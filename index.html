@@ -196,6 +196,72 @@
   .nav-btn.on{color:var(--accent)}
   .nav-btn svg{display:block}
 
+  /* ===== 테스트 ===== */
+  .quiz-wrap{max-width:560px;margin:0 auto;padding:0 18px 40px;min-height:80vh}
+  .quiz-hero{padding:48px 4px 0;text-align:center}
+  .qeyebrow{display:inline-block;font-size:12.5px;font-weight:800;letter-spacing:.06em;
+    color:#fff;background:var(--accent);padding:5px 14px;border-radius:20px;margin-bottom:20px}
+  .quiz-hero h1{font-size:32px;font-weight:800;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em}
+  .quiz-hero p{font-size:15.5px;line-height:1.7;color:var(--ink2);margin:0 auto 28px;max-width:420px}
+  .qstart{background:var(--ink);color:#fff;border:0;border-radius:12px;
+    padding:15px 34px;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;
+    box-shadow:0 4px 16px rgba(26,34,53,.2)}
+  .qstart:active{transform:scale(.98)}
+  .qmeta{margin-top:16px;font-size:13px;color:var(--muted)}
+  /* 진행바 */
+  .qprogress{height:6px;background:var(--paper2);border-radius:6px;margin:30px 0 8px;overflow:hidden}
+  .qbar{height:100%;background:var(--accent);border-radius:6px;transition:width .35s ease;width:0}
+  .qcount{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:18px}
+  /* 문제 카드 */
+  .qcard{}
+  .qtag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.03em;
+    padding:4px 11px;border-radius:14px;margin-bottom:14px}
+  .qtag.reg{background:#fbe9e6;color:#c0392b}
+  .qtag.term{background:#e8f0fb;color:#2c5f9e}
+  .qtag.cycle{background:#e8f3ee;color:#1a6b54}
+  .qq{font-size:21px;font-weight:800;line-height:1.4;margin-bottom:24px;letter-spacing:-.01em}
+  .qopts{display:flex;flex-direction:column;gap:12px}
+  .qopt{text-align:left;background:#fff;border:2px solid var(--line);border-radius:14px;
+    padding:18px 20px;font-size:16px;font-weight:600;color:var(--ink);cursor:pointer;
+    font-family:inherit;transition:all .15s;line-height:1.45}
+  .qopt:active{transform:scale(.99)}
+  .qopt:hover{border-color:var(--muted)}
+  .qopt.correct{border-color:var(--stock);background:#eafaf3}
+  .qopt.wrong{border-color:#e0564a;background:#fdecea}
+  .qopt.dim{opacity:.5}
+  .qopt .mark{float:right;font-weight:800;font-size:18px}
+  /* 해설 */
+  .qexp{margin-top:20px;background:var(--paper2);border-radius:14px;padding:18px 20px;
+    border-left:4px solid var(--accent);display:none}
+  .qexp.show{display:block;animation:fadeIn .3s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .qexp .ehead{font-size:14px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+  .qexp .ehead.o{color:var(--stock)}.qexp .ehead.x{color:#c0392b}
+  .qexp p{font-size:14.5px;line-height:1.7;color:var(--ink2);margin:0}
+  .qexp b{color:var(--ink)}
+  .qnext{margin-top:18px;width:100%;background:var(--ink);color:#fff;border:0;border-radius:12px;
+    padding:15px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;display:none}
+  .qnext.show{display:block}
+  /* 결과 */
+  .qresult{text-align:center;padding:40px 4px}
+  .qscore-ring{font-size:56px;font-weight:800;color:var(--accent);margin:10px 0}
+  .qgrade{font-size:28px;font-weight:800;margin:6px 0 4px;letter-spacing:-.02em}
+  .qgrade-sub{font-size:15px;color:var(--ink2);margin-bottom:8px}
+  .qgrade-desc{font-size:14.5px;line-height:1.7;color:var(--ink2);max-width:400px;margin:14px auto 28px}
+  .qshare-box{background:var(--paper2);border-radius:16px;padding:22px;margin:0 auto;max-width:420px}
+  .qshare-box h4{font-size:15px;font-weight:800;margin:0 0 12px}
+  .qshare-btns{display:flex;flex-direction:column;gap:10px}
+  .qshare-btn{border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:800;
+    cursor:pointer;font-family:inherit}
+  .qshare-btn.primary{background:#FEE500;color:#191600}
+  .qshare-btn.copy{background:var(--ink);color:#fff}
+  .qretry{margin-top:18px;background:none;border:0;color:var(--muted);font-size:14px;
+    font-weight:700;cursor:pointer;text-decoration:underline;font-family:inherit}
+  .qtoast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:24px;font-size:14px;
+    font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
+  .qtoast.show{opacity:1}
+
   /* ===== 통계 대시보드 ===== */
   .shero{background:linear-gradient(135deg,#1a2235,#2a3550);color:#fff;padding:40px 0 32px}
   .shero .eyebrow{color:var(--gold);font-size:13px;font-weight:700;letter-spacing:.05em;margin-bottom:10px}
@@ -571,6 +637,30 @@
   </div></div>
 </div>
 
+<!-- ===== 부동산 사이클 테스트 ===== -->
+<div id="view-test" style="display:none">
+  <div class="quiz-wrap">
+    <!-- 시작 화면 -->
+    <div id="quiz-intro">
+      <div class="quiz-hero">
+        <div class="qeyebrow">부동산 IQ 테스트</div>
+        <h1>당신은 사이클을<br>읽을 수 있는가?</h1>
+        <p>규제는 정말 악재일까? 재개발과 재건축은 뭐가 다를까? <b>10문항 2지선다</b>로 부동산 사이클 감각을 점검해 보세요. 통념을 뒤집는 해설은 덤입니다.</p>
+        <button class="qstart" onclick="startQuiz()">테스트 시작 →</button>
+        <div class="qmeta">10문항 · 약 3분 · 문항마다 즉시 해설</div>
+      </div>
+    </div>
+    <!-- 문제 화면 -->
+    <div id="quiz-play" style="display:none">
+      <div class="qprogress"><div class="qbar" id="qbar"></div></div>
+      <div class="qcount" id="qcount"></div>
+      <div class="qcard" id="qcard"></div>
+    </div>
+    <!-- 결과 화면 -->
+    <div id="quiz-result" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ===== 하단 내비 ===== -->
 <nav class="bottomnav">
   <button class="nav-btn on" data-view="report">
@@ -580,6 +670,10 @@
   <button class="nav-btn" data-view="stats">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>통계보기</span>
+  </button>
+  <button class="nav-btn" data-view="test">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>테스트</span>
   </button>
 </nav>
 
@@ -811,7 +905,7 @@ new Chart(cMelt,{type:'bar',data:{labels:D.super.melt_scenarios.map(s=>'연 '+s.
       t.fillText(s.years+'년 ('+s.done+')',p.x+6,p.y+4)});t.restore()}}]});
 
 /* ============ 하단 내비 뷰 전환 ============ */
-const vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats');
+const vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats'),vTest=document.getElementById('view-test');
 let statsInited=false;
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));
@@ -819,6 +913,7 @@ document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>
   const v=b.dataset.view;
   vReport.style.display=v==='report'?'':'none';
   vStats.style.display=v==='stats'?'':'none';
+  vTest.style.display=v==='test'?'':'none';
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){initStats();statsInited=true;}
 }));
@@ -1021,6 +1116,168 @@ function drawLeadtime(){
   tbody.innerHTML=h;
   document.getElementById('src-note').innerHTML=
     `※ 착공량과 준공량의 12개월 이동평균을 시차를 두고 비교한 것. 곡선의 봉우리가 평균 공사기간을 뜻한다. 과거 약 27개월(2년 남짓)에서 최근 약 37개월(3년~3년 반)로 길어졌다 — 공사비·인력·안전기준 변화 등이 원인으로 추정된다.`;
+}
+
+/* ============ 부동산 사이클 테스트 ============ */
+const QUIZ=[
+  {tag:'규제 통념',cls:'reg',
+   q:'"투기과열지구 지정" 같은 규제는 중장기 투자자에게 호재일까, 악재일까?',
+   opts:['악재 — 거래가 막히고 가격이 눌린다','호재 — 단기 충격 뒤 공급을 줄인다'],
+   answer:1,
+   exp:'규제는 <b>단기적으론 악재</b>지만 그 효과는 대개 6개월을 넘기지 못한다. 오히려 규제가 신규 공급과 정비사업을 위축시켜 <b>중장기적으로 공급을 줄이는 호재</b>로 작동하는 경우가 많다. "규제=악재"는 단기 시야의 통념이다.'},
+
+  {tag:'용어 정리',cls:'term',
+   q:'압구정 현대아파트의 정비사업은 "OOO"일까? 빈칸에 들어갈 말은?',
+   opts:['재개발','재건축'],
+   answer:1,
+   exp:'정답은 <b>재건축</b>. <b>재건축</b>은 멀쩡한 기반시설(도로·상하수도) 위의 노후 "건물"만 다시 짓는 것이고, <b>재개발</b>은 기반시설 자체가 열악한 "지역 전체"를 갈아엎는 것이다. 압구정처럼 인프라가 좋은 곳의 낡은 아파트 정비는 재건축이다.'},
+
+  {tag:'규제 통념',cls:'reg',
+   q:'다주택자 "취득세 중과"는 수도권 투자자에게 어떤 영향일까?',
+   opts:['악재 — 살 때 세금이 늘어 부담','호재 — 지방 수요가 수도권으로 쏠린다'],
+   answer:1,
+   exp:'취득세 중과는 <b>지방 부동산엔 악재</b>다. 여러 채를 살 바엔 똘똘한 한 채로 좁히게 만들기 때문이다. 그 결과 수요가 <b>수도권 핵심지로 쏠려</b>, 수도권 투자자에겐 오히려 호재로 작동할 수 있다. 규제 하나가 지역마다 정반대로 작용하는 셈이다.'},
+
+  {tag:'규제 통념',cls:'reg',
+   q:'대출 규제(LTV·DSR 강화)는 결국 집값에 어떻게 작용할까?',
+   opts:['하락 압력 — 살 돈이 줄어 수요 위축','상승 압력 — 공급까지 막아버린다'],
+   answer:1,
+   exp:'대출 규제는 매수 수요만 누르는 게 아니다. <b>재건축·재개발 이주비 대출</b>을 어렵게 하고, 신축 <b>중도금·잔금 대출</b>도 막아 분양 자체를 위축시킨다. 즉 수요와 <b>공급을 동시에</b> 조이는데, 공급 위축 효과가 더 길게 남아 중장기 상승 압력이 된다.'},
+
+  {tag:'사이클',cls:'cycle',
+   q:'이 리포트에서 부동산 사이클의 "출발점"으로 보는 것은?',
+   opts:['매매가격','전세가격'],
+   answer:1,
+   exp:'사이클의 방아쇠는 <b>전세</b>다. 공급이 부족해지면 매매보다 <b>전세가 먼저</b> 오르고, 그 전세가 매매를 밀어올린다. 전세는 거주 수요가 가장 정직하게 드러나는 지표라, 공급 부족의 첫 신호가 된다.'},
+
+  {tag:'사이클',cls:'cycle',
+   q:'금리는 이 사이클에서 어떤 위치일까?',
+   opts:['사슬 안의 한 고리','사슬 밖의 외부 힘'],
+   answer:1,
+   exp:'금리는 사이클의 <b>고리가 아니라 외부 변수</b>다. 공급-전세-매매의 순환은 금리와 무관하게 돌아가지만, 금리는 그 순환 <b>전체를 흔드는</b> 힘이다. 저금리는 대기 중이던 잠재 수요를 매수로 전환시켜 사이클을 증폭한다.'},
+
+  {tag:'사이클',cls:'cycle',
+   q:'"집값이 오르면 공급(인허가)이 따라 는다"는 고리, 서울에선?',
+   opts:['똑같이 잘 작동한다','거의 끊겨 있다'],
+   answer:1,
+   exp:'서울에선 이 고리가 <b>거의 끊겨</b> 있다. 집값이 올라도 <b>지을 택지가 없어</b> 인허가가 따라오지 못하기 때문이다. 반면 충북·부산처럼 땅이 있는 지역은 1년 뒤 공급이 늘며 고리가 작동한다. 서울의 만성 공급 부족이 여기서 비롯된다.'},
+
+  {tag:'용어 정리',cls:'term',
+   q:'"전세가율"이 낮은 시장(예: 서울 55%)은 어떤 시장일까?',
+   opts:['실거주 수요 위주 시장','투자 수요가 두꺼운 시장'],
+   answer:1,
+   exp:'전세가율(전세÷매매)이 <b>낮으면</b> 매매가가 전세보다 훨씬 높다는 뜻 — 사람들이 거주 가치보다 <b>미래 상승 기대</b>에 더 많이 지불하는 투자 시장이다. 서울이 대표적. 반대로 전세가율이 높은 지방(80%대)은 가격이 거주 가치에 수렴한 실거주 시장이다.'},
+
+  {tag:'사이클',cls:'cycle',
+   q:'오늘 아파트를 "착공"하면 실제 입주(준공)는 보통 언제?',
+   opts:['약 1년 뒤','약 3년~3년 반 뒤'],
+   answer:1,
+   exp:'착공에서 준공까지는 과거 약 27개월이었지만 <b>최근엔 약 37개월(3년~3년 반)</b>로 길어졌다. 공사비 급등·인력난·안전기준 강화 탓이다. 이 시차 때문에 "지금 공급 부족"과 "몇 년 뒤 입주 폭탄" 사이엔 늘 시간 간극이 생긴다.'},
+
+  {tag:'사이클',cls:'cycle',
+   q:'2028년부터 부동산에 겹쳐 오는 "더 긴 파동"의 정체는?',
+   opts:['베이비붐 세대 은퇴','88올림픽 공급분의 멸실'],
+   answer:1,
+   exp:'정답은 <b>멸실(재건축) 슈퍼사이클</b>. 1988년 서울올림픽을 기점으로 폭증한 아파트가 <b>40년 연한에 도달</b>하기 시작하는 때가 2028년이다. 헐어야 할 노후 재고는 폭증하는데 멸실 속도는 못 따라가, 순공급이 장기간 제약된다.'},
+];
+
+let qIdx=0, qScore=0, qAnswered=false;
+function startQuiz(){
+  qIdx=0;qScore=0;
+  document.getElementById('quiz-intro').style.display='none';
+  document.getElementById('quiz-result').style.display='none';
+  document.getElementById('quiz-play').style.display='';
+  renderQ();
+}
+function renderQ(){
+  qAnswered=false;
+  const item=QUIZ[qIdx];
+  document.getElementById('qbar').style.width=((qIdx)/QUIZ.length*100)+'%';
+  document.getElementById('qcount').textContent=`${qIdx+1} / ${QUIZ.length}`;
+  const card=document.getElementById('qcard');
+  card.innerHTML=`
+    <span class="qtag ${item.cls}">${item.tag}</span>
+    <div class="qq">${item.q}</div>
+    <div class="qopts">${item.opts.map((o,i)=>
+      `<button class="qopt" onclick="answerQ(${i})">${o}</button>`).join('')}</div>
+    <div class="qexp" id="qexp"></div>
+    <button class="qnext" id="qnext" onclick="nextQ()">${qIdx===QUIZ.length-1?'결과 보기 →':'다음 문제 →'}</button>`;
+}
+function answerQ(choice){
+  if(qAnswered)return; qAnswered=true;
+  const item=QUIZ[qIdx];
+  const opts=document.querySelectorAll('.qopt');
+  const correct=item.answer;
+  if(choice===correct)qScore++;
+  opts.forEach((o,i)=>{
+    o.style.pointerEvents='none';
+    if(i===correct){o.classList.add('correct');o.innerHTML+='<span class="mark">○</span>';}
+    else if(i===choice){o.classList.add('wrong');o.innerHTML+='<span class="mark">✕</span>';}
+    else o.classList.add('dim');
+  });
+  const exp=document.getElementById('qexp');
+  const ok=choice===correct;
+  exp.innerHTML=`<div class="ehead ${ok?'o':'x'}">${ok?'○ 정답!':'✕ 아쉬워요'}</div><p>${item.exp}</p>`;
+  exp.classList.add('show');
+  document.getElementById('qnext').classList.add('show');
+}
+function nextQ(){
+  qIdx++;
+  if(qIdx>=QUIZ.length){showResult();return;}
+  renderQ();
+  window.scrollTo(0,0);
+}
+function gradeOf(s){
+  if(s>=9)return{g:'사이클 마스터',sub:'상위 5%의 통찰',d:'규제의 이면까지 꿰뚫고, 사이클을 거꾸로도 읽어내는 경지. 이 리포트를 쓴 사람과 토론해도 될 수준입니다.',emoji:'🏆'};
+  if(s>=7)return{g:'전세 추적자',sub:'사이클을 읽는 눈',d:'공급과 전세가 어떻게 맞물리는지 분명히 이해하고 있습니다. 통념에 휘둘리지 않는 중급자.',emoji:'🔭'};
+  if(s>=5)return{g:'사이클 입문자',sub:'감은 잡았다',d:'큰 그림은 보이지만 디테일은 더 다질 여지가 있습니다. 리포트를 한 번 더 정독해 보세요.',emoji:'🌱'};
+  return{g:'통념의 함정에 빠진 단계',sub:'다시 시작',d:'"규제=악재" 같은 통념에 아직 갇혀 있습니다. 괜찮아요, 리포트가 바로 그 통념을 깨려고 만들어졌으니까요.',emoji:'🧭'};
+}
+function showResult(){
+  document.getElementById('qbar').style.width='100%';
+  document.getElementById('quiz-play').style.display='none';
+  const r=document.getElementById('quiz-result');
+  r.style.display='';
+  const gr=gradeOf(qScore);
+  r.innerHTML=`
+    <div class="qresult">
+      <div style="font-size:48px">${gr.emoji}</div>
+      <div class="qscore-ring">${qScore}<span style="font-size:28px;color:var(--muted)">/${QUIZ.length}</span></div>
+      <div class="qgrade">${gr.g}</div>
+      <div class="qgrade-sub">${gr.sub}</div>
+      <div class="qgrade-desc">${gr.d}</div>
+      <div class="qshare-box">
+        <h4>친구는 몇 점일까? 🔥</h4>
+        <div class="qshare-btns">
+          <button class="qshare-btn copy" onclick="shareResult()">결과 + 링크 복사하기</button>
+        </div>
+      </div>
+      <button class="qretry" onclick="startQuiz()">다시 풀기</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+function shareResult(){
+  const gr=gradeOf(qScore);
+  const txt=`[부동산 IQ 테스트] 나는 10문제 중 ${qScore}개 정답!\n등급: ${gr.g} ${gr.emoji}\n\n규제는 정말 악재일까? 너도 도전해봐 👇\nhttps://aptweather.co.kr`;
+  if(navigator.share){
+    navigator.share({title:'부동산 IQ 테스트',text:txt}).catch(()=>copyText(txt));
+  }else{copyText(txt);}
+}
+function copyText(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('복사됐어요! 친구에게 붙여넣기 하세요')).catch(()=>fallbackCopy(txt));
+  }else fallbackCopy(txt);
+}
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);
+  ta.select();try{document.execCommand('copy');toast('복사됐어요!');}catch(e){toast('복사 실패 — 길게 눌러 복사하세요');}
+  document.body.removeChild(ta);
+}
+function toast(msg){
+  let t=document.querySelector('.qtoast');
+  if(!t){t=document.createElement('div');t.className='qtoast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
 }
 </script>
 </body>
