@@ -23,6 +23,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://aptweather.co.kr/og.png">
+<script defer src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
 <meta name="twitter:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
 <meta name="twitter:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
 <title>집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클</title>
@@ -279,6 +280,24 @@
   .qlv{display:inline-block;background:var(--ink);color:#fff;font-size:18px;font-weight:800;
     padding:2px 12px;border-radius:10px;margin-right:6px;letter-spacing:.01em;vertical-align:2px}
   .qgrade-desc{font-size:14.5px;line-height:1.7;color:var(--ink2);max-width:400px;margin:14px auto 28px}
+  /* 결과 카드 */
+  .rcard{background:linear-gradient(160deg,#1a2235,#2a3550);border:2px solid var(--gold);
+    border-radius:20px;padding:30px 24px 22px;max-width:380px;margin:14px auto 24px;
+    color:#fff;box-shadow:0 12px 32px rgba(22,32,58,.35)}
+  .rcard .rc-head{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--gold)}
+  .rcard .rc-emoji{font-size:54px;margin:12px 0 2px;line-height:1}
+  .rcard .rc-score{font-size:46px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+  .rcard .rc-score small{font-size:22px;color:#8a92ab;font-weight:700}
+  .rcard .rc-dots{display:flex;gap:7px;justify-content:center;margin:10px 0 16px}
+  .rcard .rc-dots i{width:12px;height:12px;border-radius:50%;background:#39415f}
+  .rcard .rc-dots i.ok{background:#3aa17e}
+  .rcard .rc-dots i.no{background:#e0564a}
+  .rcard .rc-lv{display:inline-block;background:var(--gold);color:#1a1500;font-weight:800;
+    font-size:15px;padding:3px 15px;border-radius:16px;margin-bottom:10px}
+  .rcard .rc-grade{font-size:20px;font-weight:800;line-height:1.35;margin-bottom:10px}
+  .rcard .rc-desc{font-size:13.5px;line-height:1.65;color:#c2c7d6}
+  .rcard .rc-foot{margin-top:18px;padding-top:13px;border-top:1px solid #39415f;
+    font-size:12px;font-weight:700;color:#8a92ab;letter-spacing:.04em}
   .qshare-box{background:var(--paper2);border-radius:16px;padding:22px;margin:0 auto;max-width:420px}
   .qshare-box h4{font-size:15px;font-weight:800;margin:0 0 12px}
   .qshare-btns{display:flex;flex-direction:column;gap:10px}
@@ -693,6 +712,7 @@
           </button>
         </div>
         <div class="qmeta">각 10문항 · 약 3분 · 문항마다 즉시 해설</div>
+        <button class="qshare-btn primary" style="margin-top:22px;padding:13px 28px;border-radius:12px" onclick="shareTest()">친구에게 먼저 보내기 — 같이 풀어봐 🔥</button>
       </div>
     </div>
     <!-- 문제 화면 -->
@@ -1225,10 +1245,10 @@ const QUIZSETS={
   }
 };
 
-let curSet='investor', QUIZ=QUIZSETS.investor.Q, qIdx=0, qScore=0, qAnswered=false;
+let curSet='investor', QUIZ=QUIZSETS.investor.Q, qIdx=0, qScore=0, qAnswered=false, qResults=[];
 function startQuiz(setKey){
   if(setKey){curSet=setKey;QUIZ=QUIZSETS[setKey].Q;}
-  qIdx=0;qScore=0;
+  qIdx=0;qScore=0;qResults=[];
   document.getElementById('quiz-intro').style.display='none';
   document.getElementById('quiz-result').style.display='none';
   document.getElementById('quiz-play').style.display='';
@@ -1260,6 +1280,7 @@ function answerQ(choice){
   const opts=document.querySelectorAll('.qopt');
   const correct=item.answer;
   if(choice===correct)qScore++;
+  qResults.push(choice===correct);
   opts.forEach((o,i)=>{
     o.style.pointerEvents='none';
     if(i===correct){o.classList.add('correct');o.innerHTML+='<span class="mark">○</span>';}
@@ -1286,17 +1307,24 @@ function showResult(){
   const r=document.getElementById('quiz-result');
   r.style.display='';
   const gr=gradeOf(qScore);
+  const dots=qResults.map(ok=>`<i class="${ok?'ok':'no'}"></i>`).join('');
   r.innerHTML=`
     <div class="qresult">
-      <div style="font-size:48px">${gr.emoji}</div>
-      <div class="qscore-ring">${qScore}<span style="font-size:28px;color:var(--muted)">/${QUIZ.length}</span></div>
-      <div class="qresult-eyebrow">당신의 결과는…</div>
-      <div class="qgrade"><span class="qlv">${gr.lv}</span> ${gr.g}</div>
-      <div class="qgrade-desc">${gr.d}</div>
+      <div class="qresult-eyebrow" style="margin:6px 0 2px">당신의 결과는…</div>
+      <div class="rcard">
+        <div class="rc-head">${QUIZSETS[curSet].title}</div>
+        <div class="rc-emoji">${gr.emoji}</div>
+        <div class="rc-score">${qScore}<small>/${QUIZ.length}</small></div>
+        <div class="rc-dots">${dots}</div>
+        <div><span class="rc-lv">${gr.lv}</span></div>
+        <div class="rc-grade">${gr.g}</div>
+        <div class="rc-desc">${gr.d}</div>
+        <div class="rc-foot">aptweather.co.kr · 집값은 돌고 돈다</div>
+      </div>
       <div class="qshare-box">
         <h4>친구는 몇 레벨일까? 🔥</h4>
         <div class="qshare-btns">
-          <button class="qshare-btn primary" onclick="shareResult()">친구에게 공유하기</button>
+          <button class="qshare-btn primary" onclick="shareResult()">카카오톡으로 공유하기</button>
           <button class="qshare-btn copy" onclick="copyText(shareTxt())">내 레벨 + 링크 복사하기</button>
         </div>
       </div>
@@ -1306,12 +1334,42 @@ function showResult(){
   window.scrollTo(0,0);
 }
 const SHARE_URL='https://aptweather.co.kr/#test';
+const KAKAO_KEY='1bd3370cb08703d1450ddb0e7726ab98';
+function kakaoReady(){
+  if(!window.Kakao)return false;
+  try{if(!Kakao.isInitialized())Kakao.init(KAKAO_KEY);return Kakao.isInitialized();}
+  catch(e){return false;}
+}
+function kakaoFeed(title,desc){
+  Kakao.Share.sendDefault({objectType:'feed',
+    content:{title:title,description:desc,
+      imageUrl:'https://aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
+      link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
+    buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});
+}
+function shareTest(){
+  if(kakaoReady()){
+    try{kakaoFeed('내 부동산 감각, 몇 점일까?','부린이·투자자 테스트 — 10문항 3분, 즉시 채점·해설');return;}
+    catch(e){}
+  }
+  const txt='내 부동산 감각, 몇 점일까? 부린이·투자자 테스트 — 10문항 3분\n'+SHARE_URL;
+  if(navigator.share){
+    navigator.share({title:'부동산 사이클 테스트',
+      text:'내 부동산 감각, 몇 점일까? 10문항 3분 테스트 — 같이 풀어보자!',
+      url:SHARE_URL}).catch(e=>{if(e&&e.name!=='AbortError')copyText(txt);});
+  }else{copyText(txt);}
+}
 function shareTxt(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
   return `[${name}] 내 결과는…\n${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length})\n\n넌 몇 레벨 나오나 도전해봐 👇\n${SHARE_URL}`;
 }
 function shareResult(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
+  if(kakaoReady()){
+    try{kakaoFeed(`${gr.emoji} ${gr.lv} ${gr.g}`,
+      `[${name}] ${qScore}/${QUIZ.length}점 — 넌 몇 레벨 나오나 도전해봐!`);return;}
+    catch(e){}
+  }
   if(navigator.share){
     navigator.share({title:name,
       text:`[${name}] ${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length}) — 넌 몇 레벨 나오나 도전해봐!`,
