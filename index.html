@@ -12,12 +12,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8F%A0</text></svg>">
+<link rel="icon" type="image/png" href="/app_icon.png">
+<link rel="apple-touch-icon" href="/app_icon.png">
 <meta property="og:type" content="website">
 <meta property="og:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
 <meta property="og:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
 <meta property="og:url" content="https://aptweather.co.kr">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://aptweather.co.kr/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://aptweather.co.kr/og.png">
 <meta name="twitter:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
 <meta name="twitter:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
 <title>집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클</title>
@@ -279,6 +284,7 @@
   .qshare-btns{display:flex;flex-direction:column;gap:10px}
   .qshare-btn{border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:800;
     cursor:pointer;font-family:inherit}
+  .qshare-btn.primary{background:var(--accent);color:#fff}
   .qshare-btn.copy{background:var(--ink);color:#fff}
   .qretry{margin-top:18px;background:none;border:0;color:var(--muted);font-size:14px;
     font-weight:700;cursor:pointer;text-decoration:underline;font-family:inherit}
@@ -374,7 +380,7 @@
 
 
 <!-- STEP 1 -->
-<section class="step"><div class="wrap">
+<section class="step" id="link1"><div class="wrap">
   <div class="stepnum"><span class="badge">고리 ①</span><span class="arc">공급 부족 → 전세가 상승</span></div>
   <h2 class="t">집이 모자란 곳에서, 전세가 먼저 오른다</h2>
   <span class="verdict v-strong"><span class="v-dot"></span>신뢰 높음 · 생활권 단위 · 시차 1분기</span>
@@ -394,7 +400,7 @@
 </div></section>
 
 <!-- STEP 2 -->
-<section class="step"><div class="wrap">
+<section class="step" id="link2"><div class="wrap">
   <div class="stepnum"><span class="badge">고리 ②</span><span class="arc">전세가 상승 → 매매가 상승</span></div>
   <h2 class="t">전세가 매매를 밀어올린다</h2>
   <span class="verdict v-strong"><span class="v-dot"></span>신뢰 매우 높음 · 전 지역 예외 없음</span>
@@ -416,7 +422,7 @@
 <!-- PIVOT: 서울 디커플링 -->
 
 <!-- STEP 3 -->
-<section class="step"><div class="wrap">
+<section class="step" id="link3"><div class="wrap">
   <div class="stepnum"><span class="badge">고리 ③</span><span class="arc">매매가 상승 → 인허가 증가</span></div>
   <h2 class="t">오른 집값이 공급을 부른다 — 땅이 있는 곳에서는</h2>
   <span class="verdict v-mid"><span class="v-dot"></span>지역별로 갈림 · 시차 약 1년</span>
@@ -437,7 +443,7 @@
 
 
 <!-- STEP 4 -->
-<section class="step"><div class="wrap">
+<section class="step" id="link45"><div class="wrap">
   <div class="stepnum"><span class="badge">고리 ④⑤</span><span class="arc">인허가 → 착공 → 준공</span></div>
   <h2 class="t">공급은 수 년에 걸쳐 현실이 된다 — 그 기간이 점점 길어지고 있다</h2>
   <span class="verdict v-strong"><span class="v-dot"></span>신뢰 매우 높음 · 착공→준공 r 0.82</span>
@@ -457,7 +463,7 @@
 </div></section>
 
 <!-- STEP 5 -->
-<section class="step"><div class="wrap">
+<section class="step" id="link6"><div class="wrap">
   <div class="stepnum"><span class="badge">고리 ⑥</span><span class="arc">준공 → 전세가 하락 → 다시 처음으로</span></div>
   <h2 class="t">입주가 시작되면, 전세가 먼저 꺾인다</h2>
   <span class="verdict v-strong"><span class="v-dot"></span>신뢰 높음 · 지역 단위에서만 보임</span>
@@ -479,7 +485,7 @@
 </div></section>
 
 <!-- 지역별 사이클 강도 -->
-<section class="step"><div class="wrap">
+<section class="step" id="score"><div class="wrap">
   <div class="stepnum"><span class="badge">종합</span><span class="arc">사이클은 지역마다 다르게 돈다</span></div>
   <h2 class="t">어디서 사이클이 잘 돌고, 어디서 끊기나</h2>
   <p class="lead">같은 사이클이라도 지역마다 강도가 다르다. 6개 고리 중 몇 개가 제대로 작동하는지 점수로 매겨봤다.</p>
@@ -499,7 +505,7 @@
 </div></div>
 
 <!-- 참고1: 금리 -->
-<section class="step ref"><div class="wrap">
+<section class="step ref" id="ref1"><div class="wrap">
   <div class="stepnum"><span class="badge">참고 ①</span><span class="arc">사슬을 흔드는 외부 힘</span></div>
   <h2 class="t">금리 — 사이클 밖에서 전체를 흔드는 변수</h2>
   <p class="lead">금리는 사슬의 고리가 아니다. 사슬 <strong>바깥</strong>에서 순환 전체를 흔드는 <strong>외부 변수</strong>다. 공급 사이클은 정해진 순서로 천천히 도는 반면, 금리는 그 흐름과 무관하게 갑자기 움직여 순환 전체를 흔든다.</p>
@@ -528,7 +534,7 @@
 </div></section>
 
 <!-- 참고2: 전세가율 -->
-<section class="step ref"><div class="wrap">
+<section class="step ref" id="ref2"><div class="wrap">
   <div class="stepnum"><span class="badge">참고 ②</span><span class="arc">사슬이 만든 지역 구조</span></div>
   <h2 class="t">수도권은 투자 시장, 지방은 실거주 시장</h2>
   <p class="lead">전세가율(전세÷매매)은 그 시장에 <strong>투자 수요가 얼마나 끼어 있는가</strong>를 보여주는 지표다.</p>
@@ -542,7 +548,7 @@
 </div></section>
 
 <!-- 참고3: 투자 호흡 -->
-<section class="step ref"><div class="wrap">
+<section class="step ref" id="ref3"><div class="wrap">
   <div class="stepnum"><span class="badge">참고 ③</span><span class="arc">그래서 어떻게 볼 것인가</span></div>
   <h2 class="t">지방은 빠른 순환에 올라타고, 수도권은 긴 사이클을 안고 간다</h2>
   <p class="lead">사이클의 길이가 지역마다 다른 건, 결국 <strong>공급이 얼마나 빨리 나오느냐</strong>의 차이다. 그리고 그 차이가 투자의 호흡을 가른다.</p>
@@ -572,7 +578,7 @@
 </div></section>
 
 <!-- 참고4: 멸실 슈퍼사이클 -->
-<section class="step ref"><div class="wrap">
+<section class="step ref" id="ref4"><div class="wrap">
   <div class="stepnum"><span class="badge">참고 ④</span><span class="arc">사슬 위에 겹치는 더 긴 파동</span></div>
   <h2 class="t">2028년, 멸실의 시간이 온다</h2>
   <p class="lead">지금까지의 사슬이 약 5~6년을 도는 <strong>중기 순환</strong>이라면, 그 위에 훨씬 느린 <strong>40년짜리 파동</strong>이 하나 더 겹친다. 주택의 수명, 곧 <strong>멸실</strong>이다.</p>
@@ -595,7 +601,7 @@
 </div></section>
 
 <!-- TAKEAWAYS -->
-<section class="take"><div class="wrap">
+<section class="take" id="summary"><div class="wrap">
   <h2 class="t" style="border:0">한눈에 보는 요약</h2>
   <ol>
     <li><b>공급이 부족하면 전세가 먼저 오른다.</b> 공급과 전세는 반대로 움직인다(수도권 공급 많은 분기 전세 상승 0.6% vs 적은 분기 1.4%). 사이클의 방아쇠는 전세다.</li>
@@ -883,16 +889,25 @@ new Chart(cMelt,{type:'bar',data:{labels:D.super.melt_scenarios.map(s=>'연 '+s.
 /* ============ 하단 내비 뷰 전환 ============ */
 const vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats'),vTest=document.getElementById('view-test');
 let statsInited=false;
-document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on');
-  const v=b.dataset.view;
+function showView(v,updateHash){
+  document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
   vReport.style.display=v==='report'?'':'none';
   vStats.style.display=v==='stats'?'':'none';
   vTest.style.display=v==='test'?'':'none';
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){initStats();statsInited=true;}
-}));
+  if(updateHash!==false)history.replaceState(null,'',v==='report'?location.pathname:'#'+v);
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+function applyHash(){
+  const h=location.hash.replace('#','');
+  if(!h)return;
+  if(h==='stats'||h==='test'||h==='report'){showView(h,false);return;}
+  const el=document.getElementById(h);
+  if(el){showView('report',false);el.scrollIntoView();}
+}
+window.addEventListener('hashchange',applyHash);
+applyHash();
 
 /* ============ 통계 대시보드 ============ */
 // 날짜 정규화: "2006.01","2006.01 p)","2007/01","2012.1","2024" -> {y,m}
@@ -1281,7 +1296,8 @@ function showResult(){
       <div class="qshare-box">
         <h4>친구는 몇 레벨일까? 🔥</h4>
         <div class="qshare-btns">
-          <button class="qshare-btn copy" onclick="shareResult()">내 레벨 + 링크 복사하기</button>
+          <button class="qshare-btn primary" onclick="shareResult()">친구에게 공유하기</button>
+          <button class="qshare-btn copy" onclick="copyText(shareTxt())">내 레벨 + 링크 복사하기</button>
         </div>
       </div>
       <button class="qretry" onclick="startQuiz()">다시 풀기</button>
@@ -1289,13 +1305,18 @@ function showResult(){
     </div>`;
   window.scrollTo(0,0);
 }
+const SHARE_URL='https://aptweather.co.kr/#test';
+function shareTxt(){
+  const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
+  return `[${name}] 내 결과는…\n${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length})\n\n넌 몇 레벨 나오나 도전해봐 👇\n${SHARE_URL}`;
+}
 function shareResult(){
-  const gr=gradeOf(qScore);
-  const name=QUIZSETS[curSet].shareName;
-  const txt=`[${name}] 내 결과는…\n${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length})\n\n넌 몇 레벨 나오나 도전해봐 👇\nhttps://aptweather.co.kr`;
+  const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
   if(navigator.share){
-    navigator.share({title:name,text:txt}).catch(()=>copyText(txt));
-  }else{copyText(txt);}
+    navigator.share({title:name,
+      text:`[${name}] ${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length}) — 넌 몇 레벨 나오나 도전해봐!`,
+      url:SHARE_URL}).catch(e=>{if(e&&e.name!=='AbortError')copyText(shareTxt());});
+  }else{copyText(shareTxt());}
 }
 function copyText(txt){
   if(navigator.clipboard&&navigator.clipboard.writeText){
