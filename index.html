@@ -347,6 +347,22 @@
     .shero h1{font-size:25px}
     .chartwrap{height:260px}
   }
+  /* 30초 요약 */
+  .tldr{padding:44px 0 8px}
+  .tldr-kicker{font-size:12.5px;font-weight:800;letter-spacing:.1em;color:var(--gold);
+    text-transform:uppercase;margin-bottom:10px}
+  .tldr-h{font-size:clamp(22px,4.2vw,30px);font-weight:800;letter-spacing:-.02em;
+    line-height:1.25;margin-bottom:26px}
+  .tldr-h b{color:var(--stock)}
+  .tldr-grid{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:28px;align-items:center}
+  .tldr-diagram{display:flex;justify-content:center}
+  .tldr-text p{font-size:16px;line-height:1.7;color:var(--ink2);margin-bottom:14px}
+  .tldr-text p b{color:var(--ink)}
+  .tldr-rate{background:var(--paper2);border-radius:8px;padding:12px 16px;font-size:14.5px}
+  .tldr-more{font-size:14.5px;color:var(--muted)}
+  .tldr-arrow{display:inline-block;animation:tldrbob 1.4s ease-in-out infinite;font-weight:800;color:var(--accent)}
+  @keyframes tldrbob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+  @media(max-width:720px){.tldr-grid{grid-template-columns:1fr;gap:18px}}
 </style>
 </head>
 <body>
@@ -359,6 +375,46 @@
   <div class="meta"><span>2006–2026 분기·연</span><span class="dot"></span>
     <span>15개 시도 · 4개 생활권</span><span class="dot"></span><span>KOSIS·한국은행</span></div>
 </div></header>
+
+<!-- 30초 요약 (첫 방문자용 진입로) -->
+<section class="tldr"><div class="wrap">
+  <div class="tldr-kicker">30초 요약 · 어려운 통계 없이</div>
+  <h2 class="tldr-h">부동산은 <b>공급</b>이 만드는 <b>사이클</b>로 돈다</h2>
+  <div class="tldr-grid">
+    <div class="tldr-diagram"><svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="부동산 공급 사이클 순환 다이어그램" style="width:100%;max-width:440px;height:auto">
+<circle cx="230" cy="230" r="150" fill="none" stroke="#dad5c9" stroke-width="2.5"/>
+<polygon points="314.5,105.6 302.9,89.7 294.9,103.5" fill="#b8862f"/>
+<polygon points="380.0,241.0 388.0,223.0 372.0,223.0" fill="#b8862f"/>
+<polygon points="295.5,365.4 315.1,363.3 307.1,349.5" fill="#b8862f"/>
+<polygon points="145.5,354.4 157.1,370.3 165.1,356.5" fill="#b8862f"/>
+<polygon points="80.0,219.0 72.0,237.0 88.0,237.0" fill="#b8862f"/>
+<polygon points="164.5,94.6 144.9,96.7 152.9,110.5" fill="#b8862f"/>
+<text x="230" y="222" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="21" fill="#16203a">한 바퀴</text>
+<text x="230" y="250" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="21" fill="#b8862f">5~6년</text>
+<rect x="169.5" y="59.0" width="121" height="42" rx="12" fill="#fff" stroke="#16203a" stroke-width="2.5"/>
+<text x="230.0" y="86.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="17" fill="#16203a">공급 부족</text>
+<rect x="308.9" y="134.0" width="102" height="42" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
+<text x="359.9" y="161.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="17" fill="#6c4ab6">전세 ↑</text>
+<rect x="308.9" y="284.0" width="102" height="42" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
+<text x="359.9" y="311.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="17" fill="#c0392b">매매 ↑</text>
+<rect x="169.5" y="359.0" width="121" height="42" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
+<text x="230.0" y="386.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="17" fill="#1f8a70">착공·공급</text>
+<rect x="39.6" y="284.0" width="121" height="42" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
+<text x="100.1" y="311.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="17" fill="#1f8a70">입주 시작</text>
+<rect x="49.1" y="134.0" width="102" height="42" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
+<text x="100.1" y="161.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="17" fill="#6c4ab6">전세 ↓</text>
+</svg></div>
+    <div class="tldr-text">
+      <p><b>①</b> 집이 모자라면 <b style="color:var(--jeonse)">전세</b>부터 오른다.
+      <b>②</b> 오른 전세가 <b style="color:var(--maemae)">매매</b>를 밀어올린다.
+      <b>③</b> 값이 오르니 건설사가 <b style="color:var(--stock)">새 집을 짓는다.</b>
+      <b>④</b> 몇 년 뒤 <b style="color:var(--stock)">입주가 시작되면</b> 늘어난 물량이 다시 <b style="color:var(--jeonse)">전세를 누른다.</b>
+      그리고 시간이 지나 공급이 멈추면 — <b>다시 처음으로.</b></p>
+      <p class="tldr-rate"><b>⚡ 금리</b>는 이 사이클 <b>바깥</b>에서 순환 전체를 흔드는 외부 힘이다. 2021년 저금리가 대표적.</p>
+      <p class="tldr-more">아래에서 <b>15개 시도 데이터</b>로 이 고리를 하나씩 검증했다. <span class="tldr-arrow">↓</span></p>
+    </div>
+  </div>
+</div></section>
 
 <div class="howto"><div class="wrap">
   <div class="ic">?</div>
