@@ -17,12 +17,12 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
 <meta property="og:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
-<meta property="og:url" content="https://aptweather.co.kr">
-<meta property="og:image" content="https://aptweather.co.kr/og.png">
+<meta property="og:url" content="https://www.aptweather.co.kr">
+<meta property="og:image" content="https://www.aptweather.co.kr/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://aptweather.co.kr/og.png">
+<meta name="twitter:image" content="https://www.aptweather.co.kr/og.png">
 <script defer src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
 <meta name="twitter:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
 <meta name="twitter:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
@@ -1341,7 +1341,7 @@ function showResult(){
     </div>`;
   window.scrollTo(0,0);
 }
-const SHARE_URL='https://aptweather.co.kr/#test';
+const SHARE_URL='https://www.aptweather.co.kr/#test';
 const KAKAO_KEY='1bd3370cb08703d1450ddb0e7726ab98';
 function kakaoReady(){
   if(!window.Kakao)return false;
@@ -1351,7 +1351,7 @@ function kakaoReady(){
 function kakaoFeed(title,desc){
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
-      imageUrl:'https://aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
+      imageUrl:'https://www.aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
       link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
     buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});
 }
