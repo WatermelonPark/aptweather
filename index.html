@@ -363,11 +363,75 @@
   .tldr-arrow{display:inline-block;animation:tldrbob 1.4s ease-in-out infinite;font-weight:800;color:var(--accent)}
   @keyframes tldrbob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
   @media(max-width:720px){.tldr-grid{grid-template-columns:1fr;gap:18px}}
+  /* ===== 홈 허브 ===== */
+  .home{padding:0 0 40px}
+  .home-hero{padding:64px 0 30px;text-align:center;position:relative;overflow:hidden}
+  .home-hero::after{content:"";position:absolute;left:50%;top:20px;width:300px;height:300px;
+    transform:translateX(-50%);border:1.5px solid var(--line);border-radius:50%;opacity:.4;z-index:0}
+  .home-hero .wrap{position:relative;z-index:1}
+  .home-eyebrow{font-size:12.5px;font-weight:800;letter-spacing:.14em;color:var(--accent);
+    text-transform:uppercase;margin-bottom:16px}
+  .home-hero h1{font-size:clamp(30px,6.4vw,48px);line-height:1.12;font-weight:800;
+    letter-spacing:-.025em;margin-bottom:16px}
+  .home-hero h1 em{font-style:normal}
+  .home-hero h1 em.j{color:var(--jeonse)} .home-hero h1 em.s{color:var(--stock)}
+  .home-hero .sub{font-size:16px;color:var(--ink2);max-width:440px;margin:0 auto;line-height:1.6}
+  .home-cards{display:flex;flex-direction:column;gap:14px;margin-top:34px}
+  .hcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
+    background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;
+    cursor:pointer;font-family:inherit;transition:.15s;position:relative}
+  .hcard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 20px rgba(22,32,58,.08)}
+  .hcard:active{transform:scale(.99)}
+  .hcard .hc-emoji{font-size:34px;line-height:1;flex:none}
+  .hcard .hc-body{flex:1;min-width:0}
+  .hcard .hc-title{font-size:18.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin-bottom:3px}
+  .hcard .hc-desc{font-size:13.5px;color:var(--ink2);line-height:1.5}
+  .hcard .hc-go{font-size:22px;color:var(--muted);flex:none}
+  .hcard.feat{background:linear-gradient(135deg,#fff,#fbf3dc);border-color:var(--gold)}
+  .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:800;
+    letter-spacing:.03em;color:#fff;background:var(--accent);padding:3px 10px;border-radius:12px}
+  .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7}
 </style>
 </head>
 <body>
 
-<div id="view-report">
+<div id="view-home">
+  <header class="home-hero"><div class="wrap">
+    <div class="home-eyebrow">한국 부동산 순환 사이클</div>
+    <h1>집값은 돌고 돈다<br><em class="j">전세</em>가 끌고 <em class="s">공급</em>이 누른다</h1>
+    <p class="sub">공급이 만드는 부동산 사이클을 15개 시도 데이터로 검증했다. 어디부터 볼까?</p>
+    <div class="home-cards">
+      <button class="hcard feat" onclick="showView('test')">
+        <span class="hc-badge">3분이면 끝</span>
+        <span class="hc-emoji">🎯</span>
+        <span class="hc-body">
+          <span class="hc-title">부동산 감각 테스트</span>
+          <span class="hc-desc">부린이 · 투자자 2종, 각 10문항. 내 점수는 몇 점? 즉시 채점·해설.</span>
+        </span>
+        <span class="hc-go">→</span>
+      </button>
+      <button class="hcard" onclick="showView('report')">
+        <span class="hc-emoji">📑</span>
+        <span class="hc-body">
+          <span class="hc-title">리포트</span>
+          <span class="hc-desc">전세가 끌고 공급이 누른다 — 검증된 6개 고리를 하나씩.</span>
+        </span>
+        <span class="hc-go">→</span>
+      </button>
+      <button class="hcard" onclick="showView('stats')">
+        <span class="hc-emoji">📊</span>
+        <span class="hc-body">
+          <span class="hc-title">통계 보기</span>
+          <span class="hc-desc">통계청·국토부·한국은행 원자료를 지역·기간별로 직접 확인.</span>
+        </span>
+        <span class="hc-go">→</span>
+      </button>
+    </div>
+    <div class="home-foot">2006–2026 · 15개 시도 · KOSIS·한국은행<br>만든이: shpark1132@gmail.com</div>
+  </div></header>
+</div>
+
+<div id="view-report" style="display:none">
 <header class="hero"><div class="wrap">
   <div class="eyebrow">한국 부동산 순환 사이클 · 시도·생활권 분석</div>
   <h1>집값은 돌고 돈다<br><em>전세</em>가 끌고 <em>공급</em>이 누른다</h1>
@@ -773,8 +837,12 @@
 
 <!-- ===== 하단 내비 ===== -->
 <nav class="bottomnav">
-  <button class="nav-btn on" data-view="report">
+  <button class="nav-btn on" data-view="home">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>홈</span>
+  </button>
+  <button class="nav-btn" data-view="report">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM14 2v6h6M8 13h8M8 17h8M8 9h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>리포트</span>
   </button>
   <button class="nav-btn" data-view="stats">
@@ -954,25 +1022,26 @@ new Chart(cMelt,{type:'bar',data:{labels:D.super.melt_scenarios.map(s=>'연 '+s.
 
 /* ============ 하단 내비 뷰 전환 ============ */
 function track(ev,params){try{if(typeof gtag==='function')gtag('event',ev,params||{});}catch(e){}}
-const vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats'),vTest=document.getElementById('view-test');
+const vHome=document.getElementById('view-home'),vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats'),vTest=document.getElementById('view-test');
 let statsInited=false;
 function showView(v,updateHash){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
+  vHome.style.display=v==='home'?'':'none';
   vReport.style.display=v==='report'?'':'none';
   vStats.style.display=v==='stats'?'':'none';
   vTest.style.display=v==='test'?'':'none';
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){initStats();statsInited=true;}
-  if(updateHash!==false)history.replaceState(null,'',v==='report'?location.pathname:'#'+v);
+  if(updateHash!==false)history.replaceState(null,'',v==='home'?location.pathname:'#'+v);
   track('page_view',{page_title:'view_'+v,page_location:location.origin+'/#'+v});
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 function applyHash(){
   const h=location.hash.replace('#','');
-  if(!h)return;
-  if(h==='stats'||h==='test'||h==='report'){showView(h,false);return;}
+  if(!h){showView('home',false);return;}
+  if(h==='home'||h==='stats'||h==='test'||h==='report'){showView(h,false);return;}
   const el=document.getElementById(h);
-  if(el){showView('report',false);el.scrollIntoView();}
+  if(el){showView('report',false);requestAnimationFrame(()=>el.scrollIntoView());}
 }
 window.addEventListener('hashchange',applyHash);
 applyHash();
