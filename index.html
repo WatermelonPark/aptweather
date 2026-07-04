@@ -1348,10 +1348,10 @@ function kakaoReady(){
   try{if(!Kakao.isInitialized())Kakao.init(KAKAO_KEY);return Kakao.isInitialized();}
   catch(e){return false;}
 }
-function kakaoFeed(title,desc){
+function kakaoFeed(title,desc,img){
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
-      imageUrl:'https://www.aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
+      imageUrl:img||'https://www.aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
       link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
     buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});
 }
@@ -1367,20 +1367,27 @@ function shareTest(){
       url:SHARE_URL}).catch(e=>{if(e&&e.name!=='AbortError')copyText(txt);});
   }else{copyText(txt);}
 }
+function shareTaunt(s){
+  if(s===10)return '만점. 이거 이길 수 있어?';
+  if(s>=8)return '이 점수, 넘을 수 있으면 넘어봐';
+  if(s>=5)return '생각보다 어렵다? 네 점수도 보자';
+  return '나도 이 정도야. 넌 몇 점 나오나 보자';
+}
 function shareTxt(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
-  return `[${name}] 내 결과는…\n${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length})\n\n넌 몇 레벨 나오나 도전해봐 👇\n${SHARE_URL}`;
+  return `${gr.emoji} 내 점수 ${qScore}/10 — ${name}\n${shareTaunt(qScore)}\n\n${SHARE_URL}`;
 }
 function shareResult(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
   if(kakaoReady()){
-    try{kakaoFeed(`${gr.emoji} ${gr.lv} ${gr.g}`,
-      `[${name}] ${qScore}/${QUIZ.length}점 — 넌 몇 레벨 나오나 도전해봐!`);return;}
+    try{kakaoFeed(`${gr.emoji} ${qScore}/10점 — ${name}`,
+      `${shareTaunt(qScore)} · ${gr.lv} ${gr.g}`,
+      `https://www.aptweather.co.kr/share/score-${qScore}.png`);return;}
     catch(e){}
   }
   if(navigator.share){
     navigator.share({title:name,
-      text:`[${name}] ${gr.emoji} ${gr.lv} ${gr.g} (${qScore}/${QUIZ.length}) — 넌 몇 레벨 나오나 도전해봐!`,
+      text:`${gr.emoji} 내 점수 ${qScore}/10 — ${name}. ${shareTaunt(qScore)}`,
       url:SHARE_URL}).catch(e=>{if(e&&e.name!=='AbortError')copyText(shareTxt());});
   }else{copyText(shareTxt());}
 }
