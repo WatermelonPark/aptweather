@@ -195,15 +195,19 @@
   footer b{color:var(--ink2)}
 
   /* ===== 하단 내비 ===== */
-  body{padding-bottom:64px}
-  .bottomnav{position:fixed;bottom:0;left:0;right:0;height:60px;background:#fff;
-    border-top:1px solid var(--line);display:flex;justify-content:center;z-index:100;
-    box-shadow:0 -2px 12px rgba(0,0,0,.05)}
+  body{padding-bottom:66px}
+  .bottomnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--ink);
+    display:flex;justify-content:center;z-index:100;
+    box-shadow:0 -4px 18px rgba(22,32,58,.28)}
   .nav-btn{flex:1;max-width:220px;border:0;background:none;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:3px;color:var(--muted);
-    font-size:11px;font-weight:700;cursor:pointer;transition:color .15s}
-  .nav-btn.on{color:var(--accent)}
+    align-items:center;justify-content:center;gap:3px;color:#97a0b8;
+    font-size:11.5px;font-weight:700;cursor:pointer;transition:color .15s;position:relative}
+  .nav-btn.on{color:#fff}
+  .nav-btn.on::before{content:"";position:absolute;top:0;width:34px;height:3px;
+    border-radius:0 0 3px 3px;background:var(--gold)}
   .nav-btn svg{display:block}
+  .nav-badge{position:absolute;top:10px;right:calc(50% - 24px);width:7px;height:7px;
+    border-radius:50%;background:#e0564a}
 
   /* ===== 테스트 ===== */
   .quiz-wrap{max-width:560px;margin:0 auto;padding:0 18px 120px;min-height:80vh}
@@ -741,6 +745,7 @@
     <span>통계보기</span>
   </button>
   <button class="nav-btn" data-view="test">
+    <span class="nav-badge"></span>
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>테스트</span>
   </button>
