@@ -1353,7 +1353,8 @@ function kakaoFeed(title,desc,img){
     content:{title:title,description:desc,
       imageUrl:img||'https://www.aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
       link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
-    buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});
+    buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
+      {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.aptweather.co.kr',webUrl:'https://www.aptweather.co.kr'}}]});
 }
 function shareTest(){
   if(kakaoReady()){
@@ -1368,10 +1369,11 @@ function shareTest(){
   }else{copyText(txt);}
 }
 function shareTaunt(s){
-  if(s===10)return '만점. 이거 이길 수 있어?';
-  if(s>=8)return '이 점수, 넘을 수 있으면 넘어봐';
-  if(s>=5)return '생각보다 어렵다? 네 점수도 보자';
-  return '나도 이 정도야. 넌 몇 점 나오나 보자';
+  if(s===10)return '이걸 다 맞히네… 혹시 업자세요?';
+  if(s>=8)return '임장 좀 다녀보셨는데요?';
+  if(s>=5)return '감은 있어요. 계약은 아직 이르지만';
+  if(s>=2)return '부동산 뉴스, 헤드라인만 보셨죠?';
+  return '이 점수는 오히려 어려운 건데…';
 }
 function shareTxt(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
