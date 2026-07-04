@@ -1351,7 +1351,7 @@ function kakaoReady(){
 function kakaoFeed(title,desc,img){
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
-      imageUrl:img||'https://www.aptweather.co.kr/og.png',imageWidth:1200,imageHeight:630,
+      imageUrl:img||'https://www.aptweather.co.kr/og.png',imageWidth:img?800:1200,imageHeight:img?800:630,
       link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
     buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
       {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.aptweather.co.kr',webUrl:'https://www.aptweather.co.kr'}}]});
