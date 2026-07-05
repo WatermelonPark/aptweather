@@ -887,7 +887,7 @@ new Chart(cL1,{type:'bar',data:{labels:D.link1_new.levels,
   datasets:[{data:D.link1_new.jeonse_rise,
     backgroundColor:['#3aa17e','#7bb89e','#e0564a'],borderRadius:6}]},
   options:{responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'전세 상승률 '+c.raw+'%'}}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'전세 상승률 '+fmtN(c.raw)+'%'}}},
     scales:{x:{grid:{display:false},title:{display:true,text:'분기별 공급(입주) 수준'}},
       y:{beginAtZero:true,grid:{color:GRID},title:{display:true,text:'전세 상승률 (%/분기)'},
         ticks:{callback:v=>v+'%'}}}},
@@ -899,7 +899,7 @@ D.sync.sort((a,b)=>b.corr-a.corr);
 new Chart(c6,{type:'bar',data:{labels:D.sync.map(r=>r.region),
   datasets:[{data:D.sync.map(r=>r.corr),backgroundColor:D.sync.map(r=>r.sudo?MAEMAE:jibC),borderRadius:3}]},
   options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-    plugins:{tooltip:{callbacks:{label:c=>'동조성 '+c.raw}}},
+    plugins:{tooltip:{callbacks:{label:c=>'동조성 '+fmtN(c.raw)}}},
     scales:{x:{beginAtZero:true,max:1,grid:{color:GRID},title:{display:true,text:'전세–매매 동조성 (1에 가까울수록 함께 움직임)'}},
       y:{grid:{display:false}}}}});
 
@@ -971,7 +971,7 @@ new Chart(cRate,{type:'line',data:{labels:R.t.map(fy),datasets:[
   {label:'CD금리',data:R.rate,yAxisID:'yr',borderColor:'#e8b84b',pointRadius:0,borderWidth:2,
     borderDash:[5,4],tension:.3}]},
   options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-    plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+(c.dataset.label==='CD금리'?'%':'')}}},
+    plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtN(c.raw)+(c.dataset.label==='CD금리'?'%':'')}}},
     scales:{
       y:{position:'left',grid:{color:'#2c3760'},ticks:{color:'#9aa0b4'},
          title:{display:true,text:'매매·전세 지수',color:'#9aa0b4'}},
