@@ -1132,7 +1132,7 @@ function drawStat(){
       tension:.25,fill:true,spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:c=>`${DS_LABEL[ST.ds]}: ${c.raw??'-'} ${D.unit.split(' ')[0]}`}}},
+        tooltip:{callbacks:{label:c=>`${DS_LABEL[ST.ds]}: ${fmtN(c.raw)} ${D.unit.split(' ')[0]}`}}},
       scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,maxRotation:0,autoSkip:true}},
         y:{grid:{color:GRID},title:{display:true,text:D.unit}}}},
     plugins:[{id:'vlines',afterDraw(ch){
@@ -1166,6 +1166,7 @@ function drawStat(){
   document.getElementById('src-note').innerHTML=
     `※ ${D.source}. ${D.note?D.note+'. ':''}가공 없는 원자료입니다.`;
 }
+function fmtN(v,dec){return (v==null||isNaN(v))?'-':Number(v).toLocaleString('ko-KR',{maximumFractionDigits:dec==null?2:dec});}
 function buildTable(D,labels,vals,idx,parsed){
   const thead=document.querySelector('#stat-tbl thead'),tbody=document.querySelector('#stat-tbl tbody');
   const isMonthly=!D.annual && parsed[0].m>0;
@@ -1178,9 +1179,9 @@ function buildTable(D,labels,vals,idx,parsed){
     if(prev!=null&&k>0){
       const d=v-prev;const pct=prev!==0?(d/prev*100):0;
       const cls=d>0?'chg-up':(d<0?'chg-dn':'');
-      chg=`<span class="${cls}">${d>0?'+':''}${d.toFixed(D.annual?1:2)}${D.unit.includes('%')||D.unit.includes('지수')?'':''} (${pct>0?'+':''}${pct.toFixed(1)}%)</span>`;
+      chg=`<span class="${cls}">${d>0?'+':''}${fmtN(d)} (${pct>0?'+':''}${fmtN(pct,1)}%)</span>`;
     }
-    html+=`<tr><td>${labels[k]}</td><td>${v.toLocaleString()}</td><td>${chg}</td></tr>`;
+    html+=`<tr><td>${labels[k]}</td><td>${fmtN(v)}</td><td>${chg}</td></tr>`;
   }
   tbody.innerHTML=html;
 }
