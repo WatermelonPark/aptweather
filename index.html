@@ -12,22 +12,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="naver-site-verification" content="03c69c2ad7b55f0f48405d5258e78bbfcffb38df" />
-<meta name="description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
+<meta name="description" content="부린이 테스트 10문항으로 내 부동산 감각을 3분 만에 확인. 내집마련 전 필수 상식부터 집값 전망을 읽는 아파트 사이클까지 — 국가기관 부동산 데이터로 검증한 리포트와 통계 제공.">
+<meta name="keywords" content="부린이 테스트, 부동산 테스트, 내집마련, 집값 전망, 아파트 사이클, 부동산 데이터, 부동산 상식 퀴즈, 부동산 공부">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <link rel="apple-touch-icon" href="/app_icon.png">
 <meta property="og:type" content="website">
-<meta property="og:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
-<meta property="og:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
+<meta property="og:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
+<meta property="og:description" content="10문항 2지선다, 3분이면 끝. 내집마련 전 필수 상식부터 아파트 사이클 감각까지 즉시 채점·해설.">
 <meta property="og:url" content="https://www.aptweather.co.kr">
-<meta property="og:image" content="https://www.aptweather.co.kr/og.png">
+<meta property="og:image" content="https://www.aptweather.co.kr/og-test.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://www.aptweather.co.kr/og.png">
+<meta name="twitter:image" content="https://www.aptweather.co.kr/og-test.png">
 <script defer src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
-<meta name="twitter:title" content="집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클">
-<meta name="twitter:description" content="공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. KOSIS·한국은행 데이터로 검증한 한국 부동산 순환 사이클 6개 고리 분석.">
-<title>집값은 돌고 돈다 — 전세가 끌고 공급이 누르는 한국 부동산 순환 사이클</title>
+<meta name="twitter:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
+<meta name="twitter:description" content="10문항 2지선다, 3분이면 끝. 즉시 채점·해설.">
+<title>부린이 테스트 — 내 부동산 감각, 몇 점일까? | 집값은 돌고 돈다</title>
 <style>
   :root{
     --ink:#16203a; --ink2:#3b4569; --paper:#f6f4ee; --paper2:#edeae1;
@@ -373,10 +374,17 @@
     text-transform:uppercase;margin-bottom:14px}
   .home-hero h1{font-size:clamp(30px,6.4vw,48px);line-height:1.12;font-weight:800;
     letter-spacing:-.025em;margin-bottom:16px}
-  .home-hero h1 em{font-style:normal}
-  .home-hero h1 em.j{color:var(--jeonse)} .home-hero h1 em.s{color:var(--stock)}
   .home-hero .sub{font-size:16px;color:var(--ink2);max-width:440px;margin:0 auto;line-height:1.6}
-  .home-cards{display:flex;flex-direction:column;gap:14px;margin-top:34px}
+  .home-ctas{display:flex;flex-direction:column;gap:12px;margin-top:30px;align-items:center}
+  .home-cta{font-family:inherit;font-size:18px;font-weight:800;padding:17px 24px;border-radius:14px;
+    width:100%;max-width:400px;border:0;cursor:pointer;background:var(--ink);color:#fff;
+    box-shadow:0 6px 20px rgba(22,32,58,.18);transition:.15s}
+  .home-cta:active{transform:scale(.98)}
+  .home-cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none}
+  .home-divider{display:flex;align-items:center;gap:12px;margin:36px 0 0;
+    font-size:12.5px;font-weight:700;color:var(--muted)}
+  .home-divider::before,.home-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+  .home-cards{display:flex;flex-direction:column;gap:14px;margin-top:16px}
   .hcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
     background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;
     cursor:pointer;font-family:inherit;transition:.15s;position:relative}
@@ -397,31 +405,27 @@
 
 <div id="view-home">
   <header class="home-hero"><div class="wrap">
-    <div class="home-eyebrow">한국 부동산 순환 사이클</div>
-    <h1>집값은 돌고 돈다<br><em class="j">전세</em>가 끌고 <em class="s">공급</em>이 누른다</h1>
-    <p class="sub">공급이 만드는 부동산 사이클을 15개 시도 데이터로 검증했다. 어디부터 볼까?</p>
+    <div class="home-eyebrow">내집마련 전 필수 체크 · 10문항 3분</div>
+    <h1>부린이 테스트</h1>
+    <p class="sub">내 부동산 감각, 몇 점일까? LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설.</p>
+    <div class="home-ctas">
+      <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 시작</button>
+      <button class="home-cta sub" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
+    </div>
+    <div class="home-divider">테스트의 근거가 궁금하다면</div>
     <div class="home-cards">
-      <button class="hcard feat" onclick="showView('test')">
-        <span class="hc-badge">3분이면 끝</span>
-        <span class="hc-emoji">🎯</span>
-        <span class="hc-body">
-          <span class="hc-title">부동산 감각 테스트</span>
-          <span class="hc-desc">부린이·투자자 2종, 각 10문항</span>
-        </span>
-        <span class="hc-go">→</span>
-      </button>
       <button class="hcard" onclick="showView('report')">
         <span class="hc-emoji">📑</span>
         <span class="hc-body">
-          <span class="hc-title">리포트</span>
-          <span class="hc-desc">검증된 6개 고리로 읽는 공급 사이클</span>
+          <span class="hc-title">아파트 사이클 리포트</span>
+          <span class="hc-desc">집값은 돌고 돈다 — 데이터로 검증한 6개 고리</span>
         </span>
         <span class="hc-go">→</span>
       </button>
       <button class="hcard" onclick="showView('stats')">
         <span class="hc-emoji">📊</span>
         <span class="hc-body">
-          <span class="hc-title">통계 보기</span>
+          <span class="hc-title">부동산 데이터 통계</span>
           <span class="hc-desc">국가기관 원자료를 지역·기간별로</span>
         </span>
         <span class="hc-go">→</span>
@@ -1032,9 +1036,11 @@ function showView(v,updateHash){
   track('page_view',{page_title:'view_'+v,page_location:location.origin+'/#'+v});
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+function goQuiz(k){showView('test');startQuiz(k);}
 function applyHash(){
   const h=location.hash.replace('#','');
   if(!h){showView('home',false);return;}
+  if(h==='test-beginner'||h==='test-investor'){showView('test',false);startQuiz(h==='test-beginner'?'beginner':'investor');return;}
   if(h==='home'||h==='stats'||h==='test'||h==='report'){showView(h,false);return;}
   const el=document.getElementById(h);
   if(el){showView('report',false);requestAnimationFrame(()=>el.scrollIntoView());}
@@ -1461,7 +1467,7 @@ function kakaoReady(){
 function kakaoFeed(title,desc,img){
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
-      imageUrl:img||'https://www.aptweather.co.kr/og.png',imageWidth:img?800:1200,imageHeight:img?800:630,
+      imageUrl:img||'https://www.aptweather.co.kr/og-test.png',imageWidth:img?800:1200,imageHeight:img?800:630,
       link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
     buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
       {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.aptweather.co.kr',webUrl:'https://www.aptweather.co.kr'}}]});
