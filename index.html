@@ -283,6 +283,18 @@
   .rcard .rc-desc{font-size:13.5px;line-height:1.65;color:#c2c7d6}
   .rcard .rc-foot{margin-top:18px;padding-top:13px;border-top:1px solid #39415f;
     font-size:12px;font-weight:700;color:#8a92ab;letter-spacing:.04em}
+  /* 결과 → 다음 단계 유도 */
+  .nextstep{max-width:420px;margin:18px auto 0;background:#fff;border:1px solid var(--line);
+    border-radius:16px;padding:22px 20px;text-align:left}
+  .nextstep .ns-kicker{font-size:11.5px;font-weight:800;letter-spacing:.1em;color:var(--gold);
+    text-transform:uppercase;margin-bottom:8px}
+  .nextstep .ns-title{font-size:17px;font-weight:800;color:var(--ink);line-height:1.35;margin-bottom:8px}
+  .nextstep .ns-desc{font-size:13.5px;color:var(--ink2);line-height:1.6;margin-bottom:16px}
+  .nextstep .ns-desc b{color:var(--ink)}
+  .ns-btn{display:block;width:100%;font-family:inherit;font-size:15.5px;font-weight:800;
+    padding:14px;border-radius:12px;border:0;cursor:pointer;background:var(--ink);color:#fff;margin-bottom:9px}
+  .ns-btn:active{transform:scale(.99)}
+  .ns-btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);margin-bottom:0}
   .qshare-box{background:var(--paper2);border-radius:16px;padding:22px;margin:0 auto;max-width:420px}
   .qshare-box h4{font-size:15px;font-weight:800;margin:0 0 12px}
   .qshare-btns{display:flex;flex-direction:column;gap:10px}
@@ -380,7 +392,8 @@
     width:100%;max-width:400px;border:0;cursor:pointer;background:var(--ink);color:#fff;
     box-shadow:0 6px 20px rgba(22,32,58,.18);transition:.15s}
   .home-cta:active{transform:scale(.98)}
-  .home-cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none}
+  .home-cta.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;
+    font-size:16px;padding:14px 24px}
   .home-divider{display:flex;align-items:center;gap:12px;margin:36px 0 0;
     font-size:12.5px;font-weight:700;color:var(--muted)}
   .home-divider::before,.home-divider::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -410,7 +423,7 @@
     <p class="sub">내 부동산 감각, 몇 점일까? LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설.</p>
     <div class="home-ctas">
       <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 시작</button>
-      <button class="home-cta sub" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
+      <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
     </div>
     <div class="home-divider">테스트의 근거가 궁금하다면</div>
     <div class="home-cards">
@@ -1046,7 +1059,6 @@ function applyHash(){
   if(el){showView('report',false);requestAnimationFrame(()=>el.scrollIntoView());}
 }
 window.addEventListener('hashchange',applyHash);
-applyHash();
 
 /* ============ 통계 대시보드 ============ */
 // 날짜 정규화: "2006.01","2006.01 p)","2007/01","2012.1","2024" -> {y,m}
@@ -1425,6 +1437,24 @@ function nextQ(){
   window.scrollTo(0,0);
 }
 function gradeOf(s){return QUIZSETS[curSet].grade(s);}
+function nextStepHTML(){
+  if(curSet==='beginner'){
+    return `<div class="nextstep">
+      <div class="ns-kicker">다음 단계</div>
+      <div class="ns-title">기초는 됐다. 이제 통념을 뒤집을 차례</div>
+      <p class="ns-desc">투자자 테스트는 <b>호재를 악재로, 악재를 호재로</b> 읽어야 풀린다. 규제·금리·수급의 진짜 게임을 확인해보자.</p>
+      <button class="ns-btn" onclick="track('next_step',{from:'beginner',to:'investor'});goQuiz('investor')">🦅 투자자 테스트 도전하기 →</button>
+      <button class="ns-btn ghost" onclick="track('next_step',{from:'beginner',to:'report'});showView('report')">📑 아파트 사이클 리포트 읽기</button>
+    </div>`;
+  }
+  return `<div class="nextstep">
+    <div class="ns-kicker">다음 단계</div>
+    <div class="ns-title">이 문제들, 감으로 낸 게 아니다</div>
+    <p class="ns-desc">10문항 전부 KOSIS·한국은행·국토부 데이터로 검증한 <b>아파트 사이클</b>에서 나왔다. 전세가 왜 먼저 오르는지, 서울은 왜 집값이 올라도 공급이 안 늘어나는지 — 근거를 직접 확인해보자.</p>
+    <button class="ns-btn" onclick="track('next_step',{from:'investor',to:'report'});showView('report')">📑 아파트 사이클 리포트 읽기 →</button>
+    <button class="ns-btn ghost" onclick="track('next_step',{from:'investor',to:'stats'});showView('stats')">📊 국가기관 원자료 직접 보기</button>
+  </div>`;
+}
 function showResult(){
   track('quiz_complete',{quiz_type:curSet,score:qScore});
   document.getElementById('qbar').style.width='100%';
@@ -1452,6 +1482,7 @@ function showResult(){
           <button class="qshare-btn primary" onclick="shareResult()"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>카카오톡으로 공유하기</button>
         </div>
       </div>
+      ${nextStepHTML()}
       <button class="qretry" onclick="startQuiz()">다시 풀기</button>
       <button class="qback" style="display:block;margin:14px auto 0" onclick="backToPick()">← 다른 테스트 풀어보기</button>
     </div>`;
@@ -1534,6 +1565,9 @@ function toast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
 }
+
+/* 모든 선언(QUIZSETS·curSet 등) 이후에 초기 라우팅 실행 — TDZ 방지 */
+applyHash();
 </script>
 </body>
 </html>
