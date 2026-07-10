@@ -376,6 +376,24 @@
   .tldr-grid{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:28px;align-items:center}
   .tldr-diagram{display:flex;justify-content:center}
   .tldr-text p{font-size:16px;line-height:1.7;color:var(--ink2);margin-bottom:14px}
+  /* 번호별 한 줄 + 섹션 딥링크 */
+  .tldr-steps{list-style:none;margin:0 0 14px;padding:0}
+  .tldr-steps li+li{border-top:1px dashed var(--line)}
+  .tldr-steps a{display:flex;align-items:baseline;gap:10px;padding:11px 8px 11px 4px;
+    text-decoration:none;color:var(--ink2);font-size:15.5px;line-height:1.55;
+    border-radius:8px;transition:background .15s,color .15s}
+  .tldr-steps a:hover{background:var(--paper2);color:var(--ink)}
+  .tldr-steps .ts-n{flex:none;font-weight:800;color:var(--gold);font-size:15px}
+  .tldr-steps .ts-t{flex:1}
+  .tldr-steps b{color:var(--ink)}
+  .tldr-steps b.j{color:var(--jeonse)}
+  .tldr-steps b.m{color:var(--maemae)}
+  .tldr-steps b.s{color:var(--stock)}
+  .tldr-steps a::after{content:"›";flex:none;color:var(--muted);font-weight:800;
+    opacity:.35;transition:opacity .15s,transform .15s}
+  .tldr-steps a:hover::after{opacity:1;transform:translateX(2px)}
+  .tldr-loop{font-size:15px}
+  .tldr-hint{display:block;margin-top:6px;font-size:12.5px;color:var(--muted);font-weight:400}
   .tldr-text p b{color:var(--ink)}
   .tldr-rate{background:var(--paper2);border-radius:8px;padding:12px 16px;font-size:14.5px}
   .tldr-more{font-size:14.5px;color:var(--muted)}
@@ -479,25 +497,29 @@
 <text x="230" y="205" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="15" fill="#6f6a5c">한 바퀴</text>
 <text x="230" y="233" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#1f8a70">지방 5년</text>
 <text x="230" y="260" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#c0392b">수도권 10년</text>
-<rect x="170.5" y="58.0" width="119" height="40" rx="12" fill="#fff" stroke="#16203a" stroke-width="2.5"/>
+<rect x="170.5" y="58.0" width="119.0" height="40" rx="12" fill="#fff" stroke="#16203a" stroke-width="2.5"/>
 <text x="230.0" y="84.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#16203a">공급 부족</text>
-<rect x="311.6" y="134.0" width="100" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
+<rect x="311.6" y="134.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
 <text x="361.6" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#6c4ab6">전세 ↑</text>
-<rect x="311.6" y="286.0" width="100" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
+<rect x="311.6" y="286.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
 <text x="361.6" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#c0392b">매매 ↑</text>
-<rect x="170.5" y="362.0" width="119" height="40" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
-<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#1f8a70">착공·입주</text>
-<rect x="48.4" y="286.0" width="100" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
+<rect x="165.3" y="362.0" width="129.4" height="40" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
+<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#1f8a70">인허가~입주</text>
+<rect x="48.4" y="286.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
 <text x="98.4" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#6c4ab6">전세 ↓</text>
-<rect x="48.4" y="134.0" width="100" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
+<rect x="48.4" y="134.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
 <text x="98.4" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#c0392b">매매 ↓</text>
 </svg></div>
     <div class="tldr-text">
-      <p><b>①</b> 집이 모자라면 <b style="color:var(--jeonse)">전세</b>부터 오른다.
-      <b>②</b> 오른 전세가 <b style="color:var(--maemae)">매매</b>를 밀어올린다.
-      <b>③</b> 값이 오르니 건설사가 <b style="color:var(--stock)">새 집을 짓는다.</b>
-      <b>④</b> 몇 년 뒤 <b style="color:var(--stock)">입주가 시작되면</b> 늘어난 물량이 다시 <b style="color:var(--jeonse)">전세를 누르고,</b>
-      <b>⑤</b> 전세가 빠지면 <b style="color:var(--maemae)">매매도 따라 내린다.</b> 값이 내리니 공급이 멈추고 — <b>다시 처음으로.</b></p>
+      <ol class="tldr-steps">
+        <li><a href="#link1" onclick="track('tldr_jump',{to:'link1'})"><span class="ts-n">①</span><span class="ts-t">집이 모자라면 <b class="j">전세</b>부터 오른다</span></a></li>
+        <li><a href="#link2" onclick="track('tldr_jump',{to:'link2'})"><span class="ts-n">②</span><span class="ts-t">오른 전세가 <b class="m">매매</b>를 밀어올린다</span></a></li>
+        <li><a href="#link3" onclick="track('tldr_jump',{to:'link3'})"><span class="ts-n">③</span><span class="ts-t">값이 오르니 건설사가 <b class="s">새 집을 짓는다</b></span></a></li>
+        <li><a href="#link45" onclick="track('tldr_jump',{to:'link45'})"><span class="ts-n">④</span><span class="ts-t">인허가에서 입주까지 <b class="s">몇 년이 걸린다</b></span></a></li>
+        <li><a href="#link6" onclick="track('tldr_jump',{to:'link6'})"><span class="ts-n">⑤</span><span class="ts-t">입주가 시작되면 늘어난 물량이 <b class="j">전세를 누른다</b></span></a></li>
+        <li><a href="#link2" onclick="track('tldr_jump',{to:'link2'})"><span class="ts-n">⑥</span><span class="ts-t">전세가 빠지면 <b class="m">매매도 따라 내린다</b></span></a></li>
+      </ol>
+      <p class="tldr-loop">값이 내리니 공급이 멈추고 — <b>다시 처음으로.</b> <span class="tldr-hint">문장을 누르면 근거가 된 섹션으로 이동한다</span></p>
       <p class="tldr-rate"><b>⚡ 금리</b>는 이 사이클 <b>바깥</b>에서 순환 전체를 흔드는 외부 힘이다. 2021년 저금리가 대표적.</p>
       <p class="tldr-more">아래에서 <b>15개 시도 데이터</b>로 이 고리를 하나씩 검증했다. <span class="tldr-arrow">↓</span></p>
     </div>
