@@ -289,6 +289,30 @@
   .rcard .rc-desc{font-size:13.5px;line-height:1.65;color:#c2c7d6}
   .rcard .rc-foot{margin-top:18px;padding-top:13px;border-top:1px solid #39415f;
     font-size:12px;font-weight:700;color:#8a92ab;letter-spacing:.04em}
+  /* 친구 대결 */
+  .chalbar{background:#fff4e6;border:1px solid #f0d9b5;color:#8a5a00;
+    border-radius:12px;padding:11px 14px;font-size:13.5px;line-height:1.5;margin-bottom:14px}
+  .chalbar b{color:#6b4400}
+  .versus{border-radius:18px;padding:20px;margin:0 auto 18px;max-width:380px;
+    border:2px solid var(--line);background:#fff}
+  .versus.win{border-color:var(--stock);background:linear-gradient(160deg,#fff,#eafaf3)}
+  .versus.lose{border-color:var(--accent);background:linear-gradient(160deg,#fff,#fdecea)}
+  .versus.draw{border-color:var(--gold);background:linear-gradient(160deg,#fff,#fdf6e3)}
+  .versus .vs-head{font-size:11.5px;font-weight:800;letter-spacing:.1em;color:var(--muted);
+    text-transform:uppercase;margin-bottom:12px}
+  .versus .vs-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px}
+  .versus .vs-side{flex:1;text-align:center}
+  .versus .vs-lab{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:2px}
+  .versus .vs-score{font-size:40px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .versus.win .vs-side:first-child .vs-score{color:var(--stock)}
+  .versus.lose .vs-side:first-child .vs-score{color:var(--accent)}
+  .versus .vs-side:last-child .vs-score{color:var(--ink2)}
+  .versus .vs-mid{flex:none;font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.06em}
+  .versus .vs-verdict{font-size:18px;font-weight:800;color:var(--ink);margin-bottom:14px}
+  .versus .vs-btn{width:100%;font-family:inherit;font-size:15.5px;font-weight:800;padding:13px;
+    border:0;border-radius:12px;background:var(--ink);color:#fff;cursor:pointer}
+  .versus .vs-btn:active{transform:scale(.99)}
+  .versus .vs-next{font-size:13.5px;font-weight:700;color:var(--stock)}
   /* 결과 → 다음 단계 유도 */
   .nextstep{max-width:420px;margin:18px auto 0;background:#fff;border:1px solid var(--line);
     border-radius:16px;padding:22px 20px;text-align:left}
@@ -867,6 +891,7 @@
     </div>
     <!-- 문제 화면 -->
     <div id="quiz-play" style="display:none">
+      <div id="chal-bar" class="chalbar" style="display:none"></div>
       <div class="qprogress"><div class="qbar" id="qbar"></div></div>
       <div class="qcount" id="qcount"></div>
       <div class="qcard" id="qcard"></div>
@@ -1416,6 +1441,7 @@ function startQuiz(setKey){
   document.getElementById('quiz-intro').style.display='none';
   document.getElementById('quiz-result').style.display='none';
   document.getElementById('quiz-play').style.display='';
+  renderChalBar();
   renderQ();
 }
 function backToPick(){
@@ -1485,6 +1511,10 @@ function nextStepHTML(){
 }
 function showResult(){
   track('quiz_complete',{quiz_type:curSet,score:qScore});
+  if(CHALLENGE&&CHALLENGE.set===curSet){
+    track('challenge_result',{quiz_type:curSet,score:qScore,friend_score:CHALLENGE.score,
+      outcome:qScore>CHALLENGE.score?'win':(qScore<CHALLENGE.score?'lose':'draw')});
+  }
   document.getElementById('qbar').style.width='100%';
   document.getElementById('quiz-play').style.display='none';
   const r=document.getElementById('quiz-result');
@@ -1493,6 +1523,7 @@ function showResult(){
   const dots=qResults.map(ok=>`<i class="${ok?'ok':'no'}"></i>`).join('');
   r.innerHTML=`
     <div class="qresult">
+      ${versusHTML()}
       <div class="qresult-eyebrow" style="margin:6px 0 2px">당신의 결과는…</div>
       <div class="rcard">
         <div class="rc-head">${QUIZSETS[curSet].title}</div>
@@ -1505,7 +1536,7 @@ function showResult(){
         <div class="rc-foot">aptweather.co.kr · 집값은 돌고 돈다</div>
       </div>
       <div class="qshare-box">
-        <h4>친구는 몇 레벨일까? 🔥</h4>
+        <h4>${CHALLENGE&&CHALLENGE.set===curSet?'친구에게 되받아치기 🔥':'친구는 몇 점일까? 🔥'}</h4>
         <div class="qshare-btns">
           <button class="qshare-btn primary" onclick="shareResult()"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>카카오톡으로 공유하기</button>
         </div>
@@ -1517,18 +1548,60 @@ function showResult(){
   window.scrollTo(0,0);
 }
 const SHARE_URL='https://www.aptweather.co.kr/#test';
+/* ===== 친구 대결 (서버 없이 URL 파라미터로) ===== */
+let CHALLENGE=null;
+function readChallenge(){
+  try{
+    const p=new URLSearchParams(location.search);
+    const sc=parseInt(p.get('c'),10), st=p.get('s');
+    if(Number.isInteger(sc)&&sc>=0&&sc<=10&&(st==='beginner'||st==='investor'))return{score:sc,set:st};
+  }catch(e){}
+  return null;
+}
+function challengeURL(){
+  return `https://www.aptweather.co.kr/?c=${qScore}&s=${curSet}`;
+}
+function renderChalBar(){
+  const b=document.getElementById('chal-bar');
+  if(!b)return;
+  if(CHALLENGE&&CHALLENGE.set===curSet){
+    b.style.display='';
+    b.innerHTML=`🔥 친구가 <b>${CHALLENGE.score}점</b>으로 도전장을 보냈습니다 — 넘어보세요`;
+  }else{b.style.display='none';}
+}
+function versusHTML(){
+  if(!CHALLENGE||CHALLENGE.set!==curSet)return '';
+  const mine=qScore,theirs=CHALLENGE.score,d=Math.abs(mine-theirs);
+  const st=mine>theirs?'win':(mine<theirs?'lose':'draw');
+  const verdict=st==='win'?`${d}점 차로 이겼습니다 🎉`
+    :st==='lose'?`${d}점 차로 졌습니다 😤`:'무승부입니다 🤝';
+  const cta=st==='win'
+    ?'<div class="vs-next">이제 친구에게 되받아치세요 ↓</div>'
+    :`<button class="vs-btn" onclick="track('challenge_retry',{quiz_type:curSet});startQuiz(curSet)">다시 도전하기</button>`;
+  return `<div class="versus ${st}">
+      <div class="vs-head">친구의 도전</div>
+      <div class="vs-row">
+        <div class="vs-side"><div class="vs-lab">나</div><div class="vs-score">${mine}</div></div>
+        <div class="vs-mid">VS</div>
+        <div class="vs-side"><div class="vs-lab">친구</div><div class="vs-score">${theirs}</div></div>
+      </div>
+      <div class="vs-verdict">${verdict}</div>
+      ${cta}
+    </div>`;
+}
 const KAKAO_KEY='1bd3370cb08703d1450ddb0e7726ab98';
 function kakaoReady(){
   if(!window.Kakao)return false;
   try{if(!Kakao.isInitialized())Kakao.init(KAKAO_KEY);return Kakao.isInitialized();}
   catch(e){return false;}
 }
-function kakaoFeed(title,desc,img){
+function kakaoFeed(title,desc,img,link,btn){
+  const L=link||SHARE_URL;
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
       imageUrl:img||'https://www.aptweather.co.kr/og-test.png',imageWidth:img?800:1200,imageHeight:img?800:630,
-      link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
-    buttons:[{title:'나도 도전하기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},
+      link:{mobileWebUrl:L,webUrl:L}},
+    buttons:[{title:btn||'나도 도전하기',link:{mobileWebUrl:L,webUrl:L}},
       {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.aptweather.co.kr',webUrl:'https://www.aptweather.co.kr'}}]});
 }
 function shareTest(){
@@ -1560,21 +1633,24 @@ function shareTaunt(s){
 }
 function shareTxt(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
-  return `${gr.emoji} 내 점수 ${qScore}/10 — ${name}\n${shareTaunt(qScore)}\n\n${SHARE_URL}`;
+  return `${gr.emoji} 내 점수 ${qScore}/10 — ${name}\n${shareTaunt(qScore)}\n\n내 점수 넘어봐 👇\n${challengeURL()}`;
 }
 function shareResult(){
   const gr=gradeOf(qScore),name=QUIZSETS[curSet].shareName;
+  const url=challengeURL();
   track('share',{content_type:'quiz_result',method:kakaoReady()?'kakao':(navigator.share?'os_share':'copy'),quiz_type:curSet,score:qScore});
+  track('challenge_sent',{quiz_type:curSet,score:qScore});
   if(kakaoReady()){
     try{kakaoFeed(`${gr.emoji} ${qScore}/10점 — ${name}`,
-      `${shareTaunt(qScore)} · ${gr.lv} ${gr.g}`,
-      `https://www.aptweather.co.kr/share/${curSet}-${qScore}.png`);return;}
+      `${shareTaunt(qScore)} · 내 점수 넘어봐`,
+      `https://www.aptweather.co.kr/share/${curSet}-${qScore}.png`,
+      url,'도전 받기');return;}
     catch(e){}
   }
   if(navigator.share){
     navigator.share({title:name,
-      text:`${gr.emoji} 내 점수 ${qScore}/10 — ${name}. ${shareTaunt(qScore)}`,
-      url:SHARE_URL}).catch(e=>{if(e&&e.name!=='AbortError')copyText(shareTxt());});
+      text:`${gr.emoji} 내 점수 ${qScore}/10 — ${name}. ${shareTaunt(qScore)} 넘어봐!`,
+      url:url}).catch(e=>{if(e&&e.name!=='AbortError')copyText(shareTxt());});
   }else{copyText(shareTxt());}
 }
 function copyText(txt){
@@ -1595,7 +1671,14 @@ function toast(msg){
 }
 
 /* 모든 선언(QUIZSETS·curSet 등) 이후에 초기 라우팅 실행 — TDZ 방지 */
-applyHash();
+CHALLENGE=readChallenge();
+if(CHALLENGE){
+  track('challenge_accepted',{quiz_type:CHALLENGE.set,friend_score:CHALLENGE.score});
+  showView('test',false);
+  startQuiz(CHALLENGE.set);
+}else{
+  applyHash();
+}
 
 /* PWA: 서비스워커 등록 */
 if('serviceWorker' in navigator){
