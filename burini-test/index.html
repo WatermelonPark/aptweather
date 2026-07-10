@@ -17,6 +17,11 @@
 <link rel="canonical" href="https://www.aptweather.co.kr/burini-test/">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <link rel="apple-touch-icon" href="/app_icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#16203a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="부린이 테스트">
 <meta property="og:type" content="website">
 <meta property="og:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
 <meta property="og:description" content="10문항 2지선다, 3분이면 끝. 내집마련 전 필수 상식부터 아파트 사이클 감각까지 즉시 채점·해설.">
@@ -130,5 +135,10 @@
   <a href="/">aptweather.co.kr</a> · 만든이: shpark1132@gmail.com
 </div></footer>
 
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});
+}
+</script>
 </body>
 </html>
