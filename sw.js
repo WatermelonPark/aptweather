@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v1';
+const VERSION = 'v2'; // 앱 아이콘 교체(집+화살표 → 병아리). 옛 캐시를 버려야 새 아이콘이 뜬다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
