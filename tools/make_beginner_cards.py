@@ -112,9 +112,11 @@ def make_card(score, level, out_path):
         c = DOT_ON if i < score else DOT_OFF
         d.ellipse([cx-13.5, 524-13.5, cx+13.5, 524+13.5], fill=c)
 
-    # 도발 문구 2줄
+    # 도발 문구 2줄 (좌우 여백 60px 확보 — 넘치면 즉시 실패)
     t_f = noto(62, 'Bold')
     for i, line in enumerate(level['taunt2']):
+        lb = d.textbbox((400, 610 + i*68), line, font=t_f, anchor='mm')
+        assert lb[0] >= 60 and lb[2] <= W-60, 'taunt line overflows: %r (%d..%d)' % (line, lb[0], lb[2])
         d.text((400, 610 + i*68), line, font=t_f, fill=INK, anchor='mm')
 
     # 푸터
@@ -132,10 +134,10 @@ LEVELS = [
     dict(stamp='어린이집', emoji='\U0001F9F8', taunt2=['등기부등본이', '아직 그림책 같죠?']),
     dict(stamp='유치원', emoji='\U0001F392', taunt2=['LTV랑 DSR,', '아직 헷갈리시죠?']),
     dict(stamp='초등학생', emoji='✏️', taunt2=['용어는 외웠는데', '실전은 아직이에요']),
-    dict(stamp='중학생', emoji='\U0001F4D0', taunt2=['임장은 다녀봤니,', '부린이?']),
+    dict(stamp='중학생', emoji='\U0001F4D0', taunt2=['임장은 이제', '다녀보셨나요?']),
     dict(stamp='고등학생', emoji='\U0001F4D7', taunt2=['제도는 다 아시네요', '이제 실전만 남았어요']),
     dict(stamp='대학생', emoji='\U0001F4DA', taunt2=['계약서 앞에서', '안 떨리겠는데요?']),
-    dict(stamp='대학원생', emoji='\U0001F52C', taunt2=['중개사보다', '잘 아시는데요?']),
+    dict(stamp='대학원생', emoji='\U0001F52C', taunt2=['이쯤 되면…', '다주택자세요?']),
     dict(stamp='교수님', emoji='\U0001F393', taunt2=['혹시… 부동산학', '강의하세요?']),
 ]
 
