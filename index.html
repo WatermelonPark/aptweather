@@ -397,11 +397,13 @@
   .tldr-h{font-size:clamp(22px,4.2vw,30px);font-weight:800;letter-spacing:-.02em;
     line-height:1.25;margin-bottom:26px}
   .tldr-h b{color:var(--stock)}
-  .tldr-grid{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:28px;align-items:center}
-  .tldr-diagram{display:flex;justify-content:center}
+  .tldr-grid{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:18px 28px;align-items:start;
+    grid-template-areas:"diagram steps" "rate steps" "more more"}
+  .tldr-diagram{grid-area:diagram;display:flex;justify-content:center}
+  .tldr-text{grid-area:steps}
   .tldr-text p{font-size:16px;line-height:1.7;color:var(--ink2);margin-bottom:14px}
   /* 번호별 한 줄 + 섹션 딥링크 */
-  .tldr-steps{list-style:none;margin:0 0 14px;padding:0}
+  .tldr-steps{list-style:none;margin:0;padding:0}
   .tldr-steps li+li{border-top:1px dashed var(--line)}
   .tldr-steps a{display:flex;align-items:baseline;gap:10px;padding:11px 8px 11px 4px;
     text-decoration:none;color:var(--ink2);font-size:15.5px;line-height:1.55;
@@ -416,14 +418,13 @@
   .tldr-steps a::after{content:"›";flex:none;color:var(--muted);font-weight:800;
     opacity:.35;transition:opacity .15s,transform .15s}
   .tldr-steps a:hover::after{opacity:1;transform:translateX(2px)}
-  .tldr-loop{font-size:15px}
-  .tldr-hint{display:block;margin-top:6px;font-size:12.5px;color:var(--muted);font-weight:400}
   .tldr-text p b{color:var(--ink)}
-  .tldr-rate{background:var(--paper2);border-radius:8px;padding:12px 16px;font-size:14.5px}
-  .tldr-more{font-size:14.5px;color:var(--muted)}
+  .tldr-rate{grid-area:rate;margin:0;background:var(--paper2);border-radius:8px;padding:12px 16px;font-size:14.5px}
+  .tldr-more{grid-area:more;margin:0;font-size:14.5px;color:var(--muted)}
   .tldr-arrow{display:inline-block;animation:tldrbob 1.4s ease-in-out infinite;font-weight:800;color:var(--accent)}
   @keyframes tldrbob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-  @media(max-width:720px){.tldr-grid{grid-template-columns:1fr;gap:18px}}
+  @media(max-width:720px){.tldr-grid{grid-template-columns:1fr;gap:16px;
+    grid-template-areas:"diagram" "steps" "rate" "more"}}
   /* ===== 홈 허브 ===== */
   .home{padding:0 0 40px}
   .home-hero{padding:56px 0 30px;text-align:center;position:relative;overflow:hidden}
@@ -543,10 +544,9 @@
         <li><a href="#link6" onclick="track('tldr_jump',{to:'link6'})"><span class="ts-n">⑤</span><span class="ts-t">입주가 시작되면 늘어난 물량이 <b class="j">전세를 누른다</b></span></a></li>
         <li><a href="#link2" onclick="track('tldr_jump',{to:'link2'})"><span class="ts-n">⑥</span><span class="ts-t">전세가 빠지면 <b class="m">매매도 따라 내린다</b></span></a></li>
       </ol>
-      <p class="tldr-loop">값이 내리니 공급이 멈추고 — <b>다시 처음으로.</b> <span class="tldr-hint">문장을 누르면 근거가 된 섹션으로 이동한다</span></p>
-      <p class="tldr-rate"><b>⚡ 금리</b>는 이 사이클 <b>바깥</b>에서 순환 전체를 흔드는 외부 힘이다. 2021년 저금리가 대표적.</p>
-      <p class="tldr-more">아래에서 <b>15개 시도 데이터</b>로 이 고리를 하나씩 검증했다. <span class="tldr-arrow">↓</span></p>
     </div>
+    <p class="tldr-rate"><b>⚡ 금리</b>는 이 사이클 <b>바깥</b>에서 순환 전체를 흔드는 외부 힘이다. 2021년 저금리가 대표적.</p>
+    <p class="tldr-more">아래에서 <b>15개 시도 데이터</b>로 이 고리를 하나씩 검증했다. <span class="tldr-arrow">↓</span></p>
   </div>
 </div></section>
 
