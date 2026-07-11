@@ -12,9 +12,8 @@ GitHub Actions(.github/workflows/update-stats.yml)가 매달 실행한다.
 데이터셋 구성 (docs/advanced_stats_catalog.md 참조):
   permits  — 국토교통부 「주택건설실적통계」 주택규모별 인허가실적(월별 누계):
              6월·12월 누계에서 (계 − 40㎡이하)로 '40제외' 반기값 산출
-  monthly  — 한국부동산원 「전국주택가격동향조사」(아파트): 매매·전세·월세 지수,
-             전세가율, 전월세전환율 — 최신 월 스냅숏(지수값 + 전월대비)
   occupancy — 입주물량은 공공 API가 없어 자동 갱신 대상에서 제외(수동 시딩 유지)
+  (월간 가격동향 섹션은 UI에서 제외되어 갱신 대상 아님 — 2026-07-11)
 """
 import io, os, re, sys, json, time
 import urllib.request
@@ -34,13 +33,6 @@ CONF = {
         'orgId': '116',
         'tblId': 'DT_MLTM_2119',   # ← --discover '주택규모별 인허가' 로 검증할 것
         'itm': 'ALL',
-    },
-    'monthly': {               # 전국주택가격동향(아파트) — orgId 408
-        'index_maega':  {'orgId': '408', 'tblId': 'DT_408_2006_S0053'},  # 매매가격지수(아파트) ← discover로 검증
-        'index_jeonse': {'orgId': '408', 'tblId': 'DT_408_2006_S0056'},  # 전세가격지수(아파트)
-        'index_wolse':  {'orgId': '408', 'tblId': 'DT_408_2006_S0059'},  # 월세통합가격지수(아파트)
-        'ratio':        {'orgId': '408', 'tblId': 'DT_30404_N0006_R1'},  # 매매가 대비 전세가 비율(2019 화면 URL 확인)
-        'conv':         {'orgId': '408', 'tblId': 'DT_30404_N0009_R1'},  # 전월세전환율 ← discover로 검증
     },
 }
 
@@ -143,54 +135,6 @@ def fetch_permits():
     return rows_out
 
 
-# ---- monthly: 최신월 스냅숏 ---------------------------------------------
-MONTH_REGIONS = ['수도권','서울','경기','인천','부산','대구','광주','대전','세종','울산','강원','충북','충남','전북','전남','경북','경남','제주']
-
-def fetch_latest_two(cfg):
-    """해당 표의 최신 2개월치 (지역→[이번달, 지난달])"""
-    data = kosis({
-        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
-        'objL1': 'ALL', 'objL2': 'ALL',
-        'itmId': 'ALL', 'prdSe': 'M', 'newEstPrdCnt': '2',
-    })
-    by_reg = {}
-    prds = sorted({r['PRD_DE'] for r in data})
-    if len(prds) < 1: return None, {}
-    latest, prev = prds[-1], (prds[-2] if len(prds) > 1 else None)
-    for row in data:
-        reg = (row.get('C1_NM') or '').strip()
-        # 아파트 필터 (표가 유형 분류를 가질 때)
-        typ = (row.get('C2_NM') or '아파트').strip()
-        if typ not in ('아파트', '계', '-'): continue
-        try: v = float(row['DT'])
-        except (TypeError, ValueError): continue
-        d = by_reg.setdefault(reg, {})
-        d[row['PRD_DE']] = v
-    out = {}
-    for reg, d in by_reg.items():
-        cur = d.get(latest); pre = d.get(prev) if prev else None
-        chg = None if (cur is None or pre is None) else round(cur - pre, 2)
-        out[reg] = [cur, chg]
-    return latest, out
-
-
-def fetch_monthly():
-    metrics = {}
-    latest_prd = None
-    keymap = {'index_wolse':'wolse','index_jeonse':'jeonse','index_maega':'maega','ratio':'ratio','conv':'conv'}
-    for k, cfg in CONF['monthly'].items():
-        prd, by_reg = fetch_latest_two(cfg)
-        latest_prd = latest_prd or prd
-        arr = []
-        for reg in MONTH_REGIONS:
-            hit = by_reg.get(reg) or by_reg.get(reg + '특별시') or by_reg.get(reg + '광역시')
-            arr.append(hit if hit else [None, None])
-        metrics[keymap[k]] = arr
-        time.sleep(0.2)
-    period = '%s-%s' % (latest_prd[:4], latest_prd[4:6]) if latest_prd else None
-    return {'period': period, 'regions': MONTH_REGIONS, 'metrics': metrics}
-
-
 # ---- index.html 재작성 ----------------------------------------------------
 START, END = '/*ADV_DATA_START*/', '/*ADV_DATA_END*/'
 
@@ -218,8 +162,8 @@ def main():
     _, _, _, adv = read_current_adv()
     if arg == '--dry-run':
         write_adv(adv)  # 동일 데이터 재기록 = 마커·직렬화 왕복 검증
-        print('dry-run ok: permits %d rows, monthly %s, occupancy %d rows' % (
-            len(adv['permits']['rows']), adv['monthly']['period'], len(adv['occupancy']['rows'])))
+        print('dry-run ok: permits %d rows, occupancy %d rows' % (
+            len(adv['permits']['rows']), len(adv['occupancy']['rows'])))
         return
     assert arg == '--update', 'usage: --update | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
@@ -231,13 +175,6 @@ def main():
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
         print('permits skip:', e)
-    try:
-        monthly = fetch_monthly()
-        if monthly['period'] and any(any(p[0] is not None for p in v) for v in monthly['metrics'].values()):
-            adv['monthly'] = monthly
-            changed.append('monthly(%s)' % monthly['period'])
-    except Exception as e:
-        print('monthly skip:', e)
     if changed:
         write_adv(adv)
         print('updated:', ', '.join(changed))
