@@ -1,0 +1,42 @@
+name: 심화통계 자동 갱신 (KOSIS)
+
+on:
+  schedule:
+    # 매달 3일 09:00 KST (KOSIS 월간 갱신 반영 후)
+    - cron: '0 0 3 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: KOSIS 데이터 갱신
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+        run: |
+          if [ -z "$KOSIS_API_KEY" ]; then
+            echo "::warning::KOSIS_API_KEY 시크릿이 없어 갱신을 건너뜁니다. 저장소 Settings > Secrets에 추가하세요."
+            exit 0
+          fi
+          python tools/update_adv_data.py --update
+
+      - name: 변경 시 커밋·푸시
+        run: |
+          if git diff --quiet index.html; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git config user.name "stats-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "심화통계 데이터 자동 갱신 (KOSIS)"
+          git push
