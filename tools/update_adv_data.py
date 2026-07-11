@@ -31,8 +31,7 @@ KEY = os.environ.get('KOSIS_API_KEY', '')
 CONF = {
     'permits_size': {          # 주택규모별 인허가실적(월별 누계) — 40제외 산출용
         'orgId': '116',
-        'tblId': 'DT_MLTM_2119',   # ← --discover '주택규모별 인허가' 로 검증할 것
-        'itm': 'ALL',
+        'tblId': 'DT_MLTM_1952',   # 2026-07 API 실측 확인 (C1=규모, C2/C3=권역, C4=시도)
     },
 }
 
@@ -84,54 +83,66 @@ def discover(keyword):
 
 
 # ---- permits: 규모별 월별누계 → 40제외 반기 -----------------------------
-def fetch_permits():
-    cfg = CONF['permits_size']
-    rows_out = []
-    # 6·12월 누계 시점만 요청 (2007~현재)
-    import datetime
-    now = datetime.date.today()
-    prd = []
-    for y in range(2007, now.year + 1):
-        prd.append('%d06' % y)
-        prd.append('%d12' % y)
-    data = kosis({
-        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
-        'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL',
-        'itmId': 'ALL', 'prdSe': 'M',
-        'startPrdDe': '200706', 'endPrdDe': '%d12' % now.year,
-    })
-    # (지역, 시점) → {'계':v, '40이하':v}
-    grid = {}
+# DT_MLTM_1952 구조: C1=규모(계/40㎡이하/...), C2=권역별1, C3=권역별2, C4=시도
+# '수도권' 값 = C3=수도권 & C4=소계, 나머지 14개 시도 = C4 이름 그대로.
+def _region_of(row):
+    c3 = (row.get('C3_NM') or '').strip()
+    c4 = (row.get('C4_NM') or '').strip()
+    if c3 == '수도권' and c4 == '소계':
+        return '수도권'
+    return c4 if c4 in REG15 else None
+
+
+def _fetch_period(cfg, prd_de):
+    try:
+        data = _fetch_period_raw(cfg, prd_de)
+    except RuntimeError as e:
+        if 'err 30' in str(e):  # 해당 시점 데이터 없음
+            return {}
+        raise
+    out = {}
     for row in data:
-        prd_de = row.get('PRD_DE', '')
-        if not (prd_de.endswith('06') or prd_de.endswith('12')): continue
-        region = (row.get('C1_NM') or row.get('C2_NM') or '').strip()
-        size_nm = (row.get('C3_NM') or row.get('C2_NM') or '').strip()
-        v = row.get('DT')
-        try: v = int(float(v))
-        except (TypeError, ValueError): continue
-        key = (region, prd_de)
-        g = grid.setdefault(key, {})
-        if size_nm in ('계', '합계', '소계'): g['total'] = v
-        elif '40' in size_nm and '이하' in size_nm: g['small'] = v
-    # 반기값: 6월 누계=H1, 12월 누계−6월 누계=H2. 값 = total−small(40제외)
-    def ex40(region, prd_de):
-        g = grid.get((region, prd_de))
-        if not g or 'total' not in g: return None
-        return g['total'] - g.get('small', 0)
-    years = sorted({int(p[:4]) for (_, p) in grid})
-    for y in years:
-        h1 = ['%d06' % y, '%dH1' % y]
-        h2 = ['%d12' % y, '%dH2' % y]
-        v1 = [ex40(r, h1[0]) for r in REG15]
+        region = _region_of(row)
+        if not region: continue
+        size_nm = (row.get('C1_NM') or '').strip()
+        try: v = int(float(row['DT']))
+        except (TypeError, ValueError, KeyError): continue
+        g = out.setdefault(region, {})
+        if size_nm == '계': g['total'] = v
+        elif size_nm == '40㎡이하': g['small'] = v
+    ex = {}
+    for region, g in out.items():
+        if 'total' in g:
+            ex[region] = g['total'] - g.get('small', 0)
+    return ex
+
+
+def _fetch_period_raw(cfg, prd_de):
+    return kosis({
+        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
+        'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL', 'objL4': 'ALL',
+        'itmId': 'ALL', 'prdSe': 'M',
+        'startPrdDe': prd_de, 'endPrdDe': prd_de,
+    })
+
+
+def fetch_permits():
+    import datetime
+    cfg = CONF['permits_size']
+    now = datetime.date.today()
+    rows_out = []
+    for y in range(2007, now.year + 1):
+        h1 = _fetch_period(cfg, '%d06' % y)
+        time.sleep(0.15)
+        v1 = [h1.get(r) for r in REG15]
         if any(v is not None for v in v1):
-            rows_out.append({'p': h1[1], 'v': v1})
-        v_cum = [ex40(r, h2[0]) for r in REG15]
-        if any(v is not None for v in v_cum):
-            v2 = []
-            for a, b in zip(v_cum, v1):
-                v2.append(None if (a is None or b is None) else a - b)
-            rows_out.append({'p': h2[1], 'v': v2})
+            rows_out.append({'p': '%dH1' % y, 'v': v1})
+        cum = _fetch_period(cfg, '%d12' % y)
+        time.sleep(0.15)
+        vc = [cum.get(r) for r in REG15]
+        if any(v is not None for v in vc):
+            v2 = [None if (a is None or b is None) else a - b for a, b in zip(vc, v1)]
+            rows_out.append({'p': '%dH2' % y, 'v': v2})
     return rows_out
 
 
