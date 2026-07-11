@@ -2,8 +2,8 @@ name: 심화통계 자동 갱신 (KOSIS)
 
 on:
   schedule:
-    # 매달 3일 09:00 KST (KOSIS 월간 갱신 반영 후)
-    - cron: '0 0 3 * *'
+    # 매주 금요일 09:00 KST (주간동향 목요일 발표 다음날) — 인허가는 새 반기 나올 때만 변경됨
+    - cron: '0 0 * * 5'
   workflow_dispatch: {}
 
 permissions:

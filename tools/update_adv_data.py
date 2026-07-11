@@ -33,7 +33,15 @@ CONF = {
         'orgId': '116',
         'tblId': 'DT_MLTM_1952',   # 2026-07 API 실측 확인 (C1=규모, C2/C3=권역, C4=시도)
     },
+    'weekly': {                # 주간 아파트 가격지수 변동률 (부동산원, 매주 발표)
+        'maega':  {'orgId': '408', 'tblId': 'DT_304004_WEEK_001_B'},
+        'jeonse': {'orgId': '408', 'tblId': 'DT_304004_WEEK_003_B'},
+        'weeks': 12,           # 최근 12주 유지
+    },
 }
+
+WEEKLY_REGIONS = ['수도권','서울','경기','인천','부산','대구','광주','대전','세종','울산',
+                  '강원','충북','충남','전북','전남','경북','경남','제주']
 
 REG15 = ['수도권','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주']
 
@@ -146,6 +154,40 @@ def fetch_permits():
     return rows_out
 
 
+# ---- weekly: 주간 아파트 매매·전세 변동률 --------------------------------
+def _fetch_weekly_one(cfg, weeks):
+    data = kosis({
+        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
+        'objL1': 'ALL', 'itmId': 'ALL', 'prdSe': 'F',
+        'newEstPrdCnt': str(weeks),
+    })
+    by = {}
+    for row in data:
+        reg = (row.get('C1_NM') or '').strip()
+        if reg not in WEEKLY_REGIONS: continue
+        try: v = float(row['DT'])
+        except (TypeError, ValueError, KeyError): continue
+        by.setdefault(row['PRD_DE'], {})[reg] = v
+    return by
+
+
+def fetch_weekly():
+    w = CONF['weekly']
+    ma = _fetch_weekly_one(w['maega'], w['weeks'])
+    time.sleep(0.2)
+    je = _fetch_weekly_one(w['jeonse'], w['weeks'])
+    dates = sorted(set(ma) | set(je))[-w['weeks']:]
+    rows = []
+    for d in dates:
+        rows.append({
+            'p': '%s-%s-%s' % (d[:4], d[4:6], d[6:8]),
+            'ma': [ma.get(d, {}).get(r) for r in WEEKLY_REGIONS],
+            'je': [je.get(d, {}).get(r) for r in WEEKLY_REGIONS],
+        })
+    return {'regions': WEEKLY_REGIONS, 'rows': rows,
+            'note': '주간 아파트 매매·전세가격지수 변동률(%) · 매주 발표'}
+
+
 # ---- index.html 재작성 ----------------------------------------------------
 START, END = '/*ADV_DATA_START*/', '/*ADV_DATA_END*/'
 
@@ -179,6 +221,13 @@ def main():
     assert arg == '--update', 'usage: --update | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
+    try:
+        weekly = fetch_weekly()
+        if weekly['rows']:
+            adv['weekly'] = weekly
+            changed.append('weekly(~%s)' % weekly['rows'][-1]['p'])
+    except Exception as e:
+        print('weekly skip:', e)
     try:
         rows = fetch_permits()
         if rows and len(rows) >= len(adv['permits']['rows']):
