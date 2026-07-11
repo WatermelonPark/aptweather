@@ -78,22 +78,72 @@ def find_art(art_dir, score):
     return None
 
 
-def cutout(path, thresh=42):
-    """단색 배경을 가장자리 flood-fill로 투명 처리하고 내용만 트림."""
-    im = Image.open(path).convert('RGB')
+def _largest_component(opaque):
+    """opaque: 2D bool ndarray. 가장 큰 4연결 성분만 True로 남긴 마스크를 반환.
+    (점선 테두리·드롭섀도우처럼 배경 flood-fill 뒤에도 남는 얇은 조각을 걸러낸다.)"""
+    import numpy as np
+    from collections import deque
+    H, W = opaque.shape
+    labels = np.zeros((H, W), dtype=np.int32)
+    visited = np.zeros((H, W), dtype=bool)
+    cur = 0
+    sizes = [0]
+    for y in range(H):
+        row = opaque[y]
+        for x in range(W):
+            if row[x] and not visited[y, x]:
+                cur += 1
+                q = deque([(y, x)])
+                visited[y, x] = True
+                size = 0
+                while q:
+                    cy, cx = q.popleft()
+                    labels[cy, cx] = cur
+                    size += 1
+                    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        ny, nx = cy + dy, cx + dx
+                        if 0 <= ny < H and 0 <= nx < W and opaque[ny, nx] and not visited[ny, nx]:
+                            visited[ny, nx] = True
+                            q.append((ny, nx))
+                sizes.append(size)
+    if cur == 0:
+        return opaque
+    biggest = int(np.argmax(sizes))
+    return labels == biggest
+
+
+def cutout(path, thresh=48):
+    """배경 제거 + 내용만 트림.
+    이미 알파 채널이 있는 소스(사전 가공된 PNG)는 그대로 크롭만 한다.
+    그 외에는 가장자리 flood-fill로 배경을 지운 뒤, 점선 테두리·드롭섀도우 같은
+    잔여 조각을 떨어내기 위해 가장 큰 연결 성분(피사체)만 남긴다."""
+    import numpy as np
+    src = Image.open(path)
+    if src.mode == 'RGBA':
+        alpha = src.getchannel('A')
+        if alpha.getextrema()[0] < 250:
+            bbox = src.getbbox()
+            return src.crop(bbox) if bbox else src
+
+    im = src.convert('RGB')
     w, h = im.size
     key = (255, 0, 255)
     seeds = [(1, 1), (w - 2, 1), (1, h - 2), (w - 2, h - 2),
              (w // 2, 1), (w // 2, h - 2), (1, h // 2), (w - 2, h // 2)]
     for sd in seeds:
         ImageDraw.floodfill(im, sd, key, thresh=thresh)
+
+    arr = np.array(im)
+    opaque = ~np.all(arr == np.array(key), axis=2)
+    keep = _largest_component(opaque)
+
     px = im.load()
     out = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     op = out.load()
     for y in range(h):
         for x in range(w):
-            c = px[x, y]
-            if c != key:
+            if keep[y, x]:
+                c = px[x, y]
                 op[x, y] = (c[0], c[1], c[2], 255)
     bbox = out.getbbox()
     return out.crop(bbox) if bbox else out
