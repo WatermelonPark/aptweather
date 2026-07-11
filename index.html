@@ -472,6 +472,12 @@
   @media(min-width:721px){
     .adv-tblwrap.compact{display:none}
   }
+  .adv-links{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+  .adv-links a{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;text-decoration:none;transition:.15s}
+  .adv-links a:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .adv-links b{display:block;font-size:14px;color:var(--ink);margin-bottom:2px}
+  .adv-links span{font-size:12px;color:var(--muted);line-height:1.5}
   /* ===== 홈 허브 ===== */
   .home{padding:0 0 40px}
   .home-hero{padding:56px 0 30px;text-align:center;position:relative;overflow:hidden}
@@ -959,6 +965,23 @@
       <div class="adv-tblwrap compact" id="adv-occ-compact"></div>
       <div class="adv-legend"><span><i style="background:#fdecea"></i>기준선 초과</span><span><i style="background:#eaf3fb"></i>기준선 60% 미만</span><span><i style="background:#fbf7ea"></i>미래 분기</span></div>
       <div class="src-note">자료: 분양·입주 공개 데이터 집계 (분기 합산)</div>
+    </section>
+
+    <section class="adv-sec">
+      <div class="adv-h"><h3>원자료 바로가기</h3></div>
+      <p class="adv-note">위 표들의 원천이 되는 공식 통계 사이트와, 시장을 읽을 때 함께 보는 국내외 지표 사이트다.</p>
+      <div class="adv-links">
+        <a href="https://kosis.kr" target="_blank" rel="noopener" onclick="track('adv_link',{to:'kosis'})"><b>KOSIS 국가통계포털</b><span>인허가·가격지수·전세가율 원자료</span></a>
+        <a href="https://www.reb.or.kr/r-one/" target="_blank" rel="noopener" onclick="track('adv_link',{to:'r-one'})"><b>부동산원 R-ONE</b><span>주간 아파트 매매·전세 동향</span></a>
+        <a href="https://www.bok.or.kr" target="_blank" rel="noopener" onclick="track('adv_link',{to:'bok'})"><b>한국은행</b><span>기준금리·금융 통계</span></a>
+        <a href="https://www.kcif.or.kr/annual/reportList" target="_blank" rel="noopener" onclick="track('adv_link',{to:'kcif'})"><b>국제금융센터</b><span>매일의 국제금융 속보</span></a>
+        <a href="https://ko.tradingeconomics.com/calendar" target="_blank" rel="noopener" onclick="track('adv_link',{to:'te'})"><b>TradingEconomics</b><span>세계 경제지표 캘린더·환율·채권</span></a>
+        <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank" rel="noopener" onclick="track('adv_link',{to:'fedwatch'})"><b>CME FedWatch</b><span>미국 기준금리 확률</span></a>
+        <a href="https://www.bls.gov/news.release/cpi.nr0.htm" target="_blank" rel="noopener" onclick="track('adv_link',{to:'bls'})"><b>미국 노동통계국(BLS)</b><span>CPI·고용 발표</span></a>
+        <a href="https://www.clevelandfed.org/indicators-and-data/inflation-nowcasting" target="_blank" rel="noopener" onclick="track('adv_link',{to:'cleveland'})"><b>클리블랜드 연은</b><span>인플레이션 나우캐스팅</span></a>
+        <a href="https://m.stock.naver.com/marketindex/home/major/exchange/bond" target="_blank" rel="noopener" onclick="track('adv_link',{to:'naver'})"><b>네이버증권 시장지표</b><span>환율·금리 간편 조회</span></a>
+        <a href="https://hogangnono.com/" target="_blank" rel="noopener" onclick="track('adv_link',{to:'hogang'})"><b>호갱노노</b><span>단지별 입주물량·실거래</span></a>
+      </div>
     </section>
   </div></div>
 
