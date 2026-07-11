@@ -1,149 +1,193 @@
 # -*- coding: utf-8 -*-
-"""부린이 테스트 점수별 공유 카드 (800x800) — 10단계 레벨"""
-import io, os, sys
-from PIL import Image, ImageDraw, ImageFont
+"""부린이 테스트 점수별 공유 카드 11장 (800x800) — 부동산 여정 (달걀 → 봉황).
+
+문구는 index.html의 BLV[score]와 1:1로 대응한다. 둘 중 하나를 고치면 반드시 같이 고칠 것.
+
+아트 소스:
+  art_raw/raw-<score>.{png,webp,jpg,jpeg} 가 있으면 그 그림을 배경 제거(단색 배경 flood-fill)
+  후 카드 히어로 자리에 합성한다. 없는 레벨은 v3 스타일(이모지 없이 큰 점수 숫자)로 대체한다 —
+  '그림 대기중' 같은 플레이스홀더는 배포용으로 쓰지 않는다.
+
+  그림을 새로 구하면 art_raw/raw-<score>.png 로 넣고 이 스크립트를 다시 실행하면
+  그 레벨만 실사 아트로 자동 교체된다.
+
+사용:  python tools/make_beginner_cards.py
+"""
+import os
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 W = H = 800
-WHITE = (255, 255, 255)
-BAR = (26, 107, 84)          # 부린이 = 짙은 초록
-PILL = (26, 107, 84)
+PAPER = (246, 244, 238)
+CARD = (255, 255, 255)
+LINE = (228, 224, 214)
 INK = (22, 32, 58)
-GRAY = (200, 195, 183)       # /10
-FOOT = (139, 133, 118)
-DOT_ON = (31, 138, 112)
-DOT_OFF = (229, 224, 213)
+MUTED = (139, 133, 118)
+GRAY = (203, 198, 187)
+METER_OFF = (233, 230, 221)
 
-RED = (192, 57, 43)
-AMBER = (217, 154, 0)
-GREEN = (31, 138, 112)
-GOLD = (184, 134, 47)
-# 원본 램프 유지: 0~4 빨강 / 5~6 앰버 / 7~8 초록 / 9~10 골드
-ACCENT = [RED]*5 + [AMBER]*2 + [GREEN]*2 + [GOLD]*2
+# 10단 연속 램프 (0~5 붉은 계열 = 아직 어린이 / 6에서 초록 점프 / 10은 금)
+RAMP = [
+    (178, 59, 46), (178, 59, 46), (192, 57, 43), (207, 91, 42), (217, 130, 0),
+    (217, 163, 0), (106, 168, 79), (61, 154, 99), (31, 138, 112), (20, 119, 111),
+    (184, 134, 47),
+]
 
 NOTO = 'C:/Windows/Fonts/NotoSansKR-VF.ttf'
-EMOJI = 'C:/Windows/Fonts/seguiemj.ttf'
+
+# (LV배지, 이름, 도발 문구 2줄) — index.html BLV[score]의 lv/g/taunt와 대응
+LEVELS = [
+    ('LV1', '무주택 달걀', ['아직 껍데기 속', '무주택입니다']),
+    ('LV1', '부화 임박', ['곧 세상 밖으로', '나올 참입니다']),
+    ('LV2', '갓 깬 삐약이', ['전세 계약서가', '아직 무섭죠?']),
+    ('LV3', '솜털 병아리', ['용어는 외웠는데', '실전은 아직이죠']),
+    ('LV4', '첫 발품 영계', ['임장은 이제', '다녀보셨나요?']),
+    ('LV5', '알 낳는 암탉', ['슬슬 감이', '잡히시죠?']),
+    ('LV6', '목청 좋은 장닭', ['이제 아무도', '못 말리겠는데요?']),
+    ('LV7', '내 집 마련', ['드디어 첫 둥지', '축하합니다!']),
+    ('LV8', '다주택자', ['한 채로는', '성에 안 차죠?']),
+    ('LV9', '부동산 거물', ['시장이 손안에', '들어왔네요']),
+    ('LV10', '부동산 봉황', ['금은보화 위에', '앉으셨네요']),
+]
+
 
 def noto(size, weight='Bold'):
     f = ImageFont.truetype(NOTO, size)
     f.set_variation_by_name(weight)
     return f
 
+
 def fit_font(text, target, weight='Bold', axis='h', lo=10, hi=460):
-    """ink 높이(또는 너비)가 target이 되도록 폰트 크기를 이분 탐색"""
-    probe = Image.new('RGB', (10, 10))
-    d = ImageDraw.Draw(probe)
+    pr = ImageDraw.Draw(Image.new('RGB', (10, 10)))
     best = lo
     while lo <= hi:
         mid = (lo + hi) // 2
-        f = noto(mid, weight)
-        bb = d.textbbox((0, 0), text, font=f)
-        v = (bb[3]-bb[1]) if axis == 'h' else (bb[2]-bb[0])
+        bb = pr.textbbox((0, 0), text, font=noto(mid, weight))
+        v = (bb[3] - bb[1]) if axis == 'h' else (bb[2] - bb[0])
         if v <= target:
             best = mid; lo = mid + 1
         else:
             hi = mid - 1
     return noto(best, weight)
 
-def ink_bbox(draw, xy, text, font, **kw):
-    return draw.textbbox(xy, text, font=font, **kw)
 
-def emoji_img(ch, box):
-    """이모지를 그려 ink만 크롭한 뒤 box(px) 정사각에 맞춰 축소"""
-    canvas = Image.new('RGBA', (400, 400), (0, 0, 0, 0))
-    d = ImageDraw.Draw(canvas)
-    d.text((40, 40), ch, font=ImageFont.truetype(EMOJI, 137), embedded_color=True)
-    bb = canvas.getbbox()
-    im = canvas.crop(bb)
-    scale = box / max(im.size)
-    return im.resize((max(1, int(im.width*scale)), max(1, int(im.height*scale))), Image.LANCZOS)
+def find_art(art_dir, score):
+    for ext in ('png', 'webp', 'jpg', 'jpeg', 'png.webp'):
+        p = os.path.join(art_dir, 'raw-%d.%s' % (score, ext))
+        if os.path.exists(p):
+            return p
+    return None
 
-def rounded(draw, box, r, **kw):
-    draw.rounded_rectangle(box, radius=r, **kw)
 
-def make_card(score, level, out_path):
-    img = Image.new('RGB', (W, H), WHITE)
+def cutout(path, thresh=42):
+    """단색 배경을 가장자리 flood-fill로 투명 처리하고 내용만 트림."""
+    im = Image.open(path).convert('RGB')
+    w, h = im.size
+    key = (255, 0, 255)
+    seeds = [(1, 1), (w - 2, 1), (1, h - 2), (w - 2, h - 2),
+             (w // 2, 1), (w // 2, h - 2), (1, h // 2), (w - 2, h // 2)]
+    for sd in seeds:
+        ImageDraw.floodfill(im, sd, key, thresh=thresh)
+    px = im.load()
+    out = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    op = out.load()
+    for y in range(h):
+        for x in range(w):
+            c = px[x, y]
+            if c != key:
+                op[x, y] = (c[0], c[1], c[2], 255)
+    bbox = out.getbbox()
+    return out.crop(bbox) if bbox else out
+
+
+def place_art(card, art, box):
+    bx0, by0, bx1, by1 = box
+    bw, bh = bx1 - bx0, by1 - by0
+    s = min(bw / art.width, bh / art.height)
+    nw, nh = int(art.width * s), int(art.height * s)
+    art2 = art.resize((nw, nh), Image.LANCZOS)
+    card.alpha_composite(art2, (bx0 + (bw - nw) // 2, by0 + (bh - nh) // 2))
+
+
+def make_card(score, art_dir, out_path):
+    lv, name, taunt2 = LEVELS[score]
+    accent = RAMP[score]
+
+    img = Image.new('RGBA', (W, H), PAPER)
+    M, R = 26, 38
+    sh = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle([M, M + 6, W - M, H - M + 6], R, fill=(22, 32, 58, 34))
+    img = Image.alpha_composite(img, sh.filter(ImageFilter.GaussianBlur(11)))
     d = ImageDraw.Draw(img)
-    accent = ACCENT[score]
+    d.rounded_rectangle([M, M, W - M, H - M], R, fill=CARD, outline=LINE, width=2)
 
-    # 상단 바
-    d.rectangle([0, 0, W, 14], fill=BAR)
+    # 헤더: 이름 + 레벨 배지
+    d.text((60, 86), '부린이 테스트', font=noto(27), fill=INK, anchor='lm')
+    bf, sf = noto(30), noto(19, 'Medium')
+    bw = d.textbbox((0, 0), lv, font=bf)[2] + d.textbbox((0, 0), '/ 10', font=sf)[2] + 20
+    bx1 = W - M - 34
+    d.rounded_rectangle([bx1 - bw - 28, 66, bx1, 108], 21, fill=accent)
+    d.text((bx1 - bw - 14, 88), lv, font=bf, fill=CARD, anchor='lm')
+    d.text((bx1 - 14, 89), '/ 10', font=sf, fill=CARD, anchor='rm')
 
-    # 좌상단 병아리 + 필
-    chick = emoji_img('\U0001F423', 58)
-    img.paste(chick, (38, 44), chick)
-    pill_f = noto(30, 'Bold')
-    label = '부린이 테스트'
-    tw = d.textbbox((0, 0), label, font=pill_f)
-    pw = (tw[2]-tw[0]) + 64
-    rounded(d, [114, 46, 114+pw, 100], 27, fill=PILL)
-    d.text((114+pw/2, 73), label, font=pill_f, fill=WHITE, anchor='mm')
+    art_path = find_art(art_dir, score)
+    if art_path:
+        place_art(img, cutout(art_path), (110, 128, W - 110, 468))
+        score_y = 494
+    else:
+        # v3 폴백: 이모지 없이 점수 숫자가 히어로
+        st = str(score)
+        sfnt = fit_font(st, 200)
+        sb = d.textbbox((0, 0), st, font=sfnt)
+        of = fit_font('/10', 108, axis='w')
+        ob = d.textbbox((0, 0), '/10', font=of)
+        sw_, ow = sb[2] - sb[0], ob[2] - ob[0]
+        gx = (W - (sw_ + 22 + ow)) / 2
+        base = 400
+        d.text((gx - sb[0], base - sb[3]), st, font=sfnt, fill=accent)
+        d.text((gx + sw_ + 22 - ob[0], base - 6 - ob[3]), '/10', font=of, fill=GRAY)
+        score_y = None
 
-    # 우상단 스탬프 (기울어진 라운드 사각형)
-    st_f = noto(44, 'Bold')
-    sb = d.textbbox((0, 0), level['stamp'], font=st_f)
-    sw, sh = (sb[2]-sb[0]) + 64, 86
-    stamp = Image.new('RGBA', (sw+24, sh+24), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(stamp)
-    sd.rounded_rectangle([12, 12, 12+sw, 12+sh], radius=12, outline=accent, width=4)
-    sd.text((12+sw/2, 12+sh/2), level['stamp'], font=st_f, fill=accent, anchor='mm')
-    stamp = stamp.rotate(-8, resample=Image.BICUBIC, expand=True)
-    img.paste(stamp, (620 - stamp.width//2, 103 - stamp.height//2), stamp)
+    if score_y:
+        d.text((W // 2, score_y), '점수 %d/10' % score, font=noto(23, 'Medium'), fill=MUTED, anchor='mm')
 
-    # 큰 이모지
-    em = emoji_img(level['emoji'], 190)
-    img.paste(em, (588 - em.width//2, 306 - em.height//2), em)
-
-    # 점수 + /10
-    s_txt = str(score)
-    s_f = fit_font(s_txt, 248)
-    sb = d.textbbox((0, 0), s_txt, font=s_f)
-    sx = 180 - (sb[2]-sb[0])/2 - sb[0]
-    sy = 475 - sb[3]
-    d.text((sx, sy), s_txt, font=s_f, fill=accent)
-    s_right = sx + sb[2]
-
-    o_f = fit_font('/10', 138, axis='w')
-    ob = d.textbbox((0, 0), '/10', font=o_f)
-    d.text((s_right + 26 - ob[0], 448 - ob[3]), '/10', font=o_f, fill=GRAY)
-
-    # 진행 점 10개
+    # 레벨 미터 10칸
+    lvl = max(1, score)
+    gap, bh = 9, 12
+    x0 = M + 46
+    bw2 = ((W - 2 * x0) - gap * 9) / 10
+    meter_y = 522 if art_path else 470
     for i in range(10):
-        cx = 220 + 40*i
-        c = DOT_ON if i < score else DOT_OFF
-        d.ellipse([cx-13.5, 524-13.5, cx+13.5, 524+13.5], fill=c)
+        x = x0 + i * (bw2 + gap)
+        d.rounded_rectangle([x, meter_y, x + bw2, meter_y + bh], 6, fill=accent if i < lvl else METER_OFF)
 
-    # 도발 문구 2줄 (좌우 여백 60px 확보 — 넘치면 즉시 실패)
-    t_f = noto(62, 'Bold')
-    for i, line in enumerate(level['taunt2']):
-        lb = d.textbbox((400, 610 + i*68), line, font=t_f, anchor='mm')
-        assert lb[0] >= 60 and lb[2] <= W-60, 'taunt line overflows: %r (%d..%d)' % (line, lb[0], lb[2])
-        d.text((400, 610 + i*68), line, font=t_f, fill=INK, anchor='mm')
+    name_y = meter_y + 46
+    d.text((W // 2, name_y), name, font=noto(44), fill=accent, anchor='mm')
 
-    # 푸터
-    f_f = noto(23, 'Medium')
-    d.text((400, 754), '10문항 2지선다 · 3분 · aptweather.co.kr', font=f_f, fill=FOOT, anchor='mm')
+    taunt_y0 = name_y + (74 if art_path else 86)
+    line_gap = 58 if art_path else 74
+    tf = noto(48 if art_path else 60)
+    for i, line in enumerate(taunt2):
+        y = taunt_y0 + i * line_gap
+        bb = d.textbbox((W // 2, y), line, font=tf, anchor='mm')
+        assert bb[0] >= M + 24 and bb[2] <= W - M - 24, 'taunt overflows: %r' % line
+        d.text((W // 2, y), line, font=tf, fill=INK, anchor='mm')
 
-    img.save(out_path, 'PNG', optimize=True)
+    footer_line_y = taunt_y0 + (len(taunt2) - 1) * line_gap + (44 if art_path else 52)
+    footer_line_y = min(footer_line_y, 732)
+    d.line([320, footer_line_y, 480, footer_line_y], fill=LINE, width=2)
+    d.text((W // 2, footer_line_y + 26), 'aptweather.co.kr', font=noto(25), fill=INK, anchor='mm')
 
+    img.convert('RGB').save(out_path, 'PNG', optimize=True)
+    return art_path is not None
 
-LEVELS = [
-    # score 0
-    dict(stamp='태아', emoji='\U0001F95A', taunt2=['아직 엄마 뱃속에', '계시네요…']),
-    dict(stamp='태아', emoji='\U0001F95A', taunt2=['아직 엄마 뱃속에', '계시네요…']),
-    dict(stamp='신생아', emoji='\U0001F476', taunt2=['전세 계약서만 보면', '울음부터 나오죠']),
-    dict(stamp='어린이집', emoji='\U0001F9F8', taunt2=['등기부등본이', '아직 그림책 같죠?']),
-    dict(stamp='유치원', emoji='\U0001F392', taunt2=['LTV랑 DSR,', '아직 헷갈리시죠?']),
-    dict(stamp='초등학생', emoji='✏️', taunt2=['용어는 외웠는데', '실전은 아직이에요']),
-    dict(stamp='중학생', emoji='\U0001F4D0', taunt2=['임장은 이제', '다녀보셨나요?']),
-    dict(stamp='고등학생', emoji='\U0001F4D7', taunt2=['제도는 다 아시네요', '이제 실전만 남았어요']),
-    dict(stamp='대학생', emoji='\U0001F4DA', taunt2=['계약서 앞에서', '안 떨리겠는데요?']),
-    dict(stamp='대학원생', emoji='\U0001F52C', taunt2=['이쯤 되면…', '다주택자세요?']),
-    dict(stamp='교수님', emoji='\U0001F393', taunt2=['혹시… 부동산학', '강의하세요?']),
-]
 
 if __name__ == '__main__':
-    outdir = sys.argv[1]
-    os.makedirs(outdir, exist_ok=True)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    art_dir = os.path.join(root, 'art_raw')
+    share = os.path.join(root, 'share')
+    os.makedirs(share, exist_ok=True)
+    real = []
     for s in range(11):
-        make_card(s, LEVELS[s], os.path.join(outdir, 'beginner-%d.png' % s))
-    print('rendered 11 cards ->', outdir)
+        if make_card(s, art_dir, os.path.join(share, 'beginner-%d.png' % s)):
+            real.append(s)
+    print('11 cards written -> %s (real art: %s)' % (share, real))
