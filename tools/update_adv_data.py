@@ -38,6 +38,11 @@ CONF = {
         'jeonse': {'orgId': '408', 'tblId': 'DT_304004_WEEK_003_B'},
         'weeks': 12,           # 최근 12주 유지
     },
+    'monthly': {               # 월간 아파트 가격지수 (부동산원 월간동향) — 전월비 변동률 계산
+        'maega':  {'orgId': '408', 'tblId': 'DT_30404_B012'},   # 유형별 매매가격지수 (C1=유형, C2=지역)
+        'jeonse': {'orgId': '408', 'tblId': 'DT_30404_B013'},   # 유형별 전세가격지수
+        'months': 12,          # 최근 12개월 변동률 유지 (지수는 13개월 조회)
+    },
 }
 
 WEEKLY_REGIONS = ['수도권','서울','경기','인천','부산','대구','광주','대전','세종','울산',
@@ -188,6 +193,43 @@ def fetch_weekly():
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 매주 발표'}
 
 
+# ---- monthly: 월간 아파트 매매·전세 지수 → 전월비 변동률 ------------------
+def _fetch_monthly_one(cfg, months):
+    data = kosis({
+        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
+        'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'prdSe': 'M',
+        'newEstPrdCnt': str(months + 1),
+    })
+    by = {}
+    for row in data:
+        if (row.get('C1_NM') or '').strip() != '아파트': continue
+        reg = (row.get('C2_NM') or '').strip()
+        if reg not in WEEKLY_REGIONS: continue
+        try: v = float(row['DT'])
+        except (TypeError, ValueError, KeyError): continue
+        by.setdefault(row['PRD_DE'], {})[reg] = v
+    return by
+
+
+def fetch_monthly():
+    m = CONF['monthly']
+    ma = _fetch_monthly_one(m['maega'], m['months'])
+    time.sleep(0.2)
+    je = _fetch_monthly_one(m['jeonse'], m['months'])
+    dates = sorted(set(ma) & set(je))
+    rows = []
+    for prev, cur in zip(dates, dates[1:]):
+        def chg(by):
+            out = []
+            for r in WEEKLY_REGIONS:
+                a, b = by.get(prev, {}).get(r), by.get(cur, {}).get(r)
+                out.append(None if (a in (None, 0) or b is None) else round((b / a - 1) * 100, 2))
+            return out
+        rows.append({'p': '%s-%s' % (cur[:4], cur[4:6]), 'ma': chg(ma), 'je': chg(je)})
+    return {'regions': WEEKLY_REGIONS, 'rows': rows[-m['months']:],
+            'note': '월간 아파트 매매·전세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
+
+
 # ---- index.html 재작성 ----------------------------------------------------
 START, END = '/*ADV_DATA_START*/', '/*ADV_DATA_END*/'
 
@@ -228,6 +270,13 @@ def main():
             changed.append('weekly(~%s)' % weekly['rows'][-1]['p'])
     except Exception as e:
         print('weekly skip:', e)
+    try:
+        monthly = fetch_monthly()
+        if monthly['rows']:
+            adv['monthly'] = monthly
+            changed.append('monthly(~%s)' % monthly['rows'][-1]['p'])
+    except Exception as e:
+        print('monthly skip:', e)
     try:
         rows = fetch_permits()
         if rows and len(rows) >= len(adv['permits']['rows']):
