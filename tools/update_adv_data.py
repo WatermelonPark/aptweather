@@ -334,12 +334,15 @@ def update_occupancy(adv, full=False):
     cq = _complete_quarters(comp, regs)
     mv = fetch_moveins(regs)
     rows_map = {} if full else {_q_of(r['p']): r['v'] for r in O['rows']}
+    est = set() if full else {_q_of(r['p']) for r in O['rows'] if r.get('e')}
     for k, by in cq.items():
         rows_map[k] = [by.get(r) for r in regs]
+        est.discard(k)                          # 실적 확정 → 예정 딱지 제거
     last_cq = max(cq) if cq else None
     for k, by in mv.items():
         if last_cq and k <= last_cq: continue   # 준공 실적이 있으면 실적 우선
         rows_map[k] = [by.get(r, 0) for r in regs]
+        est.add(k)                              # 입주예정 기반 = 미확정 표시
     if full and mv:
         # 준공 이후~입주예정 커버리지 안의 빈 분기는 '예정 없음(0)'으로 채움
         y, q = last_cq if last_cq else min(mv)
@@ -348,8 +351,10 @@ def update_occupancy(adv, full=False):
             if q == 5: y, q = y + 1, 1
             if (y, q) not in rows_map:
                 rows_map[(y, q)] = [0] * len(regs)
+                est.add((y, q))
     keys = sorted(rows_map)
-    O['rows'] = [{'p': _qlabel(*k), 'v': rows_map[k]} for k in keys]
+    O['rows'] = [dict({'p': _qlabel(*k), 'v': rows_map[k]}, **({'e': 1} if k in est else {}))
+                 for k in keys]
     O['note'] = '분기별 아파트 준공 실적 + 입주예정 물량 · 미래 분기 포함'
     return ['occupancy(%d)' % len(keys)]
 
