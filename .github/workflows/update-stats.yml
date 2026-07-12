@@ -25,6 +25,8 @@ jobs:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
           # 한국은행 ECOS (CD금리) — 없으면 금리만 건너뛰고 나머지는 정상 갱신
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
+          # 공공데이터포털 (입주예정물량) — 없으면 입주물량만 건너뜀
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
         run: |
           if [ -z "$KOSIS_API_KEY" ]; then
             echo "::warning::KOSIS_API_KEY 시크릿이 없어 갱신을 건너뜁니다. 저장소 Settings > Secrets에 추가하세요."
