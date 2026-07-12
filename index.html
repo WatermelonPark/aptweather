@@ -500,6 +500,15 @@
   .adv-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #stats-adv .adv-sec,#stats-more .adv-sec{margin-top:8px}
   #stats-market .adv-sec:first-child{margin-top:8px}
+  .subs{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;margin:8px 0 26px}
+  .subs b{font-size:15px}
+  .subs p{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.5}
+  .subs form{display:flex;gap:8px;flex-wrap:wrap}
+  .subs input{flex:1;min-width:180px;font-family:inherit;font-size:14px;padding:10px 12px;
+    border-radius:10px;border:1.5px solid var(--line)}
+  .subs button{font-family:inherit;font-size:14px;font-weight:800;padding:10px 18px;border-radius:10px;
+    border:0;background:var(--ink);color:#fff;cursor:pointer}
+  .subs-msg{display:block;font-size:12.5px;font-weight:700;margin-top:8px;color:#2c7a5b}
   .tr-row{display:flex;justify-content:flex-end;margin:0 0 8px}
   .trbtn{font-family:inherit;font-size:12px;font-weight:800;padding:6px 12px;border-radius:10px;
     border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
@@ -943,6 +952,15 @@
   </div>
 
   <div class="dash" id="stats-market"><div class="wrap">
+    <div class="subs" id="subs-card" style="display:none">
+      <b>📬 시장상황 알림 받기</b>
+      <p>주간 통계가 갱신되면 요약을 이메일로 보내드립니다. 갱신이 있는 주에만 발송되고, 메일 하단에서 언제든 수신거부할 수 있습니다.</p>
+      <form onsubmit="return subsSubmit(this)">
+        <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
+        <button type="submit">알림 받기</button>
+      </form>
+      <span class="subs-msg" id="subs-msg"></span>
+    </div>
     <section class="adv-sec gsec gm-m" id="sec-week">
       <div class="adv-h"><h3>주간 아파트 동향</h3><span class="adv-badge">매주 발표</span><span class="adv-badge">전주 대비 %</span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
@@ -1404,7 +1422,7 @@ function initStats(){
   }));
   document.getElementById('reg-sel').addEventListener('change',e=>{ST.reg=e.target.value;drawStat();});
   fillRegions();renderAux();drawStat();
-  renderWeekSec();renderMonthSec();
+  renderWeekSec();renderMonthSec();initSubs();
 }
 function fillRegions(){
   const sel=document.getElementById('reg-sel');
@@ -2238,6 +2256,25 @@ function drawNationMap(k){
   });
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML='<div style="overflow-x:auto">'+sv.join('')+'</div>';
+}
+/* --- 이메일 알림 구독 (Buttondown) --- */
+const BD_USER='';   // Buttondown 사용자명 설정 시 구독 카드 노출
+function initSubs(){
+  if(BD_USER)document.getElementById('subs-card').style.display='';
+}
+function subsSubmit(f){
+  const email=f.email.value.trim();
+  if(!email)return false;
+  const fd=new FormData(); fd.append('email',email);
+  fetch('https://buttondown.com/api/emails/embed-subscribe/'+BD_USER,{method:'POST',mode:'no-cors',body:fd})
+    .then(()=>{
+      document.getElementById('subs-msg').textContent='확인 메일을 보냈습니다. 메일함에서 구독을 완료해주세요!';
+      f.reset(); track('subscribe',{channel:'email'});
+    })
+    .catch(()=>{
+      document.getElementById('subs-msg').textContent='잠시 후 다시 시도해주세요.';
+    });
+  return false;
 }
 let MAPSCOPE={week:'kr',month:'kr'};
 /* --- 표 행열전환 --- */
