@@ -43,3 +43,9 @@ jobs:
           git add index.html
           git commit -m "통계 데이터 자동 갱신 (KOSIS)"
           git push
+
+      - name: 주간 알림 발송 (Buttondown)
+        env:
+          # 시크릿 없으면 발송만 건너뜀 (주간 데이터가 갱신된 실행에서만 발송)
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY || secrets.BUTTONDOWN }}
+        run: python tools/send_newsletter.py

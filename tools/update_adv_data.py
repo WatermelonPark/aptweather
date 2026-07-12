@@ -525,6 +525,8 @@ def main():
     if changed:
         write_adv(adv)
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
+    # 후속 단계(뉴스레터 발송 등)에 변경 내역 전달 — 커밋 대상 아님
+    io.open(os.path.join(ROOT, '.stats_changed'), 'w', encoding='utf-8').write(','.join(changed))
     if changed:
         print('updated:', ', '.join(changed))
     else:
