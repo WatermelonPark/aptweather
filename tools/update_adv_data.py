@@ -25,6 +25,9 @@ API = 'https://kosis.kr/openapi/Param/statisticsParameterData.do'
 LIST_API = 'https://kosis.kr/openapi/statisticsList.do'
 KEY = os.environ.get('KOSIS_API_KEY', '')
 ECOS_KEY = os.environ.get('ECOS_API_KEY', '')   # 한국은행 ECOS (CD금리용, 없으면 금리만 건너뜀)
+DATAGO_KEY = os.environ.get('DATA_GO_KR_KEY', '')   # 공공데이터포털 (입주예정물량용, 없으면 입주물량만 건너뜀)
+# 한국부동산원 주택공급정보 입주예정물량정보 (data.go.kr/data/15111714) — 반기 갱신, 30세대 이상 단지별
+OCC_API = 'https://api.odcloud.kr/api/15111714/v1/uddi:0b257760-ac19-4841-adb4-b38b4d153397'
 
 # ---- KOSIS 표 설정 ------------------------------------------------------
 # tblId는 `--discover <검색어>` 로 확인 후 채운다.
@@ -246,6 +249,109 @@ def fetch_weekly():
             'seoul': {'regions': gus, 'rows': se_rows},
             'sgg': {'codes': SGG_CODES, 'rows': sg_rows},
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 매주 발표'}
+
+
+# ---- occupancy: 준공실적(과거) + 입주예정물량(미래) ------------------------
+# 과거·완료 분기 = 국토부 준공실적(DT_MLTM_5373, 아파트) 3개월 합산.
+# 미래 분기 = 부동산원 입주예정물량(단지별)을 분기×지역 합산. 서울/경기/인천 → 수도권.
+def _q_of(p): return (int(p[:4]), int(p[5]))          # '2026Q3' → (2026,3)
+def _qlabel(y, q): return '%dQ%d' % (y, q)
+
+
+def fetch_moveins(regions):
+    url = OCC_API + '?' + urllib.parse.urlencode({'page': 1, 'perPage': 1000, 'serviceKey': DATAGO_KEY})
+    d = http_json(url)
+    agg = {}
+    for r in d.get('data', []):
+        ym = str(r.get('입주예정월') or '')
+        if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12:
+            continue   # 입주월 미정 단지는 제외
+        reg = (r.get('지역') or '').strip()
+        if reg in ('서울', '경기', '인천'): reg = '수도권'
+        if reg not in regions: continue
+        try: n = int(r.get('세대수') or 0)
+        except (TypeError, ValueError): continue
+        key = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
+        agg.setdefault(key, {x: 0 for x in regions})
+        agg[key][reg] += n
+    return agg
+
+
+def fetch_completions(start, end, regions):
+    """(y,m) 범위의 준공실적 → {(y,m): {지역: 호수}} (아파트 기준, 월별 개별 호출)"""
+    out = {}
+    y, m = start
+    while (y, m) <= end:
+        prd = '%d%02d' % (y, m)
+        try:
+            data = kosis({'orgId': '116', 'tblId': 'DT_MLTM_5373',
+                          'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL', 'objL4': 'ALL',
+                          'itmId': 'ALL', 'prdSe': 'M', 'startPrdDe': prd, 'endPrdDe': prd})
+        except RuntimeError as e:
+            if 'err 30' in str(e): data = []
+            else: raise
+        by = {}
+        for row in data:
+            if (row.get('C2_NM') or '').strip() != '아파트': continue
+            reg = (row.get('C1_NM') or '').strip()
+            if reg == '수도권소계': reg = '수도권'
+            if reg not in regions: continue
+            try: by[reg] = int(float(row['DT']))
+            except (TypeError, ValueError, KeyError): continue
+        if by: out[(y, m)] = by
+        time.sleep(0.12)
+        m += 1
+        if m == 13: y, m = y + 1, 1
+    return out
+
+
+def _complete_quarters(comp, regions):
+    """월별 준공 → 3개월이 모두 있는 분기만 합산 {(y,q): {지역: 호수}}"""
+    grp = {}
+    for (y, m), by in comp.items():
+        grp.setdefault((y, (m - 1) // 3 + 1), []).append(by)
+    return {k: {r: sum(b.get(r, 0) for b in v) for r in regions}
+            for k, v in grp.items() if len(v) == 3}
+
+
+def update_occupancy(adv, full=False):
+    if not DATAGO_KEY:
+        print('occupancy skip: DATA_GO_KR_KEY 없음')
+        return []
+    import datetime
+    O = adv['occupancy']
+    regs = O['regions']
+    today = datetime.date.today()
+    if full:
+        start = (2017, 1)
+    else:                       # 최근 3개 분기 재계산 분량만 조회
+        y, m = today.year, today.month
+        for _ in range(10):
+            m -= 1
+            if m == 0: y, m = y - 1, 12
+        start = (y, m)
+    comp = fetch_completions(start, (today.year, today.month), regs)
+    cq = _complete_quarters(comp, regs)
+    mv = fetch_moveins(regs)
+    rows_map = {} if full else {_q_of(r['p']): r['v'] for r in O['rows']}
+    for k, by in cq.items():
+        rows_map[k] = [by.get(r) for r in regs]
+    last_cq = max(cq) if cq else None
+    for k, by in mv.items():
+        if last_cq and k <= last_cq: continue   # 준공 실적이 있으면 실적 우선
+        rows_map[k] = [by.get(r, 0) for r in regs]
+    if full and mv:
+        # 준공 이후~입주예정 커버리지 안의 빈 분기는 '예정 없음(0)'으로 채움
+        y, q = last_cq if last_cq else min(mv)
+        while (y, q) < max(mv):
+            q += 1
+            if q == 5: y, q = y + 1, 1
+            if (y, q) not in rows_map:
+                rows_map[(y, q)] = [0] * len(regs)
+    keys = sorted(rows_map)
+    O['rows'] = [{'p': _qlabel(*k), 'v': rows_map[k]} for k in keys]
+    O['note'] = '분기별 아파트 준공 실적 + 입주예정 물량 · 미래 분기 포함'
+    return ['occupancy(%d)' % len(keys)]
 
 
 # ---- monthly: 월간 아파트 매매·전세 지수 → 전월비 변동률 ------------------
@@ -500,6 +606,12 @@ def main():
         discover(sys.argv[2])
         return
     _, _, _, adv = read_current_adv()
+    if arg == '--rebuild-occupancy':   # 입주물량 시계열 전체 재구축 (준공 2017~ 전량 조회, 1회성)
+        assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
+        ch = update_occupancy(adv, full=True)
+        write_adv(adv)
+        print('rebuilt:', ', '.join(ch))
+        return
     if arg == '--dry-run':
         write_adv(adv)  # 동일 데이터 재기록 = 마커·직렬화 왕복 검증
         print('dry-run ok: permits %d rows, occupancy %d rows' % (
@@ -529,6 +641,10 @@ def main():
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
         print('permits skip:', e)
+    try:
+        changed += update_occupancy(adv)
+    except Exception as e:
+        print('occupancy skip:', e)
     if changed:
         write_adv(adv)
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
