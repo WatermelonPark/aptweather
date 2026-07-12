@@ -179,6 +179,10 @@ def fetch_permits():
 # 이름만으로는 '중'·'강서' 등이 타 도시 구와 겹쳐 코드로 식별한다.
 SEOUL_GU_RE = re.compile(r'^a70\d{5}$')
 
+# 전국 상세 지도(ENJ식 시군구 타일)용 지역코드 — index.html NATION_TILE과 동일 집합
+SGG_CODES = ["a0", "a7", "a7010101", "a7010102", "a7010103", "a7010201", "a7010202", "a7010203", "a7010204", "a7010205", "a7010206", "a7010207", "a7010208", "a7010301", "a7010302", "a7010303", "a7020101", "a7020102", "a7020103", "a7020104", "a7020105", "a7020106", "a7020107", "a7020201", "a7020202", "a7020203", "a7020204", "a8", "a80101", "a80102", "a80103", "a80104", "a80105", "a80201", "a80202", "a80203", "a80301", "a80302", "a80303", "a80304", "a80305", "a80306", "a80307", "a80401", "a80402", "a80403", "a80404", "a80501", "a80502", "a80601", "a80602", "a80603", "a80701", "a80702", "a80703", "a80704", "a9", "a901", "a902", "a903", "a904", "a905", "a906", "a907", "a908", "b1", "b10101", "b10102", "b10103", "b10104", "b10105", "b10106", "b10107", "b10108", "b10201", "b10202", "b10203", "b10204", "b10301", "b10302", "b10303", "b10304", "b2", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b3", "b301", "b302", "b303", "b304", "b305", "b4", "b401", "b402", "b403", "b404", "b405", "b5", "b501", "b502", "b503", "b504", "b505", "b6", "c1", "c101", "c102", "c103", "c104", "c105", "c106", "c107", "c2", "c201", "c20101", "c20102", "c20103", "c20104", "c203", "c204", "c206", "c3", "c301", "c302", "c303", "c304", "c305", "c306", "c307", "c308", "c309", "c311", "c312", "c313", "c4", "c401", "c402", "c403", "c404", "c405", "c406", "c407", "c408", "c5", "c501", "c502", "c503", "c504", "c505", "c506", "c6", "c601", "c602", "c603", "c60301", "c60302", "c604", "c605", "c606", "c607", "c608", "c609", "c610", "c611", "c7", "c701", "c70101", "c70102", "c70103", "c70104", "c702", "c703", "c704", "c705", "c706", "c707", "c708", "c709", "c8", "c801", "c802"]
+SGG_SET = set(SGG_CODES)
+
 def _gu_name(nm):
     return nm + '구'   # 강남→강남구, 중→중구
 
@@ -188,7 +192,7 @@ def _fetch_weekly_one(cfg, weeks):
         'objL1': 'ALL', 'itmId': 'ALL', 'prdSe': 'F',
         'newEstPrdCnt': str(weeks),
     })
-    by, seoul = {}, {}
+    by, seoul, sgg = {}, {}, {}
     for row in data:
         code = (row.get('C1') or '').strip()
         reg = (row.get('C1_NM') or '').strip()
@@ -196,9 +200,11 @@ def _fetch_weekly_one(cfg, weeks):
         except (TypeError, ValueError, KeyError): continue
         if SEOUL_GU_RE.match(code):
             seoul.setdefault(row['PRD_DE'], {})[_gu_name(reg)] = v
+        if code in SGG_SET:
+            sgg.setdefault(row['PRD_DE'], {})[code] = v
         if reg in WEEKLY_REGIONS:
             by.setdefault(row['PRD_DE'], {})[reg] = v
-    return by, seoul
+    return by, seoul, sgg
 
 
 def _gu_regions(*maps):
@@ -210,9 +216,9 @@ def _gu_regions(*maps):
 
 def fetch_weekly():
     w = CONF['weekly']
-    ma, ma_se = _fetch_weekly_one(w['maega'], w['weeks'])
+    ma, ma_se, ma_sg = _fetch_weekly_one(w['maega'], w['weeks'])
     time.sleep(0.2)
-    je, je_se = _fetch_weekly_one(w['jeonse'], w['weeks'])
+    je, je_se, je_sg = _fetch_weekly_one(w['jeonse'], w['weeks'])
     dates = sorted(set(ma) | set(je))[-w['weeks']:]
     rows = []
     for d in dates:
@@ -225,8 +231,12 @@ def fetch_weekly():
     se_rows = [{'p': '%s-%s-%s' % (d[:4], d[4:6], d[6:8]),
                 'ma': [ma_se.get(d, {}).get(r) for r in gus],
                 'je': [je_se.get(d, {}).get(r) for r in gus]} for d in dates]
+    sg_rows = [{'p': '%s-%s-%s' % (d[:4], d[4:6], d[6:8]),
+                'ma': [ma_sg.get(d, {}).get(c) for c in SGG_CODES],
+                'je': [je_sg.get(d, {}).get(c) for c in SGG_CODES]} for d in dates]
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
             'seoul': {'regions': gus, 'rows': se_rows},
+            'sgg': {'codes': SGG_CODES, 'rows': sg_rows},
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 매주 발표'}
 
 
@@ -237,7 +247,7 @@ def _fetch_monthly_one(cfg, months):
         'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'prdSe': 'M',
         'newEstPrdCnt': str(months + 1),
     })
-    by, seoul = {}, {}
+    by, seoul, sgg = {}, {}, {}
     for row in data:
         if (row.get('C1_NM') or '').strip() != '아파트': continue
         code = (row.get('C2') or '').strip()
@@ -246,9 +256,11 @@ def _fetch_monthly_one(cfg, months):
         except (TypeError, ValueError, KeyError): continue
         if SEOUL_GU_RE.match(code):
             seoul.setdefault(row['PRD_DE'], {})[_gu_name(reg)] = v
+        if code in SGG_SET:
+            sgg.setdefault(row['PRD_DE'], {})[code] = v
         if reg in WEEKLY_REGIONS:
             by.setdefault(row['PRD_DE'], {})[reg] = v
-    return by, seoul
+    return by, seoul, sgg
 
 
 def _idx_to_chg(ma, je, regions):
@@ -267,14 +279,16 @@ def _idx_to_chg(ma, je, regions):
 
 def fetch_monthly():
     m = CONF['monthly']
-    ma, ma_se = _fetch_monthly_one(m['maega'], m['months'])
+    ma, ma_se, ma_sg = _fetch_monthly_one(m['maega'], m['months'])
     time.sleep(0.2)
-    je, je_se = _fetch_monthly_one(m['jeonse'], m['months'])
+    je, je_se, je_sg = _fetch_monthly_one(m['jeonse'], m['months'])
     rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-m['months']:]
     gus = _gu_regions(ma_se, je_se)
     se_rows = _idx_to_chg(ma_se, je_se, gus)[-m['months']:]
+    sg_rows = _idx_to_chg(ma_sg, je_sg, SGG_CODES)[-m['months']:]
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
             'seoul': {'regions': gus, 'rows': se_rows},
+            'sgg': {'codes': SGG_CODES, 'rows': sg_rows},
             'note': '월간 아파트 매매·전세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
 
 
