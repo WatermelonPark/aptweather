@@ -175,27 +175,44 @@ def fetch_permits():
 
 
 # ---- weekly: 주간 아파트 매매·전세 변동률 --------------------------------
+# KOSIS 지역 분류코드: 서울 25개 구 = ^a70\d{5}$ (주간 C1, 월간 C2 공통).
+# 이름만으로는 '중'·'강서' 등이 타 도시 구와 겹쳐 코드로 식별한다.
+SEOUL_GU_RE = re.compile(r'^a70\d{5}$')
+
+def _gu_name(nm):
+    return nm + '구'   # 강남→강남구, 중→중구
+
 def _fetch_weekly_one(cfg, weeks):
     data = kosis({
         'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
         'objL1': 'ALL', 'itmId': 'ALL', 'prdSe': 'F',
         'newEstPrdCnt': str(weeks),
     })
-    by = {}
+    by, seoul = {}, {}
     for row in data:
+        code = (row.get('C1') or '').strip()
         reg = (row.get('C1_NM') or '').strip()
-        if reg not in WEEKLY_REGIONS: continue
         try: v = float(row['DT'])
         except (TypeError, ValueError, KeyError): continue
-        by.setdefault(row['PRD_DE'], {})[reg] = v
-    return by
+        if SEOUL_GU_RE.match(code):
+            seoul.setdefault(row['PRD_DE'], {})[_gu_name(reg)] = v
+        if reg in WEEKLY_REGIONS:
+            by.setdefault(row['PRD_DE'], {})[reg] = v
+    return by, seoul
+
+
+def _gu_regions(*maps):
+    gus = set()
+    for m in maps:
+        for d in m.values(): gus.update(d)
+    return sorted(gus)
 
 
 def fetch_weekly():
     w = CONF['weekly']
-    ma = _fetch_weekly_one(w['maega'], w['weeks'])
+    ma, ma_se = _fetch_weekly_one(w['maega'], w['weeks'])
     time.sleep(0.2)
-    je = _fetch_weekly_one(w['jeonse'], w['weeks'])
+    je, je_se = _fetch_weekly_one(w['jeonse'], w['weeks'])
     dates = sorted(set(ma) | set(je))[-w['weeks']:]
     rows = []
     for d in dates:
@@ -204,7 +221,12 @@ def fetch_weekly():
             'ma': [ma.get(d, {}).get(r) for r in WEEKLY_REGIONS],
             'je': [je.get(d, {}).get(r) for r in WEEKLY_REGIONS],
         })
+    gus = _gu_regions(ma_se, je_se)
+    se_rows = [{'p': '%s-%s-%s' % (d[:4], d[4:6], d[6:8]),
+                'ma': [ma_se.get(d, {}).get(r) for r in gus],
+                'je': [je_se.get(d, {}).get(r) for r in gus]} for d in dates]
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
+            'seoul': {'regions': gus, 'rows': se_rows},
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 매주 발표'}
 
 
@@ -215,33 +237,44 @@ def _fetch_monthly_one(cfg, months):
         'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'prdSe': 'M',
         'newEstPrdCnt': str(months + 1),
     })
-    by = {}
+    by, seoul = {}, {}
     for row in data:
         if (row.get('C1_NM') or '').strip() != '아파트': continue
+        code = (row.get('C2') or '').strip()
         reg = (row.get('C2_NM') or '').strip()
-        if reg not in WEEKLY_REGIONS: continue
         try: v = float(row['DT'])
         except (TypeError, ValueError, KeyError): continue
-        by.setdefault(row['PRD_DE'], {})[reg] = v
-    return by
+        if SEOUL_GU_RE.match(code):
+            seoul.setdefault(row['PRD_DE'], {})[_gu_name(reg)] = v
+        if reg in WEEKLY_REGIONS:
+            by.setdefault(row['PRD_DE'], {})[reg] = v
+    return by, seoul
 
 
-def fetch_monthly():
-    m = CONF['monthly']
-    ma = _fetch_monthly_one(m['maega'], m['months'])
-    time.sleep(0.2)
-    je = _fetch_monthly_one(m['jeonse'], m['months'])
+def _idx_to_chg(ma, je, regions):
     dates = sorted(set(ma) & set(je))
     rows = []
     for prev, cur in zip(dates, dates[1:]):
         def chg(by):
             out = []
-            for r in WEEKLY_REGIONS:
+            for r in regions:
                 a, b = by.get(prev, {}).get(r), by.get(cur, {}).get(r)
                 out.append(None if (a in (None, 0) or b is None) else round((b / a - 1) * 100, 2))
             return out
         rows.append({'p': '%s-%s' % (cur[:4], cur[4:6]), 'ma': chg(ma), 'je': chg(je)})
-    return {'regions': WEEKLY_REGIONS, 'rows': rows[-m['months']:],
+    return rows
+
+
+def fetch_monthly():
+    m = CONF['monthly']
+    ma, ma_se = _fetch_monthly_one(m['maega'], m['months'])
+    time.sleep(0.2)
+    je, je_se = _fetch_monthly_one(m['jeonse'], m['months'])
+    rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-m['months']:]
+    gus = _gu_regions(ma_se, je_se)
+    se_rows = _idx_to_chg(ma_se, je_se, gus)[-m['months']:]
+    return {'regions': WEEKLY_REGIONS, 'rows': rows,
+            'seoul': {'regions': gus, 'rows': se_rows},
             'note': '월간 아파트 매매·전세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
 
 
