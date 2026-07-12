@@ -493,6 +493,12 @@
     border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;transition:.15s}
   .adv-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #stats-adv .adv-sec{margin-top:8px}
+  #stat-matrix{max-height:540px;overflow-y:auto}
+  @media(max-width:720px){#stat-matrix{display:none}}
+  @media(min-width:721px){
+    #sec-basicmain:not(.single) .gt-t .tbl-wrap{display:none}
+    #sec-basicmain.single #stat-matrix{display:none}
+  }
   /* ===== 홈 허브 ===== */
   .home{padding:0 0 40px}
   .home-hero{padding:56px 0 30px;text-align:center;position:relative;overflow:hidden}
@@ -949,6 +955,7 @@
         <div class="prange" id="prange"></div>
       </div>
       <div class="gt-t">
+        <div class="adv-tblwrap matrix" id="stat-matrix"></div>
         <div class="tbl-wrap">
           <table id="stat-tbl"><thead></thead><tbody></tbody></table>
         </div>
@@ -1420,11 +1427,32 @@ function drawStat(){
     `<span>단위 <b>${D.unit}</b></span><span>지역 <b>${ST.reg}</b></span><span>출처 <b>${D.source}</b></span>`;
   // 테이블 (최근 → 과거, 변화 포함)
   buildTable(D,labels,vals,idx,parsed);
+  buildMatrix(D,idx,parsed);
   // 출처 노트
   document.getElementById('src-note').innerHTML=
     `※ ${D.source}. ${D.note?D.note+'. ':''}가공 없는 원자료다.`;
 }
 function fmtN(v,dec){return (v==null||isNaN(v))?'-':Number(v).toLocaleString('ko-KR',{maximumFractionDigits:dec==null?2:dec});}
+/* PC 표 모드: 전 지역(광역시도) 매트릭스 — 심화통계 인허가 표와 같은 형식 */
+const MATRIX_REGIONS=['전국','수도권','지방','지방권','서울','경기','인천','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];
+function buildMatrix(D,idx,parsed){
+  const box=document.getElementById('stat-matrix');
+  const regs=MATRIX_REGIONS.filter(r=>D.series[r]);
+  const single=regs.length<=1;
+  document.getElementById('sec-basicmain').classList.toggle('single',single);
+  if(single){box.innerHTML='';return;}
+  const isMonthly=!D.annual&&parsed[idx[0]].m>0;
+  const h=['<table class="adv"><thead><tr><th>'+(isMonthly?'연월':'연도')+'</th>'+regs.map(r=>`<th>${r}</th>`).join('')+'</tr></thead><tbody>'];
+  for(let k=idx.length-1;k>=0;k--){
+    const i=idx[k];
+    h.push(`<tr><td>${parsed[i].label}</td>`+regs.map(r=>{
+      const v=D.series[r][i];
+      return `<td>${v==null?'·':fmtN(v)}</td>`;
+    }).join('')+'</tr>');
+  }
+  h.push('</tbody></table>');
+  box.innerHTML=h.join('');
+}
 function buildTable(D,labels,vals,idx,parsed){
   const thead=document.querySelector('#stat-tbl thead'),tbody=document.querySelector('#stat-tbl tbody');
   const isMonthly=!D.annual && parsed[0].m>0;
@@ -1447,6 +1475,8 @@ function buildTable(D,labels,vals,idx,parsed){
 /* 착공→준공 리드타임 시차곡선 (시기별 비교) */
 function drawLeadtime(){
   const L=LEADTIME;
+  document.getElementById('sec-basicmain').classList.add('single');
+  document.getElementById('stat-matrix').innerHTML='';
   if(statChartObj)statChartObj.destroy();
   statChartObj=new Chart(document.getElementById('statChart'),{
     type:'line',
