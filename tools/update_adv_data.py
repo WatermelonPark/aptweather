@@ -48,6 +48,21 @@ CONF = {
 WEEKLY_REGIONS = ['수도권','서울','경기','인천','부산','대구','광주','대전','세종','울산',
                   '강원','충북','충남','전북','전남','경북','경남','제주']
 
+# ---- 기본통계(STATS) 월간 자동 갱신 --------------------------------------
+# index.html의 /*STATS_DATA_START*/const STATS={...};/*STATS_DATA_END*/ 블록을
+# 증분 갱신한다(최근 N개월만 조회해 기존 시계열 끝에 병합 — 소급 정정 반영).
+# 연간 통계(보급률·아파트건설·멸실·노후)와 금리(ECOS 필요)는 대상 아님.
+BASIC_CONF = {
+    '매매지수': {'org': '408', 'tbl': 'DT_KAB_11672_S1',   'mode': 'flat',  'itm': '지수', 'objn': 1, 'dec': 2},
+    '전세지수': {'org': '408', 'tbl': 'DT_KAB_11672_S23',  'mode': 'flat',  'itm': '지수', 'objn': 1, 'dec': 2},
+    '전세가율': {'org': '408', 'tbl': 'DT_30404_N0006_R1', 'mode': 'typed', 'type': '아파트', 'objn': 2, 'dec': 1},
+    '인허가':   {'org': '116', 'tbl': 'DT_MLTM_1948',      'mode': 'mltm',  'type': '아파트', 'objn': 4, 'dec': 0},
+    '착공':     {'org': '116', 'tbl': 'DT_MLTM_5387',      'mode': 'mltm',  'type': '아파트', 'objn': 4, 'dec': 0},
+    '준공':     {'org': '116', 'tbl': 'DT_MLTM_5373',      'mode': 'mltm',  'type': '아파트', 'objn': 4, 'dec': 0},
+}
+BASIC_REGMAP = {'지방소계': '지방', '총계': '전국', '수도권소계': '수도권'}   # KOSIS 지역명 → STATS 지역명
+BASIC_MONTHS = 8                      # 최근 8개월 조회(잠정치 소급 정정 커버)
+
 REG15 = ['수도권','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주']
 
 
@@ -230,8 +245,155 @@ def fetch_monthly():
             'note': '월간 아파트 매매·전세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
 
 
+# ---- 기본통계 fetch & merge ----------------------------------------------
+def _fetch_basic_one(name):
+    import datetime
+    cfg = BASIC_CONF[name]
+    base = {'orgId': cfg['org'], 'tblId': cfg['tbl'], 'itmId': 'ALL', 'prdSe': 'M'}
+    for k in range(1, cfg['objn'] + 1):
+        base['objL%d' % k] = 'ALL'
+    if cfg['mode'] == 'mltm':
+        # objL 4단 × 다월 요청은 40,000셀 초과(err31) → 월별 개별 호출
+        data = []
+        today = datetime.date.today()
+        y, m = today.year, today.month
+        for _ in range(BASIC_MONTHS):
+            prd = '%d%02d' % (y, m)
+            try:
+                data += kosis(dict(base, startPrdDe=prd, endPrdDe=prd))
+            except RuntimeError as e:
+                if 'err 30' not in str(e): raise
+            time.sleep(0.15)
+            m -= 1
+            if m == 0: y, m = y - 1, 12
+    else:
+        data = kosis(dict(base, newEstPrdCnt=str(BASIC_MONTHS)))
+    out = {}    # 확정치 {(y,m): {region: value}}
+    rates = {}  # 잠정 증감률(%) — 실거래지수의 최신월은 지수 대신 이것만 발표됨
+    for row in data:
+        itm = (row.get('ITM_NM') or '').strip()
+        if cfg['mode'] == 'flat':
+            if itm not in (cfg['itm'], '잠정 증감률'): continue
+            reg = (row.get('C1_NM') or '').strip()
+        elif cfg['mode'] == 'typed':   # C1=유형, C2=지역
+            if (row.get('C1_NM') or '').strip() != cfg['type']: continue
+            reg = (row.get('C2_NM') or '').strip()
+        else:                          # mltm: C1=지역, C2=유형
+            if (row.get('C2_NM') or '').strip() != cfg['type']: continue
+            reg = (row.get('C1_NM') or '').strip()
+        reg = BASIC_REGMAP.get(reg, reg)
+        try: v = float(row['DT'])
+        except (TypeError, ValueError, KeyError): continue
+        prd = row['PRD_DE']
+        ym = (int(prd[:4]), int(prd[4:6]))
+        if cfg['mode'] == 'flat' and itm == '잠정 증감률':
+            rates.setdefault(ym, {})[reg] = v
+        else:
+            v = round(v, cfg['dec']) if cfg['dec'] else int(round(v))
+            out.setdefault(ym, {})[reg] = v
+    return out, rates
+
+
+def _label_ym(label):
+    m = re.match(r'^(\d{4})[.\/]\s*(\d{1,2})', str(label).strip())
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def merge_basic(D, fetched):
+    """fetched {(y,m):{region:val}} 를 D(dates/series)에 병합. 변경 셀 수 반환."""
+    key2idx = {}
+    for i, d in enumerate(D['dates']):
+        ym = _label_ym(d)
+        if ym: key2idx[ym] = i
+    changed = 0
+    for ym in sorted(fetched):
+        vals = {r: v for r, v in fetched[ym].items() if r in D['series']}
+        if not vals: continue
+        if ym in key2idx:
+            i = key2idx[ym]
+            plain = '%d.%02d' % ym
+            if _label_ym(D['dates'][i]) == ym and D['dates'][i] != plain and 'p' in str(D['dates'][i]):
+                D['dates'][i] = plain   # 잠정(p) 꼬리표 제거
+        else:
+            D['dates'].append('%d.%02d' % ym)
+            for s_ in D['series'].values(): s_.append(None)
+            i = len(D['dates']) - 1
+            key2idx[ym] = i
+        for r, v in vals.items():
+            if D['series'][r][i] != v:
+                D['series'][r][i] = v
+                changed += 1
+    return changed
+
+
+def merge_prov(D, rates, dec):
+    """잠정 증감률 → 전월 지수 × (1+r/100)로 잠정 지수 계산해 'YYYY.MM p)' 행에 반영.
+    해당 월에 확정 지수가 이미 있으면 건드리지 않는다."""
+    changed = 0
+    for ym in sorted(rates):
+        key2idx = {}
+        for i, d in enumerate(D['dates']):
+            k = _label_ym(d)
+            if k: key2idx[k] = i
+        prev = ym[0] - 1 if ym[1] == 1 else ym[0]
+        prev_ym = (prev, 12 if ym[1] == 1 else ym[1] - 1)
+        if prev_ym not in key2idx: continue
+        pi = key2idx[prev_ym]
+        if ym in key2idx:
+            i = key2idx[ym]
+            if 'p' not in str(D['dates'][i]):   # 확정 라벨이면 잠정으로 덮지 않음
+                if any(D['series'][r][i] is not None for r in D['series']): continue
+                D['dates'][i] = '%d.%02d p)' % ym
+        else:
+            D['dates'].append('%d.%02d p)' % ym)
+            for s_ in D['series'].values(): s_.append(None)
+            i = len(D['dates']) - 1
+        for r, rate in rates[ym].items():
+            base = D['series'].get(r, [None])[pi] if r in D['series'] else None
+            if base is None: continue
+            v = round(base * (1 + rate / 100), dec)
+            if D['series'][r][i] != v:
+                D['series'][r][i] = v
+                changed += 1
+    return changed
+
+
 # ---- index.html 재작성 ----------------------------------------------------
 START, END = '/*ADV_DATA_START*/', '/*ADV_DATA_END*/'
+BSTART, BEND = '/*STATS_DATA_START*/', '/*STATS_DATA_END*/'
+
+def read_current_stats():
+    c = io.open(INDEX, encoding='utf-8').read()
+    i, j = c.find(BSTART), c.find(BEND)
+    assert i >= 0 and j > i, 'STATS 마커를 찾을 수 없음'
+    blob = c[i + len(BSTART):j]
+    m = re.match(r'const STATS=(.*);$', blob, re.S)
+    return json.loads(m.group(1))
+
+
+def write_stats(stats):
+    c = io.open(INDEX, encoding='utf-8').read()
+    i, j = c.find(BSTART), c.find(BEND)
+    blob = 'const STATS=' + json.dumps(stats, ensure_ascii=False, separators=(',', ':')) + ';'
+    io.open(INDEX, 'w', encoding='utf-8').write(c[:i + len(BSTART)] + blob + c[j:])
+
+
+def update_basic():
+    stats = read_current_stats()
+    changed = []
+    for name in BASIC_CONF:
+        try:
+            fetched, rates = _fetch_basic_one(name)
+            time.sleep(0.2)
+            n = merge_basic(stats[name], fetched)
+            n += merge_prov(stats[name], rates, BASIC_CONF[name]['dec'])
+            if n:
+                changed.append('%s(%d)' % (name, n))
+        except Exception as e:
+            print('basic %s skip: %s' % (name, e))
+    if changed:
+        write_stats(stats)
+    return changed
 
 def read_current_adv():
     c = io.open(INDEX, encoding='utf-8').read()
@@ -286,6 +448,8 @@ def main():
         print('permits skip:', e)
     if changed:
         write_adv(adv)
+    changed += update_basic()   # 기본통계(STATS) 증분 갱신
+    if changed:
         print('updated:', ', '.join(changed))
     else:
         print('no changes')
