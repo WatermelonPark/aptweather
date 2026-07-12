@@ -24,6 +24,7 @@ INDEX = os.path.join(ROOT, 'index.html')
 API = 'https://kosis.kr/openapi/Param/statisticsParameterData.do'
 LIST_API = 'https://kosis.kr/openapi/statisticsList.do'
 KEY = os.environ.get('KOSIS_API_KEY', '')
+ECOS_KEY = os.environ.get('ECOS_API_KEY', '')   # 한국은행 ECOS (CD금리용, 없으면 금리만 건너뜀)
 
 # ---- KOSIS 표 설정 ------------------------------------------------------
 # tblId는 `--discover <검색어>` 로 확인 후 채운다.
@@ -425,9 +426,37 @@ def write_stats(stats):
     io.open(INDEX, 'w', encoding='utf-8').write(c[:i + len(BSTART)] + blob + c[j:])
 
 
+def update_rate(stats):
+    """CD(91일) 월평균 — 한국은행 ECOS 721Y001/2010000. 최근 13개월 병합."""
+    if not ECOS_KEY:
+        print('rate skip: ECOS_API_KEY 없음')
+        return []
+    import datetime
+    today = datetime.date.today()
+    start = '%d%02d' % (today.year - 1, today.month)
+    end = '%d%02d' % (today.year, today.month)
+    url = ('https://ecos.bok.or.kr/api/StatisticSearch/%s/json/kr/1/50/721Y001/M/%s/%s/2010000'
+           % (ECOS_KEY, start, end))
+    data = http_json(url)
+    rows = (data.get('StatisticSearch') or {}).get('row') or []
+    fetched = {}
+    for r in rows:
+        t = r.get('TIME') or ''
+        try: v = round(float(r['DATA_VALUE']), 2)
+        except (TypeError, ValueError, KeyError): continue
+        if len(t) == 6:
+            fetched[(int(t[:4]), int(t[4:6]))] = {'CD(91일)': v}
+    n = merge_basic(stats['금리'], fetched)
+    return ['금리(%d)' % n] if n else []
+
+
 def update_basic():
     stats = read_current_stats()
     changed = []
+    try:
+        changed += update_rate(stats)
+    except Exception as e:
+        print('rate skip:', e)
     for name in BASIC_CONF:
         try:
             fetched, rates = _fetch_basic_one(name)
