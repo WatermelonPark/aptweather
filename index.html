@@ -557,41 +557,70 @@
   .hcard.feat{background:linear-gradient(135deg,#fff,#fbf3dc);border-color:var(--gold)}
   .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:800;
     letter-spacing:.03em;color:#fff;background:var(--accent);padding:3px 10px;border-radius:12px}
-  .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7}
+  .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7;padding-bottom:20px}
+  .qmenu{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:30px;max-width:460px;margin-left:auto;margin-right:auto}
+  .qm{font-family:inherit;background:#fff;border:1.5px solid var(--line);border-radius:16px;
+    padding:16px 10px 14px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .qm:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 20px rgba(22,32,58,.08)}
+  .qm:active{transform:scale(.98)}
+  .qm-e{font-size:28px;line-height:1.2}
+  .qm-t{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+  .qm-d{font-size:11.5px;color:var(--muted);font-weight:700}
+  .home-sec{padding:38px 0;text-align:center}
+  .home-sec.hs-alt{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .hs-kicker{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent);margin-bottom:10px}
+  .home-sec h2{font-size:clamp(21px,4.6vw,27px);font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+  .home-sec p{font-size:14.5px;line-height:1.75;color:var(--ink2);max-width:520px;margin:0 auto}
+  .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
 </style>
 </head>
 <body>
 
 <div id="view-home">
   <header class="home-hero"><div class="wrap">
-    <div class="home-eyebrow">내집마련 전 필수 체크 · 10문항 3분</div>
-    <h1>부린이 테스트</h1>
-    <p class="sub">내 부동산 감각, 몇 점일까? LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설.</p>
-    <div class="home-ctas">
+    <div class="home-eyebrow">데이터로 보는 부동산 사이클</div>
+    <h1>집값은 돌고 돈다</h1>
+    <p class="sub">국가 통계로 시장을 읽고, 3분 테스트로 내 감각을 확인하는 부동산 데이터 사이트.</p>
+    <div class="qmenu">
+      <button class="qm" onclick="goQuiz('beginner');track('home_qm',{to:'test'})"><span class="qm-e">🐣</span><span class="qm-t">부린이 테스트</span><span class="qm-d">3분 · 10문항</span></button>
+      <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">🗺️</span><span class="qm-t">시장상황</span><span class="qm-d">주간·월간 지도</span></button>
+      <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">사이클 리포트</span><span class="qm-d">6개 고리 검증</span></button>
+      <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e">📊</span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
+    </div>
+  </div></header>
+
+  <section class="home-sec"><div class="wrap">
+    <div class="hs-kicker">01 · 시작은 가볍게</div>
+    <h2>내 부동산 감각, 몇 점일까?</h2>
+    <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
+    <div class="hs-cta">
       <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 시작</button>
       <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
     </div>
-    <div class="home-divider">테스트의 근거가 궁금하다면</div>
-    <div class="home-cards">
-      <button class="hcard" onclick="showView('report')">
-        <span class="hc-emoji">📑</span>
-        <span class="hc-body">
-          <span class="hc-title">아파트 사이클 리포트</span>
-          <span class="hc-desc">집값은 돌고 돈다 — 데이터로 검증한 6개 고리</span>
-        </span>
-        <span class="hc-go">→</span>
-      </button>
-      <button class="hcard" onclick="showView('stats')">
-        <span class="hc-emoji">📊</span>
-        <span class="hc-body">
-          <span class="hc-title">부동산 데이터 통계</span>
-          <span class="hc-desc">국가기관 원자료를 지역·기간별로</span>
-        </span>
-        <span class="hc-go">→</span>
-      </button>
-    </div>
-    <div class="home-foot">2006–2026 · 15개 시도 · KOSIS·한국은행<br>만든이: shpark1132@gmail.com</div>
-  </div></header>
+  </div></section>
+
+  <section class="home-sec hs-alt"><div class="wrap">
+    <div class="hs-kicker">02 · 매주 확인</div>
+    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
+    <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">🗺️ 시장상황 보기</button></div>
+  </div></section>
+
+  <section class="home-sec"><div class="wrap">
+    <div class="hs-kicker">03 · 원리를 이해</div>
+    <h2>집값은 왜 돌고 도는가</h2>
+    <p>공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올리고, 새 공급이 다시 전세를 누른다 — 15개 시도 20년 데이터로 이 사이클의 6개 고리를 하나씩 검증한 리포트입니다.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="showView('report')">📑 사이클 리포트 읽기</button></div>
+  </div></section>
+
+  <section class="home-sec hs-alt"><div class="wrap">
+    <div class="hs-kicker">04 · 직접 확인</div>
+    <h2>국가기관 원자료 그대로</h2>
+    <p>실거래지수·전세가율·인허가·착공·준공·금리를 지역·기간별로. 그래프↔표 전환, 전 지역 매트릭스, 행열전환까지 — 전부 KOSIS·한국은행 API로 매주 자동 갱신됩니다.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">📊 통계보기</button></div>
+  </div></section>
+
+  <div class="home-foot">2006–2026 · 15개 시도 · KOSIS·한국은행<br>만든이: shpark1132@gmail.com</div>
 </div>
 
 <div id="view-report" style="display:none">
@@ -639,7 +668,7 @@
 </a>
 <a href="#link3" class="cycbox" onclick="track('cycle_jump',{to:'link3'})" aria-label="고리③④ 공급 증가와 리드타임 근거로 이동">
 <rect class="cb" x="165.3" y="362.0" width="129.4" height="40" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
-<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#1f8a70">인허가~입주</text>
+<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#1f8a70">신축공급</text>
 <rect x="211.0" y="341.5" width="38.0" height="25.0" rx="12.5" fill="#1f8a70"/>
 <text x="230.0" y="358.4" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="14" fill="#fff">3·4</text>
 </a>
@@ -954,7 +983,7 @@
   <div class="dash" id="stats-market"><div class="wrap">
     <div class="subs" id="subs-card" style="display:none">
       <b>📬 시장상황 알림 받기</b>
-      <p>주간 통계가 갱신되면 요약을 이메일로 보내드립니다. 갱신이 있는 주에만 발송되고, 메일 하단에서 언제든 수신거부할 수 있습니다.</p>
+      <p><b>새로운 통계가 업데이트되면 메일로 알려드립니다.</b> 주간·월간 시장상황이 갱신될 때만 요약이 발송되고, 메일 하단에서 언제든 수신거부할 수 있습니다.</p>
       <form onsubmit="return subsSubmit(this)">
         <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
         <button type="submit">알림 받기</button>
@@ -1163,17 +1192,17 @@
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>홈</span>
   </button>
-  <button class="nav-btn" data-view="report">
-    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM14 2v6h6M8 13h8M8 17h8M8 9h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>리포트</span>
-  </button>
-  <button class="nav-btn" data-view="stats">
-    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>통계보기</span>
-  </button>
   <button class="nav-btn" data-view="test">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>테스트</span>
+  </button>
+  <button class="nav-btn" data-view="stats">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>통계</span>
+  </button>
+  <button class="nav-btn" data-view="report">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM14 2v6h6M8 13h8M8 17h8M8 9h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>리포트</span>
   </button>
 </nav>
 
@@ -1358,6 +1387,7 @@ function showView(v,updateHash){
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 function goQuiz(k){showView('test');startQuiz(k);}
+function goStats(m){showView('stats');setStatsMode(m);}
 function applyHash(){
   const h=location.hash.replace('#','');
   if(!h){showView('home',false);return;}
