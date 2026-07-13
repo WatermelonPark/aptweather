@@ -74,7 +74,8 @@ def http_json(url, tries=3):
     last = None
     for i in range(tries):
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'aptweather-stats-bot'})
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'})
             with urllib.request.urlopen(req, timeout=60) as r:
                 return json.loads(r.read().decode('utf-8'))
         except Exception as e:   # 순단(타임아웃 등)은 잠시 쉬고 재시도
