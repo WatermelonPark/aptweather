@@ -626,29 +626,36 @@ def main():
     assert arg == '--update', 'usage: --update | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
+
+    def differs(a, b):
+        return json.dumps(a, sort_keys=True, ensure_ascii=False) != json.dumps(b, sort_keys=True, ensure_ascii=False)
+
     try:
         weekly = fetch_weekly()
-        if weekly['rows']:
+        if weekly['rows'] and differs(weekly, adv.get('weekly')):
             adv['weekly'] = weekly
             changed.append('weekly(~%s)' % weekly['rows'][-1]['p'])
     except Exception as e:
         print('weekly skip:', e)
     try:
         monthly = fetch_monthly()
-        if monthly['rows']:
+        if monthly['rows'] and differs(monthly, adv.get('monthly')):
             adv['monthly'] = monthly
             changed.append('monthly(~%s)' % monthly['rows'][-1]['p'])
     except Exception as e:
         print('monthly skip:', e)
     try:
         rows = fetch_permits()
-        if rows and len(rows) >= len(adv['permits']['rows']):
+        if rows and len(rows) >= len(adv['permits']['rows']) and differs(rows, adv['permits']['rows']):
             adv['permits']['rows'] = rows
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
         print('permits skip:', e)
     try:
-        changed += update_occupancy(adv)
+        before = json.dumps(adv['occupancy']['rows'], sort_keys=True)
+        occ_ch = update_occupancy(adv)
+        if occ_ch and json.dumps(adv['occupancy']['rows'], sort_keys=True) != before:
+            changed += occ_ch
     except Exception as e:
         print('occupancy skip:', e)
     if changed:
