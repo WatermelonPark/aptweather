@@ -109,7 +109,9 @@ def main():
         return
     payload = json.dumps({'subject': subject, 'body': body, 'status': 'about_to_send'}).encode('utf-8')
     req = urllib.request.Request(API, data=payload, method='POST', headers={
-        'Authorization': 'Token ' + KEY, 'Content-Type': 'application/json'})
+        'Authorization': 'Token ' + KEY, 'Content-Type': 'application/json',
+        # Buttondown 공식 요구사항: API 실발송 확인용 헤더 (키당 1회 요구, 상시 포함해도 무해)
+        'X-Buttondown-Live-Dangerously': 'true'})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             print('sent:', r.status)
