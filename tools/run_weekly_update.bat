@@ -31,4 +31,5 @@ if errorlevel 1 (
 )
 
 python tools\send_newsletter.py
+python tools\ping_indexnow.py / /weekly/
 echo [%date% %time%] ===== update end =====
