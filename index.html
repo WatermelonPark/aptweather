@@ -648,7 +648,7 @@
       <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">🗺️</span><span class="qm-t">시장상황</span><span class="qm-d">주간·월간 지도</span></button>
       <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">사이클 리포트</span><span class="qm-d">6개 고리 검증</span></button>
       <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e">📊</span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
-      <button class="qm qm-wide" onclick="goCalc('re');track('home_qm',{to:'calc'})"><span class="qm-e">🧮</span><span class="qm-t">재건축·재개발 계산기</span><span class="qm-d">사업성 암산 도구 · 3년시계 · 버블밴드</span></button>
+      <button class="qm qm-wide" onclick="goCalc('re');track('home_qm',{to:'calc'})"><span class="qm-e">🧮</span><span class="qm-t">재건축·재개발 계산기</span><span class="qm-d">정비사업 사업성 간단분석</span></button>
     </div>
   </div></header>
 
@@ -686,11 +686,8 @@
   <section class="home-sec"><div class="wrap">
     <div class="hs-kicker">05 · 실전 도구</div>
     <h2>재건축·재개발, 숫자로 먼저 걸러보기</h2>
-    <p>매매가·대지지분·용적률만 넣으면 재건축 사업성의 뼈대가 나오고, 구역 면적에서 0 두 개만 지우면 재개발 세대수가 나옵니다. 시장상황 탭에는 <b>3년 공급시계</b>와 금리 <b>버블밴드</b>도 추가했습니다.</p>
-    <div class="hs-cta">
-      <button class="home-cta" onclick="goCalc('re')">🧮 계산기 열기</button>
-      <button class="home-cta alt" onclick="goStats('market')">📉 3년시계·버블밴드</button>
-    </div>
+    <p>매매가·대지지분·용적률만 넣으면 재건축 사업성의 뼈대가 나오고, 구역 면적에서 0 두 개만 지우면 재개발 세대수가 나옵니다. 감정평가·비례율이 나오기 전, 후보를 거르는 간단분석 도구입니다.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="goCalc('re')">🧮 계산기 열기</button></div>
   </div></section>
 
   <div class="home-foot">
@@ -1234,7 +1231,7 @@
 <header class="hero"><div class="wrap">
   <div class="eyebrow">실전 도구 · 재건축 / 재개발</div>
   <h1>정비사업 계산기</h1>
-  <p class="sub">매물 정보 몇 개로 사업성의 뼈대를 확인하는 암산 도구. 감정평가·비례율이 나오기 전, 후보 단지를 거르는 용도로 쓰세요.</p>
+  <p class="sub">매물 정보 몇 개로 사업성의 뼈대를 확인하는 간단분석 도구. 감정평가·비례율이 나오기 전, 후보 단지를 거르는 용도로 쓰세요.</p>
 </div></header>
 <div class="wrap" style="max-width:760px;padding-bottom:60px">
   <div class="calc-tabs">
@@ -1262,7 +1259,7 @@
     <div class="calc-note">
       · <b>개발 후 대지 1평 가치</b> = (평당 분양가 − 평당 공사비) × 새 용적률. <b>개발 전 가치</b> = 현재 매매가 ÷ 대지지분. 개발 후가 개발 전을 <b>충분한 여유</b>를 두고 넘어야 사업이 굴러갑니다.<br>
       · 차이가 나더라도 <b>기대수익 절대액</b>이 작으면(수천만 원대) 조합원이 리스크를 지고 추진할 이유가 없습니다 — 소형·단일 평형 단지에서 흔한 함정.<br>
-      · 감정평가·비례율·분담금 통지를 대신하지 않는 <b>선별용 암산</b>입니다. 기부채납·임대비율 등으로 실제 조건은 이보다 나빠질 수 있습니다.
+      · 감정평가·비례율·분담금 통지를 대신하지 않는 <b>선별용 간단분석</b>입니다. 기부채납·임대비율 등으로 실제 조건은 이보다 나빠질 수 있습니다.
     </div>
   </div>
 
@@ -1349,6 +1346,10 @@
   <button class="nav-btn" data-view="stats">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>통계</span>
+  </button>
+  <button class="nav-btn" data-view="calc">
+    <svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 6.5h6M9 11h.01M12 11h.01M15 11h.01M9 14.5h.01M12 14.5h.01M15 14.5h.01M9 18h.01M12 18h.01M15 18h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>계산기</span>
   </button>
   <button class="nav-btn" data-view="report">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM14 2v6h6M8 13h8M8 17h8M8 9h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
