@@ -101,14 +101,49 @@ def build_body(changed):
         mo_p = adv['monthly']['rows'][-1]['p']
         sec, val = section('월간 시장상황', '전월 대비', adv['monthly'])
         L += sec
-        parts.append(_wk_label(mo_p))
+        parts.append(_wk_label(mo_p) + ' 월간')
         if seoul_ma is None:
             seoul_ma = val.get('서울', {}).get('ma')
+    if 'permits' in changed and adv.get('permits', {}).get('rows'):
+        P = adv['permits']
+        last = P['rows'][-1]
+        tot = sum(v for v in last['v'] if v is not None)
+        half = last['p'].replace('H1', '년 상반기').replace('H2', '년 하반기')
+        L += ['## 🏗️ 인허가 물량 업데이트', '',
+              '%s 아파트 인허가(40㎡ 제외)가 반영되었습니다 — 15개 지역 합계 **%s호**.' % (half, format(tot, ',')),
+              '인허가는 4~6년 뒤 입주로 이어지는 가장 이른 공급 신호입니다.', '',
+              '👉 [인허가 표·차트 보기](%s/#stats-adv)' % SITE, '']
+        parts.append('인허가')
+    if 'occupancy' in changed and adv.get('occupancy', {}).get('rows'):
+        O = adv['occupancy']
+        fut = [r for r in O['rows'] if r.get('e')]
+        L += ['## 🏠 입주물량 업데이트', '',
+              '분기별 입주물량 자료가 갱신되었습니다%s. 지역별 적정 밴드와 비교해보세요.' %
+              (' (입주예정 %d개 분기 커버)' % len(fut) if fut else ''), '',
+              '👉 [입주물량 표·차트 보기](%s/#stats-adv)' % SITE, '']
+        parts.append('입주물량')
+    if '금리' in changed:
+        try:
+            c = io.open(INDEX, encoding='utf-8').read()
+            i0, j0 = c.find('/*STATS_DATA_START*/'), c.find('/*STATS_DATA_END*/')
+            st = json.loads(re.match(r'const STATS=(.*);$', c[i0 + 20:j0], re.S).group(1))
+            sr = st['금리']['series']['CD(91일)']
+            dts = st['금리']['dates']
+            cur, prev = sr[-1], sr[-2]
+            mm = re.match(r'^(\d{4})[.\/](\d{1,2})', str(dts[-1]))
+            lab = ('%d월' % int(mm.group(2))) if mm else str(dts[-1])
+            L += ['## 🏦 CD금리 업데이트', '',
+                  '%s CD(91일) 금리 **%.2f%%** (전월 대비 %+.2f%%p)' % (lab, cur, cur - prev), '',
+                  '👉 [금리 시계열 보기](%s/#stats-basic)' % SITE, '']
+            parts.append('금리')
+        except Exception:
+            pass
     L.append('서울 25개 구 지형 지도와 전국 187개 시군구 상세는 사이트에서 확인할 수 있습니다.')
     L.append('')
     L.append('👉 **[시장상황 바로가기](%s/#stats-market)**' % SITE)
-    label = '·'.join(parts) if parts else '시장상황'
-    subject = '[집값은 돌고 돈다] %s 브리핑 — 서울 매매 %s' % (label, fmt(seoul_ma))
+    label = '·'.join(parts) if parts else '통계'
+    tail = (' — 서울 매매 %s' % fmt(seoul_ma)) if seoul_ma is not None else ''
+    subject = '[집값 브리핑] %s 업데이트%s' % (label, tail)
     return subject, '\n'.join(L)
 
 
