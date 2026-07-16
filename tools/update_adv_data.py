@@ -26,6 +26,10 @@ LIST_API = 'https://kosis.kr/openapi/statisticsList.do'
 KEY = os.environ.get('KOSIS_API_KEY', '')
 ECOS_KEY = os.environ.get('ECOS_API_KEY', '')   # 한국은행 ECOS (CD금리용, 없으면 금리만 건너뜀)
 DATAGO_KEY = os.environ.get('DATA_GO_KR_KEY', '')   # 공공데이터포털 (입주예정물량용, 없으면 입주물량만 건너뜀)
+RONE_KEY = os.environ.get('RONE_API_KEY', '')       # 부동산원 R-ONE (주간 속보용 — KOSIS보다 4~7일 빠름)
+# R-ONE 주간 아파트 가격지수 (발표 당일 반영). 지수 → 전주비 변동률 계산.
+RONE_API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
+RONE_TBL = {'maega': 'T244183132827305', 'jeonse': 'T247713133046872'}
 # 한국부동산원 주택공급정보 입주예정물량정보 (data.go.kr/data/15111714) — 반기 갱신, 30세대 이상 단지별
 OCC_API = 'https://api.odcloud.kr/api/15111714/v1/uddi:0b257760-ac19-4841-adb4-b38b4d153397'
 
@@ -226,7 +230,90 @@ def _gu_regions(*maps):
     return sorted(gus)
 
 
+# ---- R-ONE 주간 속보 (시도 18 + 서울 25구) --------------------------------
+# KOSIS는 발표 후 4~7일 지연되므로, 주간은 부동산원 R-ONE에서 직접 받는다.
+# 시군구 상세(sgg)는 지역코드 재매핑 부담이 커서 KOSIS 유지(수일 뒤 자동 보충).
+def _rone_recent_rows(tbl, need_rows):
+    base = {'KEY': RONE_KEY, 'Type': 'json', 'pSize': 1000, 'STATBL_ID': tbl, 'DTACYCLE_CD': 'WK'}
+    d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=1, pSize=1)))
+    k = list(d.keys())[0]
+    total = d[k][0]['head'][0]['list_total_count']
+    rows = []
+    p = (total + 999) // 1000
+    while p >= 1 and len(rows) < need_rows:
+        d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=p)))
+        k = list(d.keys())[0]
+        rows = d[k][1]['row'] + rows
+        p -= 1
+        time.sleep(0.15)
+    return rows
+
+
+def fetch_weekly_rone():
+    weeks = CONF['weekly']['weeks']
+    need = (weeks + 2) * 240        # 주당 ~236행
+    by = {}   # {'maega'|'jeonse': {date: {FULLNM: idx}}}
+    for key, tbl in RONE_TBL.items():
+        m = {}
+        for r in _rone_recent_rows(tbl, need):
+            full = (r.get('CLS_FULLNM') or '').strip()
+            t = (r.get('WRTTIME_DESC') or '').strip()
+            try: v = float(r['DTA_VAL'])
+            except (TypeError, ValueError, KeyError): continue
+            if len(t) == 10:
+                m.setdefault(t, {})[full] = v
+        by[key] = m
+        time.sleep(0.2)
+    dates = sorted(set(by['maega']) & set(by['jeonse']))[-(weeks + 1):]
+    if len(dates) < 2:
+        raise RuntimeError('R-ONE 주간 데이터 부족')
+
+    def sido(week, name):   # 시도·수도권 (광주/전남은 상위그룹 밑에 있음)
+        full = {'광주': '전남광주>광주', '전남': '전남광주>전남'}.get(name, name)
+        return week.get(full)
+
+    def seoul_gu(week):
+        out = {}
+        for full, v in week.items():
+            if full.startswith('서울>') and full.endswith('구'):
+                out[full.rsplit('>', 1)[-1]] = v
+        return out
+
+    def chg(a, b):
+        return None if (a in (None, 0) or b is None) else round((b / a - 1) * 100, 4)
+
+    rows, se_rows = [], []
+    gus = sorted(seoul_gu(by['maega'][dates[-1]]))
+    for prev, cur in zip(dates, dates[1:]):
+        rows.append({'p': cur,
+                     'ma': [chg(sido(by['maega'][prev], r), sido(by['maega'][cur], r)) for r in WEEKLY_REGIONS],
+                     'je': [chg(sido(by['jeonse'][prev], r), sido(by['jeonse'][cur], r)) for r in WEEKLY_REGIONS]})
+        ma_p, ma_c = seoul_gu(by['maega'][prev]), seoul_gu(by['maega'][cur])
+        je_p, je_c = seoul_gu(by['jeonse'][prev]), seoul_gu(by['jeonse'][cur])
+        se_rows.append({'p': cur,
+                        'ma': [chg(ma_p.get(g), ma_c.get(g)) for g in gus],
+                        'je': [chg(je_p.get(g), je_c.get(g)) for g in gus]})
+    return {'regions': WEEKLY_REGIONS, 'rows': rows,
+            'seoul': {'regions': gus, 'rows': se_rows},
+            'note': '주간 아파트 매매·전세가격지수 변동률(%) · 발표 당일 반영'}
+
+
 def fetch_weekly():
+    kosis = _fetch_weekly_kosis()
+    if not RONE_KEY:
+        return kosis
+    try:
+        rone = fetch_weekly_rone()
+        k_last = kosis['rows'][-1]['p'] if kosis.get('rows') else ''
+        if rone['rows'] and rone['rows'][-1]['p'] >= k_last:
+            rone['sgg'] = kosis.get('sgg')      # 시군구 상세는 KOSIS(자체 주차 라벨 유지)
+            return rone
+    except Exception as e:
+        print('rone weekly skip:', e)
+    return kosis
+
+
+def _fetch_weekly_kosis():
     w = CONF['weekly']
     ma, ma_se, ma_sg = _fetch_weekly_one(w['maega'], w['weeks'])
     time.sleep(0.2)
