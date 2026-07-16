@@ -37,24 +37,48 @@ def fmt(v):
     return '0.00%' if v == 0 else ('%+.2f%%' % v)
 
 
-def section(title, unit, W):
+def _wk_label(p):
+    """'2026-07-13' → '7/13주', '2026-05' → '5월'"""
+    if len(p) == 10:
+        return '%d/%d주' % (int(p[5:7]), int(p[8:10]))
+    return '%d월' % int(p[5:7])
+
+
+def _tops(regs, vals, n=3, exclude=('수도권',)):
+    ranked = sorted((r for r in regs if vals.get(r) is not None and r not in exclude),
+                    key=lambda r: vals[r], reverse=True)
+    up = [r for r in ranked if vals[r] > 0][:n]
+    dn = [r for r in reversed(ranked) if vals[r] < 0][:n]
+    return up, dn
+
+
+def section(title, unit, W, with_seoul=False):
     regs, row = W['regions'], W['rows'][-1]
     val = {r: {'ma': row['ma'][i], 'je': row['je'][i]} for i, r in enumerate(regs)}
-    ranked = sorted((r for r in regs if val[r]['ma'] is not None and r != '수도권'),
-                    key=lambda r: val[r]['ma'], reverse=True)
-    up = [r for r in ranked if val[r]['ma'] > 0][:3]
-    dn = [r for r in reversed(ranked) if val[r]['ma'] < 0][:3]
-    L = ['## %s (%s)' % (title, row['p']), '', '%s 아파트 매매·전세 변동률입니다.' % unit, '',
-         '| 지역 | 매매 | 전세 |', '|---|---|---|']
+    ma = {r: v['ma'] for r, v in val.items()}
+    up, dn = _tops(regs, ma)
+    L = ['## 🗓️ %s — %s' % (title, row['p']), '', '%s 아파트 매매·전세 변동률(%%)입니다.' % unit, '',
+         '| 지역 | 매매 | 전세 |', '|:---|---:|---:|']
     for r in CORE:
         if r in val:
-            L.append('| %s | %s | %s |' % (r, fmt(val[r]['ma']), fmt(val[r]['je'])))
+            L.append('| **%s** | %s | %s |' % (r, fmt(val[r]['ma']), fmt(val[r]['je'])))
     L.append('')
     if up:
-        L.append('**상승 상위**: ' + ' · '.join('%s %s' % (r, fmt(val[r]['ma'])) for r in up))
+        L.append('🔺 **상승**: ' + ' · '.join('%s %s' % (r, fmt(ma[r])) for r in up))
     if dn:
-        L.append('**하락 상위**: ' + ' · '.join('%s %s' % (r, fmt(val[r]['ma'])) for r in dn))
+        L.append('')
+        L.append('🔻 **하락**: ' + ' · '.join('%s %s' % (r, fmt(ma[r])) for r in dn))
     L.append('')
+    if with_seoul and W.get('seoul') and W['seoul'].get('rows'):
+        S = W['seoul']
+        srow = S['rows'][-1]
+        sma = {r: srow['ma'][i] for i, r in enumerate(S['regions'])}
+        sup, sdn = _tops(S['regions'], sma, n=3, exclude=())
+        if sup or sdn:
+            L.append('**서울 안에서는** — ' +
+                     (('많이 오른 곳: ' + ' · '.join('%s %s' % (r, fmt(sma[r])) for r in sup)) if sup else '') +
+                     ((' / 내린 곳: ' + ' · '.join('%s %s' % (r, fmt(sma[r])) for r in sdn)) if sdn else ''))
+            L.append('')
     return L, val
 
 
@@ -62,26 +86,29 @@ def build_body(changed):
     adv = read_adv()
     L, parts = [], []
     seoul_ma = None
+    wk_label = None
     if 'weekly' in changed and adv.get('weekly'):
-        sec, val = section('주간 시장상황', '전주 대비', adv['weekly'])
-        L += sec
-        parts.append('주간')
-        seoul_ma = val.get('서울', {}).get('ma')
         wk_p = adv['weekly']['rows'][-1]['p']
+        wk_label = _wk_label(wk_p)
+        sec, val = section('주간 시장상황', '전주 대비', adv['weekly'], with_seoul=True)
+        L += sec
+        parts.append(wk_label)
+        seoul_ma = val.get('서울', {}).get('ma')
+        # 지도 한 장 (버전 파라미터로 메일 클라이언트 캐시 회피)
+        L.append('![이번 주 아파트 시세 지도](%s/share/weekly-map.png?v=%s)' % (SITE, wk_p))
+        L.append('')
     if 'monthly' in changed and adv.get('monthly'):
+        mo_p = adv['monthly']['rows'][-1]['p']
         sec, val = section('월간 시장상황', '전월 대비', adv['monthly'])
         L += sec
-        parts.append('월간')
+        parts.append(_wk_label(mo_p))
         if seoul_ma is None:
             seoul_ma = val.get('서울', {}).get('ma')
-    L.append('서울 구별 지도·전국 시군구 상세는 사이트에서 확인하세요.')
+    L.append('서울 25개 구 지형 지도와 전국 187개 시군구 상세는 사이트에서 확인할 수 있습니다.')
     L.append('')
-    L.append('👉 [시장상황 바로가기](%s/#stats-market)' % SITE)
-    L.append('')
-    L.append('---')
-    L.append('*이 메일은 통계가 갱신될 때만 발송됩니다. 자료: KOSIS 한국부동산원 전국주택가격동향조사.*')
+    L.append('👉 **[시장상황 바로가기](%s/#stats-market)**' % SITE)
     label = '·'.join(parts) if parts else '시장상황'
-    subject = '[집값은 돌고 돈다] %s 통계 업데이트 — 서울 매매 %s' % (label, fmt(seoul_ma))
+    subject = '[집값은 돌고 돈다] %s 브리핑 — 서울 매매 %s' % (label, fmt(seoul_ma))
     return subject, '\n'.join(L)
 
 
