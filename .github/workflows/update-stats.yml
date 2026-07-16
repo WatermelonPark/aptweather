@@ -30,6 +30,8 @@ jobs:
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
           # 공공데이터포털 (입주예정물량) — 없으면 입주물량만 건너뜀
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
+          # 부동산원 R-ONE (주간 속보) — 없으면 KOSIS 폴백
+          RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
         run: |
           if [ -z "$KOSIS_API_KEY" ]; then
             echo "::warning::KOSIS_API_KEY 시크릿이 없어 갱신을 건너뜁니다. 저장소 Settings > Secrets에 추가하세요."
