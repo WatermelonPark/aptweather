@@ -231,7 +231,8 @@ def fetch_weekly():
     ma, ma_se, ma_sg = _fetch_weekly_one(w['maega'], w['weeks'])
     time.sleep(0.2)
     je, je_se, je_sg = _fetch_weekly_one(w['jeonse'], w['weeks'])
-    dates = sorted(set(ma) | set(je))[-w['weeks']:]
+    # 매매·전세가 모두 발표된 주만 반영 (한쪽만 먼저 올라온 반쪽 주차로 인한 이중 알림 방지)
+    dates = sorted(set(ma) & set(je))[-w['weeks']:]
     rows = []
     for d in dates:
         rows.append({
