@@ -19,10 +19,11 @@ echo [%date% %time%] ===== update start =====
 
 git pull --rebase origin main
 python tools\update_adv_data.py --update
+python tools\make_weekly_share.py
 
 git diff --quiet index.html
 if errorlevel 1 (
-  git add index.html
+  git add index.html share\weekly-map.png
   git commit -m "stats: weekly auto-update (KOSIS, local)"
   git push origin main
   echo [%date% %time%] changes committed and pushed
