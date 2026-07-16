@@ -720,7 +720,10 @@ def main():
 
     try:
         weekly = fetch_weekly()
-        if weekly['rows'] and differs(weekly, adv.get('weekly')):
+        cur = adv.get('weekly') or {}
+        cur_last = cur['rows'][-1]['p'] if cur.get('rows') else ''
+        # 역행 방지: 폴백(KOSIS)이 이미 반영된 R-ONE 최신 주보다 오래됐으면 무시
+        if weekly['rows'] and weekly['rows'][-1]['p'] >= cur_last and differs(weekly, cur):
             adv['weekly'] = weekly
             changed.append('weekly(~%s)' % weekly['rows'][-1]['p'])
     except Exception as e:
