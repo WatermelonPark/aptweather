@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-3FJNG6G1F3');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아파트 사이클이란 — 집값은 왜 돌고 도는가 (데이터 검증 리포트) | 집값은 돌고 돈다</title>
+<meta name="description" content="공급 부족→전세 상승→매매 상승→신축 공급→입주→전세 하락→매매 하락. 아파트 사이클 6개 고리를 15개 시도 20년 국가 통계로 검증했다. 지방 5년, 수도권 10년 — 집값 전망을 읽는 데이터 프레임.">
+<meta name="keywords" content="아파트 사이클, 집값 전망, 부동산 사이클, 집값 사이클, 전세가 매매가 관계, 입주물량 집값, 부동산 공급 사이클, 아파트 가격 전망">
+<link rel="canonical" href="https://www.aptweather.co.kr/cycle/">
+<link rel="icon" type="image/png" href="/app_icon.png">
+<link rel="apple-touch-icon" href="/app_icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#16203a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="아파트 사이클이란 — 집값은 왜 돌고 도는가">
+<meta property="og:description" content="6개 고리를 15개 시도 20년 데이터로 검증. 지방 5년, 수도권 10년의 순환.">
+<meta property="og:url" content="https://www.aptweather.co.kr/cycle/">
+<meta property="og:image" content="https://www.aptweather.co.kr/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="아파트 사이클이란 — 집값은 왜 돌고 도는가">
+<meta name="twitter:image" content="https://www.aptweather.co.kr/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "아파트 사이클이란 — 집값은 왜 돌고 도는가",
+  "description": "아파트 사이클 6개 고리(공급 부족→전세 상승→매매 상승→신축 공급→입주→전세·매매 하락)를 15개 시도 20년 국가 통계로 검증한 리포트 요약.",
+  "url": "https://www.aptweather.co.kr/cycle/",
+  "inLanguage": "ko",
+  "author": {"@type": "Organization", "name": "집값은 돌고 돈다 (aptweather.co.kr)"},
+  "publisher": {"@type": "Organization", "name": "집값은 돌고 돈다 (aptweather.co.kr)"},
+  "mainEntityOfPage": "https://www.aptweather.co.kr/#report"
+}
+</script>
+<style>
+  :root{--ink:#16203a;--ink2:#3b4569;--paper:#f6f4ee;--paper2:#edeae1;--accent:#c0392b;
+    --gold:#b8862f;--muted:#6f6a5c;--line:#dad5c9;--jeonse:#6c4ab6;--stock:#1f8a70;--green:#1a6b54}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:560px;margin:0 auto;padding:0 22px}
+  header{padding:56px 0 30px;text-align:center}
+  .chip{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.1em;color:#fff;
+    background:var(--stock);padding:6px 16px;border-radius:20px;margin-bottom:18px}
+  h1{font-size:clamp(26px,6vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.3;margin-bottom:12px}
+  h1 em{font-style:normal;color:var(--accent)}
+  .lead{font-size:15.5px;color:var(--ink2);max-width:470px;margin:0 auto}
+  section{padding:30px 0;border-top:1px solid var(--line)}
+  h2{font-size:21px;font-weight:800;letter-spacing:-.01em;margin-bottom:14px}
+  p{font-size:15px;color:var(--ink2);margin-bottom:12px}
+  ol.steps{list-style:none;counter-reset:s;margin:16px 0}
+  ol.steps li{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:14px;
+    padding:14px 18px 14px 54px;margin-bottom:10px;font-size:14.5px;color:var(--ink2);position:relative}
+  ol.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:26px;height:26px;
+    background:var(--ink);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:800}
+  ol.steps b{color:var(--ink)}
+  .note{background:#fff;border-left:4px solid var(--gold);border-radius:0 12px 12px 0;padding:14px 18px;
+    font-size:14px;color:var(--ink2);margin:14px 0}
+  .cta{display:block;width:100%;max-width:400px;margin:22px auto 0;text-align:center;text-decoration:none;
+    background:var(--ink);color:#fff;font-size:17px;font-weight:800;padding:16px 24px;border-radius:14px;
+    box-shadow:0 6px 20px rgba(22,32,58,.18)}
+  .cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;margin-top:12px;font-size:15px;padding:13px 24px}
+  .links{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .links a{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:14px 18px;text-decoration:none;color:var(--ink);font-size:14.5px;font-weight:700}
+  .links a span{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:2px}
+  footer{padding:26px 0 60px;text-align:center;font-size:12.5px;color:var(--muted)}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="chip">🔄 아파트 사이클</div>
+  <h1>집값은 <em>돌고 돈다</em><br>— 왜, 어떻게?</h1>
+  <p class="lead">감이나 뉴스가 아니라 KOSIS·국토교통부·한국은행의 20년 통계로, 집값이 순환하는 6개 고리를 하나씩 검증했다.</p>
+</div></header>
+
+<section><div class="wrap">
+  <h2>사이클의 6개 고리</h2>
+  <ol class="steps">
+    <li>집이 모자라면 <b>전세부터 오른다</b> — 살 곳은 당장 필요하니까</li>
+    <li>오른 전세가 <b>매매를 밀어올린다</b> — 전세가율이 좁혀지면 "이 돈이면 사자"</li>
+    <li>값이 오르니 건설사가 <b>새 집을 짓는다</b> — 인허가·착공 증가</li>
+    <li>인허가에서 입주까지 <b>4~6년이 걸린다</b> — 공급은 즉시 못 온다</li>
+    <li>입주가 시작되면 몰린 물량이 <b>전세를 누른다</b> — 입주장의 전세 약세</li>
+    <li>전세가 빠지면 <b>매매도 따라 내린다</b> — 그리고 공급이 끊기면 1번부터 다시</li>
+  </ol>
+  <div class="note"><b>⚡ 금리</b>는 이 순환 바깥에서 사이클 전체를 흔드는 외부 변수다. 2021년의 저금리, 2022년의 급격한 인상이 대표적 사례.</div>
+  <p>15개 시도 데이터로 관측하면 이 한 바퀴가 <b>지방은 약 5년, 수도권은 약 10년</b>이다. 지금 어느 국면인지는 전세가율·입주물량·인허가를 함께 보면 읽힌다.</p>
+  <a class="cta" href="/#report">📑 전체 리포트 읽기 (근거 데이터 포함)</a>
+  <a class="cta sub" href="/#stats-market">🗺️ 지금 시장은 어느 국면? 이번 주 지도 보기</a>
+</div></section>
+
+<section><div class="wrap">
+  <h2>사이클을 읽는 3가지 지표</h2>
+  <p><b>① 전세가율</b> — 매매가 대비 전세가. 높아질수록 매매 전환 압력이 쌓인다.</p>
+  <p><b>② 입주물량</b> — 지역별 적정 밴드와 비교해 공급 과잉·부족을 판단한다. 미래 2년치 입주예정까지 미리 보인다.</p>
+  <p><b>③ 인허가</b> — 4~6년 뒤 공급의 예고편. 지금의 인허가 절벽은 몇 년 뒤의 공급 부족이다.</p>
+  <p>세 지표 모두 국가 통계 원자료 그대로, 매주 자동 갱신으로 제공한다.</p>
+  <div class="links">
+    <a href="/#stats">📊 부동산 데이터 통계<span>전세가율·인허가·입주물량을 지역·기간별로</span></a>
+    <a href="/weekly/">🗺️ 이번 주 아파트 시세 지도<span>전국 시군구·서울 구별 주간 변동률</span></a>
+    <a href="/faq/">❓ 부동산 데이터 FAQ<span>전세가율·입주물량 기초 개념 8문답</span></a>
+    <a href="/burini-test/">🐣 부린이 테스트<span>사이클 감각 포함 10문항, 3분</span></a>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <a href="/">aptweather.co.kr</a> · 자료: KOSIS·국토교통부·한국은행 (2006–2026, 15개 시도)
+</div></footer>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});
+}
+</script>
+</body>
+</html>
