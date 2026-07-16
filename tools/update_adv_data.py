@@ -56,6 +56,16 @@ CONF = {
 WEEKLY_REGIONS = ['수도권','서울','경기','인천','부산','대구','광주','대전','세종','울산',
                   '강원','충북','충남','전북','전남','경북','경남','제주']
 
+# ---- 버블밴드 (전월세전환율 × 전세가율 밴드 vs 주담대금리) -------------------
+# 전세가율은 STATS(DT_30404_N0006_R1)에 이미 있어 페이지에서 병합. 여기선 전환율+금리만.
+BUBBLE_REGIONS = ['전국','수도권','서울','경기','인천','부산','대구','광주','대전','울산',
+                  '세종','강원','충북','충남','전북','전남','경북','경남','제주']
+BUBBLE_SHORT = {'서울특별시':'서울','부산광역시':'부산','대구광역시':'대구','인천광역시':'인천',
+                '광주광역시':'광주','대전광역시':'대전','울산광역시':'울산','세종특별자치시':'세종',
+                '경기도':'경기','강원도':'강원','강원특별자치도':'강원','충청북도':'충북','충청남도':'충남',
+                '전라북도':'전북','전북특별자치도':'전북','전라남도':'전남','경상북도':'경북',
+                '경상남도':'경남','제주도':'제주','제주특별자치도':'제주'}
+
 # ---- 기본통계(STATS) 월간 자동 갱신 --------------------------------------
 # index.html의 /*STATS_DATA_START*/const STATS={...};/*STATS_DATA_END*/ 블록을
 # 증분 갱신한다(최근 N개월만 조회해 기존 시계열 끝에 병합 — 소급 정정 반영).
@@ -613,6 +623,41 @@ def merge_prov(D, rates, dec):
     return changed
 
 
+def fetch_bubble():
+    """버블밴드: 전월세전환율(아파트·시도, KOSIS DT_30404_N0010) + 주담대 신규취급 가중평균금리
+    (ECOS 121Y006/BECBLA0302). {'prd','loan':{'v','p'},'regions','conv':{지역:%}} 반환."""
+    assert KEY and ECOS_KEY, 'KOSIS_API_KEY, ECOS_API_KEY 필요'
+    rows = kosis(dict(orgId='408', tblId='DT_30404_N0010', itmId='ALL',
+                      objL1='ALL', objL2='ALL', prdSe='M', newEstPrdCnt='3'))
+    by_prd = {}
+    for r in rows:
+        if (r.get('C1_NM') or '').strip() != '아파트':
+            continue
+        rg = (r.get('C2_NM') or '').strip()
+        rg = BUBBLE_SHORT.get(rg, rg)
+        if rg not in BUBBLE_REGIONS:
+            continue
+        try:
+            v = round(float(r['DT']), 2)
+        except (TypeError, ValueError, KeyError):
+            continue
+        by_prd.setdefault(r.get('PRD_DE', ''), {})[rg] = v
+    full = [p for p in sorted(by_prd) if len(by_prd[p]) >= 10]   # 값이 충분히 채워진 최신 월
+    assert full, '전월세전환율 응답 없음'
+    prd, conv = full[-1], by_prd[full[-1]]
+    import datetime
+    today = datetime.date.today()
+    sy, sm = (today.year, today.month - 5) if today.month > 5 else (today.year - 1, today.month + 7)
+    url = ('https://ecos.bok.or.kr/api/StatisticSearch/%s/json/kr/1/10/121Y006/M/%d%02d/%d%02d/BECBLA0302'
+           % (ECOS_KEY, sy, sm, today.year, today.month))
+    lr = [r for r in ((http_json(url).get('StatisticSearch') or {}).get('row') or []) if r.get('DATA_VALUE')]
+    assert lr, '주담대 금리 응답 없음'
+    loan = {'v': round(float(lr[-1]['DATA_VALUE']), 2),
+            'p': lr[-1]['TIME'][:4] + '.' + lr[-1]['TIME'][4:6]}
+    return {'prd': prd[:4] + '.' + prd[4:6], 'loan': loan,
+            'regions': [r for r in BUBBLE_REGIONS if r in conv], 'conv': conv}
+
+
 # ---- index.html 재작성 ----------------------------------------------------
 START, END = '/*ADV_DATA_START*/', '/*ADV_DATA_END*/'
 BSTART, BEND = '/*STATS_DATA_START*/', '/*STATS_DATA_END*/'
@@ -711,7 +756,13 @@ def main():
         print('dry-run ok: permits %d rows, occupancy %d rows' % (
             len(adv['permits']['rows']), len(adv['occupancy']['rows'])))
         return
-    assert arg == '--update', 'usage: --update | --dry-run | --discover <kw>'
+    if arg == '--seed-bubble':   # 버블밴드 최초 시딩 (KOSIS+ECOS 필요)
+        adv['bubble'] = fetch_bubble()
+        write_adv(adv)
+        print('bubble seeded: prd %s, loan %s, %d regions' % (
+            adv['bubble']['prd'], adv['bubble']['loan'], len(adv['bubble']['regions'])))
+        return
+    assert arg == '--update', 'usage: --update | --seed-bubble | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
 
@@ -749,6 +800,16 @@ def main():
             changed += occ_ch
     except Exception as e:
         print('occupancy skip:', e)
+    try:
+        if ECOS_KEY:
+            bub = fetch_bubble()
+            if differs(bub, adv.get('bubble')):
+                adv['bubble'] = bub
+                changed.append('bubble(%s)' % bub['prd'])
+        else:
+            print('bubble skip: ECOS_API_KEY 없음')
+    except Exception as e:
+        print('bubble skip:', e)
     if changed:
         write_adv(adv)
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
