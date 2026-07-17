@@ -538,6 +538,7 @@
   .rk-same{color:var(--muted)}
   .rk-new{color:var(--gold);font-weight:800;font-size:11px}
   .map-hint{display:none;text-align:center;font-size:12px;font-weight:700;color:var(--muted);margin-top:8px}
+  .map-suplegend{text-align:center;font-size:12px;font-weight:700;color:var(--muted);margin-top:10px}
   @media(max-width:720px){.map-hint{display:block}}
   .tilemap svg text{font-family:inherit}
   .gt-head{display:flex;justify-content:flex-end;margin:0 0 10px}
@@ -2647,16 +2648,25 @@ function drawTrendMap(k){
   document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · '+(met==='ma'?'매매':'전세')+' 변동률(%) · '+T.unit;
   const TW=80,TH=66,G=7;
   const sv=['<svg viewBox="0 0 '+(4*TW+3*G)+' '+(5*TH+4*G)+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:430px;display:block;margin:0 auto" role="img" aria-label="지역별 변동률 지도">'];
+  let hasSup=false;
   TILE.forEach(([r,x,y])=>{
     const v=vals[r], txt=v==null?'·':(v>0?'+':'')+v.toFixed(2);
     const tc=v>0?'#a93226':(v<0?'#1a5276':'#8a8272');
+    const sp=(typeof bubbleSupply==='function')?bubbleSupply(r):null;
+    let mark='';
+    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="16" font-size="12" font-weight="800" fill="#b3541e">⚠</text>`;hasSup=true;}
+    else if(sp&&sp.cls==='md'){mark=`<circle cx="${TW-12}" cy="12" r="4.5" fill="#e0a13a"/>`;hasSup=true;}
+    else if(sp&&sp.cls==='lo'){mark=`<circle cx="${TW-12}" cy="12" r="4.5" fill="#2c9a6d"/>`;hasSup=true;}
     sv.push(`<g transform="translate(${x*(TW+G)},${y*(TH+G)})">`+
       `<rect width="${TW}" height="${TH}" rx="11" fill="${mapColor(v,k==='week'?0.4:1.0)}" stroke="#e2dbc9"/>`+
       `<text x="${TW/2}" y="27" text-anchor="middle" font-size="13.5" font-weight="800" fill="#2b2620">${r}</text>`+
-      `<text x="${TW/2}" y="47" text-anchor="middle" font-size="12.5" font-weight="700" fill="${tc}">${txt}</text></g>`);
+      `<text x="${TW/2}" y="47" text-anchor="middle" font-size="12.5" font-weight="700" fill="${tc}">${txt}</text>`+
+      mark+
+      `<title>${r} ${txt}%${sp?' · '+sp.txt.replace('⚠ ','')+' ('+sp.tip+')':''}</title></g>`);
   });
   sv.push('</svg>');
-  document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('');
+  document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
+    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#b3541e">⚠ 과잉</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 부족</b> — 서울·경기·인천은 수도권 물량 기준</div>':'');
 }
 function setMapMet(k,m,btn){
   MAPMET[k]=m;
