@@ -12,14 +12,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="naver-site-verification" content="03c69c2ad7b55f0f48405d5258e78bbfcffb38df" />
-<link rel="canonical" href="https://www.aptweather.co.kr/">
+<link rel="canonical" href="https://www.agongmap.co.kr/">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "아공맵",
   "alternateName": "aptweather",
-  "url": "https://www.aptweather.co.kr/",
+  "url": "https://www.agongmap.co.kr/",
   "description": "부린이 테스트, 주간 아파트 시세 지도, 아파트 사이클 리포트, 국가기관 부동산 통계",
   "inLanguage": "ko"
 }
@@ -30,9 +30,9 @@
   "@type": "Dataset",
   "name": "전국 아파트 가격·공급 통계 (자동 갱신)",
   "description": "한국부동산원·국토교통부·한국은행 공표 자료 기반. 아파트 매매·전세 실거래가격지수, 주간·월간 변동률(시도·시군구·서울 구별), 전세가율, 인허가·착공·준공, 분기별 입주물량, CD금리. 매주 자동 갱신.",
-  "url": "https://www.aptweather.co.kr/#stats",
+  "url": "https://www.agongmap.co.kr/#stats",
   "isAccessibleForFree": true,
-  "creator": {"@type": "Organization", "name": "아공맵 (aptweather.co.kr)"},
+  "creator": {"@type": "Organization", "name": "아공맵 (agongmap.co.kr)"},
   "spatialCoverage": "대한민국",
   "temporalCoverage": "2006/..",
   "keywords": ["아파트 실거래가격지수", "주간 아파트 시세", "전세가율", "인허가", "입주물량", "부동산 통계"]
@@ -51,12 +51,12 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
 <meta property="og:description" content="10문항 2지선다, 3분이면 끝. 내집마련 전 필수 상식부터 아파트 사이클 감각까지 즉시 채점·해설.">
-<meta property="og:url" content="https://www.aptweather.co.kr">
-<meta property="og:image" content="https://www.aptweather.co.kr/og-test.png">
+<meta property="og:url" content="https://www.agongmap.co.kr">
+<meta property="og:image" content="https://www.agongmap.co.kr/og-test.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://www.aptweather.co.kr/og-test.png">
+<meta name="twitter:image" content="https://www.agongmap.co.kr/og-test.png">
 <script defer src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
 <meta name="twitter:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
 <meta name="twitter:description" content="10문항 2지선다, 3분이면 끝. 즉시 채점·해설.">
@@ -2289,7 +2289,7 @@ function showResult(){
         <div><span class="rc-lv">${gr.lv}</span></div>
         <div class="rc-grade">${gr.g}</div>
         <div class="rc-desc">${gr.d}</div>
-        <div class="rc-foot">aptweather.co.kr · 아공맵</div>
+        <div class="rc-foot">agongmap.co.kr · 아공맵</div>
       </div>
       <div class="qshare-box">
         <h4>${CHALLENGE&&CHALLENGE.set===curSet?'친구에게 되받아치기 🔥':'친구는 몇 점일까? 🔥'}</h4>
@@ -2303,7 +2303,7 @@ function showResult(){
     </div>`;
   window.scrollTo(0,0);
 }
-const SHARE_URL='https://www.aptweather.co.kr/#test';
+const SHARE_URL='https://www.agongmap.co.kr/#test';
 /* ===== 친구 대결 (서버 없이 URL 파라미터로) ===== */
 let CHALLENGE=null;
 function readChallenge(){
@@ -2322,7 +2322,7 @@ function readChallenge(){
   return null;
 }
 function challengeURL(){
-  return `https://www.aptweather.co.kr/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
+  return `https://www.agongmap.co.kr/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
 }
 function renderChalBar(){
   const b=document.getElementById('chal-bar');
@@ -2362,10 +2362,10 @@ function kakaoFeed(title,desc,img,link,btn){
   const L=link||SHARE_URL;
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
-      imageUrl:img||'https://www.aptweather.co.kr/og-test.png',imageWidth:img?800:1200,imageHeight:img?800:630,
+      imageUrl:img||'https://www.agongmap.co.kr/og-test.png',imageWidth:img?800:1200,imageHeight:img?800:630,
       link:{mobileWebUrl:L,webUrl:L}},
     buttons:[{title:btn||'나도 도전하기',link:{mobileWebUrl:L,webUrl:L}},
-      {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.aptweather.co.kr',webUrl:'https://www.aptweather.co.kr'}}]});
+      {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.agongmap.co.kr',webUrl:'https://www.agongmap.co.kr'}}]});
 }
 function shareTest(){
   track('share',{content_type:'quiz_invite',method:kakaoReady()?'kakao':(navigator.share?'os_share':'copy')});
@@ -2400,7 +2400,7 @@ function shareResult(){
   if(kakaoReady()){
     try{kakaoFeed(`${gr.emoji} ${qScore}/10점 — ${name}`,
       `${shareTaunt(qScore)} · 내 점수 넘어봐`,
-      `https://www.aptweather.co.kr/share/${curSet}-${qScore}.png`,
+      `https://www.agongmap.co.kr/share/${curSet}-${qScore}.png`,
       url,'도전 받기');return;}
     catch(e){}
   }

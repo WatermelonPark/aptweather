@@ -97,7 +97,7 @@ def main():
 
     # 푸터
     d.line((60, IH - 92, IW - 60, IH - 92), fill=LINE, width=2)
-    d.text((IW // 2, IH - 62), 'aptweather.co.kr — 서울 구별·전국 시군구 상세 지도', font=noto(26), fill=INK, anchor='mm')
+    d.text((IW // 2, IH - 62), 'agongmap.co.kr — 서울 구별·전국 시군구 상세 지도', font=noto(26), fill=INK, anchor='mm')
     d.text((IW // 2, IH - 30), '자료: KOSIS 한국부동산원 전국주택가격동향조사 · 매주 금요일 자동 갱신', font=noto(18), fill=MUTED, anchor='mm')
 
     out = os.path.join(ROOT, 'share', 'weekly-map.png')

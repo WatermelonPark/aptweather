@@ -225,7 +225,7 @@ def make_card(score, art_dir, out_path):
     footer_line_y = taunt_y0 + (len(taunt2) - 1) * line_gap + (44 if art_path else 52)
     footer_line_y = min(footer_line_y, 732)
     d.line([320, footer_line_y, 480, footer_line_y], fill=LINE, width=2)
-    d.text((W // 2, footer_line_y + 26), 'aptweather.co.kr', font=noto(25), fill=INK, anchor='mm')
+    d.text((W // 2, footer_line_y + 26), 'agongmap.co.kr', font=noto(25), fill=INK, anchor='mm')
 
     img.convert('RGB').save(out_path, 'PNG', optimize=True)
     return art_path is not None

@@ -20,7 +20,7 @@ INDEX = os.path.join(ROOT, 'index.html')
 CHANGED = os.path.join(ROOT, '.stats_changed')
 API = 'https://api.buttondown.com/v1/emails'
 KEY = os.environ.get('BUTTONDOWN_API_KEY', '')
-SITE = 'https://www.aptweather.co.kr'
+SITE = 'https://www.agongmap.co.kr'
 
 CORE = ['전국', '수도권', '서울', '경기', '인천', '세종', '부산', '대구']
 

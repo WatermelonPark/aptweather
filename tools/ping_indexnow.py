@@ -9,7 +9,7 @@ import io, os, sys, json
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SITE = 'https://www.aptweather.co.kr'
+SITE = 'https://www.agongmap.co.kr'
 DEFAULT = ['/', '/weekly/', '/faq/', '/burini-test/']
 
 
@@ -21,7 +21,7 @@ def main():
     key = io.open(keyfile).read().strip()
     urls = [SITE + u for u in (sys.argv[1:] or DEFAULT)]
     payload = json.dumps({
-        'host': 'www.aptweather.co.kr',
+        'host': 'www.agongmap.co.kr',
         'key': key,
         'keyLocation': '%s/%s.txt' % (SITE, key),
         'urlList': urls,
