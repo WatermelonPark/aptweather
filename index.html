@@ -1097,7 +1097,6 @@
       <div class="gt-m">
         <div class="map-head"><span class="map-lab" id="week-maplab"></span>
           <div style="display:flex;gap:8px">
-            <div class="gt"><button class="on" data-s="kr" onclick="setMapScope('week','kr',this)">요약</button><button data-s="sgg" onclick="setMapScope('week','sgg',this)">상세</button></div>
           </div></div>
         <div class="tilemap" id="week-map"></div>
       </div>
@@ -1118,7 +1117,6 @@
       <div class="gt-m">
         <div class="map-head"><span class="map-lab" id="month-maplab"></span>
           <div style="display:flex;gap:8px">
-            <div class="gt"><button class="on" data-s="kr" onclick="setMapScope('month','kr',this)">요약</button><button data-s="sgg" onclick="setMapScope('month','sgg',this)">상세</button></div>
           </div></div>
         <div class="tilemap" id="month-map"></div>
       </div>
@@ -2628,7 +2626,6 @@ function subsSubmit(f){
     });
   return false;
 }
-let MAPSCOPE={week:'kr',month:'kr'};
 /* --- 표 행열전환 --- */
 let TRANSP={};
 const TR_REDRAW={basicmain:()=>drawStat(),week:()=>renderTrendTables('week'),month:()=>renderTrendTables('month'),permit:()=>renderAdvPermits(),occ:()=>renderAdvOcc()};
@@ -2638,17 +2635,6 @@ function trFlip(sec,btn){
   TR_REDRAW[sec]();
   track('stats_transpose',{section:sec,on:!!TRANSP[sec]});
 }
-function setMapScope(k,sc,btn){
-  MAPSCOPE[k]=sc;
-  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn));
-  drawTrendMap(k);
-  track('stats_map_scope',{section:k,scope:sc});
-}
-const TILE=[['전국',0,0],['수도권',1,0],['지방',2,0],['제주',3,0],
-  ['인천',0,1],['서울',1,1],['경기',2,1],['강원',3,1],
-  ['충남',0,2],['세종',1,2],['충북',2,2],['경북',3,2],
-  ['전북',0,3],['대전',1,3],['대구',2,3],['울산',3,3],
-  ['전남',0,4],['광주',1,4],['경남',2,4],['부산',3,4]];
 function mapColor(v,ref){
   if(v==null||v===0)return '#efeadd';
   const a=Math.min(Math.abs(v)/(ref||0.4),1);
@@ -2656,38 +2642,8 @@ function mapColor(v,ref){
 }
 function drawTrendMap(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
-  if(MAPSCOPE[k]==='sgg'&&W.sgg&&W.sgg.rows.length){drawNationMap(k);return;}
-  const row=W.rows[W.rows.length-1];
-  const vma={},vje={}; W.regions.forEach((r,i)=>{vma[r]=row.ma[i];vje[r]=row.je[i];});
-  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 매매·전세 변동률(%) · '+T.unit;
-  const TW=80,TH=70,G=7;
-  const sv=['<svg viewBox="0 0 '+(4*TW+3*G)+' '+(5*TH+4*G)+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:430px;display:block;margin:0 auto" role="img" aria-label="지역별 변동률 지도">'];
-  let hasSup=false;
-  const fmtV=v=>v==null?'·':(v>0?'+':'')+v.toFixed(2);
-  const tcol=v=>v>0?'#a93226':(v<0?'#1a5276':'#8a8272');
-  const scale=k==='week'?0.4:1.0;
-  TILE.forEach(([r,x,y])=>{
-    const ma=vma[r], je=vje[r];
-    const sp=(typeof bubbleSupply==='function')?bubbleSupply(r):null;
-    let mark='';
-    const SUPC={xd:'#3a7bd5',ok:'#2c9a6d'};
-    if(sp&&sp.cls==='hi'){mark=`<g transform="translate(${TW-18},4)">${WARN_DN('#1a5276')}</g>`;hasSup=true;}
-    else if(sp&&sp.cls==='lo'){mark=`<g transform="translate(${TW-18},4)">${WARN_UP('#c0392b')}</g>`;hasSup=true;}
-    else if(sp&&SUPC[sp.cls]){mark=`<circle cx="${TW-12}" cy="10" r="4" fill="${SUPC[sp.cls]}"/>`;hasSup=true;}
-    sv.push(`<g transform="translate(${x*(TW+G)},${y*(TH+G)})">`+
-      `<rect width="${TW}" height="${TH}" rx="10" fill="#fff" stroke="#d8d0bc"/>`+
-      `<text x="${TW/2}" y="16" text-anchor="middle" font-size="12.5" font-weight="800" fill="#2b2620">${r}</text>`+
-      `<rect x="3" y="21" width="${TW-6}" height="23" rx="5" fill="${mapColor(ma,scale)}"/>`+
-      `<text x="${TW/2}" y="37" text-anchor="middle" font-size="11.5" font-weight="800" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
-      `<rect x="3" y="45" width="${TW-6}" height="22" rx="5" fill="${mapColor(je,scale)}"/>`+
-      `<text x="${TW/2}" y="60" text-anchor="middle" font-size="11.5" font-weight="700" fill="${tcol(je)}">${fmtV(je)}</text>`+
-      mark+
-      `<title>${r} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%${sp?' · '+sp.txt.replace('⚠ ','')+' ('+sp.tip+')':''}</title></g>`);
-  });
-  sv.push('</svg>');
-  document.getElementById(T.map).innerHTML=mapDateChip(row.p,'매매·전세 · '+T.unit)+sv.join('')+
-    '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
-    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#c0392b">'+warnIcon(false,'#c0392b')+'부족(상승 압력)</b> · <b style="color:#1a5276">'+warnIcon(true,'#1a5276')+'과잉(하락 압력)</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#2c9a6d">● 적정</b><br>서울·경기·인천은 수도권 물량 기준 · 전국은 15개 지역 합산 · 지방 묶음은 집계 제외</div>':'');
+  if(W.sgg&&W.sgg.rows.length){drawNationMap(k);return;}
+  document.getElementById(T.map).innerHTML='<div class="src-note" style="padding:14px">지도 데이터 수집 대기중</div>';
 }
 function trendData(k){ return k==='week'?ADV.weekly:ADV.monthly; }
 function renderTrendTables(k){
