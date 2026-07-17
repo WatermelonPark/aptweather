@@ -1098,7 +1098,6 @@
         <div class="map-head"><span class="map-lab" id="week-maplab"></span>
           <div style="display:flex;gap:8px">
             <div class="gt"><button class="on" data-s="kr" onclick="setMapScope('week','kr',this)">요약</button><button data-s="sgg" onclick="setMapScope('week','sgg',this)">상세</button></div>
-            <div class="gt"><button class="on" data-m="ma" onclick="setMapMet('week','ma',this)">매매</button><button data-m="je" onclick="setMapMet('week','je',this)">전세</button></div>
           </div></div>
         <div class="tilemap" id="week-map"></div>
       </div>
@@ -1120,7 +1119,6 @@
         <div class="map-head"><span class="map-lab" id="month-maplab"></span>
           <div style="display:flex;gap:8px">
             <div class="gt"><button class="on" data-s="kr" onclick="setMapScope('month','kr',this)">요약</button><button data-s="sgg" onclick="setMapScope('month','sgg',this)">상세</button></div>
-            <div class="gt"><button class="on" data-m="ma" onclick="setMapMet('month','ma',this)">매매</button><button data-m="je" onclick="setMapMet('month','je',this)">전세</button></div>
           </div></div>
         <div class="tilemap" id="month-map"></div>
       </div>
@@ -2564,11 +2562,11 @@ function sggRanks(S,row,met){
   arr.forEach(([c],i)=>rk[c]=i+1);
   return {order:arr,rk};
 }
-function rankTables(S,met){
+function rankTables(S){
   const rows=S.rows, cur=rows[rows.length-1];
   const prev=rows.length>1?rows[rows.length-2]:null;
-  const cr=sggRanks(S,cur,met), pr=prev?sggRanks(S,prev,met).rk:null;
-  const metNm=met==='ma'?'매매':'전세';
+  const cr=sggRanks(S,cur,'ma'), pr=prev?sggRanks(S,prev,'ma').rk:null;
+  const je={}; S.codes.forEach((c,i)=>{je[c]=cur.je[i];});
   function dcell(c){
     if(!pr||!(c in pr))return '<span class="rk-new">NEW</span>';
     const d=pr[c]-cr.rk[c];
@@ -2578,21 +2576,22 @@ function rankTables(S,met){
   }
   function tbl(title,items,base){
     const h=['<div class="rank-box"><div class="rank-h">'+title+'</div><div class="rank-wrap"><table class="rank-tbl">',
-      '<thead><tr><th>순위</th><th>지역</th><th>'+metNm+'</th><th>전주</th></tr></thead><tbody>'];
+      '<thead><tr><th>순위</th><th>지역</th><th>매매</th><th>전세</th><th>전주</th></tr></thead><tbody>'];
     items.forEach(([c,v],i)=>{
-      h.push('<tr><td>'+(base+i)+'</td><td>'+SGG_QNAME[c]+'</td><td class="'+(v>0?'up':(v<0?'dn':''))+'">'+(v>0?'+':'')+v.toFixed(2)+'</td><td>'+dcell(c)+'</td></tr>');
+      const jv=je[c];
+      h.push('<tr><td>'+(base+i)+'</td><td>'+SGG_QNAME[c]+'</td><td class="'+(v>0?'up':(v<0?'dn':''))+'">'+(v>0?'+':'')+v.toFixed(2)+'</td><td class="'+(jv>0?'up':(jv<0?'dn':''))+'">'+(jv==null?'·':(jv>0?'+':'')+jv.toFixed(2))+'</td><td>'+dcell(c)+'</td></tr>');
     });
     h.push('</tbody></table></div></div>');
     return h.join('');
   }
   return '<div class="map-rank">'+
-    tbl('<span style="color:#e0564a">▲</span> 상승 TOP 10',cr.order.slice(0,10),1)+
-    tbl('<span style="color:#3a7bd5">▼</span> 하락 TOP 10',cr.order.slice(-10).reverse(),1)+
+    tbl('<span style="color:#e0564a">▲</span> 상승 TOP 10 <span style="font-weight:600;color:#8a8272;font-size:11px">매매 기준</span>',cr.order.slice(0,10),1)+
+    tbl('<span style="color:#3a7bd5">▼</span> 하락 TOP 10 <span style="font-weight:600;color:#8a8272;font-size:11px">매매 기준</span>',cr.order.slice(-10).reverse(),1)+
     '</div>';
 }
 function drawNationMap(k){
   const T=TREND[k], D=trendData(k), S=D.sgg; if(!S||!S.rows.length)return;
-  const met=MAPMET[k], row=S.rows[S.rows.length-1];
+  const row=S.rows[S.rows.length-1];
   const vma={},vje={}; S.codes.forEach((c,i)=>{vma[c]=row.ma[i];vje[c]=row.je[i];});
   document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 전국 시군구 매매·전세 변동률(%) · '+T.unit;
   const ref=k==='week'?0.4:1.0, TW=54, NH=17, VH=16, G=3;
@@ -2639,8 +2638,8 @@ function drawNationMap(k){
   sv.push('<path d="'+bl.join('')+'" stroke="#6f6a5c" stroke-width="1.4" fill="none" opacity=".9"/>');
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=
-    mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+
-    rankTables(S,met)+
+    mapDateChip(row.p,'매매·전세 · '+T.unit)+
+    rankTables(S)+
     '<div class="map-scroll">'+sv.join('')+'</div>'+
     '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
     '<div class="map-hint">지도를 옆으로 밀면 동쪽 지역까지 볼 수 있어요 ↔</div>';
@@ -2677,8 +2676,6 @@ function trFlip(sec,btn){
 function setMapScope(k,sc,btn){
   MAPSCOPE[k]=sc;
   btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn));
-  const metBtn=document.querySelector('#sec-'+k+' .map-head button[data-m]');
-  if(metBtn)metBtn.parentElement.style.display=sc==='sgg'?'':'none';
   drawTrendMap(k);
   track('stats_map_scope',{section:k,scope:sc});
 }
@@ -2687,7 +2684,6 @@ const TILE=[['전국',0,0],['수도권',1,0],['지방',2,0],['제주',3,0],
   ['충남',0,2],['세종',1,2],['충북',2,2],['경북',3,2],
   ['전북',0,3],['대전',1,3],['대구',2,3],['울산',3,3],
   ['전남',0,4],['광주',1,4],['경남',2,4],['부산',3,4]];
-let MAPMET={week:'ma',month:'ma'};
 function mapColor(v,ref){
   if(v==null||v===0)return '#efeadd';
   const a=Math.min(Math.abs(v)/(ref||0.4),1);
@@ -2695,10 +2691,8 @@ function mapColor(v,ref){
 }
 function drawTrendMap(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
-  const metBtn=document.querySelector('#sec-'+k+' .map-head button[data-m]');
-  if(metBtn)metBtn.parentElement.style.display=MAPSCOPE[k]==='sgg'?'':'none';
   if(MAPSCOPE[k]==='sgg'&&W.sgg&&W.sgg.rows.length){drawNationMap(k);return;}
-  const met=MAPMET[k], row=W.rows[W.rows.length-1];
+  const row=W.rows[W.rows.length-1];
   const vma={},vje={}; W.regions.forEach((r,i)=>{vma[r]=row.ma[i];vje[r]=row.je[i];});
   document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 매매·전세 변동률(%) · '+T.unit;
   const TW=80,TH=70,G=7;
@@ -2726,15 +2720,9 @@ function drawTrendMap(k){
       `<title>${r} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%${sp?' · '+sp.txt.replace('⚠ ','')+' ('+sp.tip+')':''}</title></g>`);
   });
   sv.push('</svg>');
-  document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
+  document.getElementById(T.map).innerHTML=mapDateChip(row.p,'매매·전세 · '+T.unit)+sv.join('')+
     '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
     (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#c0392b">'+warnIcon(false,'#c0392b')+'부족(상승 압력)</b> · <b style="color:#1a5276">'+warnIcon(true,'#1a5276')+'과잉(하락 압력)</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#2c9a6d">● 적정</b><br>서울·경기·인천은 수도권 물량 기준 · 전국은 15개 지역 합산 · 지방 묶음은 집계 제외</div>':'');
-}
-function setMapMet(k,m,btn){
-  MAPMET[k]=m;
-  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn));
-  drawTrendMap(k);
-  track('stats_map_metric',{section:k,metric:m});
 }
 function trendData(k){ return k==='week'?ADV.weekly:ADV.monthly; }
 function renderTrendTables(k){
