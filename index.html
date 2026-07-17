@@ -479,8 +479,8 @@
   table.adv th:first-child,table.adv td:first-child{position:sticky;left:0;background:#fff;text-align:left;
     font-weight:700;color:var(--ink);border-right:1px solid var(--line);z-index:1}
   table.adv thead th:first-child{background:var(--paper2);z-index:2}
-  table.adv td.hi{background:#fdecea;color:#a93226;font-weight:700}
-  table.adv td.lo{background:#eaf3fb;color:#1a5276;font-weight:700}
+  table.adv td.hi{background:#eaf3fb;color:#1a5276;font-weight:700}
+  table.adv td.lo{background:#fdecea;color:#a93226;font-weight:700}
   table.adv tr.fut td{background:#fbf7ea}
   table.adv tr.fut td:first-child{color:var(--gold)}
   table.adv td.up{color:#c0392b}
@@ -650,13 +650,13 @@
   .bb-row{display:flex;align-items:center;gap:10px;margin:7px 0}
   .bb-lab{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:700;color:#333}
   .bb-track{flex:1;height:16px;background:#f1f3f5;border-radius:8px;position:relative}
-  .bb-band{position:absolute;top:2px;bottom:2px;background:linear-gradient(90deg,#eaf3fb,#fdecea);border-left:3px solid #1a5276;border-right:3px solid #a93226;border-radius:3px}
+  .bb-band{position:absolute;top:2px;bottom:2px;background:linear-gradient(90deg,#fdecea,#eaf3fb);border-left:3px solid #a93226;border-right:3px solid #1a5276;border-radius:3px}
   .bb-loan{position:absolute;top:-3px;bottom:-3px;width:3px;background:#1c2733;border-radius:2px}
   .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#666}
-  .bb-chip.hi{background:#fdecea;color:#a93226}
-  .bb-chip.lo{background:#eaf3fb;color:#1a5276}
+  .bb-chip.hi{background:#eaf3fb;color:#1a5276}
+  .bb-chip.lo{background:#fdecea;color:#a93226}
   .bb-sup{flex:none;width:70px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#8a8272}
-  .bb-sup.hi{background:#fdecea;color:#c0392b}
+  .bb-sup.hi{background:#eaf3fb;color:#1a5276}
   .bb-sup.xd{background:#eaf3fb;color:#1a5276}
   .bb-sup.md{background:#fbf7ea;color:#9a7000}
   .bb-sup.ok{background:#eaf6f0;color:#1a6b54}
@@ -1135,7 +1135,7 @@
 
     <section class="adv-sec gsec" id="sec-clock">
       <div class="adv-h"><h3>3년 공급시계</h3><span class="adv-badge">인허가→입주 약 3년</span></div>
-      <p class="adv-note">오늘 인허가받은 아파트는 약 3년 뒤(수도권은 더 늦게, 재건축은 5년+) 입주합니다. 즉 <b>3년 뒤 공급량은 이미 결정</b>되어 있습니다. 지금·1년 내 입주(분기 평균)와 최근 1년 인허가를 각 지역의 평년 범위와 비교해 <span style="color:#c0392b;font-weight:700">빨강=공급 많음(하락 압력)</span>, <span style="color:#1a5276;font-weight:700">파랑=공급 적음(상승 압력)</span>으로 칠합니다.</p>
+      <p class="adv-note">오늘 인허가받은 아파트는 약 3년 뒤(수도권은 더 늦게, 재건축은 5년+) 입주합니다. 즉 <b>3년 뒤 공급량은 이미 결정</b>되어 있습니다. 지금·1년 내 입주(분기 평균)와 최근 1년 인허가를 각 지역의 평년 범위와 비교해 <span style="color:#1a5276;font-weight:700">파랑=공급 많음(하락 압력)</span>, <span style="color:#c0392b;font-weight:700">빨강=공급 적음(상승 압력)</span>으로 칠합니다.</p>
       <div id="clock-lab" style="font-size:12px;color:var(--muted);margin:0 2px 8px"></div>
       <div class="adv-tblwrap"><table class="adv" id="clock-tbl"></table></div>
       <div class="src-note">자료: KOSIS 국토교통부 「주택건설실적통계」 인허가 · 한국부동산원 공동주택 입주(예정)물량 · 자동 갱신</div>
@@ -1143,7 +1143,7 @@
 
     <section class="adv-sec gsec" id="sec-bubble">
       <div class="adv-h"><h3>버블밴드</h3><span class="adv-badge">월간</span><span class="adv-badge" id="bubble-prd"></span></div>
-      <p class="adv-note">아파트의 임대수익률(<b>전세가율 × 전월세전환율</b>)을 <b style="color:#1a5276">하단(매수신호선)</b>, 그 2배를 <b style="color:#a93226">상단(위험선)</b>으로 놓고 주택담보대출 금리(세로선)와 비교합니다. 금리가 하단 아래면 전세 살 이유가 없어지는 매수 신호권, 상단 위면 임대수익 대비 금리가 과도한 위험권입니다. 2008년 10월(상단 약 5.6% vs 금리 7.58%)과 2022년 10월(약 5.2% vs 4.82%)의 급락기가 이 조건에서 나왔습니다. 단, 밴드는 <b>가격·금리 조건만</b> 봅니다 — 향후 입주물량이 많은 지역은 오른쪽 <b>공급 배지</b>(적정밴드 대비 향후 4개 분기)를 함께 확인하세요.</p>
+      <p class="adv-note">아파트의 임대수익률(<b>전세가율 × 전월세전환율</b>)을 <b style="color:#a93226">하단(매수신호선)</b>, 그 2배를 <b style="color:#1a5276">상단(위험선)</b>으로 놓고 주택담보대출 금리(세로선)와 비교합니다. 금리가 하단 아래면 전세 살 이유가 없어지는 매수 신호권, 상단 위면 임대수익 대비 금리가 과도한 위험권입니다. 2008년 10월(상단 약 5.6% vs 금리 7.58%)과 2022년 10월(약 5.2% vs 4.82%)의 급락기가 이 조건에서 나왔습니다. 단, 밴드는 <b>가격·금리 조건만</b> 봅니다 — 향후 입주물량이 많은 지역은 오른쪽 <b>공급 배지</b>(적정밴드 대비 향후 4개 분기)를 함께 확인하세요.</p>
       <div id="bubble-wrap"></div>
       <div class="src-note">자료: KOSIS 한국부동산원 전월세전환율·전세가율 · 한국은행 예금은행 주택담보대출 금리(신규취급) · 자동 갱신</div>
     </section>
@@ -1201,7 +1201,7 @@
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('permit','g')">그래프</button><button data-v="t" onclick="gtSet('permit','t')">표</button></div></div>
 
   
-      <p class="adv-note">아파트 인허가에서 40㎡ 이하를 뺀 값이다(초소형 제외 = 실제 입주 체감 물량). 인허가는 4~6년 뒤 입주로 이어지는 <b>가장 이른 공급 신호</b>다. <span style="color:#1a5276;font-weight:700">파랑=과거 저점 수준 미만(공급부족 예고)</span>, <span style="color:#a93226;font-weight:700">빨강=과거 고점 수준 이상(공급과다 예고)</span>.</p>
+      <p class="adv-note">아파트 인허가에서 40㎡ 이하를 뺀 값이다(초소형 제외 = 실제 입주 체감 물량). 인허가는 4~6년 뒤 입주로 이어지는 <b>가장 이른 공급 신호</b>다. <span style="color:#a93226;font-weight:700">빨강=과거 저점 수준 미만(공급부족·상승압력 예고)</span>, <span style="color:#1a5276;font-weight:700">파랑=과거 고점 수준 이상(공급과다·하락압력 예고)</span>.</p>
       <div class="adv-regsel"><select id="adv-permit-reg" onchange="renderPermitSec()"></select></div>
       <div class="gt-g"><div class="chartwrap sm"><canvas id="permitChart"></canvas></div></div>
       <div class="gt-t">
@@ -1209,7 +1209,7 @@
         <div class="adv-tblwrap matrix" id="adv-permit-matrix"></div>
         <div class="adv-tblwrap compact" id="adv-permit-compact"></div>
       </div>
-      <div class="adv-legend"><span><i style="background:#eaf3fb"></i>저점 미만</span><span><i style="background:#fdecea"></i>고점 이상</span><span>참조선: 지역별 과거 연간 저점·고점의 ½ (반기 환산)</span></div>
+      <div class="adv-legend"><span><i style="background:#fdecea"></i>저점 미만</span><span><i style="background:#eaf3fb"></i>고점 이상</span><span>참조선: 지역별 과거 연간 저점·고점의 ½ (반기 환산)</span></div>
       <div class="src-note">자료: KOSIS 국토교통부 「주택건설실적통계」 주택규모별 인허가실적 · 6·12월 누계 기준</div>
     </section>
 
@@ -1217,7 +1217,7 @@
     <section class="adv-sec gsec gm-g" id="sec-occ" style="display:none">
       <div class="adv-h"><h3>입주물량 (분기별)</h3><span class="adv-badge">미래 분기 포함</span>
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('occ','g')">그래프</button><button data-v="t" onclick="gtSet('occ','t')">표</button></div></div>
-      <p class="adv-note">분기별 아파트 준공(실적)과 입주예정 물량을 지역별 <b>적정물량 밴드</b>와 비교한다. 밴드 하단은 과거 <b>하락→상승 전환</b> 구간의 물량, 상단은 <b>상승→하락 전환</b> 구간의 물량이다(매매 실거래지수 전환점 실측·금리쇼크기 제외). <span style="color:#a93226;font-weight:700">빨강=밴드 상단 초과(공급 과잉·하락 압력)</span>, <span style="color:#1a5276;font-weight:700">파랑=밴드 하단 미만(공급 부족·상승 압력)</span>. 노란 행은 <b>입주예정</b> 기반으로, 준공 실적이 발표되면 자동으로 확정치로 바뀐다.</p>
+      <p class="adv-note">분기별 아파트 준공(실적)과 입주예정 물량을 지역별 <b>적정물량 밴드</b>와 비교한다. 밴드 하단은 과거 <b>하락→상승 전환</b> 구간의 물량, 상단은 <b>상승→하락 전환</b> 구간의 물량이다(매매 실거래지수 전환점 실측·금리쇼크기 제외). <span style="color:#1a5276;font-weight:700">파랑=밴드 상단 초과(공급 과잉·하락 압력)</span>, <span style="color:#a93226;font-weight:700">빨강=밴드 하단 미만(공급 부족·상승 압력)</span>. 노란 행은 <b>입주예정</b> 기반으로, 준공 실적이 발표되면 자동으로 확정치로 바뀐다.</p>
       <div class="adv-regsel"><select id="adv-occ-reg" onchange="renderOccSec()"></select></div>
       <div class="gt-g"><div class="chartwrap sm"><canvas id="occChart"></canvas></div></div>
       <div class="gt-t">
@@ -1225,7 +1225,7 @@
         <div class="adv-tblwrap matrix" id="adv-occ-matrix"></div>
         <div class="adv-tblwrap compact" id="adv-occ-compact"></div>
       </div>
-      <div class="adv-legend"><span><i style="background:#fdecea"></i>밴드 상단 초과</span><span><i style="background:#eaf3fb"></i>밴드 하단 미만</span><span><i style="background:#fbf7ea"></i>입주예정 기반(실적 미확정)</span></div>
+      <div class="adv-legend"><span><i style="background:#eaf3fb"></i>밴드 상단 초과</span><span><i style="background:#fdecea"></i>밴드 하단 미만</span><span><i style="background:#fbf7ea"></i>입주예정 기반(실적 미확정)</span></div>
       <div class="src-note">자료: 국토교통부 「주택건설실적통계」 준공실적(지난 분기) + 공공데이터포털 입주예정물량(미래 분기) · 분기 합산 · 매주 자동 갱신</div>
     </section>
 
@@ -2687,7 +2687,7 @@ function drawTrendMap(k){
     const sp=(typeof bubbleSupply==='function')?bubbleSupply(r):null;
     let mark='';
     const SUPC={xd:'#3a7bd5',md:'#e0a13a',ok:'#2c9a6d',lo:'#c0392b'};
-    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="15" font-size="11.5" font-weight="800" fill="#c0392b">⚠</text>`;hasSup=true;}
+    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="15" font-size="11.5" font-weight="800" fill="#1a5276">⚠</text>`;hasSup=true;}
     else if(sp&&SUPC[sp.cls]){mark=`<circle cx="${TW-12}" cy="10" r="4" fill="${SUPC[sp.cls]}"/>`;hasSup=true;}
     sv.push(`<g transform="translate(${x*(TW+G)},${y*(TH+G)})">`+
       `<rect width="${TW}" height="${TH}" rx="10" fill="#fff" stroke="#d8d0bc"/>`+
@@ -2702,7 +2702,7 @@ function drawTrendMap(k){
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
     '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
-    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#c0392b">⚠ 과잉</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 보통</b> · <b style="color:#c0392b">● 부족</b><br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
+    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#1a5276">⚠ 과잉</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 보통</b> · <b style="color:#c0392b">● 부족</b><br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
 }
 function setMapMet(k,m,btn){
   MAPMET[k]=m;
@@ -2766,7 +2766,7 @@ function drawPermitChart(){
   const P=ADV.permits, regs=P.regions;
   const reg=advSel('adv-permit-reg',regs), ri=regs.indexOf(reg), ref=P.ref[reg];
   const vals=P.rows.map(r=>r.v[ri]);
-  const cols=vals.map(v=>{const c=permitCls(reg,v);return c==='hi'?'#e0564a':(c==='lo'?'#3a7bd5':'#cdc4ae');});
+  const cols=vals.map(v=>{const c=permitCls(reg,v);return c==='hi'?'#3a7bd5':(c==='lo'?'#e0564a':'#cdc4ae');});
   mkChart('permitChart',{type:'bar',
     data:{labels:P.rows.map(r=>r.p.replace('H1',' 상').replace('H2',' 하')),
       datasets:[{label:'인허가(40㎡ 제외)',data:vals,backgroundColor:cols}]},
@@ -2794,7 +2794,7 @@ function drawOccChart(){
   const cols=O.rows.map((r,i)=>{
     if(occEst(r))return '#e8ce7a';
     const c=occCls(reg,vals[i]);
-    return c==='hi'?'#e0564a':(c==='lo'?'#3a7bd5':'#cdc4ae');
+    return c==='hi'?'#3a7bd5':(c==='lo'?'#e0564a':'#cdc4ae');
   });
   mkChart('occChart',{type:'bar',
     data:{labels:O.rows.map(r=>r.p),datasets:[{label:'입주물량',data:vals,backgroundColor:cols}]},
@@ -2938,8 +2938,8 @@ function renderClockSec(){
     let arrow='·';
     if(nowA!=null&&nxtA!=null&&nowA>0){
       const d=(nxtA-nowA)/nowA;
-      arrow=d>0.1?'<span style="color:#a93226;font-weight:700">▲ 늘어남</span>'
-        :d<-0.1?'<span style="color:#1a5276;font-weight:700">▼ 줄어듦</span>':'— 비슷';
+      arrow=d>0.1?'<span style="color:#1a5276;font-weight:700">▲ 늘어남</span>'
+        :d<-0.1?'<span style="color:#a93226;font-weight:700">▼ 줄어듦</span>':'— 비슷';
     }
     h+='<tr><th>'+rg+'</th><td class="'+(nowA!=null?occCls(rg,nowA):'')+'">'+f(nowA)+'</td>'
       +'<td class="'+(nxtA!=null?occCls(rg,nxtA):'')+'">'+f(nxtA)+'</td>'
@@ -2982,7 +2982,7 @@ function renderBubbleSec(){
   const latest=r=>{const s=J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
   const MAX=9;
   const px=v=>Math.min(98,Math.max(0,v/MAX*100));
-  let h='<div class="bb-legend">막대 = <b style="color:#1a5276">매수신호선(하단)</b> ~ <b style="color:#a93226">위험선(상단)</b> · 세로선 = 주택담보대출 '+loan.toFixed(2)+'% ('+B.loan.p+' 신규취급 평균)</div>';
+  let h='<div class="bb-legend">막대 = <b style="color:#a93226">매수신호선(하단)</b> ~ <b style="color:#1a5276">위험선(상단)</b> · 세로선 = 주택담보대출 '+loan.toFixed(2)+'% ('+B.loan.p+' 신규취급 평균)</div>';
   let nHi=0,nLo=0,nNear=0,nLoSupply=0;
   (B.regions||Object.keys(B.conv)).forEach(rg=>{
     const cv=B.conv[rg],jr=latest(rg);
@@ -3003,8 +3003,8 @@ function renderBubbleSec(){
       +'</div>';
   });
   let sum;
-  if(nHi>0)sum='<b style="color:#a93226">'+nHi+'개 지역</b>에서 금리가 위험선(상단)을 넘었습니다. 과거 급락기(2008·2022)가 이 조건에서 나왔습니다.';
-  else if(nLo>0)sum='<b style="color:#1a5276">'+nLo+'개 지역</b>이 매수 신호권(금리 ≤ 하단)입니다.';
+  if(nHi>0)sum='<b style="color:#1a5276">'+nHi+'개 지역</b>에서 금리가 위험선(상단)을 넘었습니다. 과거 급락기(2008·2022)가 이 조건에서 나왔습니다.';
+  else if(nLo>0)sum='<b style="color:#a93226">'+nLo+'개 지역</b>이 매수 신호권(금리 ≤ 하단)입니다.';
   else if(nNear>0)sum=nNear+'개 지역이 상단(위험선)까지 1%p 미만으로 접근해 있습니다.';
   else sum='현재 금리가 위험선(상단)을 넘거나 매수신호선(하단) 아래인 지역은 없습니다.';
   if(nLoSupply>0)sum+=' 단, 매수 신호권 중 <b style="color:#b3541e">'+nLoSupply+'개 지역은 향후 공급 과잉·주의</b> — 입주물량 소화 전까지는 신호를 눌러 읽어야 합니다.';
