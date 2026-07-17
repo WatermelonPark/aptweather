@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.aptweather.co.kr/</loc>
+    <loc>https://www.agongmap.co.kr/</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.aptweather.co.kr/weekly/</loc>
+    <loc>https://www.agongmap.co.kr/weekly/</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.aptweather.co.kr/cycle/</loc>
+    <loc>https://www.agongmap.co.kr/cycle/</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.aptweather.co.kr/faq/</loc>
+    <loc>https://www.agongmap.co.kr/faq/</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.aptweather.co.kr/burini-test/</loc>
+    <loc>https://www.agongmap.co.kr/burini-test/</loc>
     <lastmod>2026-07-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
