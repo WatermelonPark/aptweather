@@ -250,8 +250,8 @@
   .qpick-card .pc-badge{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.03em;
     padding:4px 10px;border-radius:12px}
   .qpick-card .pc-badge.lv1{background:#e8f3ee;color:#1a6b54}
-  .qpick-card .pc-badge.lv2{background:#fbe9e6;color:#c0392b}
-.qpick-card .pc-badge.lv3{background:#fff4e0;color:#b9770e}
+  .qpick-card .pc-badge.lv2{background:#fff4e0;color:#b9770e}
+.qpick-card .pc-badge.lv3{background:#fbe9e6;color:#c0392b}
   .qpick-card .pc-desc{font-size:14px;line-height:1.6;color:var(--ink2);margin:0}
   .qpick-card .pc-go{position:absolute;right:20px;bottom:18px;font-size:20px;color:var(--muted)}
   .qback{display:inline-flex;align-items:center;gap:5px;background:none;border:0;
@@ -676,7 +676,7 @@
     <h1>아공맵</h1>
     <p class="sub">아파트 공급 지도, 아공맵. 국가 통계로 시장을 읽고, 3분 테스트로 내 감각을 확인하는 부동산 데이터 사이트.</p>
     <div class="qmenu">
-      <button class="qm" onclick="goQuiz('beginner');track('home_qm',{to:'quiz'})"><span class="qm-e">🐣</span><span class="qm-t">퀴즈</span><span class="qm-d">부린이 테스트 3분</span></button>
+      <button class="qm" onclick="showView('test');track('home_qm',{to:'quiz'})"><span class="qm-e">📝</span><span class="qm-t">퀴즈</span><span class="qm-d">테스트 3종 · 각 3분</span></button>
       <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">📈</span><span class="qm-t">시황</span><span class="qm-d">주간·월간 지도</span></button>
       <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">리포트</span><span class="qm-d">집값은 돌고 돈다</span></button>
       <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e">📊</span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
@@ -688,8 +688,9 @@
     <h2>내 부동산 감각, 몇 점일까?</h2>
     <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
     <div class="hs-cta">
-      <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 시작</button>
-      <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
+      <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 · 난이도 하</button>
+      <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 · 난이도 중</button>
+      <button class="home-cta alt" onclick="goQuiz('calc')">🏗️ 재건축 투자 테스트 · 난이도 상</button>
     </div>
   </div></section>
 
@@ -1267,7 +1268,7 @@
             <div class="pc-top">
               <span class="pc-emoji">🐣</span>
               <span class="pc-title">부린이 테스트</span>
-              <span class="pc-badge lv1">입문</span>
+              <span class="pc-badge lv1">난이도 하</span>
             </div>
             <p class="pc-desc">LTV·디딤돌·계약갱신청구권… 집 사기 전 꼭 알아야 할 제도와 용어. 부린이 탈출의 첫걸음.</p>
             <span class="pc-go">→</span>
@@ -1276,7 +1277,7 @@
             <div class="pc-top">
               <span class="pc-emoji">🦅</span>
               <span class="pc-title">투자자 테스트</span>
-              <span class="pc-badge lv2">심화</span>
+              <span class="pc-badge lv2">난이도 중</span>
             </div>
             <p class="pc-desc">호재를 악재로, 악재를 호재로. 통념을 거꾸로 뒤집어야 풀리는 사이클·금리·수급의 진짜 게임.</p>
             <span class="pc-go">→</span>
@@ -1284,8 +1285,8 @@
           <button class="qpick-card" onclick="startQuiz('calc')">
             <div class="pc-top">
               <span class="pc-emoji">🏗️</span>
-              <span class="pc-title">재건축 계산 테스트</span>
-              <span class="pc-badge lv3">실전</span>
+              <span class="pc-title">재건축 투자 테스트</span>
+              <span class="pc-badge lv3">난이도 상</span>
             </div>
             <p class="pc-desc">매매가·대지지분·용적률을 주면 사업성이 보이나요? 계산하기 쉬운 숫자로 머리에서 바로 굴려보는 사업성 훈련.</p>
             <span class="pc-go">→</span>
@@ -2010,8 +2011,8 @@ const QUIZSETS={
     }
   },
   calc:{
-    title:'재건축 계산 테스트', emoji:'🏗️',
-    shareName:'재건축 계산 테스트',
+    title:'재건축 투자 테스트', emoji:'🏗️',
+    shareName:'재건축 투자 테스트',
     Q:[
   {q:'매매가 <b>4억</b>, 대지지분 <b>10평</b>짜리 재건축 대상 아파트. <b>개발 전</b> 대지 1평의 가치는?',
    opts:['4,000만원','8,000만원'],
