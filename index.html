@@ -2593,27 +2593,31 @@ function rankTables(S,met){
 function drawNationMap(k){
   const T=TREND[k], D=trendData(k), S=D.sgg; if(!S||!S.rows.length)return;
   const met=MAPMET[k], row=S.rows[S.rows.length-1];
-  const val={}; S.codes.forEach((c,i)=>val[c]=row[met][i]);
-  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 전국 시군구 '+(met==='ma'?'매매':'전세')+' 변동률(%) · '+T.unit;
-  const ref=k==='week'?0.4:1.0, TW=54, NH=18, VH=21, G=3;
-  const N=NATION_TILE, W=N.cols*(TW+G)-G, H=N.rows*(NH+VH+G)-G;
+  const vma={},vje={}; S.codes.forEach((c,i)=>{vma[c]=row.ma[i];vje[c]=row.je[i];});
+  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 전국 시군구 매매·전세 변동률(%) · '+T.unit;
+  const ref=k==='week'?0.4:1.0, TW=54, NH=17, VH=16, G=3;
+  const N=NATION_TILE, W=N.cols*(TW+G)-G, H=N.rows*(NH+VH*2+2+G)-G;
   const sv=['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:560px;display:block" role="img" aria-label="전국 시군구 변동률 지도">'];
+  const fmtV=v=>v==null?'·':(v>0?'+':'')+v.toFixed(2);
+  const tcol=v=>v>0?'#8f2318':(v<0?'#123c5c':'#6f6a5c');
   N.t.forEach(([c,nm,x,y,h])=>{
-    const v=val[c], txt=v==null?'·':(v>0?'+':'')+v.toFixed(2);
-    const tc=v>0?'#8f2318':(v<0?'#123c5c':'#6f6a5c');
-    const px=x*(TW+G), py=y*(NH+VH+G);
+    const ma=vma[c], je=vje[c];
+    const px=x*(TW+G), py=y*(NH+VH*2+2+G);
     sv.push(`<g transform="translate(${px},${py})">`+
       `<rect width="${TW}" height="${NH}" rx="4" fill="${h?'#2b2620':'#fff'}" stroke="${h?'#2b2620':'#d8d0bc'}"/>`+
-      `<text x="${TW/2}" y="${NH-5.5}" text-anchor="middle" font-size="${nm.length>3?9.5:11}" font-weight="800" fill="${h?'#fff':'#2b2620'}">${nm}</text>`+
-      `<rect y="${NH+1}" width="${TW}" height="${VH}" rx="4" fill="${mapColor(v,ref)}" stroke="#e2dbc9"/>`+
-      `<text x="${TW/2}" y="${NH+16}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${tc}">${txt}</text>`+
-      `<title>${nm} ${txt}%</title></g>`);
+      `<text x="${TW/2}" y="${NH-5}" text-anchor="middle" font-size="${nm.length>3?9.5:11}" font-weight="800" fill="${h?'#fff':'#2b2620'}">${nm}</text>`+
+      `<rect y="${NH+1}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(ma,ref)}" stroke="#e2dbc9"/>`+
+      `<text x="${TW/2}" y="${NH+13}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
+      `<rect y="${NH+VH+2}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(je,ref)}" stroke="#e2dbc9"/>`+
+      `<text x="${TW/2}" y="${NH+VH+14}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${tcol(je)}">${fmtV(je)}</text>`+
+      `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%</title></g>`);
   });
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=
     mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+
     rankTables(S,met)+
     '<div class="map-scroll">'+sv.join('')+'</div>'+
+    '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
     '<div class="map-hint">지도를 옆으로 밀면 동쪽 지역까지 볼 수 있어요 ↔</div>';
 }
 /* --- 이메일 알림 구독 (Buttondown) --- */
@@ -2648,6 +2652,8 @@ function trFlip(sec,btn){
 function setMapScope(k,sc,btn){
   MAPSCOPE[k]=sc;
   btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn));
+  const metBtn=document.querySelector('#sec-'+k+' .map-head button[data-m]');
+  if(metBtn)metBtn.parentElement.style.display=sc==='sgg'?'':'none';
   drawTrendMap(k);
   track('stats_map_scope',{section:k,scope:sc});
 }
@@ -2664,30 +2670,38 @@ function mapColor(v,ref){
 }
 function drawTrendMap(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
+  const metBtn=document.querySelector('#sec-'+k+' .map-head button[data-m]');
+  if(metBtn)metBtn.parentElement.style.display=MAPSCOPE[k]==='sgg'?'':'none';
   if(MAPSCOPE[k]==='sgg'&&W.sgg&&W.sgg.rows.length){drawNationMap(k);return;}
   const met=MAPMET[k], row=W.rows[W.rows.length-1];
-  const vals={}; W.regions.forEach((r,i)=>vals[r]=row[met][i]);
-  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · '+(met==='ma'?'매매':'전세')+' 변동률(%) · '+T.unit;
-  const TW=80,TH=66,G=7;
+  const vma={},vje={}; W.regions.forEach((r,i)=>{vma[r]=row.ma[i];vje[r]=row.je[i];});
+  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 매매·전세 변동률(%) · '+T.unit;
+  const TW=80,TH=70,G=7;
   const sv=['<svg viewBox="0 0 '+(4*TW+3*G)+' '+(5*TH+4*G)+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:430px;display:block;margin:0 auto" role="img" aria-label="지역별 변동률 지도">'];
   let hasSup=false;
+  const fmtV=v=>v==null?'·':(v>0?'+':'')+v.toFixed(2);
+  const tcol=v=>v>0?'#a93226':(v<0?'#1a5276':'#8a8272');
+  const scale=k==='week'?0.4:1.0;
   TILE.forEach(([r,x,y])=>{
-    const v=vals[r], txt=v==null?'·':(v>0?'+':'')+v.toFixed(2);
-    const tc=v>0?'#a93226':(v<0?'#1a5276':'#8a8272');
+    const ma=vma[r], je=vje[r];
     const sp=(typeof bubbleSupply==='function')?bubbleSupply(r):null;
     let mark='';
     const SUPC={xd:'#3a7bd5',md:'#e0a13a',ok:'#2c9a6d',lo:'#c0392b'};
-    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="16" font-size="12" font-weight="800" fill="#c0392b">⚠</text>`;hasSup=true;}
-    else if(sp&&SUPC[sp.cls]){mark=`<circle cx="${TW-12}" cy="12" r="4.5" fill="${SUPC[sp.cls]}"/>`;hasSup=true;}
+    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="15" font-size="11.5" font-weight="800" fill="#c0392b">⚠</text>`;hasSup=true;}
+    else if(sp&&SUPC[sp.cls]){mark=`<circle cx="${TW-12}" cy="10" r="4" fill="${SUPC[sp.cls]}"/>`;hasSup=true;}
     sv.push(`<g transform="translate(${x*(TW+G)},${y*(TH+G)})">`+
-      `<rect width="${TW}" height="${TH}" rx="11" fill="${mapColor(v,k==='week'?0.4:1.0)}" stroke="#e2dbc9"/>`+
-      `<text x="${TW/2}" y="27" text-anchor="middle" font-size="13.5" font-weight="800" fill="#2b2620">${r}</text>`+
-      `<text x="${TW/2}" y="47" text-anchor="middle" font-size="12.5" font-weight="700" fill="${tc}">${txt}</text>`+
+      `<rect width="${TW}" height="${TH}" rx="10" fill="#fff" stroke="#d8d0bc"/>`+
+      `<text x="${TW/2}" y="16" text-anchor="middle" font-size="12.5" font-weight="800" fill="#2b2620">${r}</text>`+
+      `<rect x="3" y="21" width="${TW-6}" height="23" rx="5" fill="${mapColor(ma,scale)}"/>`+
+      `<text x="${TW/2}" y="37" text-anchor="middle" font-size="11.5" font-weight="800" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
+      `<rect x="3" y="45" width="${TW-6}" height="22" rx="5" fill="${mapColor(je,scale)}"/>`+
+      `<text x="${TW/2}" y="60" text-anchor="middle" font-size="11.5" font-weight="700" fill="${tcol(je)}">${fmtV(je)}</text>`+
       mark+
-      `<title>${r} ${txt}%${sp?' · '+sp.txt.replace('⚠ ','')+' ('+sp.tip+')':''}</title></g>`);
+      `<title>${r} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%${sp?' · '+sp.txt.replace('⚠ ','')+' ('+sp.tip+')':''}</title></g>`);
   });
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
+    '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
     (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#c0392b">⚠ 과잉</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 보통</b> · <b style="color:#c0392b">● 부족</b><br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
 }
 function setMapMet(k,m,btn){
