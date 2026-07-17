@@ -676,29 +676,28 @@
     <h1>아공맵</h1>
     <p class="sub">아파트 공급 지도, 아공맵. 국가 통계로 시장을 읽고, 3분 테스트로 내 감각을 확인하는 부동산 데이터 사이트.</p>
     <div class="qmenu">
-      <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">📈</span><span class="qm-t">시장상황</span><span class="qm-d">주간·월간 지도</span></button>
-      <button class="qm" onclick="goQuiz('beginner');track('home_qm',{to:'test'})"><span class="qm-e">🐣</span><span class="qm-t">부린이 테스트</span><span class="qm-d">3분 · 10문항</span></button>
-      <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">사이클 리포트</span><span class="qm-d">6개 고리 검증</span></button>
+      <button class="qm" onclick="goQuiz('beginner');track('home_qm',{to:'quiz'})"><span class="qm-e">🐣</span><span class="qm-t">퀴즈</span><span class="qm-d">부린이 테스트 3분</span></button>
+      <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">📈</span><span class="qm-t">시황</span><span class="qm-d">주간·월간 지도</span></button>
+      <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">리포트</span><span class="qm-d">집값은 돌고 돈다</span></button>
       <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e">📊</span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
-      <button class="qm qm-wide" onclick="goCalc('re');track('home_qm',{to:'calc'})"><span class="qm-e"><svg viewBox="0 0 24 24" width="28" height="28" style="vertical-align:-2px"><rect x="4" y="2" width="16" height="20" rx="3" fill="#1c2733"/><rect x="7" y="5" width="10" height="4" rx="1" fill="#9fd0ff"/><g fill="#fff"><circle cx="8.5" cy="13" r="1.3"/><circle cx="12" cy="13" r="1.3"/><circle cx="15.5" cy="13" r="1.3"/><circle cx="8.5" cy="17" r="1.3"/><circle cx="12" cy="17" r="1.3"/><circle cx="15.5" cy="17" r="1.3"/></g></svg></span><span class="qm-t">재건축·재개발 계산기</span><span class="qm-d">정비사업 사업성 간단분석</span></button>
     </div>
   </div></header>
 
-  <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">01 · 매주 확인</div>
-    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
-    <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">📈 이번 주 시세 지도 보기</button></div>
-  </div></section>
-
   <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">02 · 시작은 가볍게</div>
+    <div class="hs-kicker">01 · 시작은 가볍게</div>
     <h2>내 부동산 감각, 몇 점일까?</h2>
     <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
     <div class="hs-cta">
       <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 시작</button>
       <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
     </div>
+  </div></section>
+
+  <section class="home-sec"><div class="wrap">
+    <div class="hs-kicker">02 · 매주 확인</div>
+    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
+    <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">📈 이번 주 시세 지도 보기</button></div>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
@@ -715,12 +714,7 @@
     <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">📊 통계보기</button></div>
   </div></section>
 
-  <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">05 · 실전 도구</div>
-    <h2>재건축·재개발, 숫자로 먼저 걸러보기</h2>
-    <p>매매가·대지지분·용적률만 넣으면 재건축 사업성의 뼈대가 나오고, 구역 면적에서 0 두 개만 지우면 재개발 세대수가 나옵니다. 감정평가·비례율이 나오기 전, 후보를 거르는 간단분석 도구입니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goCalc('re')"><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:2px"><rect x="4" y="2" width="16" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> 계산기 열기</button></div>
-  </div></section>
+
 
   <div class="home-foot">
     <a href="/weekly/" style="color:var(--muted)">이번 주 아파트 시세 지도</a> · <a href="/burini-test/" style="color:var(--muted)">부린이 테스트</a> · <a href="/faq/" style="color:var(--muted)">부동산 FAQ</a> · <a href="/cycle/" style="color:var(--muted)">아파트 사이클이란</a><br>
@@ -1078,7 +1072,7 @@
   </div></header>
 
   <div class="smode" role="tablist" aria-label="통계 모드">
-    <button id="smode-market" class="on" onclick="setStatsMode('market')">시장상황</button>
+    <button id="smode-market" class="on" onclick="setStatsMode('market')">시황</button>
     <button id="smode-basic" onclick="setStatsMode('basic')">기본통계</button>
     <button id="smode-adv" onclick="setStatsMode('adv')">심화통계</button>
     <button id="smode-more" onclick="setStatsMode('more')">더보기</button>
@@ -1259,71 +1253,6 @@
   <div class="minifooter">만든이: shpark1132@gmail.com</div>
 </div>
 
-<div id="view-calc" style="display:none">
-<header class="hero"><div class="wrap">
-  <div class="eyebrow">실전 도구 · 재건축 / 재개발</div>
-  <h1>정비사업 계산기</h1>
-  <p class="sub">매물 정보 몇 개로 사업성의 뼈대를 확인하는 간단분석 도구.</p>
-</div></header>
-<div class="wrap" style="max-width:760px;padding-bottom:60px">
-  <div class="calc-tabs">
-    <button id="ct-re" class="on" onclick="setCalcTab('re')">🏗️ 재건축 사업성</button>
-    <button id="ct-rd" onclick="setCalcTab('rd')">🏘️ 재개발 사업성</button>
-  </div>
-
-  <div id="calc-re-pane">
-    <div class="calc-card">
-      <div class="calc-grid">
-        <div class="calc-f"><label>현재 매매가 (억)</label><input id="re-price" type="number" inputmode="decimal" placeholder="예: 5" step="0.1" min="0">
-          <div class="hint">지금 이 매물을 사는 데 드는 돈</div></div>
-        <div class="calc-f"><label>대지지분 (평)</label><input id="re-share" type="number" inputmode="decimal" placeholder="예: 10" step="0.1" min="0">
-          <div class="hint">등기부·매물정보의 대지권 면적 (㎡라면 ÷3.3)</div></div>
-        <div class="calc-f"><label>예상 분양가 (평당 만원)</label><input id="re-sale" type="number" inputmode="decimal" placeholder="예: 5000" step="100" min="0">
-          <div class="hint">주변 신축 시세·최근 분양가 기준</div></div>
-        <div class="calc-f"><label>새 용적률 (%)</label><input id="re-far" type="number" inputmode="decimal" placeholder="예: 300" step="10" min="0">
-          <div class="hint">정비계획상 새로 받을 용적률</div></div>
-        <div class="calc-f"><label>공사비 (평당 만원)</label><input id="re-cost" type="number" inputmode="decimal" value="1400" step="50" min="0">
-          <div class="hint">2026년 기준 약 1,400 (고급화 시 ~2,000)</div></div>
-      </div>
-      <button class="calc-run" onclick="calcRe()">사업성 계산</button>
-    </div>
-    <div class="calc-out" id="calc-re-out" style="display:none"></div>
-    <div class="calc-note">
-      · <b>개발 후 대지 1평 가치</b> = (평당 분양가 − 평당 공사비) × 새 용적률. <b>개발 전 가치</b> = 현재 매매가 ÷ 대지지분. 개발 후가 개발 전을 <b>충분한 여유</b>를 두고 넘어야 사업이 굴러갑니다.<br>
-      · 차이가 나더라도 <b>기대수익 절대액</b>이 작으면(수천만 원대) 조합원이 리스크를 지고 추진할 이유가 없습니다 — 소형·단일 평형 단지에서 흔한 함정.<br>
-      · 감정평가·비례율·분담금 통지를 대신하지 않는 <b>선별용 간단분석</b>입니다. 기부채납·임대비율 등으로 실제 조건은 이보다 나빠질 수 있습니다.
-    </div>
-  </div>
-
-  <div id="calc-rd-pane" style="display:none">
-    <div class="calc-card">
-      <div class="calc-grid">
-        <div class="calc-f"><label>구역 전체 면적 (㎡)</label><input id="rd-area" type="number" inputmode="decimal" placeholder="예: 52000" step="100" min="0">
-          <div class="hint">조합 공고·구역 지정 고시의 면적. 평이면 ×3.3</div></div>
-        <div class="calc-f"><label>용적률 (%)</label><input id="rd-far" type="number" inputmode="decimal" placeholder="예: 200" step="10" min="0"></div>
-        <div class="calc-f"><label>조합원 수 (명)</label><input id="rd-mem" type="number" inputmode="numeric" placeholder="예: 600" step="10" min="0"></div>
-        <div class="calc-f"><label>배정 평수 (평) <span style="font-weight:400">— 선택</span></label><input id="rd-py" type="number" inputmode="decimal" value="34" step="1" min="0"></div>
-        <div class="calc-f"><label>조합원 분양가 (평당 만원) — 선택</label><input id="rd-csale" type="number" inputmode="decimal" placeholder="예: 2000" step="100" min="0"></div>
-        <div class="calc-f"><label>일반 분양가 (평당 만원) — 선택</label><input id="rd-gsale" type="number" inputmode="decimal" placeholder="예: 3000" step="100" min="0"></div>
-      </div>
-      <button class="calc-run" onclick="calcRd()">세대수·비율 계산</button>
-    </div>
-    <div class="calc-out" id="calc-rd-out" style="display:none"></div>
-    <div class="calc-note">
-      · <b>총 건립 세대수 ≈ 면적(㎡) × 용적률 ÷ 100</b> — 평균 30평대(≈100㎡) 기준이라 연면적에서 <b>0 두 개만 지우면</b> 세대수입니다.<br>
-      · 재개발은 초기엔 감정평가액이 없어 절대 사업성 계산이 불가능합니다. 그래서 <b>조합원 대비 일반분양 비율</b>로 구역끼리 상대 비교하는 것이 실전 방법입니다. 벤치마크: 분양가 높은 서울급 입지는 조합원 3 : 일반 1이면 굴러가고, 수도권 외곽은 1 : 1은 나와야 합니다.<br>
-      · 새 아파트 평형 구성은 보통 소형 2 : 중형 6 : 대형 2 — 중형 물량이 조합원수보다 많으면 뭘 갖고 있든 30평대 배정을 노릴 수 있습니다.<br>
-      · 임대주택 의무비율은 지자체마다 달라 제외했습니다(실제 일반분양분은 이보다 줄어듦).
-    </div>
-  </div>
-
-  <div class="calc-card" style="text-align:center">
-    <p style="margin:0 0 4px;font-size:14px;color:var(--muted)">공식이 손에 익었는지 확인해 보세요 — 10문항 즉시 채점</p>
-    <button class="calc-run" onclick="goQuiz('calc');track('calc_to_quiz',{})">🏗️ 재건축 계산 테스트 풀기</button>
-  </div>
-</div>
-</div>
-
 <!-- ===== 부동산 사이클 테스트 ===== -->
 <div id="view-test" style="display:none">
   <div class="quiz-wrap">
@@ -1387,15 +1316,11 @@
   </button>
   <button class="nav-btn" data-view="test">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>테스트</span>
+    <span>퀴즈</span>
   </button>
   <button class="nav-btn" data-view="stats">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>통계</span>
-  </button>
-  <button class="nav-btn" data-view="calc">
-    <svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 6.5h6M9 11h.01M12 11h.01M15 11h.01M9 14.5h.01M12 14.5h.01M15 14.5h.01M9 18h.01M12 18h.01M15 18h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    <span>계산기</span>
   </button>
   <button class="nav-btn" data-view="report">
     <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM14 2v6h6M8 13h8M8 17h8M8 9h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1577,7 +1502,6 @@ function showView(v,updateHash){
   vReport.style.display=v==='report'?'':'none';
   vStats.style.display=v==='stats'?'':'none';
   vTest.style.display=v==='test'?'':'none';
-  document.getElementById('view-calc').style.display=v==='calc'?'':'none';
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){initStats();statsInited=true;}
   if(updateHash!==false){
@@ -1596,7 +1520,6 @@ function applyHash(){
   if(!h){showView('home',false);return;}
   if(h==='test-beginner'||h==='test-investor'||h==='test-calc'){showView('test',false);startQuiz(h.slice(5));return;}
   if(h==='stats-adv'||h==='stats-market'||h==='stats-basic'||h==='stats-more'){showView('stats',false);setStatsMode(h.slice(6));return;}
-  if(h==='calc'||h==='calc-re'||h==='calc-rd'){showView('calc',false);setCalcTab(h==='calc-rd'?'rd':'re');return;}
   if(h==='home'||h==='stats'||h==='test'||h==='report'){showView(h,false);return;}
   const el=document.getElementById(h);
   if(el){showView('report',false);requestAnimationFrame(()=>el.scrollIntoView());}
@@ -2870,77 +2793,7 @@ function setAdvTab(t){
 }
 function renderAdvAll(){ renderAdvPermits(); renderAdvOcc(); setAdvTab('permit'); }
 
-/* ============ 실전 도구: 정비사업 계산기 / 3년시계 / 버블밴드 ============ */
-function goCalc(tab){showView('calc');setCalcTab(tab||'re');}
-function setCalcTab(t){
-  document.getElementById('ct-re').classList.toggle('on',t==='re');
-  document.getElementById('ct-rd').classList.toggle('on',t==='rd');
-  document.getElementById('calc-re-pane').style.display=t==='re'?'':'none';
-  document.getElementById('calc-rd-pane').style.display=t==='rd'?'':'none';
-  history.replaceState(null,'','#calc-'+t);
-  track('calc_tab',{tab:t});
-}
-function cNum(id){const v=parseFloat(document.getElementById(id).value);return isFinite(v)?v:null;}
-function fmtEok(man){const e=man/10000;return (e<0?'−':'')+Math.abs(e).toFixed(1)+'억';}
-function fmtMan(v){return Math.round(v).toLocaleString()+'만원';}
-function calcRe(){
-  const price=cNum('re-price'),share=cNum('re-share'),sale=cNum('re-sale'),far=cNum('re-far');
-  const cost=cNum('re-cost')||1400;
-  const out=document.getElementById('calc-re-out');out.style.display='';
-  if(!price||!share||!sale||!far||price<=0||share<=0||sale<=0||far<=0){
-    out.innerHTML='<p class="calc-warn">매매가·대지지분·분양가·용적률 네 값을 모두 입력해 주세요.</p>';return;}
-  const before=price*10000/share;          // 개발 전: 대지 1평 가치(만원)
-  const after=(sale-cost)*far/100;         // 개발 후: 대지 1평이 만드는 가치(만원)
-  const gain=(after-before)*share;         // 기대수익(만원)
-  const ratio=before>0?after/before:0;
-  let cls,head,desc;
-  if(after<=before){cls='bad';head='사업성 없음';
-    desc='새로 지어 얻는 가치가 지금 가격에 못 미칩니다. 분담금을 내는 만큼 손해인 구조라 사업이 추진되기 어렵습니다.';}
-  else if(gain<5000){cls='mid';head='흑자지만 추진 동력 부족';
-    desc='숫자는 흑자여도 기대수익 절대액이 작으면 조합원이 이주·분담금 리스크를 지고 움직이지 않습니다. 소형·단일 평형 단지에서 흔한 함정입니다.';}
-  else if(ratio<1.3){cls='mid';head='여유가 얇은 사업성';
-    desc='이익은 나지만 여유폭이 얇아 공사비 인상이나 분양가 하락에 쉽게 뒤집힙니다. 보수적으로 접근할 구간입니다.';}
-  else{cls='good';head='사업성 있음';
-    desc='개발 후 가치가 충분한 여유를 두고 현재 가격을 웃돕니다. 사업이 굴러갈 수 있는 구조입니다.';}
-  out.innerHTML='<p class="calc-big '+cls+'">'+head+'</p><p class="calc-desc">'+desc+'</p>'
-    +'<div class="calc-kv"><span>개발 전 — 대지 1평 가치 (매매가 ÷ 지분)</span><b>'+fmtMan(before)+'</b></div>'
-    +'<div class="calc-kv"><span>개발 후 — 대지 1평 가치 ((분양가−공사비)×용적률)</span><b>'+fmtMan(after)+'</b></div>'
-    +'<div class="calc-kv"><span>여유율 (후 ÷ 전)</span><b>×'+ratio.toFixed(2)+'</b></div>'
-    +'<div class="calc-kv"><span>기대수익 (차이 × 대지지분 '+share+'평)</span><b>'+fmtEok(gain)+'</b></div>';
-  track('calc_run',{kind:'re'});
-}
-function calcRd(){
-  const area=cNum('rd-area'),far=cNum('rd-far'),mem=cNum('rd-mem');
-  const py=cNum('rd-py')||34,cs=cNum('rd-csale'),gs=cNum('rd-gsale');
-  const out=document.getElementById('calc-rd-out');out.style.display='';
-  if(!area||!far||!mem||area<=0||far<=0||mem<=0){
-    out.innerHTML='<p class="calc-warn">구역 면적·용적률·조합원 수를 모두 입력해 주세요.</p>';return;}
-  const gfa=area*far/100;                  // 연면적(㎡)
-  const units=Math.round(gfa/100);         // 평균 30평대(≈100㎡) 1세대
-  const gen=units-mem;                     // 일반분양분
-  const ratio=gen/mem;
-  const midUnits=Math.round(units*0.6);    // 소2:중6:대2의 중형
-  let cls,head,desc;
-  if(gen<=0){cls='bad';head='일반분양 물량 없음';
-    desc='지을 수 있는 세대가 조합원 수보다 적거나 같습니다. 일반분양 수입 없이 조합원 분담금만으로 가는 구조라 사업성이 나오기 어렵습니다.';}
-  else if(ratio>=1){cls='good';head='조합원 1명당 일반분양 '+ratio.toFixed(1)+'세대';
-    desc='일반분양이 조합원 물량 이상입니다. 어느 입지에서든 최상급 구조로, 일반분양 수입이 공사비를 크게 받쳐줍니다.';}
-  else if(ratio>=0.33){cls='mid';head='조합원 1명당 일반분양 '+ratio.toFixed(2)+'세대';
-    desc='분양가가 높은 서울급 입지라면 굴러가는 수준(벤치마크 3:1), 분양가가 낮은 외곽이라면 빠듯합니다(벤치마크 1:1). 같은 값이면 분양가 높은 구역이 답입니다.';}
-  else{cls='bad';head='일반분양 비중이 너무 낮음';
-    desc='조합원 3명당 일반분양 1세대에도 못 미칩니다. 분양가가 아주 높은 입지가 아니면 분담금이 커져 사업성이 나오기 어렵습니다.';}
-  let h='<p class="calc-big '+cls+'">'+head+'</p><p class="calc-desc">'+desc+'</p>'
-    +'<div class="calc-kv"><span>연면적 (면적 × 용적률)</span><b>'+Math.round(gfa).toLocaleString()+'㎡</b></div>'
-    +'<div class="calc-kv"><span>총 건립 세대수 (연면적에서 0 두 개 지우기)</span><b>약 '+units.toLocaleString()+'세대</b></div>'
-    +'<div class="calc-kv"><span>일반분양분 (세대수 − 조합원 '+mem.toLocaleString()+')</span><b>'+gen.toLocaleString()+'세대</b></div>';
-  h+='<div class="calc-kv"><span>평형 배정 (중형 6할 = '+midUnits.toLocaleString()+'세대)</span><b>'
-    +(midUnits>=mem?'조합원 전원 30평대 배정 가능권':'일부 조합원 소형 배정 가능성')+'</b></div>';
-  if(cs&&gs&&gs>cs){
-    h+='<div class="calc-kv"><span>확정수익 ((일반 '+gs.toLocaleString()+'−조합원 '+cs.toLocaleString()+') × '+py+'평)</span><b>'+fmtEok((gs-cs)*py)+'</b></div>';
-  }
-  out.innerHTML=h;
-  track('calc_run',{kind:'rd'});
-}
+/* ============ 시장 도구: 3년시계 / 버블밴드 ============ */
 function renderClockSec(){
   const O=ADV.occupancy,P=ADV.permits,tbl=document.getElementById('clock-tbl');
   if(!O||!P||!tbl)return;
