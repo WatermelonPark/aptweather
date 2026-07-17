@@ -2062,7 +2062,7 @@ const QUIZSETS={
 
   {q:'개발 전 평당 <b>4,000만원</b> → 개발 후 평당 <b>6,000만원</b>. 계산상 사업성은 충분한데, 시장 전체가 <b>하락장 초입</b>에 들어섰다. 판단은?',
    opts:['계산이 좋으니 진행해도 된다','사이클이 우선 — 계산은 다시 해야 한다'],
-   m:1, answer:1,
+   m:1, k:1, answer:1,
    exp:'개발 후 가치는 <b>미래의 분양가</b>를 가정한 숫자다. 하락장에선 그 가정 자체가 무너진다 — 분양가가 내려앉으면 (분양가 − 공사비) 마진이 용적률 배수로 증폭되며 사업성이 통째로 뒤집힌다. <b>사업성 계산은 시장 사이클 판단을 대신하지 못한다.</b> 순서는 언제나 시장 먼저, 물건은 그다음이다.'},
 
   {q:'사업성 공식에 넣는 <b>분양가</b>는 어느 시점의 가격이어야 할까?',
@@ -2124,15 +2124,13 @@ function drawQuiz(setKey,seed){
   const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;};
   const pool=shuf(QUIZSETS[setKey].Q.slice());
   const n=Math.min(QUIZ_LEN,pool.length);
-  const mkt=pool.filter(x=>x.m), rest=pool.filter(x=>!x.m);
-  if(mkt.length<3||rest.length<n-3)return pool.slice(0,n);
-  /* 시장·계산의 한계 문항(m:1)은 매회 3개 보장 — 공식 문제만 10개 나오는 시험지를 차단 */
-  const pick=shuf(rest.slice(0,n-3).concat(mkt.slice(0,3)));
-  /* 그중 1개는 반드시 1~3번에 배치 — 사이클 이해가 계산에 선행한다는 메시지를 초반에 전달 */
-  if(!pick.slice(0,3).some(x=>x.m)){
-    const i=Math.floor(rnd()*3), j=pick.findIndex(x=>x.m);
-    const t=pick[i];pick[i]=pick[j];pick[j]=t;
-  }
+  const key=pool.find(x=>x.k), mkt=pool.filter(x=>x.m&&!x.k), rest=pool.filter(x=>!x.m);
+  if(!key||mkt.length<2||rest.length<n-3)
+    return pool.slice(0,n);
+  /* 시장·계산의 한계 문항(m:1)은 매회 3개 보장 — 공식 문제만 10개 나오는 시험지를 차단.
+     그중 핵심 문항(k:1, 사이클이 계산에 우선)은 매회 고정 출제 + 1~3번 고정 배치. */
+  const pick=shuf(rest.slice(0,n-3).concat(mkt.slice(0,2)));
+  pick.splice(Math.floor(rnd()*3),0,key);
   return pick;
 }
 let curSet='investor', QUIZ=drawQuiz('investor'), qIdx=0, qScore=0, qAnswered=false, qResults=[];
