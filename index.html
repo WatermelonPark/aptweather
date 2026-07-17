@@ -251,6 +251,7 @@
     padding:4px 10px;border-radius:12px}
   .qpick-card .pc-badge.lv1{background:#e8f3ee;color:#1a6b54}
   .qpick-card .pc-badge.lv2{background:#fbe9e6;color:#c0392b}
+.qpick-card .pc-badge.lv3{background:#fff4e0;color:#b9770e}
   .qpick-card .pc-desc{font-size:14px;line-height:1.6;color:var(--ink2);margin:0}
   .qpick-card .pc-go{position:absolute;right:20px;bottom:18px;font-size:20px;color:var(--muted)}
   .qback{display:inline-flex;align-items:center;gap:5px;background:none;border:0;
@@ -653,6 +654,10 @@
   .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#666}
   .bb-chip.hi{background:#fdecea;color:#a93226}
   .bb-chip.lo{background:#eaf3fb;color:#1a5276}
+  .bb-sup{flex:none;width:70px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#8a8272}
+  .bb-sup.hi{background:#fbeee9;color:#b3541e}
+  .bb-sup.md{background:#fbf7ea;color:#9a7000}
+  .bb-sup.lo{background:#eaf6f0;color:#1a6b54}
 </style>
 </head>
 <body>
@@ -1135,7 +1140,7 @@
 
     <section class="adv-sec gsec" id="sec-bubble">
       <div class="adv-h"><h3>버블밴드</h3><span class="adv-badge">월간</span><span class="adv-badge" id="bubble-prd"></span></div>
-      <p class="adv-note">아파트의 임대수익률(<b>전세가율 × 전월세전환율</b>)을 <b style="color:#1a5276">하단(매수신호선)</b>, 그 2배를 <b style="color:#a93226">상단(위험선)</b>으로 놓고 주택담보대출 금리(세로선)와 비교합니다. 금리가 하단 아래면 전세 살 이유가 없어지는 매수 신호권, 상단 위면 임대수익 대비 금리가 과도한 위험권입니다. 2008년 10월(상단 약 5.6% vs 금리 7.58%)과 2022년 10월(약 5.2% vs 4.82%)의 급락기가 이 조건에서 나왔습니다.</p>
+      <p class="adv-note">아파트의 임대수익률(<b>전세가율 × 전월세전환율</b>)을 <b style="color:#1a5276">하단(매수신호선)</b>, 그 2배를 <b style="color:#a93226">상단(위험선)</b>으로 놓고 주택담보대출 금리(세로선)와 비교합니다. 금리가 하단 아래면 전세 살 이유가 없어지는 매수 신호권, 상단 위면 임대수익 대비 금리가 과도한 위험권입니다. 2008년 10월(상단 약 5.6% vs 금리 7.58%)과 2022년 10월(약 5.2% vs 4.82%)의 급락기가 이 조건에서 나왔습니다. 단, 밴드는 <b>가격·금리 조건만</b> 봅니다 — 향후 입주물량이 많은 지역은 오른쪽 <b>공급 배지</b>(적정밴드 대비 향후 4개 분기)를 함께 확인하세요.</p>
       <div id="bubble-wrap"></div>
       <div class="src-note">자료: KOSIS 한국부동산원 전월세전환율·전세가율 · 한국은행 예금은행 주택담보대출 금리(신규취급) · 자동 갱신</div>
     </section>
@@ -1303,6 +1308,11 @@
       · 임대주택 의무비율은 지자체마다 달라 제외했습니다(실제 일반분양분은 이보다 줄어듦).
     </div>
   </div>
+
+  <div class="calc-card" style="text-align:center">
+    <p style="margin:0 0 4px;font-size:14px;color:var(--muted)">공식이 손에 익었는지 확인해 보세요 — 10문항 즉시 채점</p>
+    <button class="calc-run" onclick="goQuiz('calc');track('calc_to_quiz',{})">🏗️ 재건축 계산 테스트 풀기</button>
+  </div>
 </div>
 </div>
 
@@ -1332,6 +1342,15 @@
               <span class="pc-badge lv2">심화</span>
             </div>
             <p class="pc-desc">호재를 악재로, 악재를 호재로. 통념을 거꾸로 뒤집어야 풀리는 사이클·금리·수급의 진짜 게임.</p>
+            <span class="pc-go">→</span>
+          </button>
+          <button class="qpick-card" onclick="startQuiz('calc')">
+            <div class="pc-top">
+              <span class="pc-emoji">🏗️</span>
+              <span class="pc-title">재건축 계산 테스트</span>
+              <span class="pc-badge lv3">실전</span>
+            </div>
+            <p class="pc-desc">매매가·대지지분·용적률을 주면 사업성이 보이나요? 계산하기 쉬운 숫자로 머리에서 바로 굴려보는 사업성 훈련.</p>
             <span class="pc-go">→</span>
           </button>
         </div>
@@ -1562,7 +1581,7 @@ function goStats(m){showView('stats');setStatsMode(m);}
 function applyHash(){
   const h=location.hash.replace('#','');
   if(!h){showView('home',false);return;}
-  if(h==='test-beginner'||h==='test-investor'){showView('test',false);startQuiz(h==='test-beginner'?'beginner':'investor');return;}
+  if(h==='test-beginner'||h==='test-investor'||h==='test-calc'){showView('test',false);startQuiz(h.slice(5));return;}
   if(h==='stats-adv'||h==='stats-market'||h==='stats-basic'||h==='stats-more'){showView('stats',false);setStatsMode(h.slice(6));return;}
   if(h==='calc'||h==='calc-re'||h==='calc-rd'){showView('calc',false);setCalcTab(h==='calc-rd'?'rd':'re');return;}
   if(h==='home'||h==='stats'||h==='test'||h==='report'){showView(h,false);return;}
@@ -2053,6 +2072,68 @@ const QUIZSETS={
       if(s>=3)return{lv:'LV2',g:'호재·악재 거꾸로 읽는 초보',d:'"규제=악재" 같은 통념에 아직 갇혀 있습니다. 괜찮아요, 이 리포트가 바로 그 통념을 깨려고 만들어졌으니까요.',emoji:'🧭'};
       return{lv:'LV1',g:'통념에 갇힌 부동산 왕초보',d:'"규제=악재, 입주=호재"부터 다시. 이 리포트가 바로 그 통념을 깨려고 만들어졌습니다. 정독하고 재도전!',emoji:'🌱'};
     }
+  },
+  calc:{
+    title:'재건축 계산 테스트', emoji:'🏗️',
+    shareName:'재건축 계산 테스트',
+    Q:[
+  {q:'매매가 <b>4억</b>, 대지지분 <b>10평</b>짜리 재건축 대상 아파트. <b>개발 전</b> 대지 1평의 가치는?',
+   opts:['4,000만원','8,000만원'],
+   answer:0,
+   exp:'개발 전 가치 = <b>매매가 ÷ 대지지분</b>. 4억 ÷ 10평 = <b>평당 4,000만원</b>. 재건축 물건은 건물이 아니라 땅을 사는 것이므로, 모든 계산은 대지지분 1평 기준에서 시작한다.'},
+
+  {q:'평당 분양가 <b>3,000만원</b>, 평당 공사비 <b>1,000만원</b>, 새 용적률 <b>200%</b>. <b>개발 후</b> 대지 1평이 만들어내는 가치는?',
+   opts:['2,000만원','4,000만원'],
+   answer:1,
+   exp:'개발 후 가치 = <b>(분양가 − 공사비) × 용적률</b>. (3,000 − 1,000) × 200% = <b>4,000만원</b>. 대지 1평 위에 분양면적 2평을 지을 수 있으니, 평당 남는 2,000만원이 두 번 생기는 셈이다. 용적률 곱하기를 잊으면 사업성이 반토막으로 보인다.'},
+
+  {q:'개발 전 대지 1평 가치가 <b>5,000만원</b>, 개발 후 가치가 <b>4,000만원</b>으로 계산됐다. 이 단지의 재건축 사업성은?',
+   opts:['있다','없다'],
+   answer:1,
+   exp:'개발 후(4,000)가 개발 전(5,000)보다 <b>작으면 사업성이 없다</b>. 새로 지어 얻는 가치가 지금 가격에도 못 미치니, 분담금을 내는 만큼 손해라는 뜻. 이런 단지는 아무리 낡아도 사업이 굴러가지 않는다.'},
+
+  {q:'새 용적률이 <b>300%</b>라면, 내 대지지분 <b>1평</b> 위에 지을 수 있는 분양면적은?',
+   opts:['3평','0.3평'],
+   answer:0,
+   exp:'용적률 300% = 대지 면적의 <b>3배</b>를 짓는다는 뜻. 그래서 개발 후 가치 공식에서 (분양가 − 공사비)에 <b>×3</b>을 하는 것이다. 용적률이 높을수록 같은 땅에서 뽑아내는 가치가 커진다.'},
+
+  {q:'매매가 <b>3억</b>·대지지분 <b>10평</b>(개발 전 3,000만원). 분양가 <b>3,000만원</b>·공사비 <b>1,000만원</b>·용적률 <b>300%</b>(개발 후 6,000만원). 이 조합원의 <b>기대수익</b>은?',
+   opts:['3억','6억'],
+   answer:0,
+   exp:'기대수익 = <b>(개발 후 − 개발 전) × 대지지분</b> = (6,000 − 3,000) × 10평 = <b>3억</b>. 개발 후 가치 전체(6억)가 아니라 지금 가격과의 <b>차이</b>만 내 몫이라는 점이 핵심이다.'},
+
+  {q:'용적률 <b>200%</b>인 단지에서 평당 공사비가 <b>1,000만원 → 1,500만원</b>으로 올랐다. 개발 후 대지 1평 가치는 얼마나 줄어들까?',
+   opts:['500만원','1,000만원'],
+   answer:1,
+   exp:'공사비 인상분 500만원에 <b>용적률 배수(×2)</b>가 곱해져 <b>1,000만원</b>이 줄어든다. 공사비 상승은 용적률이 높을수록 사업성을 빠르게 갉아먹는다 — 요즘 재건축 단지들이 공사비 협상에 사활을 거는 이유다.'},
+
+  {q:'개발 전 4,000만원 → 개발 후 6,000만원으로 분명한 흑자인데, 대지지분이 <b>5평</b>뿐인 소형 평형 단지. 사업이 잘 안 굴러가는 이유는?',
+   opts:['기대수익 절대액이 작아서','용적률이 낮아서'],
+   answer:0,
+   exp:'기대수익 = (6,000 − 4,000) × 5평 = <b>1억뿐</b>. 이주와 분담금, 수년의 리스크를 감수하기엔 남는 돈이 작아 조합원들이 움직이지 않는다. <b>평당 수익률이 아니라 수익 절대액</b>이 사업의 동력이다 — 소형·단일 평형 단지의 흔한 함정.'},
+
+  {q:'개발 전 가치가 <b>5,000만원</b>, 공사비 <b>1,000만원</b>, 용적률 <b>250%</b>. 최소한 본전이 되려면 평당 분양가는 얼마 이상이어야 할까?',
+   opts:['3,000만원','2,000만원'],
+   answer:0,
+   exp:'(분양가 − 1,000) × 2.5 ≥ 5,000 → 분양가 − 1,000 ≥ 2,000 → 분양가 <b>3,000만원</b>. 5,000을 2.5로 나눈 뒤 공사비를 <b>다시 더해야</b> 한다는 걸 잊기 쉽다. 주변 신축 시세가 이보다 낮다면 그 단지는 아직 때가 아니다.'},
+
+  {q:'매매가 <b>6억</b>·대지지분 <b>15평</b>(개발 전 4,000만원). 분양가 <b>2,500만원</b>·공사비 <b>1,500만원</b>·용적률 <b>400%</b>. 사업성은?',
+   opts:['있다','없다'],
+   answer:1,
+   exp:'개발 후 = (2,500 − 1,500) × 4 = <b>4,000만원</b>, 개발 전과 <b>똑같다</b>. 남는 게 0이면 공사비가 조금만 올라도 적자로 뒤집힌다. 개발 후가 개발 전을 <b>충분한 여유</b>를 두고 넘어야 사업성이 있다고 본다.'},
+
+  {q:'A단지: 평당 차익 <b>1,000만원</b> × 지분 <b>20평</b>. B단지: 평당 차익 <b>3,000만원</b> × 지분 <b>5평</b>. 재건축 추진 동력이 더 큰 쪽은?',
+   opts:['A단지','B단지'],
+   answer:0,
+   exp:'A = 1,000 × 20 = <b>2억</b>, B = 3,000 × 5 = <b>1.5억</b>. 평당 차익은 B가 3배지만, 조합원을 움직이는 건 <b>총 기대수익</b>이다. 재건축은 언제나 "평당"이 아니라 "내 몫 전체"로 판단한다.'},
+    ],
+    grade:s=>{
+      if(s>=9)return{lv:'LV5',g:'사업성이 한눈에 보이는 선수',d:'공식이 완전히 손에 붙었습니다. 매물 정보만 보면 사업성이 바로 나오는 단계 — 이제 임장 가서 대지지분부터 물어보세요.',emoji:'🏗️'};
+      if(s>=7)return{lv:'LV4',g:'눈대중 견적이 되는 예비 조합원',d:'큰 틀은 정확합니다. 공사비 인상이 용적률 배수로 증폭되는 것 같은 디테일까지 다듬으면 완성.',emoji:'📐'};
+      if(s>=5)return{lv:'LV3',g:'공식은 아는데 손이 느린 단계',d:'개발 전·후 비교의 뼈대는 잡았습니다. 계산기 탭에서 숫자를 몇 번 굴려보면 손이 빨라집니다.',emoji:'✏️'};
+      if(s>=3)return{lv:'LV2',g:'분담금 고지서에 놀랄 단계',d:'용적률과 공사비가 어디에 곱해지는지부터 다시. 계산기 탭의 공식 설명을 한 번 정독하세요.',emoji:'📮'};
+      return{lv:'LV1',g:'묻지마 재건축 매수 직전',d:'"낡으면 오른다"는 절반만 맞는 말. 개발 전·후 가치 비교부터 시작하면 헛돈 쓸 일이 없어집니다.',emoji:'🚧'};
+    }
   }
 };
 
@@ -2202,7 +2283,7 @@ function readChallenge(){
     const p=new URLSearchParams(location.search);
     const sc=parseInt(p.get('c'),10), st=p.get('s'), sq=p.get('q');
     if(!Number.isInteger(sc)||sc<0||sc>10)return null;
-    if(st!=='beginner'&&st!=='investor')return null;
+    if(st!=='beginner'&&st!=='investor'&&st!=='calc')return null;
     let seed=null;
     if(sq&&/^[0-9a-z]{1,7}$/.test(sq)){
       const v=parseInt(sq,36);
@@ -2822,6 +2903,28 @@ function renderClockSec(){
   const lab=document.getElementById('clock-lab');
   if(lab)lab.textContent='단위: 호 · 입주 실적 '+rows[lastAct].p+'까지 반영 · 인허가는 '+ph[0].p+'~'+ph[1].p+' 합계를 연간 평년 범위와 비교';
 }
+function bubbleSupply(rg){
+  const O=ADV.occupancy;
+  if(!O)return null;
+  const key={'서울':'수도권','경기':'수도권','인천':'수도권'}[rg]||rg;
+  const ri=O.regions.indexOf(key);
+  if(ri<0)return null;
+  const band=O.band&&O.band[key];
+  const ref=(O.ref&&O.ref[key])||(band?(band[0]+band[1])/2:null);
+  if(!ref)return null;
+  const fut=O.rows.filter(r=>r.e===1);      // 입주예정 전체 (최대 7분기)
+  const vals=fut.map(r=>r.v[ri]).filter(v=>v!=null);
+  if(vals.length<3)return null;
+  const over=vals.filter(v=>v>=ref).length;
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const ratio=avg/ref;
+  const tip='향후 '+vals.length+'개 분기: 수요선('+ref.toLocaleString()+'호) 초과 '+over+'회 · 평균 유입 '+Math.round(ratio*100)+'%'
+    +(key!==rg?' ('+key+' 기준)':'');
+  if(over>=2)return {cls:'hi',txt:'⚠ 공급과잉',tip:tip,warn:true};
+  if(over===1||ratio>=0.6)return {cls:'md',txt:'공급주의',tip:tip,warn:true};
+  if(ratio<=0.35)return {cls:'lo',txt:'공급부족',tip:tip,warn:false};
+  return {cls:'',txt:'공급보통',tip:tip,warn:false};
+}
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
   const B=ADV.bubble,J=STATS['전세가율'];
@@ -2832,7 +2935,7 @@ function renderBubbleSec(){
   const MAX=9;
   const px=v=>Math.min(98,Math.max(0,v/MAX*100));
   let h='<div class="bb-legend">막대 = <b style="color:#1a5276">매수신호선(하단)</b> ~ <b style="color:#a93226">위험선(상단)</b> · 세로선 = 주택담보대출 '+loan.toFixed(2)+'% ('+B.loan.p+' 신규취급 평균)</div>';
-  let nHi=0,nLo=0,nNear=0;
+  let nHi=0,nLo=0,nNear=0,nLoSupply=0;
   (B.regions||Object.keys(B.conv)).forEach(rg=>{
     const cv=B.conv[rg],jr=latest(rg);
     if(cv==null||jr==null)return;
@@ -2841,17 +2944,22 @@ function renderBubbleSec(){
     if(loan>=hi){cls='hi';txt='상단 초과';nHi++;}
     else if(loan<=lo){cls='lo';txt='매수 신호권';nLo++;}
     else if(hi-loan<1)nNear++;
+    const sp=bubbleSupply(rg);
+    if(cls==='lo'&&sp&&sp.warn)nLoSupply++;
     h+='<div class="bb-row"><span class="bb-lab">'+rg+'</span>'
       +'<div class="bb-track" title="전세가율 '+jr+'% × 전환율 '+cv+'% → 하단 '+lo.toFixed(1)+'% · 상단 '+hi.toFixed(1)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div></div>'
-      +'<span class="bb-chip '+cls+'">'+txt+'</span></div>';
+      +'<span class="bb-chip '+cls+'">'+txt+'</span>'
+      +(sp?'<span class="bb-sup '+sp.cls+'" title="'+sp.tip+'">'+sp.txt+'</span>':'<span class="bb-sup" title="공급 데이터 없음">·</span>')
+      +'</div>';
   });
   let sum;
   if(nHi>0)sum='<b style="color:#a93226">'+nHi+'개 지역</b>에서 금리가 위험선(상단)을 넘었습니다. 과거 급락기(2008·2022)가 이 조건에서 나왔습니다.';
   else if(nLo>0)sum='<b style="color:#1a5276">'+nLo+'개 지역</b>이 매수 신호권(금리 ≤ 하단)입니다.';
   else if(nNear>0)sum=nNear+'개 지역이 상단(위험선)까지 1%p 미만으로 접근해 있습니다.';
   else sum='현재 금리가 위험선(상단)을 넘거나 매수신호선(하단) 아래인 지역은 없습니다.';
+  if(nLoSupply>0)sum+=' 단, 매수 신호권 중 <b style="color:#b3541e">'+nLoSupply+'개 지역은 향후 공급 과잉·주의</b> — 입주물량 소화 전까지는 신호를 눌러 읽어야 합니다.';
   document.getElementById('bubble-wrap').innerHTML='<p class="adv-note" style="margin:10px 0 4px">'+sum+'</p>'+h;
 }
 
