@@ -20,7 +20,7 @@
   "name": "아공맵",
   "alternateName": "aptweather",
   "url": "https://www.agongmap.co.kr/",
-  "description": "부린이 테스트, 주간 아파트 시세 지도, 아파트 사이클 리포트, 국가기관 부동산 통계",
+  "description": "아파트 공급 지도·주간 시세 지도, 인허가·입주물량 공급 분석, 아파트 사이클 리포트, 부린이 테스트, 국가기관 부동산 통계",
   "inLanguage": "ko"
 }
 </script>
@@ -38,7 +38,7 @@
   "keywords": ["아파트 실거래가격지수", "주간 아파트 시세", "전세가율", "인허가", "입주물량", "부동산 통계"]
 }
 </script>
-<meta name="description" content="부린이 테스트 10문항으로 내 부동산 감각을 3분 만에 확인. 내집마련 전 필수 상식부터 집값 전망을 읽는 아파트 사이클까지 — 국가기관 부동산 데이터로 검증한 리포트와 통계 제공.">
+<meta name="description" content="공급을 보면 집값이 보인다 — 아공맵. 전국 시군구·서울 구별 아파트 주간 시세 지도, 인허가·입주물량 공급 분석, 사이클 리포트, 부린이 테스트까지 국가기관 데이터로 제공.">
 <meta name="keywords" content="부린이 테스트, 부동산 테스트, 내집마련, 집값 전망, 아파트 사이클, 부동산 데이터, 부동산 상식 퀴즈, 부동산 공부">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <link rel="apple-touch-icon" href="/app_icon.png">
@@ -47,20 +47,20 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="부린이 테스트">
+<meta name="apple-mobile-web-app-title" content="아공맵">
 <meta property="og:type" content="website">
-<meta property="og:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
-<meta property="og:description" content="10문항 2지선다, 3분이면 끝. 내집마련 전 필수 상식부터 아파트 사이클 감각까지 즉시 채점·해설.">
+<meta property="og:title" content="아공맵 — 공급을 보면 집값이 보인다">
+<meta property="og:description" content="전국 시군구 아파트 주간 시세 지도와 인허가·입주물량 공급 분석. 사이클 리포트·부린이 테스트 — 국가기관 데이터 기반.">
 <meta property="og:url" content="https://www.agongmap.co.kr">
-<meta property="og:image" content="https://www.agongmap.co.kr/og-test.png">
+<meta property="og:image" content="https://www.agongmap.co.kr/og-brand.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://www.agongmap.co.kr/og-test.png">
+<meta name="twitter:image" content="https://www.agongmap.co.kr/og-brand.png">
 <script defer src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
-<meta name="twitter:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
-<meta name="twitter:description" content="10문항 2지선다, 3분이면 끝. 즉시 채점·해설.">
-<title>부린이 테스트 — 내 부동산 감각, 몇 점일까? | 아공맵</title>
+<meta name="twitter:title" content="아공맵 — 공급을 보면 집값이 보인다">
+<meta name="twitter:description" content="전국 시군구 아파트 주간 시세 지도 · 공급 분석 · 부린이 테스트">
+<title>아공맵 — 아파트 공급 지도·주간 시세·부동산 데이터</title>
 <style>
   :root{
     --ink:#16203a; --ink2:#3b4569; --paper:#f6f4ee; --paper2:#edeae1;
@@ -676,8 +676,8 @@
     <h1>아공맵</h1>
     <p class="sub">아파트 공급 지도, 아공맵. 국가 통계로 시장을 읽고, 3분 테스트로 내 감각을 확인하는 부동산 데이터 사이트.</p>
     <div class="qmenu">
-      <button class="qm" onclick="goQuiz('beginner');track('home_qm',{to:'test'})"><span class="qm-e">🐣</span><span class="qm-t">부린이 테스트</span><span class="qm-d">3분 · 10문항</span></button>
       <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">📈</span><span class="qm-t">시장상황</span><span class="qm-d">주간·월간 지도</span></button>
+      <button class="qm" onclick="goQuiz('beginner');track('home_qm',{to:'test'})"><span class="qm-e">🐣</span><span class="qm-t">부린이 테스트</span><span class="qm-d">3분 · 10문항</span></button>
       <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">사이클 리포트</span><span class="qm-d">6개 고리 검증</span></button>
       <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e">📊</span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
       <button class="qm qm-wide" onclick="goCalc('re');track('home_qm',{to:'calc'})"><span class="qm-e"><svg viewBox="0 0 24 24" width="28" height="28" style="vertical-align:-2px"><rect x="4" y="2" width="16" height="20" rx="3" fill="#1c2733"/><rect x="7" y="5" width="10" height="4" rx="1" fill="#9fd0ff"/><g fill="#fff"><circle cx="8.5" cy="13" r="1.3"/><circle cx="12" cy="13" r="1.3"/><circle cx="15.5" cy="13" r="1.3"/><circle cx="8.5" cy="17" r="1.3"/><circle cx="12" cy="17" r="1.3"/><circle cx="15.5" cy="17" r="1.3"/></g></svg></span><span class="qm-t">재건축·재개발 계산기</span><span class="qm-d">정비사업 사업성 간단분석</span></button>
@@ -685,20 +685,20 @@
   </div></header>
 
   <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">01 · 시작은 가볍게</div>
+    <div class="hs-kicker">01 · 매주 확인</div>
+    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
+    <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">📈 이번 주 시세 지도 보기</button></div>
+  </div></section>
+
+  <section class="home-sec hs-alt"><div class="wrap">
+    <div class="hs-kicker">02 · 시작은 가볍게</div>
     <h2>내 부동산 감각, 몇 점일까?</h2>
     <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
     <div class="hs-cta">
       <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 시작</button>
       <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 (심화)</button>
     </div>
-  </div></section>
-
-  <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">02 · 매주 확인</div>
-    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
-    <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">📈 시장상황 보기</button></div>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
