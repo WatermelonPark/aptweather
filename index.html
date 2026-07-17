@@ -2102,6 +2102,16 @@ const QUIZSETS={
    opts:['최종 분담금·수익 확정치로 쓴다','후보를 거르는 1차 필터로만 쓴다'],
    answer:1,
    exp:'이 공식엔 감정평가·비례율·조합 사업비·금융비용이 <b>모두 빠져 있다</b>. 각 과정의 의미를 모른 채 결과만 믿으면 오차가 크게 난다. 간단 계산은 후보를 거르는 도구일 뿐 — 진짜 판단은 관리처분 단계의 실제 숫자와 그때의 시장 상황으로 한다.'},
+
+  {q:'평당 분양가·공사비가 <b>똑같다</b>고 하자. 용적률 여유가 큰 외곽 단지 vs 기존 용적률이 이미 <b>300%</b>인 서울 최중심지 단지. 유리한 쪽은?',
+   opts:['용적률 여유가 큰 외곽 단지','서울 최중심지 단지'],
+   answer:1,
+   exp:'공식만 보면 새로 늘어나는 면적이 큰 외곽이 유리해 보인다. 하지만 재건축의 성패를 최종 결정하는 건 <b>입지가 만드는 미래 분양가</b>다. 최중심지는 늘어나는 면적이 없어도 <b>일대일 재건축</b>으로 사업이 성립하고(강남 사례), 분양가의 상방이 열려 있어 같은 계산도 다르게 실현된다. 공식은 오늘의 스냅샷일 뿐 — 입지는 공식에 들어가는 숫자의 값 자체를 바꾼다.'},
+
+  {q:'재건축 대상 아파트는 낡아서 <b>전세가율이 낮다</b>. 전세를 끼고 사려는 투자자에게 이것이 뜻하는 바는?',
+   opts:['전세금이 받쳐줘서 투자금이 적게 든다','갭이 커서 초기 투자금이 많이 든다'],
+   answer:1,
+   exp:'전세가율이 낮다 = 매매가 대비 전세금이 작다 = <b>갭(내 돈)이 크다</b>. 대신 전세금 절대액이 낮으니 역전세가 나도 돌려줄 돈의 하락폭은 작다 — 금리·역전세 리스크 자체는 크지 않다. 그래서 자금이 닿으면 <b>실거주 매수</b>가 유력한 답이다: 초기 부담을 줄이고 역전세 리스크를 아예 없앤다. 다만 낡은 집에 사는 만족도는 감수해야 하는 취향의 영역.'},
     ],
     grade:s=>{
       if(s>=9)return{lv:'LV5',g:'사업성이 한눈에 보이는 선수',d:'공식이 완전히 손에 붙었습니다. 매물 정보만 보면 사업성이 바로 나오는 단계 — 이제 임장 가서 대지지분부터 물어보세요.',emoji:'🏗️'};
@@ -2203,6 +2213,15 @@ function nextStepHTML(){
       <p class="ns-desc">투자자 테스트는 <b>호재를 악재로, 악재를 호재로</b> 읽어야 풀린다. 규제·금리·수급의 진짜 게임을 확인해보자.</p>
       <button class="ns-btn" onclick="track('next_step',{from:'beginner',to:'investor'});goQuiz('investor')">🦅 투자자 테스트 도전하기 →</button>
       <button class="ns-btn ghost" onclick="track('next_step',{from:'beginner',to:'report'});showView('report')">📑 아파트 사이클 리포트 읽기</button>
+    </div>`;
+  }
+  if(curSet==='calc'){
+    return `<div class="nextstep">
+      <div class="ns-kicker">다음 단계</div>
+      <div class="ns-title">계산보다 먼저 볼 것은 시장이다</div>
+      <p class="ns-desc">공식이 손에 익었다면, 이제 그 계산을 통째로 뒤집을 수 있는 변수를 보자. <b>입주물량과 사이클</b> — 사업성 판단의 순서는 언제나 시장이 먼저다.</p>
+      <button class="ns-btn" onclick="track('next_step',{from:'calc',to:'market'});goStats('market')">📈 시황에서 입주물량·3년시계 확인 →</button>
+      <button class="ns-btn ghost" onclick="track('next_step',{from:'calc',to:'report'});showView('report')">📑 아파트 사이클 리포트 읽기</button>
     </div>`;
   }
   return `<div class="nextstep">
