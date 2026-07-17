@@ -2666,7 +2666,7 @@ function drawTrendMap(k){
   });
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
-    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#b3541e">⚠ 과잉</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 부족</b> — 서울·경기·인천은 수도권 물량 기준</div>':'');
+    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#b3541e">⚠ 과잉</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 부족</b> · 표시 없음 = 보통<br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
 }
 function setMapMet(k,m,btn){
   MAPMET[k]=m;
