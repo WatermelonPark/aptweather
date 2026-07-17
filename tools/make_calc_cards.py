@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""재건축 투자 테스트 점수별 공유 카드 11장 (800x800) — 숫자 히어로(v3) 스타일.
+"""재건축·재개발 테스트 점수별 공유 카드 11장 (800x800) — 숫자 히어로(v3) 스타일.
 
 문구는 index.html QUIZSETS.calc.grade와 톤을 맞춘다. 둘 중 하나를 고치면 같이 볼 것.
 
@@ -75,7 +75,7 @@ def make_card(score, out_path):
     d.rounded_rectangle([M, M, W - M, H - M], R, fill=CARD, outline=LINE, width=2)
 
     # 헤더: 이름 + 레벨 배지
-    d.text((60, 86), '재건축 투자 테스트', font=noto(27), fill=INK, anchor='lm')
+    d.text((60, 86), '재건축·재개발 테스트', font=noto(27), fill=INK, anchor='lm')
     bf, sf = noto(30), noto(19, 'Medium')
     bw = d.textbbox((0, 0), lv, font=bf)[2] + d.textbbox((0, 0), '/ 10', font=sf)[2] + 20
     bx1 = W - M - 34
