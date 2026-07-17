@@ -666,6 +666,18 @@
   .bb-sup.xd{background:#eaf3fb;color:#1a5276}
     .bb-sup.ok{background:#eaf6f0;color:#1a6b54}
   .bb-sup.lo{background:#fdecea;color:#c0392b}
+  /* 아공맵 스코어 */
+  .sc-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
+  .sc-lab{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:700;color:#333}
+  .sc-track{flex:1;height:16px;background:#f1f3f5;border-radius:8px;position:relative;overflow:hidden}
+  .sc-fill{position:absolute;top:0;bottom:0;left:0;border-radius:8px}
+  .sc-val{flex:none;width:34px;text-align:right;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+  .sc-tier{flex:none;width:88px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#666}
+  .sc-tier.t4{background:#fdecea;color:#a93226}
+  .sc-tier.t3{background:#fff4e0;color:#b9770e}
+  .sc-tier.t2{background:#eef4fa;color:#3a7bd5}
+  .sc-tier.t1{background:#eaf3fb;color:#1a5276}
+  .sc-det{display:none;font-size:12.5px;color:#444;line-height:1.75;background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
 </style>
 </head>
 <body>
@@ -1089,6 +1101,13 @@
       </form>
       <span class="subs-msg" id="subs-msg"></span>
     </div>
+    <section class="adv-sec gsec" id="sec-score">
+      <div class="adv-h"><h3>아공맵 스코어</h3><span class="adv-badge">공급환경 0~100</span></div>
+      <p class="adv-note">지역의 <b>공급·금리 환경이 만드는 상승 압력</b>을 0~100으로 합성한 아공맵 자체 지표입니다. 3년 뒤 공급을 결정하는 <b>인허가(35점)</b>와 <b>입주예정(35점)</b>에 무게를 두고, 현재 입주(15점)·버블밴드 금리 여유(15점)를 더합니다. <span style="color:#a93226;font-weight:700">높을수록 공급 부족(상승 압력)</span>, <span style="color:#1a5276;font-weight:700">낮을수록 공급 부담(하락 압력)</span>. 지역 간 우열이 아니라 <b>각 지역의 사이클 위치</b>입니다 — 지역을 누르면 채점 근거가 펼쳐집니다.</p>
+      <div id="score-wrap"></div>
+      <div class="src-note">아공맵 자체 산출 지표 · 재료: 인허가·입주(예정)물량·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행) · 매주 자동 갱신</div>
+    </section>
+
     <section class="adv-sec gsec gm-m" id="sec-week">
       <div class="adv-h"><h3>주간 아파트 동향</h3><span class="adv-badge">매주 발표</span><span class="adv-badge">전주 대비 %</span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
@@ -1576,7 +1595,7 @@ function initStats(){
   }));
   document.getElementById('reg-sel').addEventListener('change',e=>{ST.reg=e.target.value;drawStat();});
   fillRegions();renderAux();drawStat();
-  renderWeekSec();renderMonthSec();renderClockSec();renderBubbleSec();initSubs();
+  renderWeekSec();renderMonthSec();renderScoreSec();renderClockSec();renderBubbleSec();initSubs();
 }
 function fillRegions(){
   const sel=document.getElementById('reg-sel');
@@ -2890,6 +2909,100 @@ function bbToggle(row){
     row.setAttribute('aria-expanded','true');
     track('bubble_detail',{region:row.querySelector('.bb-lab').textContent});
   }
+}
+/* ===== 아공맵 스코어: 공급·금리 환경 합성 지표 (가중치 밴드15/현재15/예정35/인허가35) ===== */
+function scToggle(row){
+  const d=row.nextElementSibling;
+  if(!d||!d.classList.contains('sc-det'))return;
+  const wasOpen=d.style.display==='block';
+  document.querySelectorAll('#score-wrap .sc-det').forEach(x=>x.style.display='none');
+  document.querySelectorAll('#score-wrap .sc-row').forEach(x=>x.setAttribute('aria-expanded','false'));
+  if(!wasOpen){
+    d.style.display='block';
+    row.setAttribute('aria-expanded','true');
+    track('score_detail',{region:row.querySelector('.sc-lab').textContent});
+  }
+}
+function renderScoreSec(){
+  const sec=document.getElementById('sec-score');if(!sec)return;
+  const B=ADV.bubble,O=ADV.occupancy,P=ADV.permits,J=STATS['전세가율'];
+  if(!B||!B.conv||!O||!P||!J){sec.style.display='none';return;}
+  const KEY={'서울':'수도권','경기':'수도권','인천':'수도권'};
+  const lat=r=>{const s=J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
+  const lin=(x,good,bad)=>x==null?null:(good<bad?Math.max(0,Math.min(1,(bad-x)/(bad-good))):Math.max(0,Math.min(1,(x-bad)/(good-bad))));
+  const f=v=>v==null?'·':Math.round(v).toLocaleString();
+  const actRows=O.rows.filter(r=>!r.e),futRows=O.rows.filter(r=>r.e===1);
+  const ph=P.rows.slice(-2);
+  const W=[15,15,35,35];
+  const items=[];
+  (B.regions||[]).forEach(rg=>{
+    const key=KEY[rg]||rg;
+    // ① 버블밴드 여유
+    let s1=null,lo=null,hi=null;
+    const cv=B.conv[rg],jr=lat(rg);
+    if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;s1=lin(B.loan.v,lo,hi);}
+    // 공급 지표 (전국=합산, 서울·경기·인천=수도권)
+    let ref=null,band=null,val=null;
+    if(rg==='전국'){
+      const refs=O.regions.map(r=>(O.ref&&O.ref[r])||(O.band&&O.band[r]?(O.band[r][0]+O.band[r][1])/2:null));
+      if(!refs.some(x=>x==null)){
+        ref=refs.reduce((a,b)=>a+b,0);
+        val=row=>row.v.some(v=>v!=null)?row.v.reduce((a,b)=>a+(b||0),0):null;
+      }
+    }else if(O.regions.indexOf(key)>=0){
+      const i=O.regions.indexOf(key);
+      band=O.band&&O.band[key];
+      ref=(O.ref&&O.ref[key])||(band?(band[0]+band[1])/2:null);
+      val=row=>row.v[i];
+    }
+    let s2=null,s3=null,nowA=null,futR=null;
+    if(val&&ref){
+      const now4=actRows.slice(-4).map(val).filter(v=>v!=null);
+      nowA=now4.length?now4.reduce((a,b)=>a+b,0)/now4.length:null;
+      s2=band?lin(nowA,band[0],band[1]):lin(nowA,ref*0.6,ref);
+      const fv=futRows.map(val).filter(v=>v!=null);
+      futR=fv.length?(fv.reduce((a,b)=>a+b,0)/fv.length)/ref:null;
+      s3=lin(futR,0.55,1.0);
+    }
+    // ④ 인허가 (연간)
+    let s4=null,pv=null,rlo=null,rhi=null;
+    if(rg==='전국'){
+      pv=ph.reduce((a,r)=>a+r.v.reduce((x,y)=>x+(y||0),0),0);
+      rlo=P.regions.reduce((a,r)=>a+P.ref[r][0],0);rhi=P.regions.reduce((a,r)=>a+P.ref[r][1],0);
+      s4=lin(pv,rlo,rhi);
+    }else{
+      const pkey=KEY[rg]||rg,pi=P.regions.indexOf(pkey);
+      if(pi>=0){
+        const vals=ph.map(r=>r.v[pi]);
+        if(vals.every(v=>v!=null)){pv=vals[0]+vals[1];[rlo,rhi]=P.ref[pkey];s4=lin(pv,rlo,rhi);}
+      }
+    }
+    const parts=[s1,s2,s3,s4];
+    const avail=parts.map((s,i)=>s!=null?[s,W[i]]:null).filter(Boolean);
+    if(avail.length<3)return;   // 재료가 절반뿐이면 산출하지 않음
+    const total=Math.round(avail.reduce((a,[s,w])=>a+s*w,0)/avail.reduce((a,[,w])=>a+w,0)*100);
+    const pt=parts.map((s,i)=>s!=null?Math.round(s*W[i]):null);
+    const baseNm=rg==='전국'?'전국(15개 지역 합산)':(key!==rg?rg+'('+key+' 물량 기준)':rg);
+    const det='①밴드 여유 '+(pt[0]==null?'· (데이터 없음)':pt[0]+'/15')+(lo!=null?' — 금리 '+B.loan.v.toFixed(2)+'% vs 하단 '+lo.toFixed(1)+'%·상단 '+hi.toFixed(1)+'%':'')+'.<br>'
+      +'②현재 입주 '+(pt[1]==null?'· (데이터 없음)':pt[1]+'/15')+(nowA!=null?' — 최근 4분기 평균 '+f(nowA)+'호'+(band?' vs 밴드 '+f(band[0])+'~'+f(band[1]):''):'')+'.<br>'
+      +'③입주예정 '+(pt[2]==null?'· (데이터 없음)':pt[2]+'/35')+(futR!=null?' — 수요선 대비 평균 '+Math.round(futR*100)+'%':'')+'.<br>'
+      +'④인허가(3년 뒤) '+(pt[3]==null?'· (데이터 없음)':pt[3]+'/35')+(pv!=null?' — 최근 1년 '+f(pv)+'호 vs 연간 저점 '+f(rlo)+'·고점 '+f(rhi):'')+'.'
+      +'<div style="margin-top:6px;color:var(--muted)">'+baseNm+' · 결측 항목은 가중치를 재배분해 합산합니다.</div>';
+    items.push({rg,total,det});
+  });
+  if(!items.length){sec.style.display='none';return;}
+  items.sort((a,b)=>b.total-a.total);
+  const tier=s=>s>=75?['t4','상승 압력 강함','#a93226']:s>=50?['t3','상승 우호','#b9770e']:s>=25?['t2','공급 부담','#3a7bd5']:['t1','하락 압력','#1a5276'];
+  let h='';
+  items.forEach(it=>{
+    const [tc,tt,col]=tier(it.total);
+    h+='<div class="sc-row" role="button" aria-expanded="false" onclick="scToggle(this)"><span class="sc-lab">'+it.rg+'</span>'
+      +'<div class="sc-track"><div class="sc-fill" style="width:'+it.total+'%;background:'+col+'"></div></div>'
+      +'<span class="sc-val" style="color:'+col+'">'+it.total+'</span>'
+      +'<span class="sc-tier '+tc+'">'+tt+'</span></div>'
+      +'<div class="sc-det">'+it.det+'</div>';
+  });
+  document.getElementById('score-wrap').innerHTML=h;
 }
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
