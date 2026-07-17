@@ -656,9 +656,11 @@
   .bb-chip.hi{background:#fdecea;color:#a93226}
   .bb-chip.lo{background:#eaf3fb;color:#1a5276}
   .bb-sup{flex:none;width:70px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#8a8272}
-  .bb-sup.hi{background:#fbeee9;color:#b3541e}
+  .bb-sup.hi{background:#fdecea;color:#c0392b}
+  .bb-sup.xd{background:#eaf3fb;color:#1a5276}
   .bb-sup.md{background:#fbf7ea;color:#9a7000}
-  .bb-sup.lo{background:#eaf6f0;color:#1a6b54}
+  .bb-sup.ok{background:#eaf6f0;color:#1a6b54}
+  .bb-sup.lo{background:#fdecea;color:#c0392b}
 </style>
 </head>
 <body>
@@ -1563,7 +1565,7 @@ new Chart(cMelt,{type:'bar',data:{labels:D.super.melt_scenarios.map(s=>'연 '+s.
 /* ============ 하단 내비 뷰 전환 ============ */
 function track(ev,params){try{if(typeof gtag==='function')gtag('event',ev,params||{});}catch(e){}}
 const vHome=document.getElementById('view-home'),vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats'),vTest=document.getElementById('view-test');
-let statsInited=false;
+let statsInited=false,curView=null;
 function showView(v,updateHash){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
   vHome.style.display=v==='home'?'':'none';
@@ -1573,7 +1575,12 @@ function showView(v,updateHash){
   document.getElementById('view-calc').style.display=v==='calc'?'':'none';
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){initStats();statsInited=true;}
-  if(updateHash!==false)history.replaceState(null,'',v==='home'?location.pathname:'#'+v);
+  if(updateHash!==false){
+    const tgtHash=v==='home'?'':'#'+v, tgtUrl=v==='home'?location.pathname:'#'+v;
+    if(v===curView)history.replaceState(null,'',tgtUrl);
+    else if(location.hash!==tgtHash)history.pushState(null,'',tgtUrl);
+  }
+  curView=v;
   track('page_view',{page_title:'view_'+v,page_location:location.origin+'/#'+v});
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
@@ -2669,9 +2676,9 @@ function drawTrendMap(k){
     const tc=v>0?'#a93226':(v<0?'#1a5276':'#8a8272');
     const sp=(typeof bubbleSupply==='function')?bubbleSupply(r):null;
     let mark='';
-    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="16" font-size="12" font-weight="800" fill="#b3541e">⚠</text>`;hasSup=true;}
-    else if(sp&&sp.cls==='md'){mark=`<circle cx="${TW-12}" cy="12" r="4.5" fill="#e0a13a"/>`;hasSup=true;}
-    else if(sp&&sp.cls==='lo'){mark=`<circle cx="${TW-12}" cy="12" r="4.5" fill="#2c9a6d"/>`;hasSup=true;}
+    const SUPC={xd:'#3a7bd5',md:'#e0a13a',ok:'#2c9a6d',lo:'#c0392b'};
+    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="16" font-size="12" font-weight="800" fill="#c0392b">⚠</text>`;hasSup=true;}
+    else if(sp&&SUPC[sp.cls]){mark=`<circle cx="${TW-12}" cy="12" r="4.5" fill="${SUPC[sp.cls]}"/>`;hasSup=true;}
     sv.push(`<g transform="translate(${x*(TW+G)},${y*(TH+G)})">`+
       `<rect width="${TW}" height="${TH}" rx="11" fill="${mapColor(v,k==='week'?0.4:1.0)}" stroke="#e2dbc9"/>`+
       `<text x="${TW/2}" y="27" text-anchor="middle" font-size="13.5" font-weight="800" fill="#2b2620">${r}</text>`+
@@ -2681,7 +2688,7 @@ function drawTrendMap(k){
   });
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
-    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#b3541e">⚠ 과잉</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 부족</b> · 표시 없음 = 보통<br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
+    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#c0392b">⚠ 과잉</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 보통</b> · <b style="color:#c0392b">● 부족</b><br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
 }
 function setMapMet(k,m,btn){
   MAPMET[k]=m;
@@ -2940,15 +2947,17 @@ function bubbleSupply(rg){
   const fut=O.rows.filter(r=>r.e===1);      // 입주예정 전체 (최대 7분기)
   const vals=fut.map(r=>r.v[ri]).filter(v=>v!=null);
   if(vals.length<3)return null;
+  const acts=O.rows.filter(r=>!r.e).slice(-4).map(r=>r.v[ri]).filter(v=>v!=null);
   const over=vals.filter(v=>v>=ref).length;
-  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
-  const ratio=avg/ref;
-  const tip='향후 '+vals.length+'개 분기: 수요선('+ref.toLocaleString()+'호) 초과 '+over+'회 · 평균 유입 '+Math.round(ratio*100)+'%'
+  const futR=(vals.reduce((a,b)=>a+b,0)/vals.length)/ref;
+  const recR=acts.length?(acts.reduce((a,b)=>a+b,0)/acts.length)/ref:0;
+  const tip='향후 '+vals.length+'개 분기: 수요선('+ref.toLocaleString()+'호) 초과 '+over+'회 · 평균 유입 '+Math.round(futR*100)+'% (최근 실적 '+Math.round(recR*100)+'%)'
     +(key!==rg?' ('+key+' 기준)':'');
-  if(over>=2)return {cls:'hi',txt:'⚠ 공급과잉',tip:tip,warn:true};
-  if(over===1||ratio>=0.6)return {cls:'md',txt:'공급주의',tip:tip,warn:true};
-  if(ratio<=0.35)return {cls:'lo',txt:'공급부족',tip:tip,warn:false};
-  return {cls:'',txt:'공급보통',tip:tip,warn:false};
+  if(over>=3||futR>=0.9)return {cls:'hi',txt:'⚠ 공급과잉',tip:tip,warn:true};
+  if(over===2||futR>=0.75)return {cls:'xd',txt:'공급과다',tip:tip,warn:true};
+  if(over===1||(futR>=0.6&&recR>=0.6))return {cls:'md',txt:'공급주의',tip:tip,warn:true};
+  if(futR<=0.55)return {cls:'lo',txt:'공급부족',tip:tip,warn:false};
+  return {cls:'ok',txt:'공급보통',tip:tip,warn:false};
 }
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
