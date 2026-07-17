@@ -22,7 +22,7 @@ API = 'https://api.buttondown.com/v1/emails'
 KEY = os.environ.get('BUTTONDOWN_API_KEY', '')
 SITE = 'https://www.aptweather.co.kr'
 
-CORE = ['수도권', '서울', '경기', '인천', '세종', '부산', '대구']
+CORE = ['전국', '수도권', '서울', '경기', '인천', '세종', '부산', '대구']
 
 
 def read_adv():
@@ -160,8 +160,8 @@ def main():
             changed = io.open(CHANGED, encoding='utf-8').read()
         except IOError:
             changed = ''
-        if 'weekly' not in changed and 'monthly' not in changed:
-            print('skip: 이번 실행에서 주간·월간 데이터 갱신 없음')
+        if not any(k in changed for k in ('weekly', 'monthly', 'permits', 'occupancy', '금리')):
+            print('skip: 이번 실행에서 통계 갱신 없음')
             return
     subject, body = build_body(changed)
     if preview:
