@@ -647,7 +647,8 @@
   .calc-note{font-size:12.5px;color:var(--muted);line-height:1.75;margin:14px 2px}
   #clock-tbl small{font-weight:400;color:var(--muted)}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
-  .bb-row{display:flex;align-items:center;gap:10px;margin:7px 0}
+  .bb-row{display:flex;align-items:center;gap:10px;margin:7px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
+  .bb-det{display:none;font-size:12.5px;color:#444;line-height:1.75;background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
   .bb-lab{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:700;color:#333}
   .bb-track{flex:1;height:16px;background:#f1f3f5;border-radius:8px;position:relative}
   .bb-band{position:absolute;top:2px;bottom:2px;background:linear-gradient(90deg,#fdecea,#eaf3fb);border-left:3px solid #a93226;border-right:3px solid #1a5276;border-radius:3px}
@@ -1142,7 +1143,7 @@
 
     <section class="adv-sec gsec" id="sec-bubble">
       <div class="adv-h"><h3>버블밴드</h3><span class="adv-badge">월간</span><span class="adv-badge" id="bubble-prd"></span></div>
-      <p class="adv-note">아파트의 임대수익률(<b>전세가율 × 전월세전환율</b>)을 <b style="color:#a93226">하단(매수신호선)</b>, 그 2배를 <b style="color:#1a5276">상단(위험선)</b>으로 놓고 주택담보대출 금리(세로선)와 비교합니다. 금리가 하단 아래면 전세 살 이유가 없어지는 매수 신호권, 상단 위면 임대수익 대비 금리가 과도한 위험권입니다. 2008년 10월(상단 약 5.6% vs 금리 7.58%)과 2022년 10월(약 5.2% vs 4.82%)의 급락기가 이 조건에서 나왔습니다. 단, 밴드는 <b>가격·금리 조건만</b> 봅니다 — 향후 입주물량이 많은 지역은 오른쪽 <b>공급 배지</b>(수요 대비 향후 입주예정 — 근거는 배지에 마우스를 올리면 표시)를 함께 확인하세요.</p>
+      <p class="adv-note">아파트의 임대수익률(<b>전세가율 × 전월세전환율</b>)을 <b style="color:#a93226">하단(매수신호선)</b>, 그 2배를 <b style="color:#1a5276">상단(위험선)</b>으로 놓고 주택담보대출 금리(세로선)와 비교합니다. 금리가 하단 아래면 전세 살 이유가 없어지는 매수 신호권, 상단 위면 임대수익 대비 금리가 과도한 위험권입니다. 2008년 10월(상단 약 5.6% vs 금리 7.58%)과 2022년 10월(약 5.2% vs 4.82%)의 급락기가 이 조건에서 나왔습니다. 단, 밴드는 <b>가격·금리 조건만</b> 봅니다 — 향후 입주물량이 많은 지역은 오른쪽 <b>공급 배지</b>(수요 대비 향후 입주예정)를 함께 확인하세요 — <b>지역을 누르면</b> 밴드·금리·공급의 상세 근거가 펼쳐집니다.</p>
       <div id="bubble-wrap"></div>
       <div class="src-note">자료: KOSIS 한국부동산원 전월세전환율·전세가율 · 한국은행 예금은행 주택담보대출 금리(신규취급) · 자동 갱신</div>
     </section>
@@ -2597,21 +2598,8 @@ function drawNationMap(k){
   const ref=k==='week'?0.4:1.0, TW=54, NH=17, VH=16, G=3;
   const N=NATION_TILE, W=N.cols*(TW+G)-G, H=N.rows*(NH+VH*2+2+G)-G;
   const sv=['<svg viewBox="-2 -2 '+(W+4)+' '+(H+4)+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:560px;display:block" role="img" aria-label="전국 시군구 변동률 지도">'];
-  const fmtV=v=>v==null?'·':(v>0?'+':'')+v.toFixed(2);
-  const tcol=v=>v>0?'#8f2318':(v<0?'#123c5c':'#6f6a5c');
-  N.t.forEach(([c,nm,x,y,h])=>{
-    const ma=vma[c], je=vje[c];
-    const px=x*(TW+G), py=y*(NH+VH*2+2+G);
-    sv.push(`<g transform="translate(${px},${py})">`+
-      `<rect width="${TW}" height="${NH}" rx="4" fill="${h?'#2b2620':'#fff'}" stroke="${h?'#2b2620':'#d8d0bc'}"/>`+
-      `<text x="${TW/2}" y="${NH-5}" text-anchor="middle" font-size="${nm.length>3?9.5:11}" font-weight="800" fill="${h?'#fff':'#2b2620'}">${nm}</text>`+
-      `<rect y="${NH+1}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(ma,ref)}" stroke="#e2dbc9"/>`+
-      `<text x="${TW/2}" y="${NH+13}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
-      `<rect y="${NH+VH+2}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(je,ref)}" stroke="#e2dbc9"/>`+
-      `<text x="${TW/2}" y="${NH+VH+14}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${tcol(je)}">${fmtV(je)}</text>`+
-      `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%</title></g>`);
-  });
-  // 시도(광역) 경계선 — 같은 시도가 아닌 이웃과 접한 변만 그린다
+  const GRP_TINT={a7:'#e7ebf4',c1:'#e7ebf4',c3:'#e7ebf4',b2:'#e7ebf4',b1:'#e7ebf4',
+    a9:'#e8f2ea',b3:'#e8f2ea',c7:'#e8f2ea',c6:'#e8f2ea',c8:'#e8f2ea',b4:'#e8f2ea'};
   const grpOf=c=>{
     if(c[0]==='a'){
       if(c==='a0')return 'a0';
@@ -2621,6 +2609,21 @@ function drawNationMap(k){
     }
     return c.slice(0,2);
   };
+  const fmtV=v=>v==null?'·':(v>0?'+':'')+v.toFixed(2);
+  const tcol=v=>v>0?'#8f2318':(v<0?'#123c5c':'#6f6a5c');
+  N.t.forEach(([c,nm,x,y,h])=>{
+    const ma=vma[c], je=vje[c];
+    const px=x*(TW+G), py=y*(NH+VH*2+2+G);
+    sv.push(`<g transform="translate(${px},${py})">`+
+      `<rect width="${TW}" height="${NH}" rx="4" fill="${h?'#2b2620':(GRP_TINT[grpOf(c)]||'#fff')}" stroke="${h?'#2b2620':'#d8d0bc'}"/>`+
+      `<text x="${TW/2}" y="${NH-5}" text-anchor="middle" font-size="${nm.length>3?9.5:11}" font-weight="800" fill="${h?'#fff':'#2b2620'}">${nm}</text>`+
+      `<rect y="${NH+1}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(ma,ref)}" stroke="#e2dbc9"/>`+
+      `<text x="${TW/2}" y="${NH+13}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
+      `<rect y="${NH+VH+2}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(je,ref)}" stroke="#e2dbc9"/>`+
+      `<text x="${TW/2}" y="${NH+VH+14}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${tcol(je)}">${fmtV(je)}</text>`+
+      `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%</title></g>`);
+  });
+  // 시도(광역) 경계선 — 같은 시도가 아닌 이웃과 접한 변만 그린다
   const rowH=NH+VH*2+2;
   const posGrp={};
   N.t.forEach(([c,,x,y])=>{posGrp[x+','+y]=grpOf(c);});
@@ -2633,7 +2636,7 @@ function drawNationMap(k){
     if(nb(-1,0)!==g)bl.push('M'+(px-1.5)+' '+(py-1.5)+'V'+(py+rowH+1.5));
     if(nb(1,0)!==g)bl.push('M'+(px+TW+1.5)+' '+(py-1.5)+'V'+(py+rowH+1.5));
   });
-  sv.push('<path d="'+bl.join('')+'" stroke="#a89f88" stroke-width="1.1" fill="none" opacity=".75"/>');
+  sv.push('<path d="'+bl.join('')+'" stroke="#6f6a5c" stroke-width="1.4" fill="none" opacity=".9"/>');
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=
     mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+
@@ -3010,6 +3013,18 @@ function bubbleSupply(rg){
   if(futR<=0.55)return {cls:'lo',txt:'공급부족',tip:tip,warn:false};
   return {cls:'ok',txt:'공급적정',tip:tip,warn:false};
 }
+function bbToggle(row){
+  const d=row.nextElementSibling;
+  if(!d||!d.classList.contains('bb-det'))return;
+  const wasOpen=d.style.display==='block';
+  document.querySelectorAll('#bubble-wrap .bb-det').forEach(x=>x.style.display='none');
+  document.querySelectorAll('#bubble-wrap .bb-row').forEach(x=>x.setAttribute('aria-expanded','false'));
+  if(!wasOpen){
+    d.style.display='block';
+    row.setAttribute('aria-expanded','true');
+    track('bubble_detail',{region:row.querySelector('.bb-lab').textContent});
+  }
+}
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
   const B=ADV.bubble,J=STATS['전세가율'];
@@ -3019,7 +3034,7 @@ function renderBubbleSec(){
   const latest=r=>{const s=J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
   const MAX=9;
   const px=v=>Math.min(98,Math.max(0,v/MAX*100));
-  let h='<div class="bb-legend">막대 = <b style="color:#a93226">매수신호선(하단)</b> ~ <b style="color:#1a5276">위험선(상단)</b> · 세로선 = 주택담보대출 '+loan.toFixed(2)+'% ('+B.loan.p+' 신규취급 평균)</div>';
+  let h='<div class="bb-legend">막대 = <b style="color:#a93226">매수신호선(하단)</b> ~ <b style="color:#1a5276">위험선(상단)</b> · 세로선 = 주택담보대출 '+loan.toFixed(2)+'% ('+B.loan.p+' 신규취급 평균) · <b>지역을 누르면 상세 근거</b></div>';
   let nHi=0,nLo=0,nNear=0,nLoSupply=0;
   (B.regions||Object.keys(B.conv)).forEach(rg=>{
     const cv=B.conv[rg],jr=latest(rg);
@@ -3031,13 +3046,21 @@ function renderBubbleSec(){
     else if(hi-loan<1)nNear++;
     const sp=bubbleSupply(rg);
     if(cls==='lo'&&sp&&sp.warn)nLoSupply++;
-    h+='<div class="bb-row"><span class="bb-lab">'+rg+'</span>'
+    let pos;
+    if(loan>=hi)pos='금리가 상단(위험선)을 넘었습니다 — 임대수익 대비 금리가 과도한 구간입니다.';
+    else if(loan<=lo)pos='금리가 하단(매수신호선) 아래입니다 — 대출이 전세보다 싼 매수 신호권입니다.';
+    else pos='금리는 밴드 안이고, 상단(위험선)까지 '+(hi-loan).toFixed(1)+'%p 남았습니다.';
+    const det='밴드: 전세가율 '+jr+'% × 전월세전환율 '+cv+'% = 하단(매수신호선) <b>'+lo.toFixed(1)+'%</b> · 그 2배 = 상단(위험선) <b>'+hi.toFixed(1)+'%</b>.<br>'
+      +'금리: 현재 주택담보대출 <b>'+loan.toFixed(2)+'%</b> — '+pos+'<br>'
+      +'공급: '+(sp?sp.tip:'지역 단위 집계 데이터가 없어 판정을 생략했습니다.');
+    h+='<div class="bb-row" role="button" aria-expanded="false" onclick="bbToggle(this)"><span class="bb-lab">'+rg+'</span>'
       +'<div class="bb-track" title="전세가율 '+jr+'% × 전환율 '+cv+'% → 하단 '+lo.toFixed(1)+'% · 상단 '+hi.toFixed(1)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div></div>'
       +'<span class="bb-chip '+cls+'">'+txt+'</span>'
       +(sp?'<span class="bb-sup '+sp.cls+'" title="'+sp.tip+'">'+(sp.cls==='hi'?warnIcon(true,'#1a5276'):sp.cls==='lo'?warnIcon(false,'#c0392b'):'')+sp.txt+'</span>':'<span class="bb-sup" title="공급 데이터 없음">·</span>')
-      +'</div>';
+      +'</div>'
+      +'<div class="bb-det">'+det+'</div>';
   });
   let sum;
   if(nHi>0)sum='<b style="color:#1a5276">'+nHi+'개 지역</b>에서 금리가 위험선(상단)을 넘었습니다. 과거 급락기(2008·2022)가 이 조건에서 나왔습니다.';
