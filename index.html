@@ -2686,8 +2686,9 @@ function drawTrendMap(k){
     const ma=vma[r], je=vje[r];
     const sp=(typeof bubbleSupply==='function')?bubbleSupply(r):null;
     let mark='';
-    const SUPC={xd:'#3a7bd5',md:'#e0a13a',ok:'#2c9a6d',lo:'#c0392b'};
-    if(sp&&sp.cls==='hi'){mark=`<text x="${TW-13}" y="15" font-size="11.5" font-weight="800" fill="#1a5276">⚠</text>`;hasSup=true;}
+    const SUPC={xd:'#3a7bd5',md:'#e0a13a',ok:'#2c9a6d'};
+    if(sp&&sp.cls==='hi'){mark=`<g transform="translate(${TW-18},4)">${WARN_DN('#1a5276')}</g>`;hasSup=true;}
+    else if(sp&&sp.cls==='lo'){mark=`<g transform="translate(${TW-18},4)">${WARN_UP('#c0392b')}</g>`;hasSup=true;}
     else if(sp&&SUPC[sp.cls]){mark=`<circle cx="${TW-12}" cy="10" r="4" fill="${SUPC[sp.cls]}"/>`;hasSup=true;}
     sv.push(`<g transform="translate(${x*(TW+G)},${y*(TH+G)})">`+
       `<rect width="${TW}" height="${TH}" rx="10" fill="#fff" stroke="#d8d0bc"/>`+
@@ -2702,7 +2703,7 @@ function drawTrendMap(k){
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=mapDateChip(row.p,(met==='ma'?'매매':'전세')+' · '+T.unit)+sv.join('')+
     '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
-    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#1a5276">⚠ 과잉</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 보통</b> · <b style="color:#c0392b">● 부족</b><br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
+    (hasSup?'<div class="map-suplegend">공급(향후 입주예정): <b style="color:#c0392b">'+warnIcon(false,'#c0392b')+'부족(상승 압력)</b> · <b style="color:#1a5276">'+warnIcon(true,'#1a5276')+'과잉(하락 압력)</b> · <b style="color:#3a7bd5">● 과다</b> · <b style="color:#e0a13a">● 주의</b> · <b style="color:#2c9a6d">● 보통</b><br>서울·경기·인천은 수도권 물량 기준 · 전국·지방은 집계 제외</div>':'');
 }
 function setMapMet(k,m,btn){
   MAPMET[k]=m;
@@ -2949,6 +2950,10 @@ function renderClockSec(){
   const lab=document.getElementById('clock-lab');
   if(lab)lab.textContent='단위: 호 · 입주 실적 '+rows[lastAct].p+'까지 반영 · 인허가는 '+ph[0].p+'~'+ph[1].p+' 합계를 연간 평년 범위와 비교';
 }
+/* 공급 경고 삼각형(느낌표): 부족=빨강 ▲(상승 압력) / 과잉=파랑 ▼(하락 압력) — 12x12 */
+const WARN_UP=c=>'<path d="M6 1 11.4 11H.6Z" fill="'+c+'"/><rect x="5.3" y="4.4" width="1.4" height="3.4" rx=".7" fill="#fff"/><circle cx="6" cy="9.4" r=".95" fill="#fff"/>';
+const WARN_DN=c=>'<path d="M6 11 .6 1h10.8Z" fill="'+c+'"/><rect x="5.3" y="2.4" width="1.4" height="3.4" rx=".7" fill="#fff"/><circle cx="6" cy="7.4" r=".9" fill="#fff"/>';
+const warnIcon=(dn,c)=>'<svg width="11" height="11" viewBox="0 0 12 12" style="vertical-align:-1px;margin-right:2px">'+(dn?WARN_DN(c):WARN_UP(c))+'</svg>';
 function bubbleSupply(rg){
   const O=ADV.occupancy;
   if(!O)return null;
@@ -2967,7 +2972,7 @@ function bubbleSupply(rg){
   const recR=acts.length?(acts.reduce((a,b)=>a+b,0)/acts.length)/ref:0;
   const tip='향후 '+vals.length+'개 분기: 수요선('+ref.toLocaleString()+'호) 초과 '+over+'회 · 평균 유입 '+Math.round(futR*100)+'% (최근 실적 '+Math.round(recR*100)+'%)'
     +(key!==rg?' ('+key+' 기준)':'');
-  if(over>=3||futR>=0.9)return {cls:'hi',txt:'⚠ 공급과잉',tip:tip,warn:true};
+  if(over>=3||futR>=0.9)return {cls:'hi',txt:'공급과잉',tip:tip,warn:true};
   if(over===2||futR>=0.75)return {cls:'xd',txt:'공급과다',tip:tip,warn:true};
   if(over===1||(futR>=0.6&&recR>=0.6))return {cls:'md',txt:'공급주의',tip:tip,warn:true};
   if(futR<=0.55)return {cls:'lo',txt:'공급부족',tip:tip,warn:false};
@@ -2999,7 +3004,7 @@ function renderBubbleSec(){
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div></div>'
       +'<span class="bb-chip '+cls+'">'+txt+'</span>'
-      +(sp?'<span class="bb-sup '+sp.cls+'" title="'+sp.tip+'">'+sp.txt+'</span>':'<span class="bb-sup" title="공급 데이터 없음">·</span>')
+      +(sp?'<span class="bb-sup '+sp.cls+'" title="'+sp.tip+'">'+(sp.cls==='hi'?warnIcon(true,'#1a5276'):sp.cls==='lo'?warnIcon(false,'#c0392b'):'')+sp.txt+'</span>':'<span class="bb-sup" title="공급 데이터 없음">·</span>')
       +'</div>';
   });
   let sum;
