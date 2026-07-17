@@ -2080,37 +2080,37 @@ const QUIZSETS={
 
   {q:'개발 전 <b>4,000만원</b> → 개발 후 <b>6,000만원</b>. 계산상 사업성은 충분한데, 시장 전체가 <b>하락장 초입</b>에 들어섰다. 판단은?',
    opts:['계산이 좋으니 진행해도 된다','사이클이 우선 — 계산은 다시 해야 한다'],
-   answer:1,
+   m:1, answer:1,
    exp:'개발 후 가치는 <b>미래의 분양가</b>를 가정한 숫자다. 하락장에선 그 가정 자체가 무너진다 — 분양가가 내려앉으면 (분양가 − 공사비) 마진이 용적률 배수로 증폭되며 사업성이 통째로 뒤집힌다. <b>사업성 계산은 시장 사이클 판단을 대신하지 못한다.</b> 순서는 언제나 시장 먼저, 물건은 그다음이다.'},
 
   {q:'사업성 공식에 넣는 <b>분양가</b>는 어느 시점의 가격이어야 할까?',
    opts:['지금 주변 신축 시세','수년 뒤 실제 분양 시점의 가격'],
-   answer:1,
+   m:1, answer:1,
    exp:'분양은 빨라야 수년 뒤다. 오늘 시세는 <b>출발점</b>일 뿐, 실제 사업성은 분양 시점의 가격이 결정한다. 그래서 같은 계산도 상승기엔 실제보다 박하게, 하락기엔 후하게 나온다. 오늘 숫자로 나온 사업성을 확정 수익처럼 믿으면 안 되는 이유다.'},
 
   {q:'조합설립부터 입주까지 정비사업은 보통 <b>10년 안팎</b>. 사이클이 <b>5년</b>인 지방에서 상승기 한복판에 재건축을 샀다면?',
    opts:['입주 시점엔 하락기일 수 있다','상승기에 샀으니 입주 때도 상승기다'],
-   answer:0,
+   m:1, answer:0,
    exp:'10년이면 지방 사이클(약 5년)이 <b>한 바퀴를 돌고도 남는다</b>. 사업성 계산엔 이 시간이 들어있지 않다. 정비사업 투자는 물건의 사업성만이 아니라 <b>입주 시점이 사이클의 어디쯤일지</b>까지 계산에 넣어야 한다.'},
 
   {q:'계산상 사업성은 넉넉하다. 그런데 입주 예정 시점에 <b>인근 대규모 입주물량</b>이 겹친다. 어떻게 봐야 할까?',
    opts:['사업성이 좋으니 문제없다','물량이 분양가·전세가를 눌러 계산이 어긋날 수 있다'],
-   answer:1,
+   m:1, answer:1,
    exp:'공급이 몰리면 전세가가 먼저 밀리고 분양가도 따라 눌린다. 공식의 (분양가 − 공사비) 마진이 얇아지며 사업성이 훼손된다. <b>물량 앞에 장사 없다</b> — 개별 단지 계산 전에 그 지역의 입주물량부터 확인하는 게 순서다.'},
 
   {q:'간단 공식으로 사업성 <b>"있음"</b>이 나왔다. 이 숫자의 올바른 용도는?',
    opts:['최종 분담금·수익 확정치로 쓴다','후보를 거르는 1차 필터로만 쓴다'],
-   answer:1,
+   m:1, answer:1,
    exp:'이 공식엔 감정평가·비례율·조합 사업비·금융비용이 <b>모두 빠져 있다</b>. 각 과정의 의미를 모른 채 결과만 믿으면 오차가 크게 난다. 간단 계산은 후보를 거르는 도구일 뿐 — 진짜 판단은 관리처분 단계의 실제 숫자와 그때의 시장 상황으로 한다.'},
 
   {q:'평당 분양가·공사비가 <b>똑같다</b>고 하자. 용적률 여유가 큰 외곽 단지 vs 기존 용적률이 이미 <b>300%</b>인 서울 최중심지 단지. 유리한 쪽은?',
    opts:['용적률 여유가 큰 외곽 단지','서울 최중심지 단지'],
-   answer:1,
+   m:1, answer:1,
    exp:'공식만 보면 새로 늘어나는 면적이 큰 외곽이 유리해 보인다. 하지만 재건축의 성패를 최종 결정하는 건 <b>입지가 만드는 미래 분양가</b>다. 최중심지는 늘어나는 면적이 없어도 <b>일대일 재건축</b>으로 사업이 성립하고(강남 사례), 분양가의 상방이 열려 있어 같은 계산도 다르게 실현된다. 공식은 오늘의 스냅샷일 뿐 — 입지는 공식에 들어가는 숫자의 값 자체를 바꾼다.'},
 
   {q:'재건축 대상 아파트는 낡아서 <b>전세가율이 낮다</b>. 전세를 끼고 사려는 투자자에게 이것이 뜻하는 바는?',
    opts:['전세금이 받쳐줘서 투자금이 적게 든다','갭이 커서 초기 투자금이 많이 든다'],
-   answer:1,
+   m:1, answer:1,
    exp:'전세가율이 낮다 = 매매가 대비 전세금이 작다 = <b>갭(내 돈)이 크다</b>. 대신 전세금 절대액이 낮으니 역전세가 나도 돌려줄 돈의 하락폭은 작다 — 금리·역전세 리스크 자체는 크지 않다. 그래서 자금이 닿으면 <b>실거주 매수</b>가 유력한 답이다: 초기 부담을 줄이고 역전세 리스크를 아예 없앤다. 다만 낡은 집에 사는 만족도는 감수해야 하는 취향의 영역.'},
     ],
     grade:s=>{
@@ -2139,12 +2139,19 @@ function mulberry32(a){
 function drawQuiz(setKey,seed){
   curSeed=(seed==null)?(Math.floor(Math.random()*4294967296)>>>0):(seed>>>0);
   const rnd=mulberry32(curSeed);
-  const pool=QUIZSETS[setKey].Q.slice();
-  for(let i=pool.length-1;i>0;i--){
-    const j=Math.floor(rnd()*(i+1));
-    const t=pool[i];pool[i]=pool[j];pool[j]=t;
+  const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;};
+  const pool=shuf(QUIZSETS[setKey].Q.slice());
+  const n=Math.min(QUIZ_LEN,pool.length);
+  const mkt=pool.filter(x=>x.m), rest=pool.filter(x=>!x.m);
+  if(mkt.length<3||rest.length<n-3)return pool.slice(0,n);
+  /* 시장·계산의 한계 문항(m:1)은 매회 3개 보장 — 공식 문제만 10개 나오는 시험지를 차단 */
+  const pick=shuf(rest.slice(0,n-3).concat(mkt.slice(0,3)));
+  /* 그중 1개는 반드시 1~3번에 배치 — 사이클 이해가 계산에 선행한다는 메시지를 초반에 전달 */
+  if(!pick.slice(0,3).some(x=>x.m)){
+    const i=Math.floor(rnd()*3), j=pick.findIndex(x=>x.m);
+    const t=pick[i];pick[i]=pick[j];pick[j]=t;
   }
-  return pool.slice(0,Math.min(QUIZ_LEN,pool.length));
+  return pick;
 }
 let curSet='investor', QUIZ=drawQuiz('investor'), qIdx=0, qScore=0, qAnswered=false, qResults=[];
 function startQuiz(setKey,seed){
