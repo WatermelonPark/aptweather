@@ -646,6 +646,10 @@
   .calc-warn{color:#a93226;font-weight:700;margin:0}
   .calc-note{font-size:12.5px;color:var(--muted);line-height:1.75;margin:14px 2px}
   #clock-tbl small{font-weight:400;color:var(--muted)}
+  #clock-tbl tbody tr.crow{cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
+  #clock-tbl tr.clock-det{display:none}
+  #clock-tbl tr.clock-det.open{display:table-row}
+  #clock-tbl tr.clock-det td{text-align:left;background:#faf8f2;font-size:12.5px;color:#444;line-height:1.75;font-weight:400;padding:10px 12px}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:7px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .bb-det{display:none;font-size:12.5px;color:#444;line-height:1.75;background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
@@ -2947,8 +2951,10 @@ function renderClockSec(){
   const ph=P.rows.slice(-2);
   const dueY=(+ph[1].p.slice(0,4))+3;
   let h='<thead><tr><th>지역</th><th>지금 입주<br><small>최근 4분기 평균</small></th><th>1년 내<br><small>예정 4분기 평균</small></th><th>'+dueY+'년 무렵<br><small>최근 1년 인허가</small></th><th>흐름<br><small>1년 내 vs 지금</small></th></tr></thead><tbody>';
+  const judge=cls=>cls==='hi'?'<b style="color:#1a5276">공급 많음(하락 압력)</b>':cls==='lo'?'<b style="color:#a93226">공급 적음(상승 압력)</b>':'평년 수준';
   regs.forEach((rg,i)=>{
-    const nowA=avg(rows.slice(Math.max(0,lastAct-3),lastAct+1).map(r=>r.v[i]));
+    const nowRows=rows.slice(Math.max(0,lastAct-3),lastAct+1);
+    const nowA=avg(nowRows.map(r=>r.v[i]));
     const nxt=rows.slice(lastAct+1,lastAct+5);
     const nxtA=nxt.length?avg(nxt.map(r=>r.v[i])):null;
     const pi=P.regions.indexOf(rg);
@@ -2961,19 +2967,44 @@ function renderClockSec(){
         if(ref){if(pv<=ref[0])pcls='lo';else if(pv>=ref[1])pcls='hi';}
       }
     }
-    let arrow='·';
+    const nowCls=nowA!=null?occCls(rg,nowA):'', nxtCls=nxtA!=null?occCls(rg,nxtA):'';
+    let arrow='·',flowTxt='비교할 데이터가 부족합니다';
     if(nowA!=null&&nxtA!=null&&nowA>0){
       const d=(nxtA-nowA)/nowA;
       arrow=d>0.1?'<span style="color:#1a5276;font-weight:700">▲ 늘어남</span>'
         :d<-0.1?'<span style="color:#a93226;font-weight:700">▼ 줄어듦</span>':'— 비슷';
+      flowTxt='1년 내 예정 물량이 지금보다 '+(d>=0?'+':'−')+Math.abs(Math.round(d*100))+'%'
+        +(d>0.1?' — 입주 부담이 커지는 방향입니다':d<-0.1?' — 입주 부담이 줄어드는 방향입니다':' — 비슷한 수준입니다');
     }
-    h+='<tr><th>'+rg+'</th><td class="'+(nowA!=null?occCls(rg,nowA):'')+'">'+f(nowA)+'</td>'
-      +'<td class="'+(nxtA!=null?occCls(rg,nxtA):'')+'">'+f(nxtA)+'</td>'
-      +'<td class="'+pcls+'">'+f(pv)+'</td><td>'+arrow+'</td></tr>';
+    const band=O.band&&O.band[rg];
+    const baseTxt=band?'적정 밴드(분기 '+f(band[0])+'~'+f(band[1])+'호) 기준':
+      (O.ref&&O.ref[rg]?'수요 기준선(분기 '+f(O.ref[rg])+'호) 기준':'기준 데이터 없음');
+    let det='기준: '+rg+'의 '+baseTxt+'.<br>'
+      +'지금 입주: '+nowRows[0].p+'~'+nowRows[nowRows.length-1].p+' 평균 분기 <b>'+f(nowA)+'호</b> → '+judge(nowCls)+'.<br>'
+      +(nxt.length?'1년 내: '+nxt[0].p+'~'+nxt[nxt.length-1].p+' 입주예정 평균 <b>'+f(nxtA)+'호</b> → '+judge(nxtCls)+'. '+flowTxt+'.<br>':'')
+      +(pv!=null?dueY+'년 무렵: '+ph[0].p+'~'+ph[1].p+' 인허가 합계 <b>'+f(pv)+'호</b> — 과거 연간 저점 '+f(P.ref[rg]&&P.ref[rg][0])+'호 / 고점 '+f(P.ref[rg]&&P.ref[rg][1])+'호와 비교 → '
+        +(pcls==='lo'?'<b style="color:#a93226">저점에도 못 미쳐 3년 뒤 공급 부족 예고</b>':pcls==='hi'?'<b style="color:#1a5276">고점 이상 — 3년 뒤 공급 과다 예고</b>':'평년 범위 안')+'.'
+        :dueY+'년 무렵: 이 지역의 인허가 집계가 없어 판정을 생략했습니다.');
+    h+='<tr class="crow" role="button" aria-expanded="false" onclick="clockToggle(this)"><th>'+rg+'</th><td class="'+nowCls+'">'+f(nowA)+'</td>'
+      +'<td class="'+nxtCls+'">'+f(nxtA)+'</td>'
+      +'<td class="'+pcls+'">'+f(pv)+'</td><td>'+arrow+'</td></tr>'
+      +'<tr class="clock-det"><td colspan="5">'+det+'</td></tr>';
   });
   tbl.innerHTML=h+'</tbody>';
   const lab=document.getElementById('clock-lab');
-  if(lab)lab.textContent='단위: 호 · 입주 실적 '+rows[lastAct].p+'까지 반영 · 인허가는 '+ph[0].p+'~'+ph[1].p+' 합계를 연간 평년 범위와 비교';
+  if(lab)lab.textContent='단위: 호 · 입주 실적 '+rows[lastAct].p+'까지 반영 · 인허가는 '+ph[0].p+'~'+ph[1].p+' 합계를 연간 평년 범위와 비교 · 지역을 누르면 상세 근거';
+}
+function clockToggle(tr){
+  const d=tr.nextElementSibling;
+  if(!d||!d.classList.contains('clock-det'))return;
+  const wasOpen=d.classList.contains('open');
+  document.querySelectorAll('#clock-tbl .clock-det').forEach(x=>x.classList.remove('open'));
+  document.querySelectorAll('#clock-tbl .crow').forEach(x=>x.setAttribute('aria-expanded','false'));
+  if(!wasOpen){
+    d.classList.add('open');
+    tr.setAttribute('aria-expanded','true');
+    track('clock_detail',{region:tr.querySelector('th').textContent});
+  }
 }
 /* 공급 경고 삼각형(느낌표): 부족=빨강 ▲(상승 압력) / 과잉=파랑 ▼(하락 압력) — 12x12 */
 const WARN_UP=c=>'<path d="M6 1 11.4 11H.6Z" fill="'+c+'"/><rect x="5.3" y="4.4" width="1.4" height="3.4" rx=".7" fill="#fff"/><circle cx="6" cy="9.4" r=".95" fill="#fff"/>';

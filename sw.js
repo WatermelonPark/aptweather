@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v3'; // 앱 아이콘을 FLUX 부화 병아리 아트로 교체. 옛 캐시를 버려야 새 아이콘이 뜬다.
+const VERSION = 'v4'; // 리브랜딩(아공맵): manifest 이름 교체 반영. 옛 캐시를 버려야 새 매니페스트가 뜬다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
