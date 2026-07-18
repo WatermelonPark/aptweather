@@ -2743,15 +2743,16 @@ function drawTrendChart(k){
   const chart=mkChart(T.chart,{type:'line',
     data:{labels:W.rows.map(r=>T.lab(r.p)),datasets:[
       {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','2e'),fill:'origin',
-        borderWidth:2.5,pointRadius:n>40?1.5:3,pointHoverRadius:5,tension:.3,spanGaps:true},
+        borderWidth:2.2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.3,spanGaps:true},
       {label:'전세',data:W.rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:areaGrad('#a98be0','2e'),fill:'origin',
-        borderWidth:2.5,pointRadius:n>40?1.5:3,pointHoverRadius:5,tension:.3,spanGaps:true}]},
+        borderWidth:2.2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.3,spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,position:'top',labels:{boxWidth:14,font:{size:12}}},
+      plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw==null?'-':(c.raw>0?'+':'')+Number(c.raw).toFixed(2)}%`}}},
       scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:Math.max(8,Math.ceil(n/6))}},
         y:{grid:{color:c=>c.tick.value===0?'#a89f8a':GRID,lineWidth:c=>c.tick.value===0?1.5:1},
-          title:{display:true,text:'변동률 (%)'}}}}});
+          ticks:{callback:v=>(v>0?'+':'')+v+'%'},title:{display:false}}}}});
+  drawFixedYAxis(T,chart);
 }
 function renderWeekSec(){ renderTrendTables('week'); drawTrendChart('week'); drawTrendMap('week'); }
 function renderMonthSec(){ renderTrendTables('month'); drawTrendChart('month'); drawTrendMap('month'); }
@@ -2823,7 +2824,8 @@ function gtSet(sec,v){
     const box=document.getElementById(sec+'ChartBox');
     const ch=box&&window.Chart&&Chart.getChart(box.querySelector('canvas'));
     if(ch)ch.resize();   // display:none에서 생성된 차트는 표시 시 직접 리사이즈해야 canvas가 그려짐
-    const toLatest=()=>{if(box&&box.parentElement)box.parentElement.scrollLeft=box.parentElement.scrollWidth;};   // 최신 구간부터(독립 매크로태스크로 재시도 — 첫 전환의 늦은 레이아웃 커버)
+    if(ch&&(sec==='week'||sec==='month'))setTimeout(()=>drawFixedYAxis(TREND[sec],ch),0);   // 리사이즈 후 y축 오버레이 갱신
+    const toLatest=()=>{if(box&&box.parentElement)box.parentElement.scrollLeft=box.parentElement.scrollWidth;};   // 최신 구간부터(독립 매크로태스크 재시도)
     [0,120,300,600].forEach(d=>setTimeout(toLatest,d));
   }
   track('stats_gt',{section:sec,view:v});
