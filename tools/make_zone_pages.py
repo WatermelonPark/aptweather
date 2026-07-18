@@ -152,7 +152,17 @@ tbody tr:last-child td{border-bottom:0}
 .note{font-size:12.5px;color:var(--muted);line-height:1.8}
 footer{padding:26px 0 40px;text-align:center;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
 footer a{color:var(--muted)}
-.disc{font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px}"""
+.disc{font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px}
+@media(max-width:560px){
+ table,tbody,tr,td{display:block;width:100%}
+ thead{display:none}
+ tr{border-bottom:1px solid var(--line);padding:13px 14px}
+ tbody tr:last-child{border-bottom:0}
+ td{border:0;padding:3px 0;text-align:left;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+ td.lbl{display:block;font-weight:800;color:var(--ink);font-size:14.5px;margin-bottom:7px}
+ td.lbl .note{display:block;font-weight:400;margin-top:2px}
+ td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:700;flex:none}
+}"""
 
 
 def build_page(r, allrows, prd, today):
@@ -183,16 +193,16 @@ def build_page(r, allrows, prd, today):
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
     rows_html = ''.join([
-        '<tr><td>향후 2년 입주예정<br><span class="note">생활권 실측 · 비중 55%%</span></td>'
-        '<td class="num">%s</td><td class="num">%s</td><td class="num" style="color:%s">%s</td></tr>' % (
+        '<tr><td class="lbl">향후 2년 입주예정<br><span class="note">생활권 실측 · 비중 55%%</span></td>'
+        '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['need']), num(z['supply']), '#a93226' if r['dA'] > 0 else '#1a5276', signed(r['dA'])),
-        '<tr><td>3년 뒤 인허가<br><span class="note">시도 배분 추정 · 비중 35%%</span></td>'
-        '<td class="num">%s</td><td class="num">%s</td><td class="num" style="color:%s">%s</td></tr>' % (
+        '<tr><td class="lbl">3년 뒤 인허가<br><span class="note">시도 배분 추정 · 비중 35%%</span></td>'
+        '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['plo'] * r['share']) if r['plo'] else '·',
             num((r['pv'] - r['dY']) * r['share']) if r['pv'] is not None else '·',
             '#a93226' if r['dC'] > 0 else '#1a5276', signed(r['dC'])),
-        '<tr><td>최근 1년 실적<br><span class="note">시도 배분 추정 · 비중 10%%</span></td>'
-        '<td class="num">%s</td><td class="num">·</td><td class="num" style="color:%s">%s</td></tr>' % (
+        '<tr><td class="lbl">최근 1년 실적<br><span class="note">시도 배분 추정 · 비중 10%%</span></td>'
+        '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">·</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['refq'] * 4 * r['share']),
             '#a93226' if r['dB'] > 0 else '#1a5276', signed(r['dB'])),
     ])

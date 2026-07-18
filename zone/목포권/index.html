@@ -50,7 +50,17 @@ tbody tr:last-child td{border-bottom:0}
 .note{font-size:12.5px;color:var(--muted);line-height:1.8}
 footer{padding:26px 0 40px;text-align:center;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
 footer a{color:var(--muted)}
-.disc{font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px}</style>
+.disc{font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px}
+@media(max-width:560px){
+ table,tbody,tr,td{display:block;width:100%}
+ thead{display:none}
+ tr{border-bottom:1px solid var(--line);padding:13px 14px}
+ tbody tr:last-child{border-bottom:0}
+ td{border:0;padding:3px 0;text-align:left;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+ td.lbl{display:block;font-weight:800;color:var(--ink);font-size:14.5px;margin-bottom:7px}
+ td.lbl .note{display:block;font-weight:400;margin-top:2px}
+ td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:700;flex:none}
+}</style>
 </head>
 <body>
 
@@ -81,7 +91,7 @@ footer a{color:var(--muted)}
   <p>공급이 충분한지는 <b>적정물량</b>과 비교해야 알 수 있습니다. 적정물량은 과거 이 지역에서 가격이 하락에서 상승으로(또는 그 반대로) 돌아섰던 시점의 입주물량을 실측해 잡은 기준선입니다.</p>
   <table>
     <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
-    <tbody><tr><td>향후 2년 입주예정<br><span class="note">생활권 실측 · 비중 55%</span></td><td class="num">4,672</td><td class="num">130</td><td class="num" style="color:#a93226">−4,542</td></tr><tr><td>3년 뒤 인허가<br><span class="note">시도 배분 추정 · 비중 35%</span></td><td class="num">498</td><td class="num">870</td><td class="num" style="color:#1a5276">+372</td></tr><tr><td>최근 1년 실적<br><span class="note">시도 배분 추정 · 비중 10%</span></td><td class="num">2,336</td><td class="num">·</td><td class="num" style="color:#a93226">−2,131</td></tr></tbody>
+    <tbody><tr><td class="lbl">향후 2년 입주예정<br><span class="note">생활권 실측 · 비중 55%</span></td><td class="num" data-l="적정">4,672</td><td class="num" data-l="실제">130</td><td class="num" data-l="부족분" style="color:#a93226">−4,542</td></tr><tr><td class="lbl">3년 뒤 인허가<br><span class="note">시도 배분 추정 · 비중 35%</span></td><td class="num" data-l="적정">498</td><td class="num" data-l="실제">870</td><td class="num" data-l="부족분" style="color:#1a5276">+372</td></tr><tr><td class="lbl">최근 1년 실적<br><span class="note">시도 배분 추정 · 비중 10%</span></td><td class="num" data-l="적정">2,336</td><td class="num" data-l="실제">·</td><td class="num" data-l="부족분" style="color:#a93226">−2,131</td></tr></tbody>
   </table>
   <p class="note" style="margin-top:10px">모두 <b>멸실(철거)을 뺀 순공급</b> 기준입니다. 이 시도의 최근 멸실은 연 4,581호입니다.
   인허가와 최근 실적은 시군구 단위 통계가 존재하지 않아 <b>소속 시도(전남) 값을 인구 비중(19.5%)으로 배분한 추정치</b>입니다 —
