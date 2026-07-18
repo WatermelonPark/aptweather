@@ -1377,6 +1377,7 @@ Chart.defaults.plugins.legend.display=false;
 const fy=t=>Math.floor(t),SUDO=["서울","경기","인천"];
 
 
+function initReport(){
 /* ===== cL1: 수도권 공급수준별 전세 상승률 ===== */
 const jibC="#2c5f9e";
 new Chart(cL1,{type:'bar',data:{labels:D.link1_new.levels,
@@ -1510,11 +1511,12 @@ new Chart(cMelt,{type:'bar',data:{labels:D.super.melt_scenarios.map(s=>'연 '+s.
   plugins:[{afterDatasetsDraw(ch){const t=ch.ctx;t.save();t.font='700 11px '+FONT;t.fillStyle=INK;t.textAlign='left';
     ch.getDatasetMeta(0).data.forEach((p,i)=>{const s=D.super.melt_scenarios[i];
       t.fillText(s.years+'년 ('+s.done+')',p.x+6,p.y+4)});t.restore()}}]});
+}
 
 /* ============ 하단 내비 뷰 전환 ============ */
 function track(ev,params){try{if(typeof gtag==='function')gtag('event',ev,params||{});}catch(e){}}
 const vHome=document.getElementById('view-home'),vReport=document.getElementById('view-report'),vStats=document.getElementById('view-stats'),vTest=document.getElementById('view-test');
-let statsInited=false,curView=null;
+let statsInited=false,reportInited=false,curView=null;
 function showView(v,updateHash){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
   vHome.style.display=v==='home'?'':'none';
@@ -1523,6 +1525,7 @@ function showView(v,updateHash){
   vTest.style.display=v==='test'?'':'none';
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){initStats();statsInited=true;}
+  if(v==='report'&&!reportInited){initReport();reportInited=true;}
   if(updateHash!==false){
     const tgtHash=v==='home'?'':'#'+v, tgtUrl=v==='home'?location.pathname:'#'+v;
     if(v===curView)history.replaceState(null,'',tgtUrl);
@@ -1634,7 +1637,7 @@ function drawStat(){
   statChartObj=new Chart(document.getElementById('statChart'),{
     type:'line',
     data:{labels,datasets:[{label:DS_LABEL[ST.ds],data:vals,borderColor:col,
-      backgroundColor:col+'18',borderWidth:2,pointRadius:0,pointHoverRadius:4,
+      backgroundColor:areaGrad(col),borderWidth:2,pointRadius:0,pointHoverRadius:4,
       tension:.25,fill:true,spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},
@@ -2699,6 +2702,16 @@ function renderTrendTables(k){
   document.getElementById(T.compact).innerHTML=cp.join('');
 }
 let GCH={};
+function areaGrad(color,topHex){
+  topHex=topHex||'38';
+  return function(ctx){
+    const ch=ctx.chart, area=ch.chartArea;
+    if(!area) return color+'00';
+    const g=ch.ctx.createLinearGradient(0,area.top,0,area.bottom);
+    g.addColorStop(0,color+topHex); g.addColorStop(1,color+'00');
+    return g;
+  };
+}
 function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); GCH[id]=new Chart(document.getElementById(id),cfg); }
 function drawTrendChart(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
@@ -2707,17 +2720,16 @@ function drawTrendChart(k){
   if(box)box.style.width=Math.max(box.parentElement.clientWidth,n*26)+'px';
   mkChart(T.chart,{type:'line',
     data:{labels:W.rows.map(r=>T.lab(r.p)),datasets:[
-      {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:'#e0564a',
+      {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','2e'),fill:'origin',
         borderWidth:2.5,pointRadius:n>40?1.5:3,pointHoverRadius:5,tension:.3,spanGaps:true},
-      {label:'전세',data:W.rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:'#a98be0',
+      {label:'전세',data:W.rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:areaGrad('#a98be0','2e'),fill:'origin',
         borderWidth:2.5,pointRadius:n>40?1.5:3,pointHoverRadius:5,tension:.3,spanGaps:true}]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:true,position:'top',labels:{boxWidth:14,font:{size:12}}},
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw==null?'-':(c.raw>0?'+':'')+Number(c.raw).toFixed(2)}%`}}},
       scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:Math.max(8,Math.ceil(n/6))}},
         y:{grid:{color:c=>c.tick.value===0?'#a89f8a':GRID,lineWidth:c=>c.tick.value===0?1.5:1},
           title:{display:true,text:'변동률 (%)'}}}}});
-  if(box)box.parentElement.scrollLeft=box.parentElement.scrollWidth;   // 최신 구간부터 보이게
 }
 function renderWeekSec(){ renderTrendTables('week'); drawTrendChart('week'); drawTrendMap('week'); }
 function renderMonthSec(){ renderTrendTables('month'); drawTrendChart('month'); drawTrendMap('month'); }
@@ -2785,7 +2797,13 @@ function gtSet(sec,v){
   el.classList.toggle('gm-t',v==='t');
   el.classList.toggle('gm-m',v==='m');
   el.querySelectorAll('.gt button[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  if(v==='g')requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
+  if(v==='g'){
+    const box=document.getElementById(sec+'ChartBox');
+    const ch=box&&window.Chart&&Chart.getChart(box.querySelector('canvas'));
+    if(ch)ch.resize();   // display:none에서 생성된 차트는 표시 시 직접 리사이즈해야 canvas가 그려짐
+    const toLatest=()=>{if(box&&box.parentElement)box.parentElement.scrollLeft=box.parentElement.scrollWidth;};   // 최신 구간부터(독립 매크로태스크로 재시도 — 첫 전환의 늦은 레이아웃 커버)
+    [0,120,300,600].forEach(d=>setTimeout(toLatest,d));
+  }
   track('stats_gt',{section:sec,view:v});
 }
 function setAdvTab(t){

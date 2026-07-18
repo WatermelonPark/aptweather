@@ -2,7 +2,9 @@
 """심화통계 데이터 자동 갱신 (KOSIS OpenAPI).
 
 index.html 안의 /*ADV_DATA_START*/ ... /*ADV_DATA_END*/ 블록을 최신 데이터로 교체한다.
-GitHub Actions(.github/workflows/update-stats.yml)가 매달 실행한다.
+실운영 갱신은 로컬 작업 스케줄러(tools/run_weekly_update.bat, 매주 금 09:30)가 담당한다.
+GitHub Actions(.github/workflows/update-stats.yml)는 KOSIS의 해외 IP 차단 때문에
+갱신이 실패하며, 차단 해제 시를 대비한 폴백으로만 유지된다.
 
 사용:
   KOSIS_API_KEY=... python tools/update_adv_data.py --update      # 실제 갱신
@@ -13,7 +15,8 @@ GitHub Actions(.github/workflows/update-stats.yml)가 매달 실행한다.
   permits  — 국토교통부 「주택건설실적통계」 주택규모별 인허가실적(월별 누계):
              6월·12월 누계에서 (계 − 40㎡이하)로 '40제외' 반기값 산출
   occupancy — 입주물량은 공공 API가 없어 자동 갱신 대상에서 제외(수동 시딩 유지)
-  (월간 가격동향 섹션은 UI에서 제외되어 갱신 대상 아님 — 2026-07-11)
+  monthly  — 월간 매매·전세 동향(KOSIS DT_30404_B012/B013): 시황 탭 월간 지도·그래프에
+             쓰이는 라이브 데이터로 매 실행 갱신한다(fetch_monthly, adv['monthly']).
 """
 import io, os, re, sys, json, time
 import urllib.request
@@ -44,12 +47,14 @@ CONF = {
     'weekly': {                # 주간 아파트 가격지수 변동률 (부동산원, 매주 발표)
         'maega':  {'orgId': '408', 'tblId': 'DT_304004_WEEK_001_B'},
         'jeonse': {'orgId': '408', 'tblId': 'DT_304004_WEEK_003_B'},
-        'weeks': 12,           # 최근 12주 유지
+        'weeks': 12,           # 서울 구·시군구 상세 유지 주수
+        'weeks_hist': 104,     # 시도 시계열 유지 주수 (그래프 과거 탐색용)
     },
     'monthly': {               # 월간 아파트 가격지수 (부동산원 월간동향) — 전월비 변동률 계산
         'maega':  {'orgId': '408', 'tblId': 'DT_30404_B012'},   # 유형별 매매가격지수 (C1=유형, C2=지역)
         'jeonse': {'orgId': '408', 'tblId': 'DT_30404_B013'},   # 유형별 전세가격지수
-        'months': 12,          # 최근 12개월 변동률 유지 (지수는 13개월 조회)
+        'months': 12,          # 서울 구·시군구 상세 유지 개월수
+        'months_hist': 60,     # 시도 시계열 유지 개월수 (그래프 과거 탐색용)
     },
 }
 
@@ -260,7 +265,7 @@ def _rone_recent_rows(tbl, need_rows):
 
 
 def fetch_weekly_rone():
-    weeks = CONF['weekly']['weeks']
+    weeks = CONF['weekly'].get('weeks_hist', CONF['weekly']['weeks'])
     need = (weeks + 2) * 240        # 주당 ~236행
     by = {}   # {'maega'|'jeonse': {date: {FULLNM: idx}}}
     for key, tbl in RONE_TBL.items():
@@ -304,7 +309,7 @@ def fetch_weekly_rone():
                         'ma': [chg(ma_p.get(g), ma_c.get(g)) for g in gus],
                         'je': [chg(je_p.get(g), je_c.get(g)) for g in gus]})
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
-            'seoul': {'regions': gus, 'rows': se_rows},
+            'seoul': {'regions': gus, 'rows': se_rows[-CONF['weekly']['weeks']:]},
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 발표 당일 반영'}
 
 
@@ -325,11 +330,12 @@ def fetch_weekly():
 
 def _fetch_weekly_kosis():
     w = CONF['weekly']
-    ma, ma_se, ma_sg = _fetch_weekly_one(w['maega'], w['weeks'])
+    hist = w.get('weeks_hist', w['weeks'])   # 105주 x ~240행 = 25k셀 < KOSIS 40k 제한
+    ma, ma_se, ma_sg = _fetch_weekly_one(w['maega'], hist)
     time.sleep(0.2)
-    je, je_se, je_sg = _fetch_weekly_one(w['jeonse'], w['weeks'])
+    je, je_se, je_sg = _fetch_weekly_one(w['jeonse'], hist)
     # 매매·전세가 모두 발표된 주만 반영 (한쪽만 먼저 올라온 반쪽 주차로 인한 이중 알림 방지)
-    dates = sorted(set(ma) & set(je))[-w['weeks']:]
+    dates = sorted(set(ma) & set(je))[-hist:]
     rows = []
     for d in dates:
         rows.append({
@@ -338,12 +344,13 @@ def _fetch_weekly_kosis():
             'je': [je.get(d, {}).get(r) for r in WEEKLY_REGIONS],
         })
     gus = _gu_regions(ma_se, je_se)
+    d12 = dates[-w['weeks']:]   # 서울 구·시군구 상세는 최근 주만 (index.html 비대화 방지)
     se_rows = [{'p': '%s-%s-%s' % (d[:4], d[4:6], d[6:8]),
                 'ma': [ma_se.get(d, {}).get(r) for r in gus],
-                'je': [je_se.get(d, {}).get(r) for r in gus]} for d in dates]
+                'je': [je_se.get(d, {}).get(r) for r in gus]} for d in d12]
     sg_rows = [{'p': '%s-%s-%s' % (d[:4], d[4:6], d[6:8]),
                 'ma': [ma_sg.get(d, {}).get(c) for c in SGG_CODES],
-                'je': [je_sg.get(d, {}).get(c) for c in SGG_CODES]} for d in dates]
+                'je': [je_sg.get(d, {}).get(c) for c in SGG_CODES]} for d in d12]
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
             'seoul': {'regions': gus, 'rows': se_rows},
             'sgg': {'codes': SGG_CODES, 'rows': sg_rows},
@@ -460,11 +467,29 @@ def update_occupancy(adv, full=False):
 
 # ---- monthly: 월간 아파트 매매·전세 지수 → 전월비 변동률 ------------------
 def _fetch_monthly_one(cfg, months):
-    data = kosis({
-        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
-        'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'prdSe': 'M',
-        'newEstPrdCnt': str(months + 1),
-    })
+    # KOSIS 40,000셀 제한 회피: 12개월 단위 기간 분할 조회 후 병합
+    import datetime as _dt
+    def _shift(y, m, n):
+        m += n
+        while m > 12: y += 1; m -= 12
+        while m < 1: y -= 1; m += 12
+        return y, m
+    _t = _dt.date.today()
+    cy, cm = _shift(_t.year, _t.month, -months)
+    data = []
+    while (cy, cm) <= (_t.year, _t.month):
+        ey, em = _shift(cy, cm, 11)
+        if (ey, em) > (_t.year, _t.month): ey, em = _t.year, _t.month
+        try:
+            data += kosis({
+                'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
+                'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'prdSe': 'M',
+                'startPrdDe': '%04d%02d' % (cy, cm), 'endPrdDe': '%04d%02d' % (ey, em),
+            })
+        except RuntimeError as e:
+            if 'err 30' not in str(e): raise   # 미발표 구간(데이터 없음)만 허용
+        cy, cm = _shift(ey, em, 1)
+        time.sleep(0.25)
     by, seoul, sgg = {}, {}, {}
     for row in data:
         if (row.get('C1_NM') or '').strip() != '아파트': continue
@@ -497,10 +522,10 @@ def _idx_to_chg(ma, je, regions):
 
 def fetch_monthly():
     m = CONF['monthly']
-    ma, ma_se, ma_sg = _fetch_monthly_one(m['maega'], m['months'])
+    ma, ma_se, ma_sg = _fetch_monthly_one(m['maega'], m.get('months_hist', m['months']))
     time.sleep(0.2)
-    je, je_se, je_sg = _fetch_monthly_one(m['jeonse'], m['months'])
-    rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-m['months']:]
+    je, je_se, je_sg = _fetch_monthly_one(m['jeonse'], m.get('months_hist', m['months']))
+    rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-m.get('months_hist', m['months']):]
     gus = _gu_regions(ma_se, je_se)
     se_rows = _idx_to_chg(ma_se, je_se, gus)[-m['months']:]
     sg_rows = _idx_to_chg(ma_sg, je_sg, SGG_CODES)[-m['months']:]
@@ -773,8 +798,14 @@ def main():
         weekly = fetch_weekly()
         cur = adv.get('weekly') or {}
         cur_last = cur['rows'][-1]['p'] if cur.get('rows') else ''
-        # 역행 방지: 폴백(KOSIS)이 이미 반영된 R-ONE 최신 주보다 오래됐으면 무시
-        if weekly['rows'] and weekly['rows'][-1]['p'] >= cur_last and differs(weekly, cur):
+        # 역행 방지 + 병합: 새 데이터(KOSIS 폴백)가 기존 최신 주(R-ONE 속보)보다 뒤처지면
+        # 최신 주와 서울/시군구 상세는 기존 것을 유지하고 과거 시계열만 확장한다
+        if weekly['rows'] and weekly['rows'][-1]['p'] < cur_last:
+            new_last = weekly['rows'][-1]['p']
+            weekly['rows'] += [r for r in cur['rows'] if r['p'] > new_last]
+            if cur.get('seoul'): weekly['seoul'] = cur['seoul']
+            if cur.get('sgg'): weekly['sgg'] = cur['sgg']
+        if weekly['rows'] and differs(weekly, cur):
             adv['weekly'] = weekly
             changed.append('weekly(~%s)' % weekly['rows'][-1]['p'])
     except Exception as e:
