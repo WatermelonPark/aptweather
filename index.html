@@ -700,6 +700,15 @@
   .sc-key .k-l b{color:#1a5276}
   .sc-key .k-r b{color:#a93226}
   .sc-key i{display:inline;font-style:normal;font-size:11px;font-weight:500;color:var(--muted);margin-left:5px}
+  /* 표두 — 통계 원부의 조판. 표번호·제목·단위·표본·기준일만 담고
+     형용사는 담지 않는다. 아래 겹줄이 표두와 데이터의 경계를 긋는다. */
+  .thead{max-width:640px;margin:28px auto 0;text-align:left}
+  .thead .th-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .thead .th-t{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .thead .th-u{font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap}
+  .thead .th-m{margin-top:4px;font-size:11.5px;font-weight:500;color:var(--muted);line-height:1.55}
+  .thead::after{content:"";display:block;margin-top:8px;height:3px;
+    border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
   .sc-keycap{font-size:11.5px;color:var(--muted);margin-top:8px}
   .sc-hd{max-width:640px;margin:26px auto 8px;font-size:12px;font-weight:500;
     color:var(--muted);text-align:left;line-height:1.6}
@@ -770,7 +779,6 @@
 
 <div id="view-home">
   <header class="home-hero"><div class="hero-map" id="hero-map" aria-hidden="true"></div><div class="wrap">
-    <div class="home-eyebrow">공급을 보면 집값이 보인다</div>
     <h1>아공맵</h1>
     <p class="sub">국가 통계로 전국 아파트의 공급과 시세를 추적합니다. 매주 자동 갱신.</p>
     <div class="hero-cta">
@@ -779,19 +787,17 @@
   </div></header>
 
   <section class="home-sec" id="sec-score"><div class="wrap">
-    <div class="hs-kicker">아공맵 · 매주 자동 갱신</div>
     <h2>지금 어디에 상승 압력이 쌓이고 있나</h2>
     <p class="sc-lead">전국 생활권의 아파트 공급이 <b>적정량 대비 몇 세대 모자라는지</b> 잰 아공맵 자체 지표입니다.</p>
-    <div class="sc-chips"><span>생활권 36곳</span><span>통근·생활 단위</span><span>인구 30만↑</span></div>
     <div class="sc-key">
       <div class="k-l"><b>+ 공급 과잉</b><i>하락 압력</i></div>
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
     <div class="sc-keycap">가운데 0 = 적정 공급량</div>
 
-    <div class="sc-hd">순위 — 수도권은 하나로 묶어 비교합니다. 지역을 누르면 상세 리포트가 열립니다.</div>
+    <div class="thead"><div class="th-line"><b class="th-t">표1 · 생활권별 누적 순부족</b><span class="th-u">(단위: 호)</span></div><div class="th-m">n=36 · 통근·생활권 기준 · 인구 30만 이상 · 매주 갱신 · 수도권은 하나로 묶음 · 지역을 누르면 상세</div></div>
     <div id="score-wrap" style="text-align:left"></div>
-    <div class="sc-hd">권역별 지도 — 타일을 누르면 그 생활권의 상세 리포트로 갑니다.</div>
+    <div class="thead"><div class="th-line"><b class="th-t">표2 · 권역별 분포</b><span class="th-u">(단위: 호)</span></div><div class="th-m">n=36 · 타일을 누르면 상세</div></div>
     <div id="score-map" style="text-align:left"></div>
 
     <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 반대로 <b>이자가 월세보다 싸면</b> <b style="color:#7a4fb5">★ 실거주 유리</b> 플래그로만 표시합니다.</div></details>
@@ -799,7 +805,7 @@
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">10문항 · 3분 · 즉시 채점</div>
+    <div class="hs-kicker">10문항 · 3분</div>
     <h2>내 부동산 감각, 몇 점일까?</h2>
     <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
     <div class="hs-cta">
@@ -817,7 +823,7 @@
   </div></section>
 
   <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">15개 시도 · 20년 데이터 검증</div>
+    <div class="hs-kicker">15개 시도 · 20년</div>
     <h2>집값은 왜 돌고 도는가</h2>
     <p>공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올리고, 새 공급이 다시 전세를 누른다 — 15개 시도 20년 데이터로 이 사이클의 6개 고리를 하나씩 검증한 리포트입니다.</p>
     <div class="hs-cta"><button class="home-cta" onclick="showView('report')">사이클 리포트 읽기</button></div>
@@ -840,7 +846,7 @@
 
 <div id="view-report" style="display:none">
 <header class="hero"><div class="wrap">
-  <div class="eyebrow">한국 부동산 순환 사이클 · 시도·생활권 분석</div>
+  
   <h1>집값은 돌고 돈다<br><em>전세</em>가 끌고 <em>공급</em>이 누른다</h1>
   <p class="sub">공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. 오른 매매가 새 공급을 부르고, 그 공급이 다시 전세를 눌러 사이클을 돌린다. 그리고 금리가 이 순환 전체를 흔든다. 15개 시도 데이터로 한 고리씩 추적했다.</p>
   <div class="meta"><span>2006–2026 분기·연</span><span class="dot"></span>
@@ -849,7 +855,7 @@
 
 <!-- 30초 요약 (첫 방문자용 진입로) -->
 <section class="tldr"><div class="wrap">
-  <div class="tldr-kicker">30초 요약 · 어려운 통계 없이</div>
+  <div class="tldr-kicker">30초 요약</div>
   <h2 class="tldr-h">부동산은 <b>공급</b>이 만드는 <b>사이클</b>로 돈다</h2>
   <div class="tldr-grid">
     <div class="tldr-diagram"><svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="부동산 공급 사이클 순환 다이어그램" style="width:100%;max-width:440px;height:auto">
@@ -931,7 +937,7 @@
 
 <!-- 본문 파트 배너 -->
 <div class="mainbanner"><div class="wrap">
-  <span class="mainkicker">본문 · 검증된 순환 사슬</span>
+  <span class="mainkicker">본문</span>
   <p>국가기관 통계로 직접 검증한 <b>6개의 고리</b>다. 공급 부족에서 시작해 전세·매매·공급을 돌아 다시 제자리로 — 각 고리가 데이터로 얼마나 단단한지 신뢰 게이지로 표시했다.</p>
 </div></div>
 
@@ -1183,7 +1189,7 @@
 <!-- ===== 통계보기 대시보드 ===== -->
 <div id="view-stats" style="display:none">
   <header class="shero"><div class="wrap">
-    <div class="eyebrow">국가기관 원자료 · 직접 확인</div>
+    
     <h1>통계 보기</h1>
     <p>이 리포트가 사용한 통계청·국토부·한국은행·부동산원 원자료다. 분석을 거치지 않은 <b>국가기관 발표 그대로의 숫자</b>를 지역·기간별로 직접 확인할 수 있다.</p>
   </div></header>
@@ -1375,7 +1381,7 @@
     <!-- 시작 화면 -->
     <div id="quiz-intro">
       <div class="quiz-hero">
-        <div class="qeyebrow">부동산 테스트</div>
+        
         <h1>당신의 부동산 감각,<br>몇 점일까?</h1>
         <p>난이도를 골라 도전해 보세요. 기초 제도부터 사이클을 거꾸로 읽는 통찰까지, <b>각 10문항 2지선다</b>로 즉시 채점·해설합니다.</p>
         <div class="qpick">
@@ -2371,7 +2377,7 @@ function showResult(){
   r.innerHTML=`
     <div class="qresult">
       ${versusHTML()}
-      <div class="qresult-eyebrow" style="margin:6px 0 2px">당신의 결과는…</div>
+      
       <div class="rcard">
         <div class="rc-head">${QUIZSETS[curSet].title}</div>
         <div class="rc-emoji">${gr.emoji}</div>
