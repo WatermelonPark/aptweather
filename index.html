@@ -686,6 +686,9 @@
   .sc-tier.t3{background:#fff4e0;color:#b9770e}
   .sc-tier.t2{background:#eef4fa;color:#3a7bd5}
   .sc-tier.t1{background:#eaf3fb;color:#1a5276}
+  .sc-flag{flex:none;font-size:10px;font-weight:800;padding:2px 6px;border-radius:7px;white-space:nowrap}
+  .sc-flag.warn{background:#fdecea;color:#a93226}
+  .sc-flag.watch{background:#f3ecfb;color:#7a4fb5}
   .sc-det{display:none;font-size:12.5px;color:#444;line-height:1.75;background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
   /* 생활권 입주예정 지도 */
   .lz-reg{margin:7px 0}
@@ -722,7 +725,7 @@
   <section class="home-sec" id="sec-score"><div class="wrap">
     <div class="hs-kicker">아공맵 스코어 · 매주 자동 갱신</div>
     <h2>지금 어디에 상승 압력이 쌓이고 있나</h2>
-    <p>지역의 <b>공급·금리 환경</b>을 0~100으로 합성한 아공맵 자체 지표입니다. 3년 뒤 공급을 결정하는 <b>인허가(35점)</b>·<b>입주예정(35점)</b>에 무게를 두고, 현재 입주(15점)와 금리 여유(15점)를 더합니다. <span style="color:#a93226;font-weight:700">높을수록 공급 부족(상승 압력)</span>, <span style="color:#1a5276;font-weight:700">낮을수록 공급 부담(하락 압력)</span> — 지역 간 우열이 아니라 <b>각 지역의 사이클 위치</b>입니다. 지역을 누르면 채점 근거가 펼쳐집니다.</p>
+    <p>지역의 <b>공급 환경</b>만 0~100으로 합성한 아공맵 자체 지표입니다. 3년 뒤 공급을 결정하는 <b>인허가(35점)</b>·<b>입주예정(35점)</b>에 무게를 두고 현재 입주(15점)를 더합니다. 금리는 점수에서 분리해, 갭 여유가 없으면 <b style="color:#a93226">⚠ 주의</b>·수익 구간이면 <b style="color:#7a4fb5">★ 주목</b> 플래그로 표시합니다. <span style="color:#a93226;font-weight:700">높을수록 공급 부족(상승 압력)</span>, <span style="color:#1a5276;font-weight:700">낮을수록 공급 부담(하락 압력)</span> — 지역 간 우열이 아니라 <b>각 지역의 사이클 위치</b>입니다. 지역을 누르면 채점 근거가 펼쳐집니다.</p>
     <div id="score-wrap" style="text-align:left"></div>
     <p style="font-size:12px;color:var(--muted);margin:12px 0 0">아공맵 자체 산출 · 재료: 인허가·입주(예정)물량·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행)</p>
   </div></section>
@@ -3011,62 +3014,53 @@ function renderScoreSec(){
   const f=v=>v==null?'·':Math.round(v).toLocaleString();
   const actRows=O.rows.filter(r=>!r.e),futRows=O.rows.filter(r=>r.e===1);
   const ph=P.rows.slice(-2);
-  const W=[15,15,35,35];
+  const W=[15,35,35];  // 현재입주 / 입주예정 / 인허가 — 공급 3요소만(금리 여유는 플래그로 분리)
   const items=[];
   (B.regions||[]).forEach(rg=>{
     const key=KEY[rg]||rg;
-    // ① 버블밴드 여유
-    let s1=null,lo=null,hi=null;
+    // 금리 여유 — 점수 아님, 주의(여유 소진)/주목(수익 구간) 플래그
+    let lo=null,hi=null,flag=null;
     const cv=B.conv[rg],jr=lat(rg);
-    if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;s1=lin(B.loan.v,lo,hi);}
+    if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;
+      if(B.loan.v>=hi)flag='warn'; else if(B.loan.v<=lo)flag='watch';}
     // 공급 지표 (전국=합산, 서울·경기·인천=수도권)
     let ref=null,band=null,val=null;
     if(rg==='전국'){
       const refs=O.regions.map(r=>(O.ref&&O.ref[r])||(O.band&&O.band[r]?(O.band[r][0]+O.band[r][1])/2:null));
-      if(!refs.some(x=>x==null)){
-        ref=refs.reduce((a,b)=>a+b,0);
-        val=row=>row.v.some(v=>v!=null)?row.v.reduce((a,b)=>a+(b||0),0):null;
-      }
+      if(!refs.some(x=>x==null)){ref=refs.reduce((a,b)=>a+b,0);val=row=>row.v.some(v=>v!=null)?row.v.reduce((a,b)=>a+(b||0),0):null;}
     }else if(O.regions.indexOf(key)>=0){
-      const i=O.regions.indexOf(key);
-      band=O.band&&O.band[key];
-      ref=(O.ref&&O.ref[key])||(band?(band[0]+band[1])/2:null);
-      val=row=>row.v[i];
+      const i=O.regions.indexOf(key);band=O.band&&O.band[key];ref=(O.ref&&O.ref[key])||(band?(band[0]+band[1])/2:null);val=row=>row.v[i];
     }
-    let s2=null,s3=null,nowA=null,futR=null;
+    let s1=null,s2=null,nowA=null,futR=null;
     if(val&&ref){
       const now4=actRows.slice(-4).map(val).filter(v=>v!=null);
       nowA=now4.length?now4.reduce((a,b)=>a+b,0)/now4.length:null;
-      s2=band?lin(nowA,band[0],band[1]):lin(nowA,ref*0.6,ref);
+      s1=band?lin(nowA,band[0],band[1]):lin(nowA,ref*0.5,ref);
       const fv=futRows.map(val).filter(v=>v!=null);
       futR=fv.length?(fv.reduce((a,b)=>a+b,0)/fv.length)/ref:null;
-      s3=lin(futR,0.55,1.0);
+      s2=lin(futR,0.2,1.1);
     }
-    // ④ 인허가 (연간)
-    let s4=null,pv=null,rlo=null,rhi=null;
+    let s3=null,pv=null,rlo=null,rhi=null;
     if(rg==='전국'){
       pv=ph.reduce((a,r)=>a+r.v.reduce((x,y)=>x+(y||0),0),0);
       rlo=P.regions.reduce((a,r)=>a+P.ref[r][0],0);rhi=P.regions.reduce((a,r)=>a+P.ref[r][1],0);
-      s4=lin(pv,rlo,rhi);
+      s3=lin(pv,rlo*0.35,rhi);
     }else{
       const pkey=KEY[rg]||rg,pi=P.regions.indexOf(pkey);
-      if(pi>=0){
-        const vals=ph.map(r=>r.v[pi]);
-        if(vals.every(v=>v!=null)){pv=vals[0]+vals[1];[rlo,rhi]=P.ref[pkey];s4=lin(pv,rlo,rhi);}
-      }
+      if(pi>=0){const vals=ph.map(r=>r.v[pi]);if(vals.every(v=>v!=null)){pv=vals[0]+vals[1];[rlo,rhi]=P.ref[pkey];s3=lin(pv,rlo*0.35,rhi);}}
     }
-    const parts=[s1,s2,s3,s4];
+    const parts=[s1,s2,s3];
     const avail=parts.map((s,i)=>s!=null?[s,W[i]]:null).filter(Boolean);
-    if(avail.length<3)return;   // 재료가 절반뿐이면 산출하지 않음
+    if(avail.length<2)return;   // 공급 재료 3개 중 2개 미만이면 미산출
     const total=Math.round(avail.reduce((a,[s,w])=>a+s*w,0)/avail.reduce((a,[,w])=>a+w,0)*100);
     const pt=parts.map((s,i)=>s!=null?Math.round(s*W[i]):null);
     const baseNm=rg==='전국'?'전국(15개 지역 합산)':(key!==rg?rg+'('+key+' 물량 기준)':rg);
-    const det='①밴드 여유 '+(pt[0]==null?'· (데이터 없음)':pt[0]+'/15')+(lo!=null?' — 금리 '+B.loan.v.toFixed(2)+'% vs 하단 '+lo.toFixed(1)+'%·상단 '+hi.toFixed(1)+'%':'')+'.<br>'
-      +'②현재 입주 '+(pt[1]==null?'· (데이터 없음)':pt[1]+'/15')+(nowA!=null?' — 최근 4분기 평균 '+f(nowA)+'호'+(band?' vs 밴드 '+f(band[0])+'~'+f(band[1]):''):'')+'.<br>'
-      +'③입주예정 '+(pt[2]==null?'· (데이터 없음)':pt[2]+'/35')+(futR!=null?' — 수요선 대비 평균 '+Math.round(futR*100)+'%':'')+'.<br>'
-      +'④인허가(3년 뒤) '+(pt[3]==null?'· (데이터 없음)':pt[3]+'/35')+(pv!=null?' — 최근 1년 '+f(pv)+'호 vs 연간 저점 '+f(rlo)+'·고점 '+f(rhi):'')+'.'
-      +'<div style="margin-top:6px;color:var(--muted)">'+baseNm+' · 결측 항목은 가중치를 재배분해 합산합니다.</div>';
-    items.push({rg,total,det});
+    const det='①현재 입주 '+(pt[0]==null?'· (데이터 없음)':pt[0]+'/15')+(nowA!=null?' — 최근 4분기 평균 '+f(nowA)+'호'+(band?' vs 밴드 '+f(band[0])+'~'+f(band[1]):''):'')+'.<br>'
+      +'②입주예정(1년) '+(pt[1]==null?'· (데이터 없음)':pt[1]+'/35')+(futR!=null?' — 수요선 대비 평균 '+Math.round(futR*100)+'%':'')+'.<br>'
+      +'③인허가(3년 뒤) '+(pt[2]==null?'· (데이터 없음)':pt[2]+'/35')+(pv!=null?' — 최근 1년 '+f(pv)+'호 vs 연간 저점 '+f(rlo)+'·고점 '+f(rhi):'')+'.'
+      +(flag?'<br><b style="color:'+(flag==='warn'?'#a93226':'#7a4fb5')+'">'+(flag==='warn'?'⚠ 주의 — 주담대 금리('+B.loan.v.toFixed(2)+'%)가 임대수익 위험선('+hi.toFixed(1)+'%)을 넘어 갭 여유가 없습니다.':'★ 주목 — 주담대 금리('+B.loan.v.toFixed(2)+'%)가 매수신호선('+lo.toFixed(1)+'%)보다 낮아 갭 매력이 큽니다.')+'</b>':'')
+      +'<div style="margin-top:6px;color:var(--muted)">'+baseNm+' · 공급 지표만으로 산출(금리 여유는 플래그로 별도). 결측 항목은 가중치를 재배분.</div>';
+    items.push({rg,total,det,flag});
   });
   if(!items.length){sec.style.display='none';return;}
   items.sort((a,b)=>b.total-a.total);
@@ -3074,8 +3068,9 @@ function renderScoreSec(){
   let h='';
   items.forEach(it=>{
     const [tc,tt,col]=tier(it.total);
+    const fb=it.flag==='warn'?'<span class="sc-flag warn">⚠ 주의</span>':it.flag==='watch'?'<span class="sc-flag watch">★ 주목</span>':'';
     h+='<div class="sc-row" role="button" aria-expanded="false" onclick="scToggle(this)"><span class="sc-lab">'+it.rg+'</span>'
-      +'<div class="sc-track"><div class="sc-fill" style="width:'+it.total+'%;background:'+col+'"></div></div>'
+      +'<div class="sc-track"><div class="sc-fill" style="width:'+it.total+'%;background:'+col+'"></div></div>'+fb
       +'<span class="sc-val" style="color:'+col+'">'+it.total+'</span>'
       +'<span class="sc-tier '+tc+'">'+tt+'</span></div>'
       +'<div class="sc-det">'+it.det+'</div>';
