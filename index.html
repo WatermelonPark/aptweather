@@ -1512,10 +1512,13 @@ new Chart(cRate,{type:'line',data:{labels:R.t.map(fy),datasets:[
 /* ===== cStr strength ===== */
 new Chart(cStr,{type:'bar',data:{labels:D.cycle_strength.map(d=>d.region),
   datasets:[{data:D.cycle_strength.map(d=>d.score),
-    backgroundColor:D.cycle_strength.map(d=>d.score>=4?'#2f8f6f':(d.score<=1?'#b3ab99':'#e0a93b')),borderRadius:3}]},
+    backgroundColor:D.cycle_strength.map(d=>d.score>=4?'#2f8f6f':(d.score<=1?'#b3ab99':'#e0a93b')),
+    borderColor:D.cycle_strength.map(d=>SUDO.includes(d.region)?'#0c5f56':'rgba(0,0,0,0)'),
+    borderWidth:D.cycle_strength.map(d=>SUDO.includes(d.region)?3:0),
+    borderRadius:3}]},
   options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-    plugins:{tooltip:{callbacks:{label:c=>c.raw+'/6 고리 작동'}}},
-    scales:{x:{beginAtZero:true,max:6,grid:{color:GRID},title:{display:true,text:'작동하는 고리 수 (6점 만점)'},ticks:{stepSize:1}},
+    plugins:{tooltip:{callbacks:{label:c=>(SUDO.includes(D.cycle_strength[c.dataIndex].region)?'수도권 · ':'')+c.raw+'/6 고리 작동'}}},
+    scales:{x:{beginAtZero:true,max:6,grid:{color:GRID},title:{display:true,text:'작동하는 고리 수 (6점 만점) · 굵은 테두리=수도권'},ticks:{stepSize:1}},
       y:{grid:{display:false}}}}});
 
 /* ===== cSuper: 준공연도→40년 멸실도달 타임라인 ===== */
