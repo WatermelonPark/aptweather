@@ -764,6 +764,98 @@ def write_adv(adv):
     io.open(INDEX, 'w', encoding='utf-8').write(c2)
 
 
+# ---- 생활권 입주예정 (odcloud 단지별 → 생활권 집계, 인구 대비 강도) ----
+LZ_SIDO_FULL = {'서울특별시':'서울','부산광역시':'부산','대구광역시':'대구','인천광역시':'인천','광주광역시':'광주',
+    '대전광역시':'대전','울산광역시':'울산','세종특별자치시':'세종','경기도':'경기','강원특별자치도':'강원','강원도':'강원',
+    '충청북도':'충북','충청남도':'충남','전북특별자치도':'전북','전라북도':'전북','전라남도':'전남',
+    '경상북도':'경북','경상남도':'경남','제주특별자치도':'제주','제주도':'제주'}
+LZ_GWANG = {'서울','부산','대구','인천','광주','대전','울산','세종'}
+LIVEZONE = {
+ '부산권':[('부산','*'),('경남','양산시')], '김해권':[('경남','김해시')], '창원권':[('경남','창원시')],
+ '울산권':[('울산','*')], '진주권':[('경남','진주시')], '대구권':[('대구','*'),('경북','경산시'),('경북','칠곡군')],
+ '포항권':[('경북','포항시'),('경북','경주시')], '구미권':[('경북','구미시'),('경북','김천시')],
+ '안동권':[('경북','안동시'),('경북','예천군')], '대전세종권':[('대전','*'),('세종','*'),('충남','계룡시')],
+ '청주권':[('충북','청주시')], '천안아산권':[('충남','천안시'),('충남','아산시')], '서산당진권':[('충남','서산시'),('충남','당진시')],
+ '광주권':[('광주','*'),('전남','나주시'),('전남','담양군'),('전남','화순군'),('전남','장성군')],
+ '전주권':[('전북','전주시'),('전북','완주군')], '군산익산권':[('전북','군산시'),('전북','익산시')],
+ '여순광권':[('전남','여수시'),('전남','순천시'),('전남','광양시')], '목포권':[('전남','목포시'),('전남','무안군'),('전남','영암군')],
+ '원주권':[('강원','원주시')], '춘천권':[('강원','춘천시')], '강릉권':[('강원','강릉시'),('강원','동해시'),('강원','속초시')],
+ '제주권':[('제주','*')], '서울권':[('서울','*')], '인천권':[('인천','*')],
+}
+LZ_GU2SI = {'서원구':'청주시','상당구':'청주시','흥덕구':'청주시','청원구':'청주시','동남구':'천안시','서북구':'천안시',
+ '완산구':'전주시','덕진구':'전주시','의창구':'창원시','성산구':'창원시','마산합포구':'창원시','마산회원구':'창원시','진해구':'창원시'}
+LZ_REGION = {'서울권':'수도권','인천권':'수도권','원주권':'강원','춘천권':'강원','강릉권':'강원',
+ '대전세종권':'충청','청주권':'충청','천안아산권':'충청','서산당진권':'충청',
+ '광주권':'전라','전주권':'전라','군산익산권':'전라','여순광권':'전라','목포권':'전라',
+ '부산권':'경상','김해권':'경상','창원권':'경상','울산권':'경상','진주권':'경상','대구권':'경상',
+ '포항권':'경상','구미권':'경상','안동권':'경상','제주권':'제주'}
+
+def _lz_pop():
+    url = API + '?' + urllib.parse.urlencode(dict(method='getList', apiKey=KEY, format='json', jsonVD='Y',
+        orgId='101', tblId='DT_1B040A3', objL1='ALL', itmId='T20', prdSe='M', newEstPrdCnt='1'))
+    sido, sgg, cur = {}, {}, None
+    for r in http_json(url):
+        nm = (r.get('C1_NM') or '').strip()
+        try: pop = int(r.get('DT') or 0)
+        except (TypeError, ValueError): continue
+        if nm in LZ_SIDO_FULL:
+            cur = LZ_SIDO_FULL[nm]; sido[cur] = pop; continue
+        if nm == '전국' or cur is None or cur in LZ_GWANG or nm.endswith('구'): continue
+        sgg[(cur, nm)] = pop
+    return sido, sgg
+
+def fetch_livezone():
+    import collections, datetime
+    assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
+    sido_pop, sgg_pop = _lz_pop()
+    m2z = {m: z for z, mm in LIVEZONE.items() for m in mm}
+    def zone_of(sd, sg):
+        if (sd, '*') in m2z: return m2z[(sd, '*')]
+        sg = LZ_GU2SI.get(sg, sg)
+        if (sd, sg) in m2z: return m2z[(sd, sg)]
+        if sd == '경기': return sg.replace('시', '').replace('군', '') + '권'
+        return None
+    def zone_pop(z):
+        if z in LIVEZONE:
+            return sum(sido_pop.get(m[0], 0) if m[1] == '*' else sgg_pop.get(m, 0) for m in LIVEZONE[z])
+        nm = z[:-1]
+        return sum(sgg_pop.get(('경기', nm + s), 0) for s in ('시', '군'))
+    supply = collections.defaultdict(int)
+    detail = collections.defaultdict(lambda: collections.defaultdict(int))
+    qset = collections.defaultdict(set)
+    for pg in range(1, 9):
+        d = http_json(OCC_API + '?' + urllib.parse.urlencode({'page': pg, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
+        data = d.get('data', [])
+        if not data: break
+        for r in data:
+            sd = (r.get('지역') or '').strip(); ym = str(r.get('입주예정월') or '')
+            if len(ym) < 7 or not ym[5:7].isdigit(): continue
+            a = (r.get('주소') or '').split(); sg = a[1] if len(a) > 1 else ''
+            if sd == '세종': sg = '세종'
+            z = zone_of(sd, sg)
+            if not z: continue
+            try: n = int(r.get('세대수') or 0)
+            except (TypeError, ValueError): n = 0
+            supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
+            qset[z].add((int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1))
+    def mk(z, region):
+        pop = zone_pop(z); s = supply.get(z, 0); qs = sorted(qset.get(z, []))
+        span = ((qs[-1][0] - qs[0][0]) * 4 + (qs[-1][1] - qs[0][1]) + 1) if qs else 0
+        det = sorted(detail[z].items(), key=lambda x: -x[1])
+        return {'z': z, 'region': region, 'pop': pop, 'supply': s,
+                'inten': round(s / (pop / 10000), 1) if pop else 0, 'span': span,
+                'q0': ('%dQ%d' % qs[0] if qs else ''), 'q1': ('%dQ%d' % qs[-1] if qs else ''),
+                'sgg': [[k, v] for k, v in det]}
+    zones = []
+    for z in LIVEZONE:
+        if zone_pop(z) >= 300000: zones.append(mk(z, LZ_REGION.get(z, '기타')))
+    for z in supply:
+        if z not in LIVEZONE and zone_pop(z) >= 300000: zones.append(mk(z, '수도권'))
+    zones.sort(key=lambda x: -x['inten'])
+    td = datetime.date.today()
+    return {'prd': '%d.%02d' % (td.year, td.month), 'unit': '만명당 예정세대(향후 전량)', 'zones': zones}
+
+
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else '--dry-run'
     if arg == '--discover':
@@ -787,7 +879,12 @@ def main():
         print('bubble seeded: prd %s, loan %s, %d regions' % (
             adv['bubble']['prd'], adv['bubble']['loan'], len(adv['bubble']['regions'])))
         return
-    assert arg == '--update', 'usage: --update | --seed-bubble | --dry-run | --discover <kw>'
+    if arg == '--seed-livezone':   # 생활권 입주예정 최초 시딩 (KOSIS+DATAGO 필요)
+        adv['livezone'] = fetch_livezone()
+        write_adv(adv)
+        print('livezone seeded: %d zones, prd %s' % (len(adv['livezone']['zones']), adv['livezone']['prd']))
+        return
+    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-livezone | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
 
@@ -841,6 +938,16 @@ def main():
             print('bubble skip: ECOS_API_KEY 없음')
     except Exception as e:
         print('bubble skip:', e)
+    try:
+        if DATAGO_KEY:
+            lz = fetch_livezone()
+            if lz['zones'] and differs(lz, adv.get('livezone')):
+                adv['livezone'] = lz
+                changed.append('livezone(%d)' % len(lz['zones']))
+        else:
+            print('livezone skip: DATA_GO_KR_KEY 없음')
+    except Exception as e:
+        print('livezone skip:', e)
     if changed:
         write_adv(adv)
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
