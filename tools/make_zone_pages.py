@@ -119,7 +119,7 @@ def signed(v):
     return s + ('{:,}'.format(int(round(a))))
 
 
-CSS = """:root{--ink:#16203a;--ink2:#3b4569;--paper:#f6f4ee;--accent:#c0392b;--muted:#6f6a5c;--line:#dad5c9}
+CSS = """:root{--ink:#16203a;--ink2:#3b4569;--paper:#f6f4ee;--accent:#3d4a8a;--muted:#6f6a5c;--line:#dad5c9}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
