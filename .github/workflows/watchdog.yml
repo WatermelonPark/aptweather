@@ -1,0 +1,63 @@
+name: 데이터 신선도 감시 (배치 실패 알림)
+
+# 로컬 배치(tools/run_weekly_update.bat)는 "자기가 실행되지 않았다"는 사실을 알릴 수 없다.
+# PC가 꺼져 있거나 작업 스케줄러가 뜨지 않으면 배치 안의 어떤 알림 코드도 실행되지 않기 때문.
+# 그래서 감시자는 반드시 외부에 둔다. 이 워크플로는 라이브 사이트의 주간 데이터가
+# 낡았는지만 확인하고, 낡았으면 실패시킨다 → GitHub이 실패 알림 메일을 보낸다.
+#
+# 이 한 가지 체크로 다음이 전부 걸린다:
+#   PC 꺼짐 / 배치 크래시 / git push 실패(토큰 만료) / Pages 배포 실패 / API 표 변경
+# 시크릿 불필요, 비용 0.
+
+on:
+  schedule:
+    - cron: '0 1 * * *'      # 매일 10:00 KST
+  workflow_dispatch: {}
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 라이브 주간 데이터 신선도 확인
+        run: |
+          python3 - <<'PY'
+          import json, re, sys, urllib.request, datetime
+
+          URL = 'https://www.agongmap.co.kr/'
+          # 주간 데이터는 매주 목요일 발표 → 배치가 목 오후/금 오전에 반영한다.
+          # 정상 상태의 최대 경과일은 약 10일(다음 발표 직전). 3일 여유를 둬 13일로 잡는다.
+          MAX_AGE = 13
+
+          req = urllib.request.Request(URL, headers={'User-Agent': 'agongmap-watchdog'})
+          try:
+              html = urllib.request.urlopen(req, timeout=60).read().decode('utf-8', 'replace')
+          except Exception as e:
+              print('FAIL: 사이트에 접근할 수 없습니다 - %s' % e)
+              sys.exit(1)
+
+          m = re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});', html, re.S)
+          if not m:
+              print('FAIL: 페이지에서 ADV 데이터 블록을 찾지 못했습니다 (배포가 깨졌을 수 있음)')
+              sys.exit(1)
+          try:
+              adv = json.loads(m.group(1))
+              last = adv['weekly']['rows'][-1]['p']
+              d = datetime.date.fromisoformat(last)
+          except Exception as e:
+              print('FAIL: 주간 데이터를 해석할 수 없습니다 - %s' % e)
+              sys.exit(1)
+
+          age = (datetime.date.today() - d).days
+          print('최신 주간 기준일: %s (경과 %d일, 허용 %d일)' % (last, age, MAX_AGE))
+          print('최신 월간 기준일: %s' % adv.get('monthly', {}).get('rows', [{}])[-1].get('p', '?'))
+
+          if age > MAX_AGE:
+              print('')
+              print('FAIL: 주간 데이터가 %d일째 갱신되지 않았습니다.' % age)
+              print('  → 주간 배치가 실패했거나 실행되지 않았을 가능성이 높습니다.')
+              print('  확인: PC 전원/작업 스케줄러 이력, aptweather\\logs\\weekly-*.log,')
+              print('        GitHub 토큰 만료 여부, KOSIS/R-ONE API 표 변경 여부')
+              sys.exit(1)
+
+          print('OK: 데이터가 최신입니다.')
+          PY
