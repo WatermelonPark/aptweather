@@ -94,6 +94,9 @@ if errorlevel 1 (
 python tools\send_newsletter.py
 if errorlevel 1 echo WARN: send_newsletter failed
 
+python tools\send_instagram.py
+if errorlevel 1 echo WARN: send_instagram failed
+
 python tools\ping_indexnow.py / /weekly/
 if errorlevel 1 echo WARN: ping_indexnow failed
 
