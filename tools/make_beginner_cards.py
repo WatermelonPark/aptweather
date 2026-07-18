@@ -32,7 +32,16 @@ RAMP = [
     (184, 134, 47),
 ]
 
-NOTO = 'C:/Windows/Fonts/NotoSansKR-VF.ttf'
+# 폰트는 저장소에 번들(tools/fonts/)해 OS와 무관하게 동작한다.
+# 리눅스 서버(클라우드)로 옮겨도 시스템 폰트에 의존하지 않는다.
+# Pretendard = 사이트 본문과 같은 서체 (SIL OFL 1.1, tools/fonts/LICENSE.txt)
+FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts')
+FONT_FILES = {
+    'Bold': 'Pretendard-Bold.subset.ttf',
+    'Medium': 'Pretendard-Medium.subset.ttf',
+}
+# 번들 폰트가 없을 때만 쓰는 시스템 가변폰트 폴백(개발 PC 호환용)
+FONT_FALLBACK = ['C:/Windows/Fonts/NotoSansKR-VF.ttf']
 
 # (LV배지, 이름, 도발 문구 2줄) — index.html BLV[score]의 lv/g/taunt와 대응
 LEVELS = [
@@ -51,9 +60,20 @@ LEVELS = [
 
 
 def noto(size, weight='Bold'):
-    f = ImageFont.truetype(NOTO, size)
-    f.set_variation_by_name(weight)
-    return f
+    """번들 폰트(tools/fonts) 우선, 없으면 시스템 가변폰트로 폴백."""
+    path = os.path.join(FONT_DIR, FONT_FILES.get(weight, FONT_FILES['Bold']))
+    if os.path.exists(path):
+        return ImageFont.truetype(path, size)
+    for p in FONT_FALLBACK:
+        if os.path.exists(p):
+            f = ImageFont.truetype(p, size)
+            try:
+                f.set_variation_by_name(weight)
+            except Exception:
+                pass
+            return f
+    raise FileNotFoundError(
+        '한글 폰트를 찾을 수 없습니다. %s 에 Pretendard 서브셋을 두세요.' % FONT_DIR)
 
 
 def fit_font(text, target, weight='Bold', axis='h', lo=10, hi=460):

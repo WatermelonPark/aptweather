@@ -5,8 +5,11 @@
 
 사용:  python tools/make_calc_cards.py
 """
-import os
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import os, sys
+from PIL import Image, ImageDraw, ImageFilter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from make_beginner_cards import noto  # noqa: E402  (번들 폰트 로더 공유)
 
 W = H = 800
 PAPER = (246, 244, 238)
@@ -24,8 +27,6 @@ RAMP = [
     (184, 134, 47),
 ]
 
-NOTO = 'C:/Windows/Fonts/NotoSansKR-VF.ttf'
-
 # (LV배지, 이름, 도발 문구 2줄) — QUIZSETS.calc.grade 구간과 대응
 LEVELS = [
     ('LV1', '묻지마 매수 직전', ['공식부터', '다시 볼까요?']),
@@ -41,11 +42,6 @@ LEVELS = [
     ('LV5', '재건축 계산 선수', ['이제 임장 가서', '대지지분 물어보세요']),
 ]
 
-
-def noto(size, weight='Bold'):
-    f = ImageFont.truetype(NOTO, size)
-    f.set_variation_by_name(weight)
-    return f
 
 
 def fit_font(text, target, weight='Bold', axis='h', lo=10, hi=460):
