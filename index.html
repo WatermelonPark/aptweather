@@ -88,10 +88,10 @@
     border:1.5px solid var(--line);border-radius:50%;opacity:.5}
   .hero::before{content:"";position:absolute;right:10px;top:130px;width:160px;height:160px;
     border:1.5px solid var(--line);border-radius:50%;opacity:.4}
-  .eyebrow{font-size:13px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--accent);font-weight:800;margin-bottom:14px}
-  .hero h1{font-size:clamp(36px,6.4vw,62px);line-height:1.1;font-weight:800;
-    letter-spacing:-.025em;position:relative;z-index:2}
+  .eyebrow{font-size:13px;
+    color:var(--accent);font-weight:500;margin-bottom:14px}
+  .hero h1{font-size:clamp(36px,6.4vw,62px);line-height:1.1;font-weight:700;
+    letter-spacing:-.01em;position:relative;z-index:2}
   .hero h1 em{font-style:normal}
   .hero h1 em:first-of-type{color:var(--jeonse)}
   .hero h1 em:last-of-type{color:var(--stock)}
@@ -105,7 +105,7 @@
   .howto{background:var(--ink);color:#e8ebf2;padding:28px 0;font-size:14.5px}
   .howto .wrap{display:flex;gap:14px;align-items:flex-start}
   .howto .ic{flex:none;width:30px;height:30px;border-radius:50%;background:var(--gold);
-    color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+    color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px}
   .howto b{color:#fff}
   .howto .gloss{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px;color:#c2c7d6}
   .howto .gloss div{padding-left:14px;border-left:2px solid #313c5e}
@@ -119,17 +119,17 @@
   section.step.ref{--part:var(--gold);--part-bg:#fbf3dc;--part-ink:#9a7000}
   section.step.ref{background:#fcfbf7}
   .stepnum{display:flex;align-items:center;gap:11px;margin-bottom:16px;flex-wrap:wrap}
-  .stepnum .badge{font-size:15px;font-weight:800;letter-spacing:.02em;
+  .stepnum .badge{font-size:15px;font-weight:600;letter-spacing:.02em;
     color:#fff;background:var(--part);padding:5px 14px;border-radius:8px;
     display:inline-block;white-space:nowrap}
-  .stepnum .arc{font-size:14px;color:var(--part-ink);font-weight:700;letter-spacing:0}
-  h2.t{font-size:clamp(23px,4vw,32px);font-weight:800;letter-spacing:-.02em;
+  .stepnum .arc{font-size:14px;color:var(--part-ink);font-weight:600;letter-spacing:0}
+  h2.t{font-size:clamp(23px,4vw,32px);font-weight:700;letter-spacing:-.02em;
     line-height:1.22;margin-bottom:18px}
   p{font-size:16px;color:var(--ink2);margin-bottom:14px}
   p.lead{font-size:17.5px;color:var(--ink);font-weight:500}
-  strong{color:var(--ink);font-weight:700}
+  strong,b{color:var(--ink);font-weight:600}
 
-  .verdict{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;
+  .verdict{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;
     padding:5px 13px;border-radius:30px;margin-bottom:18px}
   .v-strong{background:#dff3ec;color:#157a61;border:1px solid #9dd9c5}
   .v-mid{background:#fdf3d8;color:#9a7000;border:1px solid #ecd28a}
@@ -138,7 +138,7 @@
 
   .chartbox{background:#fff;border:1px solid var(--line);border-radius:10px;
     padding:22px 18px 16px;margin:22px 0;box-shadow:0 1px 4px rgba(22,32,58,.05)}
-  .chartbox h4{font-size:14px;font-weight:700;margin-bottom:4px}
+  .chartbox h4{font-size:14px;font-weight:600;margin-bottom:4px}
   .chartbox .cap{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
   .cwrap{position:relative;height:340px}.cwrap.tall{height:420px}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin:8px 0}
@@ -149,7 +149,7 @@
   .read{font-size:14px;color:var(--ink2);background:var(--paper2);border-radius:8px;
     padding:14px 18px;margin:16px 0;line-height:1.6}
   .read b{color:var(--ink)}
-  .read .lab{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;
+  .read .lab{display:inline-block;font-size:11.5px;font-weight:500;color:#fff;
     background:var(--gold);padding:2px 9px;border-radius:20px;margin-right:8px;
     vertical-align:middle;letter-spacing:.04em}
 
@@ -172,7 +172,7 @@
   .conf .gauge i.mid{background:var(--flow)}
   .conf .ctxt{font-size:13.5px;color:var(--ink2);line-height:1.5;flex:1;min-width:220px}
   .conf .ctxt b{color:var(--ink)}
-  .conf .clevel{font-size:12px;font-weight:800;letter-spacing:.02em;padding:3px 10px;
+  .conf .clevel{font-size:12px;font-weight:600;letter-spacing:.02em;padding:3px 10px;
     border-radius:20px;flex:none}
   .cl-high{background:#dff3ec;color:#157a61}
   .cl-mid{background:#fdf3d8;color:#9a7000}
@@ -181,14 +181,14 @@
   /* 본문 파트 배너 (청록) */
   .mainbanner{background:var(--stock);padding:22px 0;margin-top:10px}
   .mainbanner .wrap{max-width:880px;margin:0 auto;padding:0 24px}
-  .mainbanner .mainkicker{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.08em;
+  .mainbanner .mainkicker{display:inline-block;font-size:12px;font-weight:500;
     background:#fff;color:#1a6b54;padding:3px 12px;border-radius:20px;margin-bottom:10px}
   .mainbanner p{margin:0;color:#eafff7;font-size:15px;line-height:1.6}
   .mainbanner b{color:#fff}
   /* 참고 배너 & 섹션 */
   .refbanner{background:var(--gold);padding:22px 0;margin-top:10px}
   .refbanner .wrap{max-width:880px;margin:0 auto;padding:0 24px}
-  .refbanner .refkicker{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.08em;
+  .refbanner .refkicker{display:inline-block;font-size:12px;font-weight:500;
     background:#fff;color:#9a7000;padding:3px 12px;border-radius:20px;margin-bottom:10px}
   .refbanner p{margin:0;color:#3a2e00;font-size:15px;line-height:1.6}
   .refbanner b{color:#1a1500}
@@ -200,8 +200,8 @@
   .hcol{border:1px solid var(--line);border-radius:12px;padding:20px 22px;background:#fff}
   .hcol.short{border-top:4px solid #e0564a}
   .hcol.long{border-top:4px solid #2c5f9e}
-  .hcol .htag{font-size:12.5px;font-weight:800;letter-spacing:.03em;color:var(--muted);margin-bottom:6px}
-  .hcol .hbig{font-size:22px;font-weight:800;color:var(--ink);margin-bottom:14px}
+  .hcol .htag{font-size:12.5px;font-weight:600;letter-spacing:.03em;color:var(--muted);margin-bottom:6px}
+  .hcol .hbig{font-size:22px;font-weight:600;color:var(--ink);margin-bottom:14px}
   .hcol ul{margin:0;padding-left:18px}
   .hcol li{font-size:14px;line-height:1.65;color:var(--ink2);margin-bottom:9px}
   .hcol li b{color:var(--ink)}
@@ -216,7 +216,7 @@
     border-top:1px solid var(--line);font-size:16px;color:var(--ink2)}
   .take li::before{content:counter(t);position:absolute;left:0;top:18px;width:32px;height:32px;
     background:var(--ink);color:var(--paper);border-radius:50%;display:flex;
-    align-items:center;justify-content:center;font-size:14px;font-weight:800}
+    align-items:center;justify-content:center;font-size:14px;font-weight:600}
   .take li b{color:var(--ink)}
 
   footer{padding:44px 0 80px;font-size:13px;color:var(--muted)}
@@ -230,7 +230,7 @@
     box-shadow:0 -4px 18px rgba(22,32,58,.28)}
   .nav-btn{flex:1;max-width:220px;border:0;background:none;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:3px;color:#97a0b8;
-    font-size:11.5px;font-weight:700;cursor:pointer;transition:color .15s;position:relative}
+    font-size:11.5px;font-weight:600;cursor:pointer;transition:color .15s;position:relative}
   .nav-btn.on{color:#fff}
   .nav-btn.on::before{content:"";position:absolute;top:0;width:34px;height:3px;
     border-radius:0 0 3px 3px;background:var(--gold)}
@@ -240,9 +240,9 @@
   /* ===== 테스트 ===== */
   .quiz-wrap{max-width:560px;margin:0 auto;padding:0 18px 120px;min-height:80vh}
   .quiz-hero{padding:56px 4px 0;text-align:center}
-  .qeyebrow{font-size:13px;font-weight:800;letter-spacing:.16em;
-    color:var(--accent);text-transform:uppercase;margin-bottom:14px}
-  .quiz-hero h1{font-size:32px;font-weight:800;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em}
+  .qeyebrow{font-size:13px;font-weight:500;
+    color:var(--accent);margin-bottom:14px}
+  .quiz-hero h1{font-size:32px;font-weight:700;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em}
   .quiz-hero p{font-size:15.5px;line-height:1.7;color:var(--ink2);margin:0 auto 28px;max-width:420px}
   .qmeta{margin-top:16px;font-size:13px;color:var(--muted)}
   /* 테스트 선택 카드 */
@@ -254,8 +254,8 @@
   .qpick-card:hover{border-color:var(--accent)}
   .qpick-card .pc-top{display:flex;align-items:center;gap:11px;margin-bottom:7px}
   .qpick-card .pc-emoji{font-size:26px;line-height:1}
-  .qpick-card .pc-title{font-size:18.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
-  .qpick-card .pc-badge{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.03em;
+  .qpick-card .pc-title{font-size:18.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .qpick-card .pc-badge{margin-left:auto;font-size:11px;font-weight:600;letter-spacing:.03em;
     padding:4px 10px;border-radius:12px}
   .qpick-card .pc-badge.lv1{background:#e8f3ee;color:#1a6b54}
   .qpick-card .pc-badge.lv2{background:#fff4e0;color:#b9770e}
@@ -263,15 +263,15 @@
   .qpick-card .pc-desc{font-size:14px;line-height:1.6;color:var(--ink2);margin:0}
   .qpick-card .pc-go{position:absolute;right:20px;bottom:18px;font-size:20px;color:var(--muted)}
   .qback{display:inline-flex;align-items:center;gap:5px;background:none;border:0;
-    color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+    color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
     padding:6px 0;margin-bottom:4px}
   /* 진행바 */
   .qprogress{height:6px;background:var(--paper2);border-radius:6px;margin:30px 0 8px;overflow:hidden}
   .qbar{height:100%;background:var(--accent);border-radius:6px;transition:width .35s ease;width:0}
-  .qcount{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:18px}
+  .qcount{font-size:13px;font-weight:500;color:var(--muted);margin-bottom:18px}
   /* 문제 카드 */
   .qcard{}
-  .qq{font-size:21px;font-weight:800;line-height:1.4;margin-bottom:24px;letter-spacing:-.01em}
+  .qq{font-size:21px;font-weight:600;line-height:1.4;margin-bottom:24px;letter-spacing:-.01em}
   .qopts{display:flex;flex-direction:column;gap:12px}
   .qopts-lr{flex-direction:row;gap:12px}
   .qopts-lr .qopt{flex:1;text-align:center;display:flex;flex-direction:column;
@@ -284,46 +284,46 @@
   .qopt.correct{border-color:var(--stock);background:#eafaf3}
   .qopt.wrong{border-color:#e0564a;background:#fdecea}
   .qopt.dim{opacity:.5}
-  .qopt .mark{display:block;font-weight:800;font-size:22px;margin-top:8px}
+  .qopt .mark{display:block;font-weight:600;font-size:22px;margin-top:8px}
   /* 해설 */
   .qexp{margin-top:20px;background:var(--paper2);border-radius:14px;padding:18px 20px;
     border-left:4px solid var(--accent);display:none}
   .qexp.show{display:block;animation:fadeIn .3s}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .qexp .ehead{font-size:14px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+  .qexp .ehead{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:7px}
   .qexp .ehead.o{color:var(--stock)}.qexp .ehead.x{color:#c0392b}
   .qexp p{font-size:14.5px;line-height:1.7;color:var(--ink2);margin:0}
   .qexp b{color:var(--ink)}
   .qnext{margin-top:18px;width:100%;background:var(--ink);color:#fff;border:0;border-radius:12px;
-    padding:15px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;display:none}
+    padding:15px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;display:none}
   .qnext.show{display:block}
   /* 결과 */
   .qresult{text-align:center;padding:40px 4px}
-  .qscore-ring{font-size:56px;font-weight:800;color:var(--accent);margin:10px 0 2px}
-  .qresult-eyebrow{font-size:13.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
-  .qgrade{font-size:25px;font-weight:800;margin:4px auto 4px;letter-spacing:-.02em;
+  .qscore-ring{font-size:56px;font-weight:700;color:var(--accent);margin:10px 0 2px}
+  .qresult-eyebrow{font-size:13.5px;font-weight:500;color:var(--muted);margin-bottom:6px}
+  .qgrade{font-size:25px;font-weight:700;margin:4px auto 4px;letter-spacing:-.02em;
     line-height:1.3;max-width:420px}
-  .qlv{display:inline-block;background:var(--ink);color:#fff;font-size:18px;font-weight:800;
+  .qlv{display:inline-block;background:var(--ink);color:#fff;font-size:18px;font-weight:600;
     padding:2px 12px;border-radius:10px;margin-right:6px;letter-spacing:.01em;vertical-align:2px}
   .qgrade-desc{font-size:14.5px;line-height:1.7;color:var(--ink2);max-width:400px;margin:14px auto 28px}
   /* 결과 카드 */
   .rcard{background:linear-gradient(160deg,#1a2235,#2a3550);border:2px solid var(--gold);
     border-radius:20px;padding:30px 24px 22px;max-width:380px;margin:14px auto 24px;
     color:#fff;box-shadow:0 12px 32px rgba(22,32,58,.35)}
-  .rcard .rc-head{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--gold-ink)}
+  .rcard .rc-head{font-size:13px;font-weight:600;color:var(--gold-ink)}
   .rcard .rc-emoji{font-size:54px;margin:12px 0 2px;line-height:1}
-  .rcard .rc-score{font-size:46px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
-  .rcard .rc-score small{font-size:22px;color:#8a92ab;font-weight:700}
+  .rcard .rc-score{font-size:46px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+  .rcard .rc-score small{font-size:22px;color:#8a92ab;font-weight:600}
   .rcard .rc-dots{display:flex;gap:7px;justify-content:center;margin:10px 0 16px}
   .rcard .rc-dots i{width:12px;height:12px;border-radius:50%;background:#39415f}
   .rcard .rc-dots i.ok{background:#3aa17e}
   .rcard .rc-dots i.no{background:#e0564a}
-  .rcard .rc-lv{display:inline-block;background:var(--gold);color:#1a1500;font-weight:800;
+  .rcard .rc-lv{display:inline-block;background:var(--gold);color:#1a1500;font-weight:600;
     font-size:15px;padding:3px 15px;border-radius:16px;margin-bottom:10px}
-  .rcard .rc-grade{font-size:20px;font-weight:800;line-height:1.35;margin-bottom:10px}
+  .rcard .rc-grade{font-size:20px;font-weight:600;line-height:1.35;margin-bottom:10px}
   .rcard .rc-desc{font-size:13.5px;line-height:1.65;color:#c2c7d6}
   .rcard .rc-foot{margin-top:18px;padding-top:13px;border-top:1px solid #39415f;
-    font-size:12px;font-weight:700;color:#8a92ab;letter-spacing:.04em}
+    font-size:12px;font-weight:500;color:#8a92ab;letter-spacing:.04em}
   /* 친구 대결 */
   .chalbar{background:#fff4e6;border:1px solid #f0d9b5;color:#8a5a00;
     border-radius:12px;padding:11px 14px;font-size:13.5px;line-height:1.5;margin-bottom:14px}
@@ -333,57 +333,55 @@
   .versus.win{border-color:var(--stock);background:linear-gradient(160deg,#fff,#eafaf3)}
   .versus.lose{border-color:var(--maemae);background:linear-gradient(160deg,#fff,#fdecea)}
   .versus.draw{border-color:var(--gold-ink);background:linear-gradient(160deg,#fff,#fdf6e3)}
-  .versus .vs-head{font-size:11.5px;font-weight:800;letter-spacing:.1em;color:var(--muted);
-    text-transform:uppercase;margin-bottom:12px}
+  .versus .vs-head{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:12px}
   .versus .vs-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px}
   .versus .vs-side{flex:1;text-align:center}
-  .versus .vs-lab{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:2px}
-  .versus .vs-score{font-size:40px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .versus .vs-lab{font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:2px}
+  .versus .vs-score{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
   .versus.win .vs-side:first-child .vs-score{color:var(--stock)}
   .versus.lose .vs-side:first-child .vs-score{color:var(--maemae)}
   .versus .vs-side:last-child .vs-score{color:var(--ink2)}
-  .versus .vs-mid{flex:none;font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.06em}
-  .versus .vs-verdict{font-size:18px;font-weight:800;color:var(--ink);margin-bottom:14px}
-  .versus .vs-btn{width:100%;font-family:inherit;font-size:15.5px;font-weight:800;padding:13px;
+  .versus .vs-mid{flex:none;font-size:13px;font-weight:600;color:var(--muted);}
+  .versus .vs-verdict{font-size:18px;font-weight:600;color:var(--ink);margin-bottom:14px}
+  .versus .vs-btn{width:100%;font-family:inherit;font-size:15.5px;font-weight:600;padding:13px;
     border:0;border-radius:12px;background:var(--ink);color:#fff;cursor:pointer}
   .versus .vs-btn:active{transform:scale(.99)}
-  .versus .vs-next{font-size:13.5px;font-weight:700;color:var(--stock)}
+  .versus .vs-next{font-size:13.5px;font-weight:600;color:var(--stock)}
   /* 결과 → 다음 단계 유도 */
   .nextstep{max-width:420px;margin:18px auto 0;background:#fff;border:1px solid var(--line);
     border-radius:16px;padding:22px 20px;text-align:left}
-  .nextstep .ns-kicker{font-size:11.5px;font-weight:800;letter-spacing:.1em;color:var(--gold-ink);
-    text-transform:uppercase;margin-bottom:8px}
-  .nextstep .ns-title{font-size:17px;font-weight:800;color:var(--ink);line-height:1.35;margin-bottom:8px}
+  .nextstep .ns-kicker{font-size:11.5px;font-weight:500;color:var(--gold-ink);margin-bottom:8px}
+  .nextstep .ns-title{font-size:17px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:8px}
   .nextstep .ns-desc{font-size:13.5px;color:var(--ink2);line-height:1.6;margin-bottom:16px}
   .nextstep .ns-desc b{color:var(--ink)}
-  .ns-btn{display:block;width:100%;font-family:inherit;font-size:15.5px;font-weight:800;
+  .ns-btn{display:block;width:100%;font-family:inherit;font-size:15.5px;font-weight:600;
     padding:14px;border-radius:12px;border:0;cursor:pointer;background:var(--ink);color:#fff;margin-bottom:9px}
   .ns-btn:active{transform:scale(.99)}
   .ns-btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);margin-bottom:0}
   .qshare-box{background:var(--paper2);border-radius:16px;padding:22px;margin:0 auto;max-width:420px}
-  .qshare-box h4{font-size:15px;font-weight:800;margin:0 0 12px}
+  .qshare-box h4{font-size:15px;font-weight:600;margin:0 0 12px}
   .qshare-btns{display:flex;flex-direction:column;gap:10px}
-  .qshare-btn{border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:800;
+  .qshare-btn{border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:600;
     cursor:pointer;font-family:inherit}
   .qshare-btn.primary{background:#FEE500;color:#191919;display:flex;align-items:center;justify-content:center;gap:8px}
   .qretry{margin-top:18px;background:none;border:0;color:var(--muted);font-size:14px;
-    font-weight:700;cursor:pointer;text-decoration:underline;font-family:inherit}
+    font-weight:600;cursor:pointer;text-decoration:underline;font-family:inherit}
   .qtoast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
     background:var(--ink);color:#fff;padding:12px 22px;border-radius:24px;font-size:14px;
-    font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
+    font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
   .qtoast.show{opacity:1}
   .subs-consent{font-size:11.5px;color:var(--muted);line-height:1.55;margin:8px 0 0}
-.subs-consent b{font-size:inherit;font-weight:700;color:var(--ink)}
+.subs-consent b{font-size:inherit;font-weight:600;color:var(--ink)}
 .legal-disc{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:18px;padding-top:14px;
   border-top:1px solid var(--line);text-align:left;max-width:720px;margin-left:auto;margin-right:auto}
-.legal-disc b{color:var(--ink);font-weight:700}
+.legal-disc b{color:var(--ink);font-weight:600}
 .minifooter{text-align:center;font-size:12px;color:var(--muted);
     padding:24px 0 12px;border-top:1px solid var(--line);margin-top:30px}
 
   /* ===== 통계 대시보드 ===== */
   .shero{background:var(--paper);color:var(--ink);padding:56px 0 32px}
-  .shero .eyebrow{color:var(--accent);font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px}
-  .shero h1{font-size:30px;font-weight:800;margin:0 0 12px}
+  .shero .eyebrow{color:var(--accent);font-size:13px;font-weight:500;margin-bottom:14px}
+  .shero h1{font-size:30px;font-weight:700;margin:0 0 12px}
   .shero p{font-size:14.5px;line-height:1.7;color:var(--ink2);margin:0;max-width:620px}
   .shero b{color:var(--ink)}
   .dash{padding:0 0 40px}
@@ -393,7 +391,7 @@
     box-shadow:0 4px 20px rgba(0,0,0,.06)}
   .ctrl-row{display:flex;align-items:center;gap:12px;padding:6px 0}
   .ctrl-row+.ctrl-row{border-top:1px solid var(--paper2)}
-  .ctrl-row label{font-size:13px;font-weight:800;color:var(--ink2);width:40px;flex:none}
+  .ctrl-row label{font-size:13px;font-weight:500;color:var(--ink2);width:40px;flex:none}
   .seg{display:flex;gap:6px;flex-wrap:wrap;flex:1}
   .seg button{border:1px solid var(--line);background:#fff;border-radius:18px;
     padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap}
@@ -404,7 +402,7 @@
   .meta-bar b{color:var(--ink2)}
   .period{display:flex;gap:6px;margin:14px 0 6px;flex-wrap:wrap}
   .period button{flex:1;min-width:54px;border:1px solid var(--line);background:#fff;
-    border-radius:9px;padding:9px 0;font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer}
+    border-radius:9px;padding:9px 0;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
   .period button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .aux{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 4px;min-height:4px}
   .aux button{border:1px dashed var(--line);background:#fff;border-radius:16px;
@@ -416,7 +414,7 @@
   .prange b{color:var(--ink2)}
   .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
   #stat-tbl{width:100%;border-collapse:collapse;font-size:13px}
-  #stat-tbl th{background:var(--paper2);color:var(--ink2);font-weight:700;
+  #stat-tbl th{background:var(--paper2);color:var(--ink2);font-weight:600;
     padding:10px 12px;text-align:right;white-space:nowrap;position:sticky;top:0}
   #stat-tbl th:first-child{text-align:left}
   #stat-tbl td{padding:9px 12px;text-align:right;border-top:1px solid var(--paper2);
@@ -432,9 +430,8 @@
   }
   /* 30초 요약 */
   .tldr{padding:44px 0 8px}
-  .tldr-kicker{font-size:12.5px;font-weight:800;letter-spacing:.1em;color:var(--gold-ink);
-    text-transform:uppercase;margin-bottom:10px}
-  .tldr-h{font-size:clamp(22px,4.2vw,30px);font-weight:800;letter-spacing:-.02em;
+  .tldr-kicker{font-size:12.5px;font-weight:500;color:var(--gold-ink);margin-bottom:10px}
+  .tldr-h{font-size:clamp(22px,4.2vw,30px);font-weight:700;letter-spacing:-.02em;
     line-height:1.25;margin-bottom:26px}
   .tldr-h b{color:var(--stock)}
   .tldr-grid{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:18px 28px;align-items:start;
@@ -454,25 +451,25 @@
     text-decoration:none;color:var(--ink2);font-size:15.5px;line-height:1.55;
     border-radius:8px;transition:background .15s,color .15s}
   .tldr-steps a:hover{background:var(--paper2);color:var(--ink)}
-  .tldr-steps .ts-n{flex:none;font-weight:800;color:var(--gold-ink);font-size:15px}
+  .tldr-steps .ts-n{flex:none;font-weight:600;color:var(--gold-ink);font-size:15px}
   .tldr-steps .ts-t{flex:1}
   .tldr-steps b{color:var(--ink)}
   .tldr-steps b.j{color:var(--jeonse)}
   .tldr-steps b.m{color:var(--maemae)}
   .tldr-steps b.s{color:var(--stock)}
-  .tldr-steps a::after{content:"›";flex:none;color:var(--muted);font-weight:800;
+  .tldr-steps a::after{content:"›";flex:none;color:var(--muted);font-weight:600;
     opacity:.35;transition:opacity .15s,transform .15s}
   .tldr-steps a:hover::after{opacity:1;transform:translateX(2px)}
   .tldr-text p b{color:var(--ink)}
   .tldr-rate{grid-area:rate;margin:0;background:var(--paper2);border-radius:8px;padding:12px 16px;font-size:14.5px}
   .tldr-more{grid-area:more;margin:0;font-size:14.5px;color:var(--muted)}
-  .tldr-arrow{display:inline-block;animation:tldrbob 1.4s ease-in-out infinite;font-weight:800;color:var(--accent)}
+  .tldr-arrow{display:inline-block;animation:tldrbob 1.4s ease-in-out infinite;font-weight:600;color:var(--accent)}
   @keyframes tldrbob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
   @media(max-width:720px){.tldr-grid{grid-template-columns:1fr;gap:16px;
     grid-template-areas:"diagram" "steps" "rate" "more"}}
   /* ===== 통계: 기본/심화 전환 ===== */
   .smode{display:flex;gap:6px;justify-content:center;margin:18px auto 34px;max-width:560px;padding:0 16px;position:relative;z-index:3}
-  .smode button{flex:1;font-family:inherit;font-size:14px;font-weight:800;padding:11px 0;
+  .smode button{flex:1;font-family:inherit;font-size:14px;font-weight:600;padding:11px 0;
     border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;transition:.15s}
   .smode button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .smode button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -480,20 +477,20 @@
   .adv-sec{margin-top:34px}
   .adv-sec:first-child{margin-top:8px}
   .adv-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
-  .adv-h h3{font-size:18px;font-weight:800;letter-spacing:-.01em}
-  .adv-badge{font-size:11px;font-weight:800;letter-spacing:.05em;padding:3px 9px;border-radius:10px;
+  .adv-h h3{font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .adv-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;
     background:var(--paper2);color:var(--muted);border:1px solid var(--line)}
   .adv-note{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.6}
   .adv-tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
   table.adv{border-collapse:collapse;font-size:12.5px;white-space:nowrap;width:100%}
   table.adv th,table.adv td{padding:6px 9px;border-bottom:1px solid var(--paper2);text-align:center;
     font-variant-numeric:tabular-nums}
-  table.adv thead th{background:var(--paper2);color:var(--ink2);font-weight:800;position:sticky;top:0}
+  table.adv thead th{background:var(--paper2);color:var(--ink2);font-weight:600;position:sticky;top:0}
   table.adv th:first-child,table.adv td:first-child{position:sticky;left:0;background:#fff;text-align:left;
-    font-weight:700;color:var(--ink);border-right:1px solid var(--line);z-index:1}
+    font-weight:600;color:var(--ink);border-right:1px solid var(--line);z-index:1}
   table.adv thead th:first-child{background:var(--paper2);z-index:2}
-  table.adv td.hi{background:#eaf3fb;color:#1a5276;font-weight:700}
-  table.adv td.lo{background:#fdecea;color:#a93226;font-weight:700}
+  table.adv td.hi{background:#eaf3fb;color:#1a5276;font-weight:600}
+  table.adv td.lo{background:#fdecea;color:#a93226;font-weight:600}
   table.adv tr.fut td{background:#fbf7ea}
   table.adv tr.fut td:first-child{color:var(--gold-ink)}
   table.adv td.up{color:#c0392b}
@@ -520,7 +517,7 @@
   .adv-links span{font-size:12px;color:var(--muted);line-height:1.5}
   /* ===== 그래프/표 토글 · 심화 탭 ===== */
   .gt{display:inline-flex;margin-left:auto;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
-  .gt button{font-family:inherit;font-size:12px;font-weight:800;padding:6px 14px;border:0;background:transparent;color:var(--muted);cursor:pointer;transition:.15s}
+  .gt button{font-family:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:0;background:transparent;color:var(--muted);cursor:pointer;transition:.15s}
   .gt button.on{background:var(--ink);color:#fff}
   .gsec.gm-g .gt-t{display:none}
   .gsec.gm-t .gt-g{display:none}
@@ -528,30 +525,30 @@
   .gsec.gm-g .gt-m,.gsec.gm-t .gt-m{display:none}
   .gsec.gm-g .adv-regsel{display:block}
   .map-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap}
-  .map-lab{font-size:12.5px;color:var(--muted);font-weight:700}
+  .map-lab{font-size:12.5px;color:var(--muted);font-weight:500}
   .tilemap{padding:2px 0 4px}
   .map-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .map-datechip{display:flex;justify-content:center;margin:0 0 12px}
-  .map-datechip span{background:var(--ink);color:#fff;font-size:14px;font-weight:800;
+  .map-datechip span{background:var(--ink);color:#fff;font-size:14px;font-weight:600;
     padding:8px 20px;border-radius:999px;letter-spacing:.01em}
   .map-rank{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 20px}
   @media(max-width:720px){.map-rank{grid-template-columns:1fr}}
-  .rank-h{font-size:14.5px;font-weight:800;margin:0 0 8px}
+  .rank-h{font-size:14.5px;font-weight:600;margin:0 0 8px}
   .rank-wrap{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .rank-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
   .rank-tbl th,.rank-tbl td{padding:4px 8px;border-bottom:1px solid var(--paper2);
     text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .rank-tbl thead th{background:var(--paper2);font-weight:800;color:var(--ink2);font-size:12px}
-  .rank-tbl th:nth-child(2),.rank-tbl td:nth-child(2){text-align:left;font-weight:700}
-  .rank-tbl td:first-child{color:var(--muted);font-weight:800}
-  .rank-tbl td.up{color:#c0392b;font-weight:800}
-  .rank-tbl td.dn{color:#1a5276;font-weight:800}
-  .rk-up{color:#c0392b;font-weight:800;font-size:12px}
-  .rk-dn{color:#1a5276;font-weight:800;font-size:12px}
+  .rank-tbl thead th{background:var(--paper2);font-weight:600;color:var(--ink2);font-size:12px}
+  .rank-tbl th:nth-child(2),.rank-tbl td:nth-child(2){text-align:left;font-weight:600}
+  .rank-tbl td:first-child{color:var(--muted);font-weight:600}
+  .rank-tbl td.up{color:#c0392b;font-weight:600}
+  .rank-tbl td.dn{color:#1a5276;font-weight:600}
+  .rk-up{color:#c0392b;font-weight:600;font-size:12px}
+  .rk-dn{color:#1a5276;font-weight:600;font-size:12px}
   .rk-same{color:var(--muted)}
-  .rk-new{color:var(--gold-ink);font-weight:800;font-size:11px}
-  .map-hint{display:none;text-align:center;font-size:12px;font-weight:700;color:var(--muted);margin-top:8px}
-  .map-suplegend{text-align:center;font-size:12px;font-weight:700;color:var(--muted);margin-top:10px}
+  .rk-new{color:var(--gold-ink);font-weight:600;font-size:11px}
+  .map-hint{display:none;text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:8px}
+  .map-suplegend{text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:10px}
   @media(max-width:720px){.map-hint{display:block}}
   .tilemap svg text{font-family:inherit}
   .gt-head{display:flex;justify-content:flex-end;margin:0 0 10px}
@@ -560,14 +557,14 @@
   .chart-scroll .chartwrap.sm{min-width:100%}
   .chart-frame{position:relative}
   .chart-yaxis{position:absolute;left:0;top:0;z-index:2;pointer-events:none}
-  .chart-legend{display:flex;gap:18px;justify-content:center;font-size:12.5px;font-weight:800;color:var(--ink2);margin:0 0 8px}
+  .chart-legend{display:flex;gap:18px;justify-content:center;font-size:12.5px;font-weight:500;color:var(--ink2);margin:0 0 8px}
   .chart-legend span{display:inline-flex;align-items:center;gap:6px}
   .chart-legend span::before{content:'';width:13px;height:13px;border-radius:4px}
   .chart-legend .cl-ma::before{background:#e0564a}
   .chart-legend .cl-je::before{background:#a98be0}
   @media(max-width:720px){.chartwrap.sm{height:240px}}
   .adv-tabs{display:flex;gap:8px;margin:2px 0 20px;flex-wrap:wrap}
-  .adv-tabs button{font-family:inherit;font-size:13.5px;font-weight:800;padding:8px 18px;border-radius:999px;
+  .adv-tabs button{font-family:inherit;font-size:13.5px;font-weight:600;padding:8px 18px;border-radius:999px;
     border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;transition:.15s}
   .adv-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #stats-adv .adv-sec,#stats-more .adv-sec{margin-top:8px}
@@ -578,18 +575,18 @@
   .subs form{display:flex;gap:8px;flex-wrap:wrap}
   .subs input{flex:1;min-width:180px;font-family:inherit;font-size:14px;padding:10px 12px;
     border-radius:10px;border:1.5px solid var(--line)}
-  .subs button{font-family:inherit;font-size:14px;font-weight:800;padding:10px 18px;border-radius:10px;
+  .subs button{font-family:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:10px;
     border:0;background:var(--ink);color:#fff;cursor:pointer}
-  .subs-msg{display:block;font-size:12.5px;font-weight:700;margin-top:8px;color:#2c7a5b}
+  .subs-msg{display:block;font-size:12.5px;font-weight:500;margin-top:8px;color:#2c7a5b}
   .tr-row{display:flex;justify-content:flex-end;margin:0 0 8px}
-  .trbtn{font-family:inherit;font-size:12px;font-weight:800;padding:6px 12px;border-radius:10px;
+  .trbtn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;
     border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
   .trbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #sec-basicmain.single .tr-row{display:none}
   table.adv td.fut{background:#fbf7ea}
-  table.adv tr.bandrow td{background:#f5efdd;color:#6b5d33;font-weight:800;border-bottom:2px solid #e0d5b4}
+  table.adv tr.bandrow td{background:#f5efdd;color:#6b5d33;font-weight:600;border-bottom:2px solid #e0d5b4}
   table.adv tr.bandrow td:first-child{background:#f5efdd}
-  table.adv th.band-h,table.adv td.band-c{background:#f5efdd;color:#6b5d33;font-weight:800}
+  table.adv th.band-h,table.adv td.band-c{background:#f5efdd;color:#6b5d33;font-weight:600}
   @media(max-width:720px){.tr-row{display:none}}
   #stat-matrix{max-height:540px;overflow-y:auto}
   @media(max-width:720px){#stat-matrix{display:none}}
@@ -608,20 +605,19 @@
   .home-hero::after{content:"";position:absolute;left:50%;top:20px;width:300px;height:300px;
     transform:translateX(-50%);border:1.5px solid var(--line);border-radius:50%;opacity:.4;z-index:0}
   .home-hero .wrap{position:relative;z-index:1}
-  .home-eyebrow{font-size:13px;font-weight:800;letter-spacing:.16em;color:var(--accent);
-    text-transform:uppercase;margin-bottom:14px}
-  .home-hero h1{font-size:clamp(30px,6.4vw,48px);line-height:1.12;font-weight:800;
-    letter-spacing:-.025em;margin-bottom:16px}
+  .home-eyebrow{font-size:13px;font-weight:500;color:var(--accent);margin-bottom:14px}
+  .home-hero h1{font-size:clamp(30px,6.4vw,48px);line-height:1.12;font-weight:700;
+    letter-spacing:-.01em;margin-bottom:16px}
   .home-hero .sub{font-size:16px;color:var(--ink2);max-width:440px;margin:0 auto;line-height:1.6}
   .home-ctas{display:flex;flex-direction:column;gap:12px;margin-top:30px;align-items:center}
-  .home-cta{font-family:inherit;font-size:18px;font-weight:800;padding:17px 24px;border-radius:14px;
+  .home-cta{font-family:inherit;font-size:18px;font-weight:600;padding:17px 24px;border-radius:14px;
     width:100%;max-width:400px;border:0;cursor:pointer;background:var(--ink);color:#fff;
     box-shadow:0 6px 20px rgba(22,32,58,.18);transition:.15s}
   .home-cta:active{transform:scale(.98)}
   .home-cta.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;
     font-size:16px;padding:14px 24px}
   .home-divider{display:flex;align-items:center;gap:12px;margin:36px 0 0;
-    font-size:12.5px;font-weight:700;color:var(--muted)}
+    font-size:12.5px;font-weight:500;color:var(--muted)}
   .home-divider::before,.home-divider::after{content:"";flex:1;height:1px;background:var(--line)}
   .home-cards{display:flex;flex-direction:column;gap:14px;margin-top:16px}
   .hcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
@@ -631,11 +627,11 @@
   .hcard:active{transform:scale(.99)}
   .hcard .hc-emoji{font-size:34px;line-height:1;flex:none}
   .hcard .hc-body{flex:1;min-width:0}
-  .hcard .hc-title{display:block;font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin-bottom:4px}
+  .hcard .hc-title{display:block;font-size:18px;font-weight:600;color:var(--ink);letter-spacing:-.01em;margin-bottom:4px}
   .hcard .hc-desc{display:block;font-size:13.5px;color:var(--ink2);line-height:1.5}
   .hcard .hc-go{font-size:22px;color:var(--muted);flex:none}
   .hcard.feat{background:linear-gradient(135deg,#fff,#fbf3dc);border-color:var(--gold-ink)}
-  .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:800;
+  .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:600;
     letter-spacing:.03em;color:#fff;background:var(--accent);padding:3px 10px;border-radius:12px}
   .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7;padding-bottom:20px}
   .foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 0;margin-bottom:12px}
@@ -644,28 +640,28 @@
   .foot-links a:hover{color:var(--ink2);text-decoration:underline}
   .home-sec{padding:38px 0;text-align:center}
   .home-sec.hs-alt{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .hs-kicker{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent);margin-bottom:10px}
-  .home-sec h2{font-size:clamp(21px,4.6vw,27px);font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+  .hs-kicker{font-size:12px;font-weight:500;color:var(--accent);margin-bottom:10px}
+  .home-sec h2{font-size:clamp(21px,4.6vw,27px);font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
   .home-sec p{font-size:16px;line-height:1.75;color:var(--ink2);max-width:520px;margin:0 auto}
   .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
   /* ===== 시장 도구: 3년시계 / 버블밴드 ===== */
   .calc-tabs{display:flex;gap:8px;margin:16px 0 4px}
-  .calc-tabs button{flex:1;padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:700;font-size:15px;color:var(--muted);cursor:pointer}
+  .calc-tabs button{flex:1;padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:600;font-size:15px;color:var(--muted);cursor:pointer}
   .calc-tabs button.on{background:#1c2733;color:#fff;border-color:#1c2733}
   .calc-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px;margin:12px 0}
   .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:560px){.calc-grid{grid-template-columns:1fr}}
-  .calc-f label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .calc-f label{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:4px}
   .calc-f input{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:16px;box-sizing:border-box;background:#fff}
   .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}
-  .calc-run{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:#1c2733;color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+  .calc-run{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:#1c2733;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
   .calc-out{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px;margin:12px 0}
-  .calc-big{font-size:19px;font-weight:800;margin:0 0 4px}
+  .calc-big{font-size:19px;font-weight:700;margin:0 0 4px}
   .calc-big.good{color:#1a5276}.calc-big.bad{color:#a93226}.calc-big.mid{color:#b9770e}
   .calc-desc{font-size:13.5px;color:#444;margin:0 0 12px;line-height:1.6}
   .calc-kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
   .calc-kv b{font-variant-numeric:tabular-nums;white-space:nowrap}
-  .calc-warn{color:#a93226;font-weight:700;margin:0}
+  .calc-warn{color:#a93226;font-weight:500;margin:0}
   .calc-note{font-size:12.5px;color:var(--muted);line-height:1.75;margin:14px 2px}
   #clock-tbl small{font-weight:400;color:var(--muted)}
   #clock-tbl tbody tr.crow{cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
@@ -676,22 +672,22 @@
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .bb-det{display:none;font-size:12.5px;color:#444;line-height:1.75;background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
-  .bb-lab{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:700;color:#333}
+  .bb-lab{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:500;color:#333}
   .bb-track{flex:1;height:16px;background:#f1f3f5;border-radius:8px;position:relative}
   .bb-band{position:absolute;top:2px;bottom:2px;background:linear-gradient(90deg,#fdecea,#eaf3fb);border-left:3px solid #a93226;border-right:3px solid #1a5276;border-radius:3px}
   .bb-loan{position:absolute;top:-3px;bottom:-3px;width:3px;background:#1c2733;border-radius:2px}
-  .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:800;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#666}
+  .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:600;border-radius:8px;padding:3px 2px;background:#f1f3f5;color:#666}
   .bb-chip.hi{background:#eaf3fb;color:#1a5276}
   .bb-chip.lo{background:#fdecea;color:#a93226}
   /* 아공맵 스코어 */
   .sc-row{display:flex;align-items:center;gap:7px;margin:1px 0;padding:8px 0;cursor:pointer;text-decoration:none;color:inherit;border-bottom:1px solid #efeadd;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .sc-row:last-child{border-bottom:0}
-  .sc-go{flex:none;width:10px;text-align:right;color:#b9b3a4;font-weight:800}
-  .sc-lab{flex:none;width:78px;text-align:left;font-size:13px;font-weight:700;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sc-go{flex:none;width:10px;text-align:right;color:#b9b3a4;font-weight:600}
+  .sc-lab{flex:none;width:78px;text-align:left;font-size:13px;font-weight:600;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 아공맵 헤더 — 축(axis) 키 */
   .sc-lead{font-size:16px;line-height:1.75;color:var(--ink2);max-width:470px;margin:0 auto}
   .sc-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:13px 0 0}
-  .sc-chips span{font-size:11.5px;font-weight:700;color:var(--muted);background:#fff;
+  .sc-chips span{font-size:11.5px;font-weight:500;color:var(--muted);background:#fff;
     border:1px solid var(--line);border-radius:999px;padding:4px 11px}
   .sc-key{display:flex;max-width:430px;margin:18px auto 0;background:#fff;
     border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -701,19 +697,19 @@
     background:linear-gradient(90deg,rgba(26,82,118,.13),rgba(26,82,118,.02))}
   .sc-key .k-r{text-align:right;
     background:linear-gradient(90deg,rgba(169,50,38,.02),rgba(169,50,38,.13))}
-  .sc-key b{display:inline;font-size:12.5px;font-weight:800;letter-spacing:-.01em}
+  .sc-key b{display:inline;font-size:12.5px;font-weight:600;letter-spacing:-.01em}
   .sc-key .k-l b{color:#1a5276}
   .sc-key .k-r b{color:#a93226}
-  .sc-key i{display:inline;font-style:normal;font-size:11px;font-weight:700;color:var(--muted);margin-left:5px}
+  .sc-key i{display:inline;font-style:normal;font-size:11px;font-weight:500;color:var(--muted);margin-left:5px}
   .sc-keycap{font-size:11.5px;color:var(--muted);margin-top:8px}
-  .sc-hd{max-width:640px;margin:26px auto 8px;font-size:12px;font-weight:700;
+  .sc-hd{max-width:640px;margin:26px auto 8px;font-size:12px;font-weight:500;
     color:var(--muted);text-align:left;line-height:1.6}
   .sc-how{max-width:640px;margin:24px auto 0;text-align:left;
     border-top:1px solid var(--line);padding-top:13px}
-  .sc-how summary{list-style:none;cursor:pointer;font-size:13px;font-weight:800;
+  .sc-how summary{list-style:none;cursor:pointer;font-size:13px;font-weight:600;
     color:var(--ink);display:flex;align-items:center;gap:7px}
   .sc-how summary::-webkit-details-marker{display:none}
-  .sc-how summary::after{content:'▾';flex:none;font-size:11px;font-weight:700;
+  .sc-how summary::after{content:'▾';flex:none;font-size:11px;font-weight:600;
     color:var(--muted);line-height:1}
   .sc-how[open] summary::after{content:'▴'}
   .sc-how summary:hover{color:var(--accent)}
@@ -727,13 +723,13 @@
     margin-left:-.5px;background:rgba(22,32,58,.28);z-index:1}
   .sc-fill{position:absolute;top:0;bottom:0;border-radius:8px}
   .sc-zero{position:absolute;left:50%;top:0;bottom:0;width:1px;background:#c9c2b0;z-index:2}
-  .sc-val{flex:none;width:62px;text-align:right;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:800;border-radius:7px;padding:3px 2px;background:#f1f3f5;color:#666;white-space:nowrap}
+  .sc-val{flex:none;width:62px;text-align:right;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:600;border-radius:7px;padding:3px 2px;background:#f1f3f5;color:#666;white-space:nowrap}
   .sc-tier.t4{background:#fdecea;color:#a93226}
   .sc-tier.t3{background:#fff4e0;color:#b9770e}
   .sc-tier.t2{background:#f1eee6;color:#6f6a5c}
   .sc-tier.t1{background:#eaf3fb;color:#1a5276}
-  .sc-flag{flex:none;font-size:11px;font-weight:800;width:18px;text-align:center;border-radius:6px;line-height:1.5}
+  .sc-flag{flex:none;font-size:11px;font-weight:600;width:18px;text-align:center;border-radius:6px;line-height:1.5}
   .sc-flag.warn{background:#fdecea;color:#a93226}
   .sc-flag.watch{background:#f3ecfb;color:#7a4fb5}
   /* 좁은 화면: 고정폭 합이 커서 ▸(sc-go)가 화면 밖으로 밀려 가로 스크롤이 생겼다.
@@ -748,17 +744,17 @@
   .sc-det{display:none;font-size:12.5px;color:#444;line-height:1.75;background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:2px 0 10px}
   /* 생활권 입주예정 지도 */
   .lz-reg{margin:7px 0}
-  .lz-regname{font-size:12px;font-weight:800;color:var(--muted);margin:0 2px 5px}
+  .lz-regname{font-size:12px;font-weight:600;color:var(--muted);margin:0 2px 5px}
   .lz-tiles{display:flex;flex-wrap:wrap;gap:6px}
   .lz-tile{border:1px solid #e2dbc9;border-radius:9px;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
-  .lz-tn{font-size:12px;font-weight:800;color:#2b2620}
-  .lz-tv{font-size:11px;font-weight:700;color:#4a4a4a;font-variant-numeric:tabular-nums}
+  .lz-tn{font-size:12px;font-weight:600;color:#2b2620}
+  .lz-tv{font-size:11px;font-weight:500;color:#4a4a4a;font-variant-numeric:tabular-nums}
   .lz-row{display:flex;align-items:center;gap:8px;margin:1px 0;padding:5px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
-  .lz-lab{flex:none;width:80px;font-size:12.5px;font-weight:700;color:#333}
+  .lz-lab{flex:none;width:80px;font-size:12.5px;font-weight:500;color:#333}
   .lz-track{flex:1;height:15px;background:#f1f3f5;border-radius:8px;overflow:hidden}
   .lz-fill{height:100%;border-radius:8px}
-  .lz-val{flex:none;width:32px;text-align:right;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
-  .lz-jt{flex:none;width:66px;text-align:right;font-size:11px;font-weight:800}
+  .lz-val{flex:none;width:32px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  .lz-jt{flex:none;width:66px;text-align:right;font-size:11px;font-weight:600}
   .lz-det{background:#faf8f2;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.8;color:#444;margin-top:8px}
   /* --- 접근성 기본선 --- */
   a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,
@@ -865,44 +861,44 @@
 <polygon points="144.5,356.1 156.1,372.1 164.1,358.2" fill="#b8862f"/>
 <polygon points="78.0,219.0 70.0,237.0 86.0,237.0" fill="#b8862f"/>
 <polygon points="163.5,92.9 143.9,94.9 151.9,108.8" fill="#b8862f"/>
-<text x="230" y="205" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="15" fill="#6f6a5c">한 바퀴</text>
-<text x="230" y="233" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#1f8a70">지방 5년</text>
-<text x="230" y="260" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#c0392b">수도권 10년</text>
+<text x="230" y="205" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="15" fill="#6f6a5c">한 바퀴</text>
+<text x="230" y="233" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#1f8a70">지방 5년</text>
+<text x="230" y="260" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#c0392b">수도권 10년</text>
 <a href="#link1" class="cycbox" onclick="track('cycle_jump',{to:'link1'})" aria-label="공급 부족 — 고리① 근거로 이동">
 <rect class="cb" x="170.5" y="58.0" width="119.0" height="40" rx="12" fill="#fff" stroke="#16203a" stroke-width="2.5"/>
-<text x="230.0" y="84.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#16203a">공급 부족</text>
+<text x="230.0" y="84.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#16203a">공급 부족</text>
 <rect x="206.0" y="37.5" width="48.0" height="25.0" rx="12.5" fill="#16203a"/>
-<text x="230.0" y="54.4" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="13" fill="#fff">시작</text>
+<text x="230.0" y="54.4" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="13" fill="#fff">시작</text>
 </a>
 <a href="#link1" class="cycbox" onclick="track('cycle_jump',{to:'link1'})" aria-label="고리① 전세 상승 근거로 이동">
 <rect class="cb" x="311.6" y="134.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
-<text x="361.6" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#6c4ab6">전세 ↑</text>
+<text x="361.6" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#6c4ab6">전세 ↑</text>
 <circle cx="361.6" cy="126.0" r="12.5" fill="#6c4ab6"/>
-<text x="361.6" y="130.9" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="14" fill="#fff">1</text>
+<text x="361.6" y="130.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">1</text>
 </a>
 <a href="#link2" class="cycbox" onclick="track('cycle_jump',{to:'link2'})" aria-label="고리② 매매 상승 근거로 이동">
 <rect class="cb" x="311.6" y="286.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
-<text x="361.6" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#c0392b">매매 ↑</text>
+<text x="361.6" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#c0392b">매매 ↑</text>
 <circle cx="361.6" cy="278.0" r="12.5" fill="#c0392b"/>
-<text x="361.6" y="282.9" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="14" fill="#fff">2</text>
+<text x="361.6" y="282.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">2</text>
 </a>
 <a href="#link3" class="cycbox" onclick="track('cycle_jump',{to:'link3'})" aria-label="고리③④ 공급 증가와 리드타임 근거로 이동">
 <rect class="cb" x="165.3" y="362.0" width="129.4" height="40" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
-<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#1f8a70">신축공급</text>
+<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#1f8a70">신축공급</text>
 <rect x="211.0" y="341.5" width="38.0" height="25.0" rx="12.5" fill="#1f8a70"/>
-<text x="230.0" y="358.4" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="14" fill="#fff">3·4</text>
+<text x="230.0" y="358.4" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">3·4</text>
 </a>
 <a href="#link6" class="cycbox" onclick="track('cycle_jump',{to:'link6'})" aria-label="고리⑤ 입주가 전세를 누르는 근거로 이동">
 <rect class="cb" x="48.4" y="286.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
-<text x="98.4" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#6c4ab6">전세 ↓</text>
+<text x="98.4" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#6c4ab6">전세 ↓</text>
 <circle cx="98.4" cy="278.0" r="12.5" fill="#6c4ab6"/>
-<text x="98.4" y="282.9" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="14" fill="#fff">5</text>
+<text x="98.4" y="282.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">5</text>
 </a>
 <a href="#link2" class="cycbox" onclick="track('cycle_jump',{to:'link2'})" aria-label="고리⑥ 매매 하락 근거로 이동">
 <rect class="cb" x="48.4" y="134.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
-<text x="98.4" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16.5" fill="#c0392b">매매 ↓</text>
+<text x="98.4" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#c0392b">매매 ↓</text>
 <circle cx="98.4" cy="126.0" r="12.5" fill="#c0392b"/>
-<text x="98.4" y="130.9" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="14" fill="#fff">6</text>
+<text x="98.4" y="130.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">6</text>
 </a>
 </svg></div>
     <div class="tldr-text">
@@ -1216,7 +1212,7 @@
     <section class="adv-sec gsec gm-m" id="sec-week">
       <div class="adv-h"><h3>주간 아파트 동향</h3><span class="adv-badge">매주 발표</span><span class="adv-badge">전주 대비 %</span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
-      <p class="adv-note">가장 빠른 속보 지표다. 매주 발표되는 아파트 <b>매매·전세가격지수 변동률</b>로 지금 어느 지역이 오르고 내리는지 확인한다. <span style="color:#c0392b;font-weight:700">빨강=상승</span>, <span style="color:#1a5276;font-weight:700">파랑=하락</span>.</p>
+      <p class="adv-note">가장 빠른 속보 지표다. 매주 발표되는 아파트 <b>매매·전세가격지수 변동률</b>로 지금 어느 지역이 오르고 내리는지 확인한다. <span style="color:#c0392b;font-weight:600">빨강=상승</span>, <span style="color:#1a5276;font-weight:600">파랑=하락</span>.</p>
       <div class="adv-regsel"><select id="adv-week-reg" onchange="renderWeekSec()"></select></div>
       <div class="gt-m">
         <div class="map-head"><span class="map-lab" id="week-maplab"></span>
@@ -1236,7 +1232,7 @@
     <section class="adv-sec gsec gm-m" id="sec-month">
       <div class="adv-h"><h3>월간 아파트 동향</h3><span class="adv-badge">매월 발표</span><span class="adv-badge">전월 대비 %</span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('month','m')">지도</button><button data-v="g" onclick="gtSet('month','g')">그래프</button><button data-v="t" onclick="gtSet('month','t')">표</button></div></div>
-      <p class="adv-note">주간보다 표본이 넓고 안정적인 <b>월간 매매·전세가격지수 변동률</b>이다. 주간의 잔파도를 걷어내고 추세를 확인할 때 본다. <span style="color:#c0392b;font-weight:700">빨강=상승</span>, <span style="color:#1a5276;font-weight:700">파랑=하락</span>.</p>
+      <p class="adv-note">주간보다 표본이 넓고 안정적인 <b>월간 매매·전세가격지수 변동률</b>이다. 주간의 잔파도를 걷어내고 추세를 확인할 때 본다. <span style="color:#c0392b;font-weight:600">빨강=상승</span>, <span style="color:#1a5276;font-weight:600">파랑=하락</span>.</p>
       <div class="adv-regsel"><select id="adv-month-reg" onchange="renderMonthSec()"></select></div>
       <div class="gt-m">
         <div class="map-head"><span class="map-lab" id="month-maplab"></span>
@@ -1255,7 +1251,7 @@
 
     <section class="adv-sec gsec" id="sec-clock">
       <div class="adv-h"><h3>3년 공급시계</h3><span class="adv-badge">인허가→입주 약 3년</span></div>
-      <p class="adv-note">오늘 인허가받은 아파트는 약 3년 뒤(수도권은 더 늦게, 재건축은 5년+) 입주합니다. 즉 <b>3년 뒤 공급량은 이미 결정</b>되어 있습니다. 지금·1년 내 입주(분기 평균)와 최근 1년 인허가를 각 지역의 평년 범위와 비교해 <span style="color:#1a5276;font-weight:700">파랑=공급 많음(하락 압력)</span>, <span style="color:#c0392b;font-weight:700">빨강=공급 적음(상승 압력)</span>으로 칠합니다.</p>
+      <p class="adv-note">오늘 인허가받은 아파트는 약 3년 뒤(수도권은 더 늦게, 재건축은 5년+) 입주합니다. 즉 <b>3년 뒤 공급량은 이미 결정</b>되어 있습니다. 지금·1년 내 입주(분기 평균)와 최근 1년 인허가를 각 지역의 평년 범위와 비교해 <span style="color:#1a5276;font-weight:600">파랑=공급 많음(하락 압력)</span>, <span style="color:#c0392b;font-weight:600">빨강=공급 적음(상승 압력)</span>으로 칠합니다.</p>
       <div id="clock-lab" style="font-size:12px;color:var(--muted);margin:0 2px 8px"></div>
       <div class="adv-tblwrap"><table class="adv" id="clock-tbl"></table></div>
       <div class="src-note">자료: KOSIS 국토교통부 「주택건설실적통계」 인허가 · 한국부동산원 공동주택 입주(예정)물량 · 자동 갱신</div>
@@ -1321,7 +1317,7 @@
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('permit','g')">그래프</button><button data-v="t" onclick="gtSet('permit','t')">표</button></div></div>
 
   
-      <p class="adv-note">주택유형별 통계의 <b>아파트 인허가</b> 실적이다. 인허가는 3~5년 뒤 입주로 이어지는 <b>가장 이른 공급 신호</b>다. <span style="color:#a93226;font-weight:700">빨강=과거 저점 수준 미만(공급부족·상승압력 예고)</span>, <span style="color:#1a5276;font-weight:700">파랑=과거 고점 수준 이상(공급과다·하락압력 예고)</span>.</p>
+      <p class="adv-note">주택유형별 통계의 <b>아파트 인허가</b> 실적이다. 인허가는 3~5년 뒤 입주로 이어지는 <b>가장 이른 공급 신호</b>다. <span style="color:#a93226;font-weight:600">빨강=과거 저점 수준 미만(공급부족·상승압력 예고)</span>, <span style="color:#1a5276;font-weight:600">파랑=과거 고점 수준 이상(공급과다·하락압력 예고)</span>.</p>
       <div class="adv-regsel"><select id="adv-permit-reg" onchange="renderPermitSec()"></select></div>
       <div class="gt-g"><div class="chartwrap sm"><canvas id="permitChart"></canvas></div></div>
       <div class="gt-t">
@@ -1337,7 +1333,7 @@
     <section class="adv-sec gsec gm-g" id="sec-occ" style="display:none">
       <div class="adv-h"><h3>입주물량 (분기별)</h3><span class="adv-badge">미래 분기 포함</span>
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('occ','g')">그래프</button><button data-v="t" onclick="gtSet('occ','t')">표</button></div></div>
-      <p class="adv-note">분기별 아파트 준공(실적)과 입주예정 물량을 지역별 <b>적정물량 밴드</b>와 비교한다. 밴드 하단은 과거 <b>하락→상승 전환</b> 구간의 물량, 상단은 <b>상승→하락 전환</b> 구간의 물량이다(매매 실거래지수 전환점 실측·금리쇼크기 제외). <span style="color:#1a5276;font-weight:700">파랑=밴드 상단 초과(공급 과잉·하락 압력)</span>, <span style="color:#a93226;font-weight:700">빨강=밴드 하단 미만(공급 부족·상승 압력)</span>. 노란 행은 <b>입주예정</b> 기반으로, 준공 실적이 발표되면 자동으로 확정치로 바뀐다.</p>
+      <p class="adv-note">분기별 아파트 준공(실적)과 입주예정 물량을 지역별 <b>적정물량 밴드</b>와 비교한다. 밴드 하단은 과거 <b>하락→상승 전환</b> 구간의 물량, 상단은 <b>상승→하락 전환</b> 구간의 물량이다(매매 실거래지수 전환점 실측·금리쇼크기 제외). <span style="color:#1a5276;font-weight:600">파랑=밴드 상단 초과(공급 과잉·하락 압력)</span>, <span style="color:#a93226;font-weight:600">빨강=밴드 하단 미만(공급 부족·상승 압력)</span>. 노란 행은 <b>입주예정</b> 기반으로, 준공 실적이 발표되면 자동으로 확정치로 바뀐다.</p>
       <div class="adv-regsel"><select id="adv-occ-reg" onchange="renderOccSec()"></select></div>
       <div class="gt-g"><div class="chartwrap sm"><canvas id="occChart"></canvas></div></div>
       <div class="gt-t">
@@ -2717,11 +2713,11 @@ function drawNationMap(k){
     const px=x*(TW+G), py=y*(NH+VH*2+2+G);
     sv.push(`<g transform="translate(${px},${py})">`+
       `<rect width="${TW}" height="${NH}" rx="4" fill="${h?'#2b2620':(GRP_TINT[grpOf(c)]||'#fff')}" stroke="${h?'#2b2620':'#d8d0bc'}"/>`+
-      `<text x="${TW/2}" y="${NH-5}" text-anchor="middle" font-size="${nm.length>3?9.5:11}" font-weight="800" fill="${h?'#fff':'#2b2620'}">${nm}</text>`+
+      `<text x="${TW/2}" y="${NH-5}" text-anchor="middle" font-size="${nm.length>3?9.5:11}" font-weight="600" fill="${h?'#fff':'#2b2620'}">${nm}</text>`+
       `<rect y="${NH+1}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(ma,ref)}" stroke="#e2dbc9"/>`+
-      `<text x="${TW/2}" y="${NH+13}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
+      `<text x="${TW/2}" y="${NH+13}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
       `<rect y="${NH+VH+2}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(je,ref)}" stroke="#e2dbc9"/>`+
-      `<text x="${TW/2}" y="${NH+VH+14}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${tcol(je)}">${fmtV(je)}</text>`+
+      `<text x="${TW/2}" y="${NH+VH+14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${tcol(je)}">${fmtV(je)}</text>`+
       `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%</title></g>`);
   });
   // 시도(광역) 경계선 — 같은 시도가 아닌 이웃과 접한 변만 그린다
@@ -2794,15 +2790,15 @@ function renderTrendTables(k){
   if(TRANSP[k]){
     mx=['<table class="adv"><thead><tr><th>지역</th><th></th>'+R.map(r=>`<th>${T.lab(r.p)}</th>`).join('')+'</tr></thead><tbody>'];
     regs.forEach((r,ri)=>{
-      mx.push(`<tr><td rowspan="2">${r}</td><td style="position:static;text-align:left;color:var(--muted);font-weight:700">매매</td>`+R.map(row=>wkCell(row.ma[ri])).join('')+'</tr>');
-      mx.push(`<tr><td style="position:static;text-align:left;color:var(--muted);font-weight:700">전세</td>`+R.map(row=>wkCell(row.je[ri])).join('')+'</tr>');
+      mx.push(`<tr><td rowspan="2">${r}</td><td style="position:static;text-align:left;color:var(--muted);font-weight:600">매매</td>`+R.map(row=>wkCell(row.ma[ri])).join('')+'</tr>');
+      mx.push(`<tr><td style="position:static;text-align:left;color:var(--muted);font-weight:600">전세</td>`+R.map(row=>wkCell(row.je[ri])).join('')+'</tr>');
     });
   }else{
     mx=['<table class="adv"><thead><tr><th>'+T.col+'</th><th></th>'+regs.map(r=>`<th>${r}</th>`).join('')+'</tr></thead><tbody>'];
     for(let i=R.length-1;i>=0;i--){
       const row=R[i], label=T.lab(row.p);
-      mx.push(`<tr><td rowspan="2">${label}</td><td style="position:static;text-align:left;color:var(--muted);font-weight:700">매매</td>`+row.ma.map(wkCell).join('')+'</tr>');
-      mx.push(`<tr><td style="position:static;text-align:left;color:var(--muted);font-weight:700">전세</td>`+row.je.map(wkCell).join('')+'</tr>');
+      mx.push(`<tr><td rowspan="2">${label}</td><td style="position:static;text-align:left;color:var(--muted);font-weight:600">매매</td>`+row.ma.map(wkCell).join('')+'</tr>');
+      mx.push(`<tr><td style="position:static;text-align:left;color:var(--muted);font-weight:600">전세</td>`+row.je.map(wkCell).join('')+'</tr>');
     }
   }
   mx.push('</tbody></table>');
@@ -2981,8 +2977,8 @@ function renderClockSec(){
     let arrow='·',flowTxt='비교할 데이터가 부족합니다';
     if(nowA!=null&&nxtA!=null&&nowA>0){
       const d=(nxtA-nowA)/nowA;
-      arrow=d>0.1?'<span style="color:#1a5276;font-weight:700">▲ 늘어남</span>'
-        :d<-0.1?'<span style="color:#a93226;font-weight:700">▼ 줄어듦</span>':'— 비슷';
+      arrow=d>0.1?'<span style="color:#1a5276;font-weight:600">▲ 늘어남</span>'
+        :d<-0.1?'<span style="color:#a93226;font-weight:600">▼ 줄어듦</span>':'— 비슷';
       flowTxt='1년 내 예정 물량이 지금보다 '+(d>=0?'+':'−')+Math.abs(Math.round(d*100))+'%'
         +(d>0.1?' — 입주 부담이 커지는 방향입니다':d<-0.1?' — 입주 부담이 줄어드는 방향입니다':' — 비슷한 수준입니다');
     }
