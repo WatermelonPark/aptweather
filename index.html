@@ -723,12 +723,15 @@
   .sc-how .body{margin-top:9px;font-size:13px;line-height:1.9;color:var(--ink2)}
   .sc-src{max-width:640px;margin:14px auto 0;text-align:left;font-size:11.5px;
     line-height:1.7;color:var(--muted)}
-  .sc-track{flex:1;min-width:56px;height:14px;background:#dee4e1;border-radius:0;position:relative;overflow:hidden}
-  /* 0(적정 공급) 기준선 — 발산 막대라 중앙이 어디인지 보여야 길이가 읽힌다 */
-  .sc-track::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;
-    margin-left:-.5px;background:rgba(19,30,36,.28);z-index:1}
+  .sc-track{flex:1;min-width:56px;height:14px;background:#dee4e1;border-radius:0;position:relative}
   .sc-fill{position:absolute;top:0;bottom:0;border-radius:0}
-  .sc-zero{position:absolute;left:50%;top:0;bottom:0;width:1px;background:#bdc9c3;z-index:2}
+  /* 영점(적정 공급) 척추 — 막대는 카드 속 그래픽이 아니라 이 선에서
+     좌우로 자라난 조직이다. 행 간격을 건너 하나의 연속선으로 잇고,
+     블록 밖으로는 넘기지 않도록 첫 행 위·끝 행 아래만 잘라낸다. */
+  .sc-zero{position:absolute;left:50%;top:-16px;bottom:-16px;width:1px;
+    margin-left:-.5px;background:var(--ink);opacity:.5;z-index:2}
+  .sc-row:first-of-type .sc-zero{top:0}
+  .sc-row:last-of-type .sc-zero{bottom:0}
   .sc-val{flex:none;width:62px;text-align:right;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
   .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted);white-space:nowrap}
   .sc-tier.t4{background:#fdecea;color:#a93226}
