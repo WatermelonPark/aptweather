@@ -630,7 +630,7 @@
     padding:16px 10px 14px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:3px}
   .qm:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 20px rgba(22,32,58,.08)}
   .qm:active{transform:scale(.98)}
-  .qm-e{font-size:28px;line-height:1.2}
+  .qm-e{display:flex;align-items:center;justify-content:center;height:28px;color:var(--ink)}
   .qm-t{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
   .qm-d{font-size:11.5px;color:var(--muted);font-weight:700}
   .home-sec{padding:38px 0;text-align:center}
@@ -729,10 +729,10 @@
     <h1>아공맵</h1>
     <p class="sub">아파트 공급 지도, 아공맵. 국가 통계로 시장을 읽고, 3분 테스트로 내 감각을 확인하는 부동산 데이터 사이트.</p>
     <div class="qmenu">
-      <button class="qm" onclick="showView('test');track('home_qm',{to:'quiz'})"><span class="qm-e">📝</span><span class="qm-t">퀴즈</span><span class="qm-d">테스트 3종 · 각 3분</span></button>
-      <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e">📈</span><span class="qm-t">시황</span><span class="qm-d">주간·월간 지도</span></button>
-      <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e">📑</span><span class="qm-t">리포트</span><span class="qm-d">집값은 돌고 돈다</span></button>
-      <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e">📊</span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
+      <button class="qm" onclick="showView('test');track('home_qm',{to:'quiz'})"><span class="qm-e"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><circle cx="7.5" cy="12" r="4.6" fill="currentColor"/><circle cx="16.5" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="2.1"/></svg></span><span class="qm-t">퀴즈</span><span class="qm-d">테스트 3종 · 각 3분</span></button>
+      <button class="qm" onclick="goStats('market');track('home_qm',{to:'market'})"><span class="qm-e"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><rect x="2" y="2" width="9" height="9" rx="2" fill="#c0392b"/><rect x="13" y="2" width="9" height="9" rx="2" fill="#ddd7c8"/><rect x="2" y="13" width="9" height="9" rx="2" fill="#ddd7c8"/><rect x="13" y="13" width="9" height="9" rx="2" fill="#1a5276"/></svg></span><span class="qm-t">시황</span><span class="qm-d">주간·월간 지도</span></button>
+      <button class="qm" onclick="showView('report');track('home_qm',{to:'report'})"><span class="qm-e"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20.6 3.4v5.2h-5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="qm-t">리포트</span><span class="qm-d">집값은 돌고 돈다</span></button>
+      <button class="qm" onclick="goStats('basic');track('home_qm',{to:'stats'})"><span class="qm-e"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><rect x="3" y="13" width="5" height="8" rx="1.4" fill="currentColor"/><rect x="9.5" y="8" width="5" height="13" rx="1.4" fill="currentColor"/><rect x="16" y="3.5" width="5" height="17.5" rx="1.4" fill="currentColor"/></svg></span><span class="qm-t">통계보기</span><span class="qm-d">국가기관 원자료</span></button>
     </div>
   </div></header>
 
@@ -748,7 +748,7 @@
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">01 · 시작은 가볍게</div>
+    <div class="hs-kicker">10문항 · 3분 · 즉시 채점</div>
     <h2>내 부동산 감각, 몇 점일까?</h2>
     <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
     <div class="hs-cta">
@@ -759,24 +759,24 @@
   </div></section>
 
   <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">02 · 매주 확인</div>
+    <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
     <h2>이번 주, 어디가 오르고 내렸을까?</h2>
     <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">📈 이번 주 시세 지도 보기</button></div>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">이번 주 시세 지도 보기</button></div>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">03 · 원리를 이해</div>
+    <div class="hs-kicker">15개 시도 · 20년 데이터 검증</div>
     <h2>집값은 왜 돌고 도는가</h2>
     <p>공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올리고, 새 공급이 다시 전세를 누른다 — 15개 시도 20년 데이터로 이 사이클의 6개 고리를 하나씩 검증한 리포트입니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="showView('report')">📑 사이클 리포트 읽기</button></div>
+    <div class="hs-cta"><button class="home-cta" onclick="showView('report')">사이클 리포트 읽기</button></div>
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">04 · 직접 확인</div>
+    <div class="hs-kicker">KOSIS · 한국은행 · 국토교통부</div>
     <h2>국가기관 원자료 그대로</h2>
     <p>실거래지수·전세가율·인허가·착공·준공·금리를 지역·기간별로. 그래프↔표 전환, 전 지역 매트릭스, 행열전환까지 — 전부 KOSIS·한국은행 API로 매주 자동 갱신됩니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">📊 통계보기</button></div>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">통계 원자료 보기</button></div>
   </div></section>
 
 
