@@ -545,6 +545,13 @@
   .chartwrap.sm{height:300px;position:relative}
   .chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .chart-scroll .chartwrap.sm{min-width:100%}
+  .chart-frame{position:relative}
+  .chart-yaxis{position:absolute;left:0;top:0;z-index:2;pointer-events:none}
+  .chart-legend{display:flex;gap:18px;justify-content:center;font-size:12.5px;font-weight:800;color:var(--ink2);margin:0 0 8px}
+  .chart-legend span{display:inline-flex;align-items:center;gap:6px}
+  .chart-legend span::before{content:'';width:13px;height:13px;border-radius:4px}
+  .chart-legend .cl-ma::before{background:#e0564a}
+  .chart-legend .cl-je::before{background:#a98be0}
   @media(max-width:720px){.chartwrap.sm{height:240px}}
   .adv-tabs{display:flex;gap:8px;margin:2px 0 20px;flex-wrap:wrap}
   .adv-tabs button{font-family:inherit;font-size:13.5px;font-weight:800;padding:8px 18px;border-radius:999px;
@@ -1122,7 +1129,7 @@
           </div></div>
         <div class="tilemap" id="week-map"></div>
       </div>
-      <div class="gt-g"><div class="chart-scroll"><div class="chartwrap sm" id="weekChartBox"><canvas id="weekChart"></canvas></div></div><div class="map-hint">그래프를 옆으로 밀면 과거 시세까지 볼 수 있어요 ↔</div></div>
+      <div class="gt-g"><div class="chart-legend"><span class="cl-ma">매매</span><span class="cl-je">전세</span></div><div class="chart-frame"><canvas class="chart-yaxis" id="weekChartY"></canvas><div class="chart-scroll"><div class="chartwrap sm" id="weekChartBox"><canvas id="weekChart"></canvas></div></div></div><div class="map-hint">그래프를 옆으로 밀면 과거 시세까지 볼 수 있어요 ↔</div></div>
       <div class="gt-t">
         <div class="tr-row"><button class="trbtn" onclick="trFlip('week',this)">⇄ 행열 전환</button></div>
         <div class="adv-tblwrap matrix" id="adv-week-matrix"></div>
@@ -1142,7 +1149,7 @@
           </div></div>
         <div class="tilemap" id="month-map"></div>
       </div>
-      <div class="gt-g"><div class="chart-scroll"><div class="chartwrap sm" id="monthChartBox"><canvas id="monthChart"></canvas></div></div><div class="map-hint">그래프를 옆으로 밀면 과거 시세까지 볼 수 있어요 ↔</div></div>
+      <div class="gt-g"><div class="chart-legend"><span class="cl-ma">매매</span><span class="cl-je">전세</span></div><div class="chart-frame"><canvas class="chart-yaxis" id="monthChartY"></canvas><div class="chart-scroll"><div class="chartwrap sm" id="monthChartBox"><canvas id="monthChart"></canvas></div></div></div><div class="map-hint">그래프를 옆으로 밀면 과거 시세까지 볼 수 있어요 ↔</div></div>
       <div class="gt-t">
         <div class="tr-row"><button class="trbtn" onclick="trFlip('month',this)">⇄ 행열 전환</button></div>
         <div class="adv-tblwrap matrix" id="adv-month-matrix"></div>
@@ -1416,8 +1423,8 @@ new Chart(c4,{type:'bar',data:{labels:D.jratio_level.map(r=>r.region),
 let zc;const zn=Object.keys(D.zones);
 function dz(name){const z=D.zones[name];if(zc)zc.destroy();
   zc=new Chart(c5,{type:'line',data:{labels:z.t.map(fy),
-    datasets:[{data:z.maemae,borderColor:'#e0564a',pointRadius:0,borderWidth:2.4,tension:.3},
-      {data:z.jeonse,borderColor:'#a98be0',pointRadius:0,borderWidth:2.4,tension:.3}]},
+    datasets:[{data:z.maemae,borderColor:'#e0564a',fill:true,backgroundColor:areaGrad('#e0564a','26'),pointRadius:0,borderWidth:2.4,tension:.3},
+      {data:z.jeonse,borderColor:'#a98be0',fill:true,backgroundColor:areaGrad('#a98be0','26'),pointRadius:0,borderWidth:2.4,tension:.3}]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       scales:{y:{grid:{color:'#2c3760'},ticks:{color:'#9aa0b4'},title:{display:true,text:'지수',color:'#9aa0b4'}},
         x:{grid:{display:false},ticks:{color:'#9aa0b4',maxTicksLimit:8}}}}});}
@@ -1452,9 +1459,9 @@ new Chart(cL6,{type:'bar',data:{labels:D.link6_regional.map(d=>d.region),
 /* ===== cFlow supply chain ===== */
 const FC=D.flow_chain,noZero=a=>a.map(v=>v>0?v:null);
 new Chart(cFlow,{type:'line',data:{labels:FC.t,datasets:[
-  {label:'인허가',data:FC.permit,borderColor:'#2563eb',pointRadius:0,borderWidth:2.2,tension:.35},
-  {label:'착공',data:noZero(FC.start),borderColor:FLOW,pointRadius:0,borderWidth:2.2,tension:.35},
-  {label:'준공',data:noZero(FC.done),borderColor:STOCK,pointRadius:0,borderWidth:2.2,tension:.35}]},
+  {label:'인허가',data:FC.permit,borderColor:'#2563eb',fill:true,backgroundColor:areaGrad('#2563eb','1e'),pointRadius:0,borderWidth:2.2,tension:.35},
+  {label:'착공',data:noZero(FC.start),borderColor:FLOW,fill:true,backgroundColor:areaGrad(FLOW,'1e'),pointRadius:0,borderWidth:2.2,tension:.35},
+  {label:'준공',data:noZero(FC.done),borderColor:STOCK,fill:true,backgroundColor:areaGrad(STOCK,'1e'),pointRadius:0,borderWidth:2.2,tension:.35}]},
   options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,padding:14}}},
     scales:{y:{grid:{color:GRID},title:{display:true,text:'물량 (천 호)'}},
@@ -1463,8 +1470,8 @@ new Chart(cFlow,{type:'line',data:{labels:FC.t,datasets:[
 /* ===== cRate: 수도권 매매·전세 vs 금리(역축) ===== */
 (function(){const R=D.rate_overlay;
 new Chart(cRate,{type:'line',data:{labels:R.t.map(fy),datasets:[
-  {label:'매매',data:R.maemae,yAxisID:'y',borderColor:'#e0564a',pointRadius:0,borderWidth:2.6,tension:.3},
-  {label:'전세',data:R.jeonse,yAxisID:'y',borderColor:'#a98be0',pointRadius:0,borderWidth:2.6,tension:.3},
+  {label:'매매',data:R.maemae,yAxisID:'y',borderColor:'#e0564a',fill:true,backgroundColor:areaGrad('#e0564a','26'),pointRadius:0,borderWidth:2.6,tension:.3},
+  {label:'전세',data:R.jeonse,yAxisID:'y',borderColor:'#a98be0',fill:true,backgroundColor:areaGrad('#a98be0','26'),pointRadius:0,borderWidth:2.6,tension:.3},
   {label:'CD금리',data:R.rate,yAxisID:'yr',borderColor:'#e8b84b',pointRadius:0,borderWidth:2,
     borderDash:[5,4],tension:.3}]},
   options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
@@ -2712,13 +2719,28 @@ function areaGrad(color,topHex){
     return g;
   };
 }
-function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); GCH[id]=new Chart(document.getElementById(id),cfg); }
+function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); return GCH[id]=new Chart(document.getElementById(id),cfg); }
+// 가로 스크롤 추이 차트의 y축을 왼쪽에 고정 복제 (스크롤해도 항상 보이게)
+function drawFixedYAxis(T,chart){
+  const yc=document.getElementById(T.chart+'Y'); if(!yc||!chart||!chart.scales||!chart.scales.y)return;
+  const ys=chart.scales.y, dpr=window.devicePixelRatio||1, w=Math.ceil(ys.width), h=chart.height;
+  if(w<2||h<2){yc.width=0;yc.height=0;return;}
+  yc.width=w*dpr; yc.height=h*dpr; yc.style.width=w+'px'; yc.style.height=h+'px';
+  const ctx=yc.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);   // 카드 배경색으로 스크롤되는 y축 라벨을 가림
+  ctx.font='11px '+FONT; ctx.textAlign='right'; ctx.textBaseline='middle';
+  (ys.ticks||[]).forEach(t=>{
+    const y=ys.getPixelForValue(t.value);
+    ctx.fillStyle=t.value===0?'#a89f8a':MUTED;
+    ctx.fillText((t.value>0?'+':'')+t.value+'%', w-5, y);
+  });
+}
 function drawTrendChart(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
   const reg=advSel(T.sel,W.regions), ri=W.regions.indexOf(reg);
   const n=W.rows.length, box=document.getElementById(T.chart+'Box');
-  if(box)box.style.width=Math.max(box.parentElement.clientWidth,n*26)+'px';
-  mkChart(T.chart,{type:'line',
+  if(box)box.style.width=Math.max(box.parentElement.clientWidth,n*15)+'px';   // 15px/구간 — 타이트한 밀도
+  const chart=mkChart(T.chart,{type:'line',
     data:{labels:W.rows.map(r=>T.lab(r.p)),datasets:[
       {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','2e'),fill:'origin',
         borderWidth:2.5,pointRadius:n>40?1.5:3,pointHoverRadius:5,tension:.3,spanGaps:true},
