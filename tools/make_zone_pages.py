@@ -13,7 +13,8 @@ from urllib.parse import quote
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX = os.path.join(ROOT, 'index.html')
 SITE = 'https://www.agongmap.co.kr'
-H = 8   # 향후 2년(8분기) — 아공맵 점수와 동일 기준
+H = 8    # 앞으로 2년(8분기) 수요 기준 — 아공맵 점수와 동일
+LB = 12  # 과거 누적 3년(12분기) — 부족은 재고처럼 쌓이므로 1년으로는 부족
 W = (0.55, 0.35, 0.10)
 
 
@@ -56,7 +57,7 @@ def calc(adv, sts):
         dY = last_of(DM, ps); dQ = dY / 4.0
         need = refq * H * share
         dA = need - z['supply']
-        n4 = [r['v'][oi] for r in act[-4:] if r['v'][oi] is not None]
+        n4 = [r['v'][oi] for r in act[-LB:] if r['v'][oi] is not None]
         dB = (refq * len(n4) - (sum(n4) - dQ * len(n4))) * share if n4 else 0
         dC = 0; pv = None; plo = None
         if ps in P['regions']:
@@ -193,17 +194,17 @@ def build_page(r, allrows, prd, today):
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
     rows_html = ''.join([
-        '<tr><td class="lbl">향후 2년 입주예정<br><span class="note">생활권 실측 · 비중 55%%</span></td>'
+        '<tr><td class="lbl">앞으로 2년, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['need']), num(z['supply']), '#a93226' if r['dA'] > 0 else '#1a5276', signed(r['dA'])),
-        '<tr><td class="lbl">3년 뒤 인허가<br><span class="note">시도 배분 추정 · 비중 35%%</span></td>'
+        '<tr><td class="lbl">인허가 — 3~4년 뒤 입주<br><span class="note">시도 배분 추정 · 가중 0.35</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['plo'] * r['share']) if r['plo'] else '·',
             num((r['pv'] - r['dY']) * r['share']) if r['pv'] is not None else '·',
             '#a93226' if r['dC'] > 0 else '#1a5276', signed(r['dC'])),
-        '<tr><td class="lbl">최근 1년 실적<br><span class="note">시도 배분 추정 · 비중 10%%</span></td>'
+        '<tr><td class="lbl">최근 3년, 입주 실적<br><span class="note">시도 배분 추정 · 가중 0.10</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">·</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
-            num(r['refq'] * 4 * r['share']),
+            num(r['refq'] * LB * r['share']),
             '#a93226' if r['dB'] > 0 else '#1a5276', signed(r['dB'])),
     ])
 
@@ -274,7 +275,7 @@ def build_page(r, allrows, prd, today):
 <section><div class="wrap">
   <h2>한 줄 요약</h2>
   <p>%(head)s 앞으로 2년간 이 지역에 필요한 아파트는 약 <b>%(need)s세대</b>인데, 실제로 입주가 예정된 물량은 <b>%(sup)s세대</b>입니다.
-  여기에 3년 뒤 공급을 좌우할 인허가와 최근 1년 실적까지 더해 계산한 결과가 <b style="color:%(tcol)s">%(disp)s세대</b>입니다.</p>
+  여기에 3~4년 뒤 입주로 이어질 인허가와 최근 3년간 실제 입주량까지 더해 계산한 결과가 <b style="color:%(tcol)s">%(disp)s세대</b>입니다.</p>
   <p class="note">숫자가 <b>음수(−)</b>면 그만큼 <b>모자란다</b>는 뜻이고, 양수(+)면 남는다는 뜻입니다. 모자랄수록 가격에는 상승 압력으로, 남을수록 하락 압력으로 작용합니다.</p>
 </div></section>
 
@@ -293,7 +294,7 @@ def build_page(r, allrows, prd, today):
     <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
     <tbody>%(rows)s</tbody>
   </table>
-  <p class="note" style="margin-top:10px">모두 <b>멸실(철거)을 뺀 순공급</b> 기준입니다. %(dYtxt)s
+  <p class="note" style="margin-top:10px">과거를 <b>3년</b>으로 보는 이유는 부족이 재고처럼 쌓이기 때문입니다 — 몇 해 모자랐던 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실(철거)을 뺀 순공급</b> 기준입니다. %(dYtxt)s
   인허가와 최근 실적은 시군구 단위 통계가 존재하지 않아 <b>소속 시도(%(ps)s) 값을 인구 비중(%(sharep).1f%%)으로 배분한 추정치</b>입니다 —
   이 지역에 실제로 인허가가 몰렸는지까지는 알 수 없다는 한계가 있습니다. 반면 향후 2년 입주예정은 단지 주소 기반 실측이라 가장 정확합니다.</p>
 </div></section>

@@ -784,7 +784,7 @@
     <div class="sc-hd">권역별 지도 — 타일을 누르면 그 생활권의 상세 리포트로 갑니다.</div>
     <div id="score-map" style="text-align:left"></div>
 
-    <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. <b>향후 2년 입주예정</b>(생활권 실측·55%)·<b>3년 뒤 인허가</b>(35%)·최근 1년 실적(10%)의 부족분을 합산하며, 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 보유 부담이 크면 <b style="color:#a93226">⚠</b>·임대수익이 이자를 덮으면 <b style="color:#7a4fb5">★</b> 플래그로만 표시합니다.</div></details>
+    <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 2년 입주 예정</b>(생활권 실측, 가중 0.55)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 보유 부담이 크면 <b style="color:#a93226">⚠</b>·임대수익이 이자를 덮으면 <b style="color:#7a4fb5">★</b> 플래그로만 표시합니다.</div></details>
     <p class="sc-src">아공맵 자체 산출 · 재료: 한국부동산원 입주예정물량(단지 주소→생활권)·행안부 주민등록인구·인허가·주택멸실·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행)</p>
   </div></section>
 
@@ -3048,7 +3048,7 @@ function scCalc(){
     const share=Math.min(1,z.pop/(SP[ps]||z.pop||1));
     const dY=lastOf(DM&&DM.series,ps), dQ=dY/4;
     const dA=refq*H*share-z.supply;                       // 향후 2년
-    const n4=act.slice(-4).map(r=>r.v[oi]).filter(v=>v!=null);
+    const n4=act.slice(-12).map(r=>r.v[oi]).filter(v=>v!=null);   // 과거 3년 누적
     const dB=n4.length?(refq*n4.length-(n4.reduce((a,b)=>a+b,0)-dQ*n4.length))*share:0;
     let dC=0,pv=null; const pi=P.regions.indexOf(ps);
     if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}
