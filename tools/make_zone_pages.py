@@ -8,6 +8,7 @@ index.html의 ADV(livezone·occupancy·permits·bubble)와 STATS(전세가율·�
 사용:  python tools/make_zone_pages.py         # 생성 + sitemap 갱신
 """
 import io, os, re, json, sys, datetime
+from urllib.parse import quote
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX = os.path.join(ROOT, 'index.html')
@@ -226,7 +227,7 @@ def build_page(r, allrows, prd, today):
         "datePublished": today, "dateModified": today,
         "author": {"@type": "Organization", "name": "아공맵"},
         "publisher": {"@type": "Organization", "name": "아공맵"},
-        "mainEntityOfPage": '%s/zone/%s/' % (SITE, nm),
+        "mainEntityOfPage": '%s/zone/%s/' % (SITE, quote(nm)),
         "about": {"@type": "Place", "name": nm},
     }
 
@@ -239,13 +240,13 @@ def build_page(r, allrows, prd, today):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>%(title)s</title>
 <meta name="description" content="%(desc)s">
-<link rel="canonical" href="%(site)s/zone/%(nm)s/">
+<link rel="canonical" href="%(site)s/zone/%(enc)s/">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <meta name="theme-color" content="#16203a">
 <meta property="og:type" content="article">
 <meta property="og:title" content="%(nm)s 아파트 공급 분석 — %(tname)s">
 <meta property="og:description" content="%(desc)s">
-<meta property="og:url" content="%(site)s/zone/%(nm)s/">
+<meta property="og:url" content="%(site)s/zone/%(enc)s/">
 <meta property="og:image" content="%(site)s/og-brand.png">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">%(ld)s</script>
@@ -309,7 +310,7 @@ def build_page(r, allrows, prd, today):
 
 </body>
 </html>""" % dict(
-        title=title, desc=desc, site=SITE, nm=nm, tname=tname, tcol=tcol, disp=disp,
+        title=title, desc=desc, site=SITE, nm=nm, enc=quote(nm), tname=tname, tcol=tcol, disp=disp,
         ranktxt=ranktxt, prd=prd, head=head_line, need=num(r['need']), sup=num(z['supply']),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
         dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
@@ -323,7 +324,7 @@ def update_sitemap(names, today):
     x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/[^<]*</loc>.*?</url>', '', x, flags=re.S)
     block = ''.join(
         '\n  <url>\n    <loc>%s/zone/%s/</loc>\n    <lastmod>%s</lastmod>\n'
-        '    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>' % (SITE, n, today)
+        '    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>' % (SITE, quote(n), today)
         for n in names)
     x = x.replace('</urlset>', block + '\n</urlset>')
     io.open(p, 'w', encoding='utf-8', newline='\n').write(x)
