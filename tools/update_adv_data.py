@@ -185,18 +185,39 @@ def _fetch_period_raw(cfg, prd_de):
     })
 
 
+def _fetch_apt_permits(prd_de):
+    """아파트 인허가 누계(유형별 표 DT_MLTM_1948) → {지역: 호}.
+    C1_NM=지역, C2_NM=주택유형. 규모별 표(1952)는 주택 전체라 아파트만 못 뽑아 이 표를 쓴다."""
+    try:
+        data = kosis({'orgId': '116', 'tblId': 'DT_MLTM_1948',
+                      'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL', 'objL4': 'ALL',
+                      'itmId': 'ALL', 'prdSe': 'M', 'startPrdDe': prd_de, 'endPrdDe': prd_de})
+    except RuntimeError as e:
+        if 'err 30' in str(e):   # 해당 시점 데이터 없음
+            return {}
+        raise
+    out = {}
+    for row in data:
+        if (row.get('C2_NM') or '').strip() != '아파트': continue
+        if (row.get('C4_NM') or '').strip() != '아파트': continue
+        reg = (row.get('C1_NM') or '').strip()
+        if reg not in REG15: continue
+        try: out[reg] = int(float(row['DT']))
+        except (TypeError, ValueError, KeyError): continue
+    return out
+
+
 def fetch_permits():
     import datetime
-    cfg = CONF['permits_size']
     now = datetime.date.today()
     rows_out = []
     for y in range(2007, now.year + 1):
-        h1 = _fetch_period(cfg, '%d06' % y)
+        h1 = _fetch_apt_permits('%d06' % y)
         time.sleep(0.15)
         v1 = [h1.get(r) for r in REG15]
         if any(v is not None for v in v1):
             rows_out.append({'p': '%dH1' % y, 'v': v1})
-        cum = _fetch_period(cfg, '%d12' % y)
+        cum = _fetch_apt_permits('%d12' % y)
         time.sleep(0.15)
         vc = [cum.get(r) for r in REG15]
         if any(v is not None for v in vc):
