@@ -878,7 +878,10 @@ def fetch_livezone():
         if z not in LIVEZONE and zone_pop(z) >= 300000: zones.append(mk(z, '수도권'))
     zones.sort(key=lambda x: -x['inten'])
     td = datetime.date.today()
-    return {'prd': '%d.%02d' % (td.year, td.month), 'unit': '만명당 예정세대(향후 전량)', 'zones': zones}
+    spop = dict(sido_pop)
+    spop['수도권'] = sido_pop.get('서울', 0) + sido_pop.get('인천', 0) + sido_pop.get('경기', 0)
+    return {'prd': '%d.%02d' % (td.year, td.month), 'unit': '만명당 예정세대(향후 전량)',
+            'sidopop': spop, 'zones': zones}
 
 
 def main():
