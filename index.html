@@ -592,6 +592,10 @@
   /* ===== 홈 허브 ===== */
   .home{padding:0 0 40px}
   .home-hero{padding:56px 0 30px;text-align:center;position:relative;overflow:hidden}
+  .hero-map{position:absolute;inset:-8% -3%;z-index:0;opacity:.17;pointer-events:none;
+    -webkit-mask-image:radial-gradient(ellipse 64% 58% at 50% 44%,#000 28%,transparent 78%);
+    mask-image:radial-gradient(ellipse 64% 58% at 50% 44%,#000 28%,transparent 78%)}
+  .home-hero>.wrap{position:relative;z-index:1}
   .home-hero::after{content:"";position:absolute;left:50%;top:20px;width:300px;height:300px;
     transform:translateX(-50%);border:1.5px solid var(--line);border-radius:50%;opacity:.4;z-index:0}
   .home-hero .wrap{position:relative;z-index:1}
@@ -680,9 +684,38 @@
   .sc-row:last-child{border-bottom:0}
   .sc-go{flex:none;width:10px;text-align:right;color:#b9b3a4;font-weight:800}
   .sc-lab{flex:none;width:78px;text-align:left;font-size:13px;font-weight:700;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sc-how{margin:10px 2px 0;font-size:12.5px;color:var(--muted)}
-  .sc-how summary{cursor:pointer;font-weight:700}
-  .sc-how div{margin-top:6px;line-height:1.8;color:#555}
+  /* 아공맵 헤더 — 축(axis) 키 */
+  .sc-lead{font-size:16px;line-height:1.75;color:var(--ink2);max-width:470px;margin:0 auto}
+  .sc-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:13px 0 0}
+  .sc-chips span{font-size:11.5px;font-weight:700;color:var(--muted);background:#fff;
+    border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+  .sc-key{display:flex;max-width:430px;margin:18px auto 0;background:#fff;
+    border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sc-key>div{flex:1;padding:11px 14px}
+  .sc-key .k-l{text-align:left;border-right:1px solid #cfc9b8;
+    background:linear-gradient(90deg,rgba(169,50,38,.13),rgba(169,50,38,.02))}
+  .sc-key .k-r{text-align:right;
+    background:linear-gradient(90deg,rgba(26,82,118,.02),rgba(26,82,118,.13))}
+  .sc-key b{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em}
+  .sc-key .k-l b{color:#a93226}
+  .sc-key .k-r b{color:#1a5276}
+  .sc-key i{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:var(--muted);margin-top:3px}
+  .sc-keycap{font-size:11.5px;color:var(--muted);margin-top:8px}
+  .sc-hd{max-width:640px;margin:26px auto 8px;font-size:12px;font-weight:700;
+    color:var(--muted);text-align:left;line-height:1.6}
+  .sc-how{max-width:640px;margin:24px auto 0;text-align:left;
+    border-top:1px solid var(--line);padding-top:13px}
+  .sc-how summary{list-style:none;cursor:pointer;font-size:13px;font-weight:800;
+    color:var(--ink);display:flex;align-items:center;gap:7px}
+  .sc-how summary::-webkit-details-marker{display:none}
+  .sc-how summary::after{content:'';flex:none;width:6px;height:6px;
+    border-right:1.7px solid var(--muted);border-bottom:1.7px solid var(--muted);
+    transform:translateY(-2px) rotate(45deg);transition:transform .18s}
+  .sc-how[open] summary::after{transform:translateY(1px) rotate(-135deg)}
+  .sc-how .body{margin-top:9px;font-size:13px;line-height:1.9;color:var(--ink2)}
+  .sc-src{max-width:640px;margin:14px auto 0;text-align:left;font-size:11.5px;
+    line-height:1.7;color:var(--muted)}
+  @media (prefers-reduced-motion:reduce){.sc-how summary::after{transition:none}}
   .sc-track{flex:1;min-width:40px;height:14px;background:#f1f3f5;border-radius:8px;position:relative;overflow:hidden}
   .sc-fill{position:absolute;top:0;bottom:0;left:0;border-radius:8px}
   .sc-val{flex:none;width:62px;text-align:right;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -702,7 +735,6 @@
   .lz-tile{border:1px solid #e2dbc9;border-radius:9px;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .lz-tn{font-size:12px;font-weight:800;color:#2b2620}
   .lz-tv{font-size:11px;font-weight:700;color:#4a4a4a;font-variant-numeric:tabular-nums}
-  .lz-listhd{font-size:12px;color:var(--muted);font-weight:700;margin:14px 2px 6px}
   .lz-row{display:flex;align-items:center;gap:8px;margin:1px 0;padding:5px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .lz-lab{flex:none;width:80px;font-size:12.5px;font-weight:700;color:#333}
   .lz-track{flex:1;height:15px;background:#f1f3f5;border-radius:8px;overflow:hidden}
@@ -724,7 +756,7 @@
 <body>
 
 <div id="view-home">
-  <header class="home-hero"><div class="wrap">
+  <header class="home-hero"><div class="hero-map" id="hero-map" aria-hidden="true"></div><div class="wrap">
     <div class="home-eyebrow">공급을 보면 집값이 보인다</div>
     <h1>아공맵</h1>
     <p class="sub">아파트 공급 지도, 아공맵. 국가 통계로 시장을 읽고, 3분 테스트로 내 감각을 확인하는 부동산 데이터 사이트.</p>
@@ -737,14 +769,23 @@
   </div></header>
 
   <section class="home-sec" id="sec-score"><div class="wrap">
-    <div class="hs-kicker">아공맵 스코어 · 매주 자동 갱신</div>
+    <div class="hs-kicker">아공맵 · 매주 자동 갱신</div>
     <h2>지금 어디에 상승 압력이 쌓이고 있나</h2>
-    <p>전국을 <b>생활권 36곳</b>(통근·생활 단위, 인구 30만↑)으로 나눠, 적정 공급량 대비 <b>얼마나 모자라는지를 세대수</b>로 잰 아공맵 지표입니다. <b style="color:#a93226">−가 클수록 공급 부족(상승 압력)</b>, <b style="color:#1a5276">+면 공급 과잉</b>. 순위표는 수도권을 하나로 묶고, 아래 지도는 상세 생활권을 보여줍니다. <b>지역을 누르면 상세 리포트</b>가 열립니다.</p>
-    <details class="sc-how"><summary>산출 방법 자세히</summary><div>목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. <b>향후 2년 입주예정</b>(생활권 실측·55%)·<b>3년 뒤 인허가</b>(35%)·최근 1년 실적(10%)의 부족분을 합산하며, 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 보유 부담이 크면 <b style="color:#a93226">⚠</b>·임대수익이 이자를 덮으면 <b style="color:#7a4fb5">★</b> 플래그로만 표시합니다.</div></details>
+    <p class="sc-lead">전국 생활권의 아파트 공급이 <b>적정량 대비 몇 세대 모자라는지</b> 잰 아공맵 자체 지표입니다.</p>
+    <div class="sc-chips"><span>생활권 36곳</span><span>통근·생활 단위</span><span>인구 30만↑</span></div>
+    <div class="sc-key">
+      <div class="k-l"><b>− 공급 부족</b><i>상승 압력</i></div>
+      <div class="k-r"><b>공급 과잉 +</b><i>하락 압력</i></div>
+    </div>
+    <div class="sc-keycap">가운데 0 = 적정 공급량</div>
+
+    <div class="sc-hd">순위 — 수도권은 하나로 묶어 비교합니다. 지역을 누르면 상세 리포트가 열립니다.</div>
     <div id="score-wrap" style="text-align:left"></div>
-    <div class="lz-listhd">권역별 지도 · 타일을 누르면 그 생활권의 상세 리포트로 갑니다</div>
+    <div class="sc-hd">권역별 지도 — 타일을 누르면 그 생활권의 상세 리포트로 갑니다.</div>
     <div id="score-map" style="text-align:left"></div>
-    <p style="font-size:12px;color:var(--muted);margin:12px 0 0">아공맵 자체 산출 · 재료: 한국부동산원 입주예정물량(단지 주소→생활권)·행안부 주민등록인구·인허가·주택멸실·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행)</p>
+
+    <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. <b>향후 2년 입주예정</b>(생활권 실측·55%)·<b>3년 뒤 인허가</b>(35%)·최근 1년 실적(10%)의 부족분을 합산하며, 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 보유 부담이 크면 <b style="color:#a93226">⚠</b>·임대수익이 이자를 덮으면 <b style="color:#7a4fb5">★</b> 플래그로만 표시합니다.</div></details>
+    <p class="sc-src">아공맵 자체 산출 · 재료: 한국부동산원 입주예정물량(단지 주소→생활권)·행안부 주민등록인구·인허가·주택멸실·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행)</p>
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
@@ -3020,6 +3061,22 @@ function scCalc(){
             need:refq*H*share,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null};
   }).filter(Boolean);
 }
+function renderHeroMap(){
+  const el=document.getElementById('hero-map');
+  if(!el||typeof NATION_TILE==='undefined'||typeof mapColor!=='function')return;
+  const S=ADV.weekly&&ADV.weekly.sgg;
+  if(!S||!S.rows||!S.rows.length)return;
+  const row=S.rows[S.rows.length-1], v={};
+  (S.codes||[]).forEach((c,i)=>{v[c]=row.ma[i];});
+  const N=NATION_TILE, T=10, G=1.6;
+  const w=N.cols*(T+G)-G, h=N.rows*(T+G)-G;
+  const p=['<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="presentation" focusable="false">'];
+  N.t.forEach(a=>{
+    p.push('<rect x="'+(a[2]*(T+G)).toFixed(1)+'" y="'+(a[3]*(T+G)).toFixed(1)+'" width="'+T+'" height="'+T+'" rx="2.2" fill="'+mapColor(v[a[0]],0.4)+'"/>');
+  });
+  p.push('</svg>');
+  el.innerHTML=p.join('');
+}
 function renderScoreSec(){
   const sec=document.getElementById('sec-score');if(!sec)return;
   const zones=scCalc();
@@ -3102,6 +3159,7 @@ function renderBubbleSec(){
 }
 
 /* 모든 선언(QUIZSETS·curSet 등) 이후에 초기 라우팅 실행 — TDZ 방지 */
+renderHeroMap();    // 히어로 배경 = 이번 주 전국 시군구 지도
 renderScoreSec();   // 홈 섹션 — 뷰 진입과 무관하게 로드 시 렌더
 CHALLENGE=readChallenge();
 if(CHALLENGE){
