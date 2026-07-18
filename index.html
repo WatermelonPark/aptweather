@@ -2556,7 +2556,7 @@ function sggRanks(S,row,met){
   arr.forEach(([c],i)=>rk[c]=i+1);
   return {order:arr,rk};
 }
-function rankTables(S){
+function rankTables(S,unit){
   const rows=S.rows, cur=rows[rows.length-1];
   const prev=rows.length>1?rows[rows.length-2]:null;
   const cr=sggRanks(S,cur,'ma'), pr=prev?sggRanks(S,prev,'ma').rk:null;
@@ -2570,7 +2570,7 @@ function rankTables(S){
   }
   function tbl(title,items,base){
     const h=['<div class="rank-box"><div class="rank-h">'+title+'</div><div class="rank-wrap"><table class="rank-tbl">',
-      '<thead><tr><th>순위</th><th>지역</th><th>매매</th><th>전세</th><th>전주</th></tr></thead><tbody>'];
+      '<thead><tr><th>순위</th><th>지역</th><th>매매</th><th>전세</th><th>'+unit+'</th></tr></thead><tbody>'];
     items.forEach(([c,v],i)=>{
       const jv=je[c];
       h.push('<tr><td>'+(base+i)+'</td><td>'+SGG_QNAME[c]+'</td><td class="'+(v>0?'up':(v<0?'dn':''))+'">'+(v>0?'+':'')+v.toFixed(2)+'%</td><td class="'+(jv>0?'up':(jv<0?'dn':''))+'">'+(jv==null?'·':(jv>0?'+':'')+jv.toFixed(2)+'%')+'</td><td>'+dcell(c)+'</td></tr>');
@@ -2633,7 +2633,7 @@ function drawNationMap(k){
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=
     mapDateChip(row.p,'매매·전세 · '+T.unit)+
-    rankTables(S)+
+    rankTables(S,T.unit)+
     '<div class="map-scroll">'+sv.join('')+'</div>'+
     '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>'+
     '<div class="map-hint">지도를 옆으로 밀면 동쪽 지역까지 볼 수 있어요 ↔</div>';
