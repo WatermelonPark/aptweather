@@ -16,7 +16,7 @@ import urllib.request
 import urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INDEX = os.path.join(ROOT, 'index.html')
+DATA = os.path.join(ROOT, 'data.js')
 CHANGED = os.path.join(ROOT, '.stats_changed')
 API = 'https://api.buttondown.com/v1/emails'
 KEY = os.environ.get('BUTTONDOWN_API_KEY', '')
@@ -26,7 +26,7 @@ CORE = ['전국', '수도권', '서울', '경기', '인천', '세종', '부산',
 
 
 def read_adv():
-    c = io.open(INDEX, encoding='utf-8').read()
+    c = io.open(DATA, encoding='utf-8').read()
     i, j = c.find('/*ADV_DATA_START*/'), c.find('/*ADV_DATA_END*/')
     m = re.match(r'const ADV=(.*);$', c[i + 18:j], re.S)
     return json.loads(m.group(1))
@@ -124,7 +124,7 @@ def build_body(changed):
         parts.append('입주물량')
     if '금리' in changed:
         try:
-            c = io.open(INDEX, encoding='utf-8').read()
+            c = io.open(DATA, encoding='utf-8').read()
             i0, j0 = c.find('/*STATS_DATA_START*/'), c.find('/*STATS_DATA_END*/')
             st = json.loads(re.match(r'const STATS=(.*);$', c[i0 + 20:j0], re.S).group(1))
             sr = st['금리']['series']['CD(91일)']

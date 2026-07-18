@@ -3,11 +3,12 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v5'; // 앱 아이콘 병아리+지도 타일 v2. 옛 캐시를 버려야 새 아이콘이 뜬다.
+const VERSION = 'v6'; // data.js 분리(2026-07-19). 데이터가 인라인이던 옛 HTML 캐시를 반드시 버려야 한다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
   '/',
+  '/data.js',
   '/404.html',
   '/burini-test/',
   '/app_icon.png',
@@ -40,6 +41,21 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // GA·카카오 등은 통과
+
+  // data.js: HTML과 같은 데이터라 network-first (cache-first면 통계가 stale 된다)
+  // 정적 자산 규칙보다 반드시 먼저 판정할 것.
+  if (url.pathname === '/data.js') {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
 
   // HTML 문서: network-first
   if (req.mode === 'navigate') {

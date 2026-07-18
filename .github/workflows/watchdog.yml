@@ -23,7 +23,7 @@ jobs:
           python3 - <<'PY'
           import json, re, sys, urllib.request, datetime
 
-          URL = 'https://www.agongmap.co.kr/'
+          URL = 'https://www.agongmap.co.kr/data.js'
           # 주간 데이터는 매주 목요일 발표 → 배치가 목 오후/금 오전에 반영한다.
           # 정상 상태의 최대 경과일은 약 10일(다음 발표 직전). 3일 여유를 둬 13일로 잡는다.
           MAX_AGE = 13
@@ -32,12 +32,12 @@ jobs:
           try:
               html = urllib.request.urlopen(req, timeout=60).read().decode('utf-8', 'replace')
           except Exception as e:
-              print('FAIL: 사이트에 접근할 수 없습니다 - %s' % e)
+              print('FAIL: data.js에 접근할 수 없습니다 - %s' % e)
               sys.exit(1)
 
           m = re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});', html, re.S)
           if not m:
-              print('FAIL: 페이지에서 ADV 데이터 블록을 찾지 못했습니다 (배포가 깨졌을 수 있음)')
+              print('FAIL: data.js에서 ADV 데이터 블록을 찾지 못했습니다 (배포가 깨졌을 수 있음)')
               sys.exit(1)
           try:
               adv = json.loads(m.group(1))

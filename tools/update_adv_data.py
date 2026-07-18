@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """심화통계 데이터 자동 갱신 (KOSIS OpenAPI).
 
-index.html 안의 /*ADV_DATA_START*/ ... /*ADV_DATA_END*/ 블록을 최신 데이터로 교체한다.
+data.js 안의 /*ADV_DATA_START*/ ... /*ADV_DATA_END*/ 블록을 최신 데이터로 교체한다.
+(2026-07-19 분리: 데이터는 index.html이 아니라 data.js에 있다.)
 실운영 갱신은 로컬 작업 스케줄러(tools/run_weekly_update.bat, 매주 금 09:30)가 담당한다.
 GitHub Actions(.github/workflows/update-stats.yml)는 KOSIS의 해외 IP 차단 때문에
 갱신이 실패하며, 차단 해제 시를 대비한 폴백으로만 유지된다.
@@ -23,7 +24,7 @@ import urllib.request
 import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INDEX = os.path.join(ROOT, 'index.html')
+DATA = os.path.join(ROOT, 'data.js')
 API = 'https://kosis.kr/openapi/Param/statisticsParameterData.do'
 LIST_API = 'https://kosis.kr/openapi/statisticsList.do'
 KEY = os.environ.get('KOSIS_API_KEY', '')
@@ -72,7 +73,7 @@ BUBBLE_SHORT = {'서울특별시':'서울','부산광역시':'부산','대구광
                 '경상남도':'경남','제주도':'제주','제주특별자치도':'제주'}
 
 # ---- 기본통계(STATS) 월간 자동 갱신 --------------------------------------
-# index.html의 /*STATS_DATA_START*/const STATS={...};/*STATS_DATA_END*/ 블록을
+# data.js의 /*STATS_DATA_START*/const STATS={...};/*STATS_DATA_END*/ 블록을
 # 증분 갱신한다(최근 N개월만 조회해 기존 시계열 끝에 병합 — 소급 정정 반영).
 # 연간 통계(보급률·아파트건설·멸실·노후)와 금리(ECOS 필요)는 대상 아님.
 BASIC_CONF = {
@@ -704,12 +705,12 @@ def fetch_bubble():
             'regions': [r for r in BUBBLE_REGIONS if r in conv], 'conv': conv}
 
 
-# ---- index.html 재작성 ----------------------------------------------------
+# ---- data.js 재작성 ----------------------------------------------------
 START, END = '/*ADV_DATA_START*/', '/*ADV_DATA_END*/'
 BSTART, BEND = '/*STATS_DATA_START*/', '/*STATS_DATA_END*/'
 
 def read_current_stats():
-    c = io.open(INDEX, encoding='utf-8').read()
+    c = io.open(DATA, encoding='utf-8').read()
     i, j = c.find(BSTART), c.find(BEND)
     assert i >= 0 and j > i, 'STATS 마커를 찾을 수 없음'
     blob = c[i + len(BSTART):j]
@@ -718,10 +719,10 @@ def read_current_stats():
 
 
 def write_stats(stats):
-    c = io.open(INDEX, encoding='utf-8').read()
+    c = io.open(DATA, encoding='utf-8').read()
     i, j = c.find(BSTART), c.find(BEND)
     blob = 'const STATS=' + json.dumps(stats, ensure_ascii=False, separators=(',', ':')) + ';'
-    io.open(INDEX, 'w', encoding='utf-8').write(c[:i + len(BSTART)] + blob + c[j:])
+    io.open(DATA, 'w', encoding='utf-8').write(c[:i + len(BSTART)] + blob + c[j:])
 
 
 def update_rate(stats):
@@ -770,7 +771,7 @@ def update_basic():
     return changed
 
 def read_current_adv():
-    c = io.open(INDEX, encoding='utf-8').read()
+    c = io.open(DATA, encoding='utf-8').read()
     i, j = c.find(START), c.find(END)
     assert i >= 0 and j > i, 'ADV 마커를 찾을 수 없음'
     blob = c[i + len(START):j]
@@ -782,7 +783,7 @@ def write_adv(adv):
     c, i, j, _ = read_current_adv()
     blob = 'const ADV=' + json.dumps(adv, ensure_ascii=False, separators=(',', ':')) + ';'
     c2 = c[:i + len(START)] + blob + c[j:]
-    io.open(INDEX, 'w', encoding='utf-8').write(c2)
+    io.open(DATA, 'w', encoding='utf-8').write(c2)
 
 
 # ---- 생활권 입주예정 (odcloud 단지별 → 생활권 집계, 인구 대비 강도) ----
