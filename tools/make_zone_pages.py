@@ -138,7 +138,14 @@ CSS = """:root{--ink:#16203a;--ink2:#3b4569;--paper:#f6f4ee;--accent:#3d4a8a;--m
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
- line-height:1.75;-webkit-font-smoothing:antialiased}
+ line-height:1.75;-webkit-font-smoothing:antialiased;padding-bottom:66px}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--ink);
+ display:flex;justify-content:center;z-index:100;box-shadow:0 -4px 18px rgba(22,32,58,.28)}
+.nav-btn{flex:1;max-width:220px;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;gap:3px;color:#97a0b8;font-size:11.5px;font-weight:700;text-decoration:none}
+.nav-btn svg{display:block}
+.nav-btn:hover{color:#fff}
+.nav-btn:focus-visible{outline:2px solid #fff;outline-offset:-3px}
 .wrap{max-width:620px;margin:0 auto;padding:0 22px}
 header{padding:44px 0 28px;text-align:center}
 .chip{display:inline-block;font-size:12.5px;font-weight:800;letter-spacing:.08em;color:#fff;
@@ -340,6 +347,13 @@ def build_page(r, allrows, prd, today):
   <a href="/">agongmap.co.kr</a> · 자료: 한국부동산원 입주예정물량 · 국토교통부 주택건설실적 · 행정안전부 주민등록인구 · 한국은행
   <div class="disc">본 페이지는 공개된 국가통계를 가공한 정보 제공 목적의 자료이며, 특정 부동산의 매수·매도를 권유하거나 투자 수익을 보장하지 않습니다. 투자 판단과 그 결과는 이용자 본인에게 귀속됩니다.</div>
 </div></footer>
+
+<nav class="bottomnav">
+  <a class="nav-btn" href="/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>홈</span></a>
+  <a class="nav-btn" href="/#test"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="7.4" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7.4" cy="12" r="1.7" fill="currentColor"/><circle cx="16.6" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>퀴즈</span></a>
+  <a class="nav-btn" href="/#stats"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>통계</span></a>
+  <a class="nav-btn" href="/#report"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>리포트</span></a>
+</nav>
 
 </body>
 </html>""" % dict(
