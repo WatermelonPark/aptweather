@@ -13,7 +13,7 @@ from urllib.parse import quote
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX = os.path.join(ROOT, 'index.html')
 SITE = 'https://www.agongmap.co.kr'
-H = 8    # 앞으로 2년(8분기) 수요 기준 — 아공맵 점수와 동일
+H_MAX = 8  # 앞으로 최대 8분기 — 실제로는 데이터가 있는 미래 분기 수만 사용
 LB = 12  # 과거 누적 3년(12분기) — 부족은 재고처럼 쌓이므로 1년으로는 부족
 W = (0.55, 0.35, 0.10)
 
@@ -43,6 +43,18 @@ def calc(adv, sts):
     SP = LZ.get('sidopop') or {}
     act = [r for r in O['rows'] if not r.get('e')]
     ph = P['rows'][-2:]
+    today = datetime.date.today()
+    cur_q = today.year * 4 + (today.month - 1) // 3        # 현재 분기 인덱스
+    def qi(k):
+        m = re.match(r'^(\d{4})Q([1-4])$', k)
+        return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else None
+    # 전역 미래 분기 창 — 모든 생활권이 같은 창을 써야 절대량 비교가 성립
+    allq = {k for zz in LZ['zones'] for k in (zz.get('byq') or {})}
+    FUTQ = sorted([k for k in allq if qi(k) is not None and qi(k) > cur_q], key=qi)[:H_MAX]
+    HQ = max(1, len(FUTQ))
+    def fut_supply(zz):
+        b = zz.get('byq') or {}
+        return sum(b.get(k, 0) for k in FUTQ), HQ
     out = []
     for z in LZ['zones']:
         ps = '수도권' if z['region'] == '수도권' else (z.get('psido') or '수도권')
@@ -55,8 +67,9 @@ def calc(adv, sts):
             continue
         share = min(1.0, z['pop'] / (SP.get(ps) or z['pop'] or 1))
         dY = last_of(DM, ps); dQ = dY / 4.0
+        fsup, H = fut_supply(z)
         need = refq * H * share
-        dA = need - z['supply']
+        dA = need - fsup
         n4 = [r['v'][oi] for r in act[-LB:] if r['v'][oi] is not None]
         dB = (refq * len(n4) - (sum(n4) - dQ * len(n4))) * share if n4 else 0
         dC = 0; pv = None; plo = None
@@ -74,7 +87,7 @@ def calc(adv, sts):
         if cv and jr and loan:
             lo = jr / 100.0 * cv; hi = lo * 2
             flag = 'warn' if loan >= hi else ('watch' if loan <= lo else None)
-        out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot,
+        out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
                         flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band))
     out.sort(key=lambda r: -r['tot'])
     return out
@@ -93,8 +106,9 @@ def make_capital(rows):
                 'supply': sum(c['z']['supply'] for c in caps),
                 'sgg': [], 'q0': min(q0s) if q0s else '', 'q1': max(q1s) if q1s else '',
                 'span': 1 if q0s else 0}
-    for k in ('need', 'dA', 'dB', 'dC', 'tot'):
+    for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup'):
         agg[k] = sum(c[k] for c in caps)
+    agg['fq'] = max(c['fq'] for c in caps)
     agg['share'] = sum(c['share'] for c in caps)
     agg['ps'] = '수도권'
     agg['subs'] = sorted(caps, key=lambda c: -c['tot'])
@@ -194,9 +208,9 @@ def build_page(r, allrows, prd, today):
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
     rows_html = ''.join([
-        '<tr><td class="lbl">앞으로 2년, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
+        '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
-            num(r['need']), num(z['supply']), '#a93226' if r['dA'] > 0 else '#1a5276', signed(r['dA'])),
+            num(r['need']), num(r['fsup']), '#a93226' if r['dA'] > 0 else '#1a5276', signed(r['dA'])),
         '<tr><td class="lbl">인허가 — 3~4년 뒤 입주<br><span class="note">시도 배분 추정 · 가중 0.35</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['plo'] * r['share']) if r['plo'] else '·',
@@ -274,7 +288,7 @@ def build_page(r, allrows, prd, today):
 
 <section><div class="wrap">
   <h2>한 줄 요약</h2>
-  <p>%(head)s 앞으로 2년간 이 지역에 필요한 아파트는 약 <b>%(need)s세대</b>인데, 실제로 입주가 예정된 물량은 <b>%(sup)s세대</b>입니다.
+  <p>%(head)s 앞으로 %(fq)d개 분기 동안 이 지역에 필요한 아파트는 약 <b>%(need)s세대</b>인데, 실제로 입주가 예정된 물량은 <b>%(sup)s세대</b>입니다.
   여기에 3~4년 뒤 입주로 이어질 인허가와 최근 3년간 실제 입주량까지 더해 계산한 결과가 <b style="color:%(tcol)s">%(disp)s세대</b>입니다.</p>
   <p class="note">숫자가 <b>음수(−)</b>면 그만큼 <b>모자란다</b>는 뜻이고, 양수(+)면 남는다는 뜻입니다. 모자랄수록 가격에는 상승 압력으로, 남을수록 하락 압력으로 작용합니다.</p>
 </div></section>
@@ -322,7 +336,7 @@ def build_page(r, allrows, prd, today):
 </body>
 </html>""" % dict(
         title=title, desc=desc, site=SITE, nm=nm, enc=quote(nm), tname=tname, tcol=tcol, disp=disp,
-        ranktxt=ranktxt, prd=prd, head=head_line, need=num(r['need']), sup=num(z['supply']),
+        ranktxt=ranktxt, prd=prd, fq=r['fq'], head=head_line, need=num(r['need']), sup=num(r['fsup']),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
         dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
         flag=flag_html, nav=nav, ld=json.dumps(ld, ensure_ascii=False),

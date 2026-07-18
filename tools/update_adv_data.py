@@ -848,6 +848,7 @@ def fetch_livezone():
     supply = collections.defaultdict(int)
     detail = collections.defaultdict(lambda: collections.defaultdict(int))
     qset = collections.defaultdict(set)
+    byq = collections.defaultdict(lambda: collections.defaultdict(int))
     for pg in range(1, 9):
         d = http_json(OCC_API + '?' + urllib.parse.urlencode({'page': pg, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
         data = d.get('data', [])
@@ -861,8 +862,9 @@ def fetch_livezone():
             if not z: continue
             try: n = int(r.get('세대수') or 0)
             except (TypeError, ValueError): n = 0
+            q = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
             supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
-            qset[z].add((int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1))
+            qset[z].add(q); byq[z]['%dQ%d' % q] += n
     def mk(z, region):
         pop = zone_pop(z); s = supply.get(z, 0); qs = sorted(qset.get(z, []))
         span = ((qs[-1][0] - qs[0][0]) * 4 + (qs[-1][1] - qs[0][1]) + 1) if qs else 0
@@ -870,7 +872,8 @@ def fetch_livezone():
         return {'z': z, 'region': region, 'psido': LZ_PSIDO.get(z, '수도권'), 'pop': pop, 'supply': s,
                 'inten': round(s / (pop / 10000), 1) if pop else 0, 'span': span,
                 'q0': ('%dQ%d' % qs[0] if qs else ''), 'q1': ('%dQ%d' % qs[-1] if qs else ''),
-                'sgg': [[k, v] for k, v in det]}
+                'sgg': [[k, v] for k, v in det],
+                'byq': dict(byq.get(z, {}))}
     zones = []
     for z in LIVEZONE:
         if zone_pop(z) >= 300000: zones.append(mk(z, LZ_REGION.get(z, '기타')))
