@@ -714,7 +714,7 @@
   .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:800;border-radius:7px;padding:3px 2px;background:#f1f3f5;color:#666;white-space:nowrap}
   .sc-tier.t4{background:#fdecea;color:#a93226}
   .sc-tier.t3{background:#fff4e0;color:#b9770e}
-  .sc-tier.t2{background:#eef4fa;color:#3a7bd5}
+  .sc-tier.t2{background:#f1eee6;color:#6f6a5c}
   .sc-tier.t1{background:#eaf3fb;color:#1a5276}
   .sc-flag{flex:none;font-size:11px;font-weight:800;width:18px;text-align:center;border-radius:6px;line-height:1.5}
   .sc-flag.warn{background:#fdecea;color:#a93226}
@@ -773,7 +773,7 @@
     <div class="sc-hd">권역별 지도 — 타일을 누르면 그 생활권의 상세 리포트로 갑니다.</div>
     <div id="score-map" style="text-align:left"></div>
 
-    <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 보유 부담이 크면 <b style="color:#a93226">⚠</b>·임대수익이 이자를 덮으면 <b style="color:#7a4fb5">★</b> 플래그로만 표시합니다.</div></details>
+    <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 반대로 <b>이자가 월세보다 싸면</b> <b style="color:#7a4fb5">★ 실거주 유리</b> 플래그로만 표시합니다.</div></details>
     <p class="sc-src">아공맵 자체 산출 · 재료: 한국부동산원 입주예정물량(단지 주소→생활권)·행안부 주민등록인구·인허가·주택멸실·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행)</p>
   </div></section>
 
@@ -3093,9 +3093,12 @@ function renderScoreSec(){
   document.getElementById('score-wrap').innerHTML=units.map(u=>{
     const tv=scTier(u.tot);
     const w=Math.max(3,Math.sqrt(Math.abs(u.tot)/mx)*100);   // 좌측 정렬 바(√ 스케일)
-    const bar='<div class="sc-fill" style="width:'+w+'%;background:'+tv[2]+'"></div>';
+    // 막대 색은 tier가 아니라 '부호'로 — 균형 구간에서도 부족(빨강)/과잉(파랑)이 구분돼야
+    // 0을 지나며 막대가 다시 길어질 때 역순처럼 보이지 않는다.
+    const barCol=u.tot>=0?(u.tot>=30000?'#a93226':'#c0392b'):(u.tot<=-10000?'#1a5276':'#3a7bd5');
+    const bar='<div class="sc-fill" style="width:'+w+'%;background:'+barCol+'"></div>';
     const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>'
-      :u.flag==='watch'?'<span class="sc-flag watch" title="임대수익이 이자를 덮는 저평가 구간입니다">★</span>':'<span class="sc-flag"></span>';
+      :u.flag==='watch'?'<span class="sc-flag watch" title="대출 이자가 이 지역 월세보다 싼 구간 — 실거주라면 매수를 검토해볼 만합니다">★</span>':'<span class="sc-flag"></span>';
     const sub=u.name==='수도권'?' <span style="color:var(--muted);font-weight:400">('+u.zones.length+'개 생활권)</span>':'';
     return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/"><span class="sc-lab">'+u.name+'</span>'+fb
       +'<div class="sc-track">'+bar+'</div>'
