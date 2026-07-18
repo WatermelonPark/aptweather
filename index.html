@@ -137,8 +137,8 @@
   .v-weak{background:#fae3df;color:#b23022;border:1px solid #e7b3aa}
   .v-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 
-  .chartbox{background:#fff;border:1px solid var(--line);border-radius:0;
-    padding:22px 18px 16px;margin:22px 0;box-shadow:0 1px 4px rgba(19,30,36,.05)}
+  .chartbox{background:#fff;border-radius:0;
+    padding:22px 18px 16px;margin:22px 0;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
   .chartbox h4{font-size:14px;font-weight:600;margin-bottom:4px}
   .chartbox .cap{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
   .cwrap{position:relative;height:340px}.cwrap.tall{height:420px}
@@ -165,8 +165,8 @@
   .note b{color:var(--ink)}
 
   /* confidence panel */
-  .conf{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);
-    border-radius:0;padding:14px 18px;margin:18px 0;flex-wrap:wrap}
+  .conf{display:flex;align-items:center;gap:16px;
+    border-radius:0;padding:14px 18px;margin:18px 0;flex-wrap:wrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .conf .gauge{display:flex;gap:4px;flex:none}
   .conf .gauge i{width:11px;height:11px;border-radius:50%;background:var(--line)}
   .conf .gauge i.on{background:var(--stock)}
@@ -198,7 +198,7 @@
 
   /* 투자 호흡 2칼럼 */
   .hbox{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0}
-  .hcol{border:1px solid var(--line);border-radius:0;padding:20px 22px;background:#fff}
+  .hcol{border-radius:0;padding:20px 22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .hcol.short{border-top:4px solid #e0564a}
   .hcol.long{border-top:4px solid #2c5f9e}
   .hcol .htag{font-size:12.5px;font-weight:600;letter-spacing:.03em;color:var(--muted);margin-bottom:6px}
@@ -248,7 +248,7 @@
   .qmeta{margin-top:16px;font-size:13px;color:var(--muted)}
   /* 테스트 선택 카드 */
   .qpick{display:flex;flex-direction:column;gap:14px;margin:28px 0 8px;text-align:left}
-  .qpick-card{display:block;width:100%;background:#fff;border:2px solid var(--line);
+  .qpick-card{display:block;width:100%;background:#fff;border:1px solid var(--line);
     border-radius:0;padding:20px 22px;cursor:pointer;font-family:inherit;transition:all .15s;
     text-align:left;position:relative}
   .qpick-card:active{transform:scale(.99)}
@@ -277,7 +277,7 @@
   .qopts-lr{flex-direction:row;gap:12px}
   .qopts-lr .qopt{flex:1;text-align:center;display:flex;flex-direction:column;
     align-items:center;justify-content:center;min-height:96px}
-  .qopt{text-align:left;background:#fff;border:2px solid var(--line);border-radius:var(--r-touch);
+  .qopt{text-align:left;background:#fff;border:1px solid var(--line);border-radius:var(--r-touch);
     padding:18px 20px;font-size:15.5px;font-weight:600;color:var(--ink);cursor:pointer;
     font-family:inherit;transition:all .15s;line-height:1.4;position:relative}
   .qopt:active{transform:scale(.99)}
@@ -308,9 +308,9 @@
     padding:2px 12px;border-radius:0;margin-right:6px;letter-spacing:.01em;vertical-align:2px}
   .qgrade-desc{font-size:14.5px;line-height:1.7;color:var(--ink2);max-width:400px;margin:14px auto 28px}
   /* 결과 카드 */
-  .rcard{background:linear-gradient(160deg,#1a2235,#2a3550);border:1px solid rgba(255,255,255,.16);
+  .rcard{background:#18242a;border:1px solid rgba(255,255,255,.16);
     border-radius:0;padding:30px 24px 22px;max-width:380px;margin:14px auto 24px;
-    color:#fff;box-shadow:0 12px 32px rgba(19,30,36,.35)}
+    color:#fff;}
   .rcard .rc-head{font-size:13px;font-weight:600;color:rgba(232,235,242,.66)}
   .rcard .rc-emoji{font-size:54px;margin:12px 0 2px;line-height:1}
   .rcard .rc-score{font-size:46px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
@@ -330,10 +330,10 @@
     border-radius:0;padding:11px 14px;font-size:13.5px;line-height:1.5;margin-bottom:14px}
   .chalbar b{color:#6b4400}
   .versus{border-radius:0;padding:20px;margin:0 auto 18px;max-width:380px;
-    border:2px solid var(--line);background:#fff}
-  .versus.win{border-color:var(--stock);background:linear-gradient(160deg,#fff,#eafaf3)}
-  .versus.lose{border-color:var(--maemae);background:linear-gradient(160deg,#fff,#fdecea)}
-  .versus.draw{border-color:var(--muted);background:linear-gradient(160deg,#fff,#f5f7f6)}
+    border:1px solid var(--line);background:#fff}
+  .versus.win{border-color:var(--stock);background:#eafaf3}
+  .versus.lose{border-color:var(--maemae);background:#fdecea}
+  .versus.draw{border-color:var(--muted);background:#f5f7f6}
   .versus .vs-head{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:12px}
   .versus .vs-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px}
   .versus .vs-side{flex:1;text-align:center}
@@ -349,8 +349,8 @@
   .versus .vs-btn:active{transform:scale(.99)}
   .versus .vs-next{font-size:13.5px;font-weight:600;color:var(--stock)}
   /* 결과 → 다음 단계 유도 */
-  .nextstep{max-width:420px;margin:18px auto 0;background:#fff;border:1px solid var(--line);
-    border-radius:0;padding:22px 20px;text-align:left}
+  .nextstep{max-width:420px;margin:18px auto 0;
+    border-radius:0;padding:22px 20px;text-align:left;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .nextstep .ns-kicker{font-size:11.5px;font-weight:500;color:var(--muted);margin-bottom:8px}
   .nextstep .ns-title{font-size:17px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:8px}
   .nextstep .ns-desc{font-size:13.5px;color:var(--ink2);line-height:1.6;margin-bottom:16px}
@@ -388,8 +388,7 @@
   .dash{padding:0 0 40px}
   .dash .wrap{max-width:860px;margin:0 auto;padding:0 18px}
   .ctrl{background:#fff;border:1px solid var(--line);border-radius:var(--r-touch);
-    padding:14px 16px;margin-top:-20px;position:relative;z-index:2;
-    box-shadow:0 4px 20px rgba(0,0,0,.06)}
+    padding:14px 16px;margin-top:-20px;position:relative;z-index:2;}
   .ctrl-row{display:flex;align-items:center;gap:12px;padding:6px 0}
   .ctrl-row+.ctrl-row{border-top:1px solid var(--paper2)}
   .ctrl-row label{font-size:13px;font-weight:500;color:var(--ink2);width:40px;flex:none}
@@ -413,7 +412,7 @@
     border:1px solid var(--line);border-radius:0;padding:14px 10px 6px}
   .prange{text-align:center;font-size:12.5px;color:var(--muted);font-weight:600;margin:2px 0 18px}
   .prange b{color:var(--ink2)}
-  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:0;background:#fff}
+  .tbl-wrap{overflow-x:auto;border-radius:0;background:#fff;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
   #stat-tbl{width:100%;border-collapse:collapse;font-size:13px}
   #stat-tbl th{background:var(--paper2);color:var(--ink2);font-weight:600;
     padding:10px 12px;text-align:right;white-space:nowrap;position:sticky;top:0}
@@ -482,7 +481,7 @@
   .adv-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:0;
     background:var(--paper2);color:var(--muted);border:1px solid var(--line)}
   .adv-note{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.6}
-  .adv-tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:0;background:#fff}
+  .adv-tblwrap{overflow-x:auto;border-radius:0;background:#fff;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
   table.adv{border-collapse:collapse;font-size:12.5px;white-space:nowrap;width:100%}
   table.adv th,table.adv td{padding:6px 9px;border-bottom:1px solid var(--paper2);text-align:center;
     font-variant-numeric:tabular-nums}
@@ -513,7 +512,7 @@
   .adv-links{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
   .adv-links a{display:block;background:#fff;border:1px solid var(--line);border-radius:var(--r-touch);
     padding:12px 14px;text-decoration:none;transition:.15s}
-  .adv-links a:hover{border-color:var(--ink);transform:translateY(-1px)}
+  .adv-links a:hover{border-color:var(--ink);}
   .adv-links b{display:block;font-size:14px;color:var(--ink);margin-bottom:2px}
   .adv-links span{font-size:12px;color:var(--muted);line-height:1.5}
   /* ===== 그래프/표 토글 · 심화 탭 ===== */
@@ -535,7 +534,7 @@
   .map-rank{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 20px}
   @media(max-width:720px){.map-rank{grid-template-columns:1fr}}
   .rank-h{font-size:14.5px;font-weight:600;margin:0 0 8px}
-  .rank-wrap{background:#fff;border:1px solid var(--line);border-radius:0;overflow:hidden}
+  .rank-wrap{background:#fff;border-radius:0;overflow:hidden;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
   .rank-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
   .rank-tbl th,.rank-tbl td{padding:4px 8px;border-bottom:1px solid var(--paper2);
     text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -570,7 +569,7 @@
   .adv-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #stats-adv .adv-sec,#stats-more .adv-sec{margin-top:8px}
   #stats-market .adv-sec:first-child{margin-top:8px}
-  .subs{background:#fff;border:1.5px solid var(--line);border-radius:0;padding:16px 18px;margin:8px 0 26px}
+  .subs{border-radius:0;padding:16px 18px;margin:8px 0 26px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .subs b{font-size:15px}
   .subs p{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.5}
   .subs form{display:flex;gap:8px;flex-wrap:wrap}
@@ -610,8 +609,7 @@
   .home-hero .sub{font-size:16px;color:var(--ink2);max-width:440px;margin:0 auto;line-height:1.6}
   .home-ctas{display:flex;flex-direction:column;gap:12px;margin-top:30px;align-items:center}
   .home-cta{font-family:inherit;font-size:18px;font-weight:600;padding:17px 24px;border-radius:var(--r-touch);
-    width:100%;max-width:400px;border:0;cursor:pointer;background:var(--ink);color:#fff;
-    box-shadow:0 6px 20px rgba(19,30,36,.18);transition:.15s}
+    width:100%;max-width:400px;border:0;cursor:pointer;background:var(--ink);color:#fff;transition:.15s}
   .home-cta:active{transform:scale(.98)}
   .home-cta.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;
     font-size:16px;padding:14px 24px}
@@ -622,14 +620,14 @@
   .hcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
     background:#fff;border:1px solid var(--line);border-radius:0;padding:20px 22px;
     cursor:pointer;font-family:inherit;transition:.15s;position:relative}
-  .hcard:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 6px 20px rgba(19,30,36,.08)}
+  .hcard:hover{border-color:var(--ink);}
   .hcard:active{transform:scale(.99)}
   .hcard .hc-emoji{font-size:34px;line-height:1;flex:none}
   .hcard .hc-body{flex:1;min-width:0}
   .hcard .hc-title{display:block;font-size:18px;font-weight:600;color:var(--ink);letter-spacing:-.01em;margin-bottom:4px}
   .hcard .hc-desc{display:block;font-size:13.5px;color:var(--ink2);line-height:1.5}
   .hcard .hc-go{font-size:22px;color:var(--muted);flex:none}
-  .hcard.feat{background:linear-gradient(135deg,#fff,#f2f4f3);border-color:var(--muted)}
+  .hcard.feat{background:#fff;border-color:var(--ink2)}
   .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:600;
     letter-spacing:.03em;color:#fff;background:var(--ink);padding:3px 10px;border-radius:0}
   .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7;padding-bottom:20px}
@@ -647,14 +645,14 @@
   .calc-tabs{display:flex;gap:8px;margin:16px 0 4px}
   .calc-tabs button{flex:1;padding:12px 8px;border:1px solid var(--line);border-radius:var(--r-touch);background:#fff;font-weight:600;font-size:15px;color:var(--muted);cursor:pointer}
   .calc-tabs button.on{background:#1c2733;color:#fff;border-color:#1c2733}
-  .calc-card{background:#fff;border:1px solid var(--line);border-radius:0;padding:18px 16px;margin:12px 0}
+  .calc-card{border-radius:0;padding:18px 16px;margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:560px){.calc-grid{grid-template-columns:1fr}}
   .calc-f label{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:4px}
   .calc-f input{width:100%;padding:10px;border:1px solid var(--line);border-radius:var(--r-touch);font-size:16px;box-sizing:border-box;background:#fff}
   .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}
   .calc-run{width:100%;margin-top:14px;padding:13px;border:0;border-radius:var(--r-touch);background:#1c2733;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  .calc-out{background:#fff;border:1px solid var(--line);border-radius:0;padding:18px 16px;margin:12px 0}
+  .calc-out{border-radius:0;padding:18px 16px;margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .calc-big{font-size:19px;font-weight:700;margin:0 0 4px}
   .calc-big.good{color:#1a5276}.calc-big.bad{color:#a93226}.calc-big.mid{color:#b9770e}
   .calc-desc{font-size:13.5px;color:var(--ink2);margin:0 0 12px;line-height:1.6}
