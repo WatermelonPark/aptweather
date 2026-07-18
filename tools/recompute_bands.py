@@ -26,8 +26,8 @@ import update_adv_data as U  # noqa: E402
 
 SALE_IDX = {'orgId': '408', 'tblId': 'DT_KAB_11672_S1'}   # 아파트 매매 실거래가격지수
 SHOCK = (2021.75, 2023.5)    # 금리쇼크기 — 고점(상단) 전환만 제외
-MIN_GAP_Q = 5                # 전환점 최소 이격 (분기) — 미세 진동 배제
-AMP = 0.06                   # 극값 최소 진폭 (6%)
+MIN_GAP_Q = 6                # 전환점 최소 이격 (분기) — 미세 진동 배제
+AMP = 0.04                   # 극값 최소 진폭 (4%) — 완만한 사이클 저점도 포착
 HALF = 2                     # 입주물량 ±분기 평균 창
 
 def qnum(q):  y, k = q.split('Q'); return int(y) + (int(k) - 1) * 0.25
@@ -80,13 +80,26 @@ def turning_points(series):
     return thin(lows, lambda a, b: a < b), thin(highs, lambda a, b: a > b)
 
 
+PAST_FROM = (2011, 1)   # 밴드 재산출용 준공실적 확장 시작 (2011~2016 = 금리쇼크 없는 정상 사이클)
+
 def load_occupancy():
     src = io.open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
     adv = json.loads(re.search(r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/',
                                src, re.S).group(1))
     occ = adv['occupancy']
-    by = {reg: {row['p']: row['v'][i] for row in occ['rows']} for i, reg in enumerate(occ['regions'])}
-    return occ['regions'], by, occ.get('band', {}), occ.get('ref', {})
+    regions = occ['regions']
+    by = {reg: {row['p']: row['v'][i] for row in occ['rows']} for i, reg in enumerate(regions)}
+    # 과거 준공실적(2011~2016) 병합 — 사이트 데이터는 2017~ 뿐이라, 재산출 전환점 매칭을 위해 확장
+    first_p = occ['rows'][0]['p']                          # 보통 '2017Q1'
+    end = (int(first_p[:4]), (int(first_p[5]) - 1) * 3 + 1)   # 그 직전월까지
+    end = (end[0] - 1, 12) if end[1] == 1 else (end[0], end[1] - 1)
+    comp = U.fetch_completions(PAST_FROM, end, regions)
+    pastq = U._complete_quarters(comp, regions)           # {(y,q): {reg: 호}}
+    for (y, q), row in pastq.items():
+        label = '%dQ%d' % (y, q)
+        for reg, v in row.items():
+            by.setdefault(reg, {}).setdefault(label, v)
+    return regions, by, occ.get('band', {}), occ.get('ref', {})
 
 
 def occ_around(by, reg, q):
@@ -106,8 +119,9 @@ def main():
         series = idxq.get(reg)
         lows, highs = ([], [])
         if series: lows, highs = turning_points(trim_rebasing(series))
-        lows = [q for q in lows if qnum(q) >= 2017.0]                       # 저점: 회복점이라 쇼크기도 포함
-        highs = [q for q in highs if qnum(q) >= 2017.0 and not in_shock(q)]  # 고점: 쇼크기 제외
+        MINY = PAST_FROM[0]   # 입주물량 매칭 가능 하한 (준공 확장 시작연도)
+        lows = [q for q in lows if qnum(q) >= MINY]                       # 저점: 회복점이라 쇼크기도 포함
+        highs = [q for q in highs if qnum(q) >= MINY and not in_shock(q)]  # 고점: 쇼크기 제외
         lo_v = [x for x in (occ_around(occby, reg, q) for q in lows) if x]
         hi_v = [x for x in (occ_around(occby, reg, q) for q in highs) if x]
         lo = round(statistics.median(lo_v)) if lo_v else None
