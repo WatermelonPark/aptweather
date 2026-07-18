@@ -91,6 +91,9 @@ if errorlevel 1 (
   echo no changes
 )
 
+python tools\make_naver_post.py
+if errorlevel 1 echo WARN: make_naver_post failed
+
 python tools\send_newsletter.py
 if errorlevel 1 echo WARN: send_newsletter failed
 
