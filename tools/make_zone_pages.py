@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """생활권별 공급 리포트 페이지 생성 — /zone/<생활권>/index.html
 
-index.html의 ADV(livezone·occupancy·permits·bubble)와 STATS(전세가율·주택멸실)를 읽어
+data.js의 ADV(livezone·occupancy·permits·bubble)와 STATS(전세가율·주택멸실)를 읽어
 아공맵 점수 산출 근거를 서술형으로 풀어쓴 정적 페이지를 생활권 수만큼 만든다.
 홈의 요약 카드가 "무슨 말인지 모르겠다"는 문제를 풀고, 검색 유입(SEO) 창구가 된다.
 
@@ -11,7 +11,7 @@ import io, os, re, json, sys, datetime
 from urllib.parse import quote
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INDEX = os.path.join(ROOT, 'index.html')
+DATA = os.path.join(ROOT, 'data.js')
 SITE = 'https://www.agongmap.co.kr'
 H_MAX = 8  # 앞으로 최대 8분기 — 실제로는 데이터가 있는 미래 분기 수만 사용
 LB = 12  # 과거 누적 3년(12분기) — 부족은 재고처럼 쌓이므로 1년으로는 부족
@@ -19,7 +19,7 @@ W = (0.55, 0.35, 0.10)
 
 
 def load():
-    t = io.open(INDEX, encoding='utf-8').read()
+    t = io.open(DATA, encoding='utf-8').read()
     adv = json.loads(re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});\s*/\*ADV_DATA_END\*/', t, re.S).group(1))
     sts = json.loads(re.search(r'/\*STATS_DATA_START\*/const STATS=(\{.*?\});\s*/\*STATS_DATA_END\*/', t, re.S).group(1))
     return adv, sts

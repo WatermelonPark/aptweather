@@ -16,7 +16,7 @@
 사용:
   python tools/recompute_bands.py              # 진단 리포트만 (덮어쓰지 않음)
   python tools/recompute_bands.py --json        # 실측 제안 밴드를 JSON으로 출력
-  (index.html 반영은 값 검토 후 수동으로. 자동 --apply는 의도적으로 만들지 않음.)
+  (data.js 반영은 값 검토 후 수동으로. 자동 --apply는 의도적으로 만들지 않음.)
 """
 import io, os, re, sys, json, statistics, time
 
@@ -83,7 +83,7 @@ def turning_points(series):
 PAST_FROM = (2011, 1)   # 밴드 재산출용 준공실적 확장 시작 (2011~2016 = 금리쇼크 없는 정상 사이클)
 
 def load_occupancy():
-    src = io.open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
+    src = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()
     adv = json.loads(re.search(r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/',
                                src, re.S).group(1))
     occ = adv['occupancy']
