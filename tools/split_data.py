@@ -12,7 +12,14 @@ data.js를 손대지 않으므로 생활권 41장과 /cycle/은 아무 영향이
 
 실행: python tools/split_data.py   (update_adv_data.py --update 뒤에)
 """
-import io, json, os, re
+import io, json, os, re, sys
+
+# 배치는 chcp 65001을 하지만 다른 경로로 불릴 수도 있다. 콘솔 인코딩 때문에
+# 산출물을 다 만들고도 print에서 죽으면 배치가 exit 20으로 실패한다.
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'data.js')

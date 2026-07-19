@@ -1909,7 +1909,7 @@ function scCalc(){
   // (물량이 없는 분기는 '창 밖'이 아니라 공급 0으로 센다)
   const FUTQ=[...new Set(LZ.zones.flatMap(z=>Object.keys(z.byq||{})))]
     .map(k=>[k,qIdx(k)]).filter(x=>x[1]!=null&&x[1]>curQ)
-    .sort((a,b)=>a[1]-b[1]).slice(0,8).map(x=>x[0]);
+    .sort((a,b)=>a[1]-b[1]).slice(0,12).map(x=>x[0]);   // 12분기(3년) — tools/make_zone_pages.py H_MAX와 반드시 같아야 한다
   const H=Math.max(1,FUTQ.length);
   const futSum=z=>FUTQ.reduce((s,k)=>s+((z.byq||{})[k]||0),0);
   const lastOf=(sr,r)=>{const s=sr&&sr[r];if(!s)return 0;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return 0;};
@@ -1922,7 +1922,9 @@ function scCalc(){
     const refq=(O.ref&&O.ref[ps])||(band?(band[0]+band[1])/2:null); if(!refq)return null;
     const share=Math.min(1,z.pop/(SP[ps]||z.pop||1));
     const dY=lastOf(DM&&DM.series,ps), dQ=dY/4;
-    const dA=refq*H*share-futSum(z);                      // 전역 미래 창(H분기) 기준
+    // 창 길이 정규화: 자료가 H분기뿐이어도 12분기 기준으로 환산한다.
+    // 안 하면 데이터 커버리지가 늘 때마다 dA가 커져 아래 0.55 가중이 조용히 바뀐다.
+    const dA=(refq*H*share-futSum(z))*(12/H);
     const n4=act.slice(-12).map(r=>r.v[oi]).filter(v=>v!=null);   // 과거 3년 누적
     const dB=n4.length?(refq*n4.length-(n4.reduce((a,b)=>a+b,0)-dQ*n4.length))*share:0;
     let dC=0,pv=null; const pi=P.regions.indexOf(ps);
