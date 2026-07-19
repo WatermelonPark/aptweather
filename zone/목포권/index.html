@@ -49,6 +49,16 @@ th:first-child,td:first-child{text-align:left}
 thead th{background:#f1eee6;font-size:12.5px;color:var(--muted)}
 tbody tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;font-weight:700}
+.subsbox{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:16px 18px}
+.subsbox b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
+.subsbox p{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.5}
+.subsbox form{display:flex;gap:8px;flex-wrap:wrap}
+.subsbox input{flex:1;min-width:180px;font-family:inherit;font-size:14px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink2)}
+.subsbox button{font-family:inherit;font-size:14px;font-weight:800;padding:10px 18px;border-radius:10px;
+  border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.subsbox .consent{font-size:11.5px;line-height:1.55;margin:8px 0 0}
+.subsbox .subs-msg{display:block;font-size:12.5px;color:var(--muted);margin-top:8px}
 .cta{display:block;max-width:400px;margin:22px auto 0;text-align:center;text-decoration:none;
  background:var(--ink);color:#fff;font-size:16.5px;font-weight:800;padding:15px 22px;border-radius:14px}
 .cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);font-size:15px;padding:13px 20px}
@@ -118,6 +128,21 @@ footer a{color:var(--muted)}
 </div></section>
 
 <section><div class="wrap">
+  <div class="subsbox">
+    <b>📬 목포권 공급 수치가 갱신되면 메일로 받기</b>
+    <p>한국부동산원 주간·월간 통계와 입주물량이 갱신되는 날에만 보냅니다. 광고 메일이 아닙니다.</p>
+    <form onsubmit="return zsubs(this)">
+      <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
+      <button type="submit">알림 받기</button>
+    </form>
+    <span class="subs-msg" id="subs-msg"></span>
+    <p class="consent">구독하면 <b>이메일 주소</b>를 통계 갱신 알림 발송에 이용하며, 구독 해지 시 즉시 파기합니다.
+      발송은 미국 소재 Buttondown을 통해 이뤄집니다(국외 이전). 메일 하단 수신거부 링크로 언제든 즉시 해지할 수 있습니다.
+      자세한 내용은 <a href="/privacy/">개인정보처리방침</a>을 확인하세요.</p>
+  </div>
+</div></section>
+
+<section><div class="wrap">
   <h2>다른 생활권</h2>
   <div class="zlist"><a href="/zone/수도권/">수도권</a><a href="/zone/대구권/">대구권</a><a href="/zone/창원권/">창원권</a><a href="/zone/포항권/">포항권</a><a href="/zone/부산권/">부산권</a><a href="/zone/울산권/">울산권</a><a href="/zone/김해권/">김해권</a><a href="/zone/구미권/">구미권</a><a href="/zone/군산익산권/">군산익산권</a><a href="/zone/원주권/">원주권</a><a href="/zone/전주권/">전주권</a><a href="/zone/여순광권/">여순광권</a><a href="/zone/강릉권/">강릉권</a><a href="/zone/서산당진권/">서산당진권</a><a href="/zone/제주권/">제주권</a><a href="/zone/청주권/">청주권</a><a href="/zone/광주권/">광주권</a><a href="/zone/천안아산권/">천안아산권</a><a href="/zone/대전세종권/">대전세종권</a><a href="/zone/진주권/">진주권</a></div>
   <a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>
@@ -134,6 +159,19 @@ footer a{color:var(--muted)}
   <a class="nav-btn" href="/#stats"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>통계</span></a>
   <a class="nav-btn" href="/#report"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>리포트</span></a>
 </nav>
+
+<script>
+function zsubs(f){
+  var email=f.email.value.trim(); if(!email)return false;
+  var m=document.getElementById('subs-msg');
+  var fd=new FormData(); fd.append('email',email);
+  fetch('https://buttondown.com/api/emails/embed-subscribe/aptweather',{method:'POST',mode:'no-cors',body:fd})
+    .then(function(){ m.textContent='확인 메일을 보냈습니다. 메일함에서 구독을 완료해주세요!'; f.reset();
+      try{if(typeof gtag==='function')gtag('event','subscribe',{channel:'email',page:'zone'});}catch(e){} })
+    .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
+  return false;
+}
+</script>
 
 </body>
 </html>
