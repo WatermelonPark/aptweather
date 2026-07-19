@@ -245,11 +245,30 @@ def _gu_name(nm):
     return nm + '구'   # 강남→강남구, 중→중구
 
 def _fetch_weekly_one(cfg, weeks):
-    data = kosis({
-        'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
-        'objL1': 'ALL', 'itmId': 'ALL', 'prdSe': 'F',
-        'newEstPrdCnt': str(weeks),
-    })
+    """KOSIS 40,000셀 제한 회피: 52주 단위 기간 분할 조회 후 병합.
+
+    주간은 objL1=ALL이라 주당 ~240행이다. 156주를 한 번에 부르면 약 37,400셀로
+    한도에 여유가 6%뿐이고, 지역이 하나만 늘어도 그 주 통계가 통째로 멈춘다.
+    52주씩 나누면 청크당 ~12,500셀이라 3배 여유가 생긴다.
+    기간 파라미터를 못 쓰는 표는 예전 방식(newEstPrdCnt)으로 되돌아간다.
+    """
+    import datetime as _dt
+    base = {'orgId': cfg['orgId'], 'tblId': cfg['tblId'],
+            'objL1': 'ALL', 'itmId': 'ALL', 'prdSe': 'F'}
+    today = _dt.date.today()
+    cur = today - _dt.timedelta(weeks=weeks + 1)
+    data = []
+    while cur <= today:
+        end = min(cur + _dt.timedelta(weeks=51), today)
+        try:
+            data += kosis(dict(base, startPrdDe=cur.strftime('%Y%m%d'),
+                               endPrdDe=end.strftime('%Y%m%d')))
+        except RuntimeError as e:
+            if 'err 30' not in str(e): raise   # 미발표 구간만 허용
+        cur = end + _dt.timedelta(days=1)
+        time.sleep(0.25)
+    if not data:   # 기간 조회를 지원하지 않는 경우의 안전망
+        data = kosis(dict(base, newEstPrdCnt=str(weeks)))
     by, seoul, sgg = {}, {}, {}
     for row in data:
         code = (row.get('C1') or '').strip()
@@ -970,6 +989,13 @@ def main():
             weekly['rows'] += [r for r in cur['rows'] if r['p'] > new_last]
             if cur.get('seoul'): weekly['seoul'] = cur['seoul']
             if cur.get('sgg'): weekly['sgg'] = cur['sgg']
+        # 깊이 역행 방지: 이번에 짧게 받아졌더라도 이미 갖고 있던 과거는 살린다.
+        # 이게 없으면 통째 교체라 화면의 '3년' 탭이 주 단위로 나타났다 사라진다.
+        if weekly['rows'] and cur.get('rows'):
+            first = weekly['rows'][0]['p']
+            older = [r for r in cur['rows'] if r['p'] < first]
+            if older:
+                weekly['rows'] = (older + weekly['rows'])[-CONF['weekly'].get('weeks_hist', len(weekly['rows'])):]
         if weekly['rows'] and differs(weekly, cur):
             adv['weekly'] = weekly
             # '바이트가 달라짐'과 '새 주차가 나옴'은 다르다. 부동산원이 과거 주차를
@@ -986,6 +1012,12 @@ def main():
         monthly = fetch_monthly()
         mo_cur = adv.get('monthly') or {}
         mo_last = mo_cur['rows'][-1]['p'] if mo_cur.get('rows') else ''
+        # 주간과 같은 이유 — 월간도 깊이가 줄지 않게 과거를 살려 병합한다.
+        if monthly['rows'] and mo_cur.get('rows'):
+            m_first = monthly['rows'][0]['p']
+            m_older = [r for r in mo_cur['rows'] if r['p'] < m_first]
+            if m_older:
+                monthly['rows'] = (m_older + monthly['rows'])[-CONF['monthly'].get('months_hist', len(monthly['rows'])):]
         if monthly['rows'] and differs(monthly, adv.get('monthly')):
             adv['monthly'] = monthly
             # weekly와 같은 이유 — 소급 수정은 커밋만 하고 발송은 하지 않는다.
