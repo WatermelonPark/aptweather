@@ -60,6 +60,10 @@ def audit(path):
         'shadow': len([x for x in re.findall(r'box-shadow:\s*([^;}\n]+)', scope)
                        if 'none' not in x and '0 0 0' not in x]),
         'grad': len(re.findall(r'linear-gradient', scope)),
+        # 표 정렬: th와 td를 한 규칙으로 묶어 우측 정렬하면 헤더가 값처럼 붙어
+        # 열과 어긋나 보인다. thead th 별도 지정이 없으면 위반으로 본다.
+        'thalign': bool(re.search(r'th\s*,\s*td[^{]*\{[^{}]*text-align:\s*right', scope))
+                   and not re.search(r'thead\s+th[^{]*\{[^{}]*text-align', scope),
     }
 
 
@@ -89,6 +93,7 @@ def main():
         if a['gold']: flags.append('금색×%d' % a['gold'])
         if a['warm']: flags.append('웜색%d종' % len(a['warm']))
         if a['shadow'] > 1: flags.append('그림자×%d' % a['shadow'])
+        if a['thalign']: flags.append('표헤더우측정렬')
         print('%-26s %-4s %-5s %-4d %-4d %-4d %-7d %-4d %-5d %d'
               % (p[:26], 'O' if a['shared'] else '-', 'O' if a['font'] else 'X',
                  a['w800'], a['upper'], a['track'], nr, a['gold'], len(a['warm']), a['shadow']))
