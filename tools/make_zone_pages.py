@@ -87,9 +87,14 @@ def calc(adv, sts):
         if cv and jr and loan:
             lo = jr / 100.0 * cv; hi = lo * 2
             flag = 'warn' if loan >= hi else ('watch' if loan <= lo else None)
+        # 공급 원자료 자체가 없는 생활권 — '공급 0'이 아니라 '자료 없음'이다.
+        # 부족으로 계산하면 데이터 부재가 판정으로 둔갑한다(진주권 사례).
+        nd = not (z.get('supply') or 0) or not (z.get('sgg') or []) or not (z.get('byq') or {})
         out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
+                        nd=nd,
                         flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band))
-    out.sort(key=lambda r: -r['tot'])
+    # 자료 없는 곳은 순위 산정에서 빼고 뒤로 보낸다(순위 번호가 밀리지 않게).
+    out.sort(key=lambda r: (r.get('nd', False), -r['tot']))
     return out
 
 
@@ -191,8 +196,10 @@ footer a{color:var(--muted)}
 def build_page(r, allrows, prd, today):
     z = r['z']; nm = z['z']; ps = r['ps']
     tname, tcol = tier(r['tot'])
+    if r.get('nd'):
+        tname, tcol = '자료 없음', 'var(--muted)'
     lack = r['tot'] > 0
-    disp = signed(r['tot'])
+    disp = '—' if r.get('nd') else signed(r['tot'])
     sgg = z.get('sgg') or []
     subs = r.get('subs') or []
     if subs:
@@ -206,13 +213,17 @@ def build_page(r, allrows, prd, today):
         sublist = ''
         sgg_names = [s[0] for s in sgg]
     # 서술
-    head_line = ('%s은 앞으로 아파트가 <b>모자랄</b> 쪽입니다.' % nm) if lack else \
-                ('%s은 앞으로 아파트가 <b>남을</b> 쪽입니다.' % nm)
+    if r.get('nd'):
+        head_line = ('%s은 <b>입주예정 원자료에 단지가 없어</b> 수급을 산출하지 않습니다.' % nm)
+    else:
+        head_line = ('%s은 앞으로 아파트가 <b>모자랄</b> 쪽입니다.' % nm) if lack else \
+                    ('%s은 앞으로 아파트가 <b>남을</b> 쪽입니다.' % nm)
     if subs:
         ranktxt = '수도권 %d개 생활권 합계' % len(subs)
     else:
-        rk = [i for i, x in enumerate(allrows, 1) if x['z']['z'] == nm]
-        ranktxt = ('생활권 %d곳 중 %d위' % (len(allrows), rk[0])) if rk else ''
+        ranked = [x for x in allrows if not x.get('nd')]
+        rk = [i for i, x in enumerate(ranked, 1) if x['z']['z'] == nm]
+        ranktxt = ('생활권 %d곳 중 %d위' % (len(ranked), rk[0])) if rk else '순위 산정 제외'
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
     rows_html = ''.join([
@@ -254,9 +265,13 @@ def build_page(r, allrows, prd, today):
                    for x in navsrc if x['z']['z'] != nm)
 
     title = '%s 아파트 공급 분석 — 입주예정·인허가로 본 %s | 아공맵' % (nm, tname)
-    desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 향후 2년 입주예정 %s세대, 구성: %s. '
-            '한국부동산원·국토교통부 통계로 매주 자동 갱신.' % (
-                nm, disp, tname, num(z['supply']), ', '.join(sgg_names[:3]) or '—'))
+    if r.get('nd'):
+        desc = ('%s은 한국부동산원 입주예정물량 원자료에 등록된 단지가 없어 수급을 산출하지 않습니다. '
+                '자료가 확보되면 자동으로 반영됩니다.' % nm)
+    else:
+        desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 향후 2년 입주예정 %s세대, 구성: %s. '
+                '한국부동산원·국토교통부 통계로 매주 자동 갱신.' % (
+                    nm, disp, tname, num(z['supply']), ', '.join(sgg_names[:3]) or '—'))
 
     ld = {
         "@context": "https://schema.org", "@type": "Article",
@@ -294,16 +309,16 @@ def build_page(r, allrows, prd, today):
 
 <header><div class="wrap">
   <div class="chip">아공맵 생활권 리포트</div>
-  <h1>%(nm)s 아파트,<br>앞으로 얼마나 부족할까</h1>
+  <h1>%(h1)s</h1>
   <div class="big" style="color:%(tcol)s">%(disp)s세대</div>
   <div class="bigsub">적정 공급량 대비 누적 순부족 · <b style="color:%(tcol)s">%(tname)s</b> · %(ranktxt)s · 기준 %(prd)s</div>
 </div></header>
 
 <section><div class="wrap">
   <h2>한 줄 요약</h2>
-  <p>%(head)s 앞으로 %(fq)d개 분기 동안 이 지역에 필요한 아파트는 약 <b>%(need)s세대</b>인데, 실제로 입주가 예정된 물량은 <b>%(sup)s세대</b>입니다.
-  여기에 3~4년 뒤 입주로 이어질 인허가와 최근 3년간 실제 입주량까지 더해 계산한 결과가 <b style="color:%(tcol)s">%(disp)s세대</b>입니다.</p>
-  <p class="note">숫자가 <b>음수(−)</b>면 그만큼 <b>모자란다</b>는 뜻이고, 양수(+)면 남는다는 뜻입니다. 모자랄수록 가격에는 상승 압력으로, 남을수록 하락 압력으로 작용합니다.</p>
+  <p>%(head)s %(supsent)s
+  %(calcsent)s</p>
+  %(legend)s
 </div></section>
 
 <section><div class="wrap">
@@ -359,6 +374,18 @@ def build_page(r, allrows, prd, today):
 </html>""" % dict(
         title=title, desc=desc, site=SITE, nm=nm, enc=quote(nm), tname=tname, tcol=tcol, disp=disp,
         ranktxt=ranktxt, prd=prd, fq=r['fq'], head=head_line, need=num(r['need']), sup=num(r['fsup']),
+        calcsent=('' if r.get('nd') else
+                  ('여기에 3~4년 뒤 입주로 이어질 인허가와 최근 3년간 실제 입주량까지 더해 계산한 결과가 '
+                   '<b style="color:%s">%s세대</b>입니다.' % (tcol, disp))),
+        legend=('' if r.get('nd') else
+                '<p class="note">숫자가 <b>음수(−)</b>면 그만큼 <b>모자란다</b>는 뜻이고, 양수(+)면 남는다는 뜻입니다. '
+                '모자랄수록 가격에는 상승 압력으로, 남을수록 하락 압력으로 작용합니다.</p>'),
+        h1=(('%s 아파트,<br>입주예정 자료 없음' % nm) if r.get('nd')
+            else ('%s 아파트,<br>앞으로 얼마나 부족할까' % nm)),
+        supsent=('한국부동산원 입주예정물량 원자료에 이 지역 단지가 등록되어 있지 않아 수급 판정을 내리지 않습니다. '
+                 '공급이 없다는 뜻이 아니라 자료가 없다는 뜻입니다.' if r.get('nd') else
+                 ('앞으로 %d개 분기 동안 이 지역에 필요한 아파트는 약 <b>%s세대</b>인데, '
+                  '실제로 입주가 예정된 물량은 <b>%s세대</b>입니다.' % (r['fq'], num(r['need']), num(r['fsup'])))),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
         dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
         flag=flag_html, nav=nav, ld=json.dumps(ld, ensure_ascii=False),

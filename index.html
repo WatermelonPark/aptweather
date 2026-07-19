@@ -755,7 +755,9 @@
   .lz-reg{margin:7px 0}
   .lz-regname{font-size:12px;font-weight:600;color:var(--muted);margin:0 2px 5px}
   .lz-tiles{display:flex;flex-wrap:wrap;gap:6px}
-  .lz-tile{border:1px solid #d8dfdc;border-radius:0;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
+  .lz-tile.lz-nd{background:var(--paper);border:1px dashed var(--line);color:var(--muted)}
+.lz-tile.lz-nd .lz-tv{color:var(--muted);font-weight:700}
+.lz-tile{border:1px solid #d8dfdc;border-radius:0;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .lz-tn{font-size:12px;font-weight:600;color:#1b2426}
   .lz-tv{font-size:11px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
   .lz-row{display:flex;align-items:center;gap:8px;margin:1px 0;padding:5px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
@@ -3078,6 +3080,9 @@ function scCalc(){
   const act=O.rows.filter(r=>!r.e), ph=P.rows.slice(-2);
   return LZ.zones.map(z=>{
     const ps=z.region==='수도권'?'수도권':(z.psido||'수도권');
+    // 공급 원자료 자체가 없는 생활권 — '공급이 0'이 아니라 '자료가 없음'이다.
+    // 이걸 부족으로 계산하면 데이터 부재가 판정으로 둔갑한다(진주권 사례).
+    const nd=!(z.supply>0)||!(z.sgg&&z.sgg.length)||!Object.keys(z.byq||{}).length;
     const oi=O.regions.indexOf(ps); if(oi<0)return null;
     const band=O.band&&O.band[ps];
     const refq=(O.ref&&O.ref[ps])||(band?(band[0]+band[1])/2:null); if(!refq)return null;
@@ -3092,7 +3097,7 @@ function scCalc(){
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
     if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}
-    return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,
+    return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,nd:nd,
             q0:z.q0,q1:z.q1,span:z.span,dA:dA,dB:dB,dC:dC,tot:tot,flag:flag,lo:lo,hi:hi,
             need:refq*H*share,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null};
   }).filter(Boolean);
@@ -3115,8 +3120,10 @@ function renderHeroMap(){
 }
 function renderScoreSec(){
   const sec=document.getElementById('sec-score');if(!sec)return;
-  const zones=scCalc();
-  if(!zones||!zones.length){sec.style.display='none';return;}
+  const all=scCalc();
+  if(!all||!all.length){sec.style.display='none';return;}
+  // 원자료가 없는 생활권은 순위에서 제외한다(없는 걸 '부족'으로 셀 수 없다).
+  const zones=all.filter(z=>!z.nd), ndz=all.filter(z=>z.nd);
   const f=v=>v==null?'·':Math.round(v).toLocaleString();
   // ── 리스트: 수도권 통합 + 비수도권 생활권 ──
   const agg={};
@@ -3146,13 +3153,17 @@ function renderScoreSec(){
   // ── 지도: 상세 생활권 36개 ──
   const REGORD=['수도권','충청','강원','전라','경상','제주'];
   const byreg={}; zones.forEach(z=>{(byreg[z.region]=byreg[z.region]||[]).push(z);});
+  const byregND={}; ndz.forEach(z=>{(byregND[z.region]=byregND[z.region]||[]).push(z);});
   const mapEl=document.getElementById('score-map');
   if(mapEl)mapEl.innerHTML=REGORD.map(rg=>{
     const list=(byreg[rg]||[]).slice().sort((a,b)=>b.tot-a.tot);
-    if(!list.length)return '';
+    const ndl=(byregND[rg]||[]);
+    if(!list.length&&!ndl.length)return '';
     return '<div class="lz-reg"><div class="lz-regname">'+rg+'</div><div class="lz-tiles">'+
       list.map(z=>'<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+scColor(z.tot)+'" title="'+z.z+' · 누적 '+scFmt(z.tot)+'세대">'+
         '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+scFmt(z.tot)+'</span></a>').join('')+
+      ndl.map(z=>'<a class="lz-tile lz-nd" href="/zone/'+encodeURIComponent(z.z)+'/" title="'+z.z+' · 입주예정 원자료에 단지가 없어 산출하지 않습니다">'+
+        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">자료없음</span></a>').join('')+
       '</div></div>';
   }).join('');
   window.__SCZ=zones;
