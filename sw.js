@@ -54,7 +54,8 @@ self.addEventListener('fetch', (e) => {
   //  - chart-4.4.1.umd.js는 파일명에 버전이 박혀 있어 cache-first로 안전하다.
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
   if (url.pathname === '/data.js' || url.pathname === '/app.css'
-      || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json') {
+      || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json'
+      || url.pathname === '/data-trend.json') {
     e.respondWith(
       fetch(req)
         .then((res) => {

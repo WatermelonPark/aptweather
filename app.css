@@ -354,7 +354,7 @@
     font-variant-numeric:tabular-nums;color:var(--ink)}
   #stat-tbl td:first-child{text-align:left;font-weight:600;color:var(--ink2)}
   #stat-tbl tr:nth-child(even) td{background:#f9fafa}
-  .chg-up{color:#d2342a}.chg-dn{color:#1565c0}
+  .chg-up{color:#d2342a}.chg-dn{color:var(--gwaing)}
   .src-note{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.6}
   @media(max-width:560px){
     .ctrl-row{flex-wrap:wrap}
