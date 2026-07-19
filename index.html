@@ -1678,16 +1678,16 @@ function drawTrendChart(k){
   if(box)box.style.width=Math.max(box.parentElement.clientWidth,n*15)+'px';   // 15px/구간 — 타이트한 밀도
   const chart=mkChart(T.chart,{type:'line',
     data:{labels:W.rows.map(r=>T.lab(r.p)),datasets:[
-      {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','2e'),fill:'origin',
-        borderWidth:2.2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.3,spanGaps:true},
-      {label:'전세',data:W.rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:areaGrad('#a98be0','2e'),fill:'origin',
-        borderWidth:2.2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.3,spanGaps:true}]},
+      {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','1a'),fill:'origin',
+        borderWidth:2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true},
+      {label:'전세',data:W.rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:areaGrad('#a98be0','1a'),fill:'origin',
+        borderWidth:2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw==null?'-':(c.raw>0?'+':'')+Number(c.raw).toFixed(2)}%`}}},
       scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:Math.max(8,Math.ceil(n/6))}},
-        y:{grid:{color:c=>c.tick.value===0?'#98aba1':GRID,lineWidth:c=>c.tick.value===0?1.5:1},
-          ticks:{callback:v=>(v>0?'+':'')+v+'%'},title:{display:false}}}}});
+        y:{grid:{color:c=>c.tick.value===0?INK:GRID,lineWidth:c=>c.tick.value===0?1.2:1},
+          ticks:{callback:v=>(v>0?'+':'')+v+'%',maxTicksLimit:6},title:{display:false}}}}});
   drawFixedYAxis(T,chart);
 }
 function renderWeekSec(){ renderTrendTables('week'); drawTrendChart('week'); drawTrendMap('week'); }
@@ -1904,9 +1904,6 @@ function scCalc(){
   const act=O.rows.filter(r=>!r.e), ph=P.rows.slice(-2);
   return LZ.zones.map(z=>{
     const ps=z.region==='수도권'?'수도권':(z.psido||'수도권');
-    // 공급 원자료 자체가 없는 생활권 — '공급이 0'이 아니라 '자료가 없음'이다.
-    // 이걸 부족으로 계산하면 데이터 부재가 판정으로 둔갑한다(진주권 사례).
-    const nd=!(z.supply>0)||!(z.sgg&&z.sgg.length)||!Object.keys(z.byq||{}).length;
     const oi=O.regions.indexOf(ps); if(oi<0)return null;
     const band=O.band&&O.band[ps];
     const refq=(O.ref&&O.ref[ps])||(band?(band[0]+band[1])/2:null); if(!refq)return null;
@@ -1921,7 +1918,7 @@ function scCalc(){
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
     if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}
-    return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,nd:nd,
+    return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,
             q0:z.q0,q1:z.q1,span:z.span,dA:dA,dB:dB,dC:dC,tot:tot,flag:flag,lo:lo,hi:hi,
             need:refq*H*share,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null};
   }).filter(Boolean);
@@ -1946,8 +1943,7 @@ function renderScoreSec(){
   const sec=document.getElementById('sec-score');if(!sec)return;
   const all=scCalc();
   if(!all||!all.length){sec.style.display='none';return;}
-  // 원자료가 없는 생활권은 순위에서 제외한다(없는 걸 '부족'으로 셀 수 없다).
-  const zones=all.filter(z=>!z.nd), ndz=all.filter(z=>z.nd);
+  const zones=all;
   const f=v=>v==null?'·':Math.round(v).toLocaleString();
   // ── 리스트: 수도권 통합 + 비수도권 생활권 ──
   const agg={};
@@ -1977,17 +1973,13 @@ function renderScoreSec(){
   // ── 지도: 상세 생활권 36개 ──
   const REGORD=['수도권','충청','강원','전라','경상','제주'];
   const byreg={}; zones.forEach(z=>{(byreg[z.region]=byreg[z.region]||[]).push(z);});
-  const byregND={}; ndz.forEach(z=>{(byregND[z.region]=byregND[z.region]||[]).push(z);});
   const mapEl=document.getElementById('score-map');
   if(mapEl)mapEl.innerHTML=REGORD.map(rg=>{
     const list=(byreg[rg]||[]).slice().sort((a,b)=>b.tot-a.tot);
-    const ndl=(byregND[rg]||[]);
-    if(!list.length&&!ndl.length)return '';
+    if(!list.length)return '';
     return '<div class="lz-reg"><div class="lz-regname">'+rg+'</div><div class="lz-tiles">'+
       list.map(z=>'<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+scColor(z.tot)+'" title="'+z.z+' · 누적 '+scFmt(z.tot)+'세대">'+
         '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+scFmt(z.tot)+'</span></a>').join('')+
-      ndl.map(z=>'<a class="lz-tile lz-nd" href="/zone/'+encodeURIComponent(z.z)+'/" title="'+z.z+' · 입주예정 원자료에 단지가 없어 산출하지 않습니다">'+
-        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">자료없음</span></a>').join('')+
       '</div></div>';
   }).join('');
   window.__SCZ=zones;

@@ -338,8 +338,11 @@
   .aux button{border:1px dashed var(--line);background:#fff;border-radius:var(--r-touch);
     padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer}
   .aux button.on{background:#f7f8f8;border-color:var(--muted);border-style:solid;color:#9a7000}
+  /* 차트도 상자가 아니라 괘선으로 연다(6단계 카드 해체와 동일 규칙).
+   좌우 테두리는 어차피 가로 스크롤로 시야를 벗어나 아무 일도 하지 않았다. */
   .chartwrap{position:relative;height:320px;margin:10px 0 4px;background:#fff;
-    border:1px solid var(--line);border-radius:0;padding:14px 10px 6px}
+    border:0;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);
+    border-radius:0;padding:14px 10px 6px}
   .prange{text-align:center;font-size:12.5px;color:var(--muted);font-weight:600;margin:2px 0 18px}
   .prange b{color:var(--ink2)}
   .tbl-wrap{overflow-x:auto;border-radius:0;background:#fff;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
