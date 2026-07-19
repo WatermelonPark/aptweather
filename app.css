@@ -696,7 +696,12 @@
   .lz-tiles{display:flex;flex-wrap:wrap;gap:6px}
   .lz-tile.lz-nd{background:var(--paper);border:1px dashed var(--line);color:var(--muted)}
 .lz-tile.lz-nd .lz-tv{color:var(--muted);font-weight:700}
-.lz-tile{border:1px solid #d8dfdc;border-radius:0;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
+.lz-tile{border:1px solid #d8dfdc;border-radius:0;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06);position:relative}
+  /* 순위 행의 ›와 같은 어휘를 타일에도 준다 — "타일을 누르면 상세" 같은
+     안내문 대신 생김새가 말하게 한다. */
+  .lz-tile::after{content:"›";position:absolute;top:1px;right:4px;
+    font-size:11px;font-weight:600;color:var(--ink);opacity:.32}
+  .lz-tile:active{outline:1.5px solid var(--ink);outline-offset:-1.5px}
   .lz-tn{font-size:12px;font-weight:600;color:#1b2426}
   .lz-tv{font-size:11px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
   .lz-row{display:flex;align-items:center;gap:8px;margin:1px 0;padding:5px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
