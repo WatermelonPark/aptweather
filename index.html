@@ -1640,6 +1640,17 @@ function areaGrad(color,topHex){
 }
 function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); return GCH[id]=new Chart(document.getElementById(id),cfg); }
 // 가로 스크롤 추이 차트의 y축을 왼쪽에 고정 복제 (스크롤해도 항상 보이게)
+const TRP={week:1,month:1};   /* 기본: 주간 1년 · 월간 3년 */
+function renderTrPeriods(k){
+  const T=TREND[k], el=document.getElementById(k+'-period'); if(!el||!T.periods)return;
+  el.innerHTML=T.periods.map((p,i)=>
+    '<button type="button" class="'+(TRP[k]===i?'on':'')+'" onclick="trSetPeriod(&#39;'+k+'&#39;,'+i+')">'
+    +p[0]+'</button>').join('');
+}
+function trSetPeriod(k,i){
+  TRP[k]=i; renderTrPeriods(k); drawTrendChart(k);
+  track('stats_period',{section:k,period:TREND[k].periods[i][0]});
+}
 function drawTrendChart(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
   const reg=advSel(T.sel,W.regions), ri=W.regions.indexOf(reg);
