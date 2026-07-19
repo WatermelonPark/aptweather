@@ -18,6 +18,9 @@ import urllib.error
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.js')
 CHANGED = os.path.join(ROOT, '.stats_changed')
+# 이미 발송한 기간을 기록하는 원장. 갱신 판정(update_adv_data)이 뚫리더라도
+# 같은 기간을 두 번 보내지 않게 막는 마지막 방어선이다.
+LEDGER = os.path.join(ROOT, '.last_sent')
 API = 'https://api.buttondown.com/v1/emails'
 KEY = os.environ.get('BUTTONDOWN_API_KEY', '')
 SITE = 'https://www.agongmap.co.kr'
@@ -147,6 +150,31 @@ def build_body(changed):
     return subject, '\n'.join(L)
 
 
+def read_ledger():
+    try:
+        return json.loads(io.open(LEDGER, encoding='utf-8').read())
+    except Exception:
+        return {}
+
+
+def periods_of(changed):
+    """이번 메일이 '새로 나왔다'고 주장하게 될 기간을 종류별로 뽑는다."""
+    adv = read_adv()
+    out = {}
+    for k in ('weekly', 'monthly', 'permits', 'occupancy'):
+        if k in changed and adv.get(k, {}).get('rows'):
+            out[k] = adv[k]['rows'][-1]['p']
+    if '금리' in changed:
+        try:
+            c = io.open(DATA, encoding='utf-8').read()
+            i0, j0 = c.find('/*STATS_DATA_START*/'), c.find('/*STATS_DATA_END*/')
+            st = json.loads(re.match(r'const STATS=(.*);$', c[i0 + 20:j0], re.S).group(1))
+            out['금리'] = str(st['금리']['dates'][-1])
+        except Exception:
+            pass
+    return out
+
+
 def main():
     preview = '--preview' in sys.argv
     if preview:
@@ -163,6 +191,12 @@ def main():
         if not any(k in changed for k in ('weekly', 'monthly', 'permits', 'occupancy', '금리')):
             print('skip: 이번 실행에서 통계 갱신 없음')
             return
+    periods = periods_of(changed) if not preview else {}
+    ledger = read_ledger()
+    if periods and all(ledger.get(k) == v for k, v in periods.items()):
+        print('skip: 이미 발송한 기간 (%s) — 중복 발송 방지'
+              % ', '.join('%s=%s' % kv for kv in sorted(periods.items())))
+        return
     subject, body = build_body(changed)
     if preview:
         print(subject)
@@ -174,12 +208,23 @@ def main():
         'Authorization': 'Token ' + KEY, 'Content-Type': 'application/json',
         # Buttondown 공식 요구사항: API 실발송 확인용 헤더 (키당 1회 요구, 상시 포함해도 무해)
         'X-Buttondown-Live-Dangerously': 'true'})
+    # 발송 실패는 반드시 종료코드로 드러낸다. 예전에는 print만 하고 0으로 끝나
+    # 배치가 'OK'를 찍었고, 발송 성공과 실패가 구분되지 않았다.
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             print('sent:', r.status)
     except urllib.error.HTTPError as e:
-        # 발송 실패해도 배치 전체는 성공으로 끝낸다 (통계 갱신이 본체)
         print('send failed: HTTP %s — %s' % (e.code, e.read().decode('utf-8', 'replace')[:300]))
+        sys.exit(1)
+    except Exception as e:
+        print('send failed: %s: %s' % (type(e).__name__, e))
+        sys.exit(1)
+    # 발송이 실제로 성공한 뒤에만 원장을 갱신한다.
+    if periods:
+        ledger.update(periods)
+        io.open(LEDGER, 'w', encoding='utf-8', newline='\n').write(
+            json.dumps(ledger, ensure_ascii=False, sort_keys=True, indent=1))
+        print('ledger:', ', '.join('%s=%s' % kv for kv in sorted(periods.items())))
 
 
 if __name__ == '__main__':

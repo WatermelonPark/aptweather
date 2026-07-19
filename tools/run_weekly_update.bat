@@ -15,7 +15,9 @@ rem   Notification is handled externally by .github/workflows/watchdog.yml
 rem   (a local script cannot report that it never ran).
 rem
 rem   exit codes: 10 keys 11 pull 12 update 13 share
-rem               14 add 15 commit 16 push 17 zone-pages
+rem               14 add 15 commit 16 push 17 zone-pages 18 newsletter
+rem   Newsletter send failure does NOT abort (stats are already live),
+rem   but it is reported as rc=18 so a silent non-send cannot look like OK.
 rem ============================================================
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
@@ -91,11 +93,16 @@ if errorlevel 1 (
   echo no changes
 )
 
+set SENDRC=0
+
 python tools\make_naver_post.py
 if errorlevel 1 echo WARN: make_naver_post failed
 
 python tools\send_newsletter.py
-if errorlevel 1 echo WARN: send_newsletter failed
+if errorlevel 1 (
+  echo ERROR: send_newsletter failed - stats are live but mail did NOT go out
+  set SENDRC=18
+)
 
 python tools\send_instagram.py
 if errorlevel 1 echo WARN: send_instagram failed
@@ -104,4 +111,4 @@ python tools\ping_indexnow.py --sitemap
 if errorlevel 1 echo WARN: ping_indexnow failed
 
 echo ===== update end %date% %time% =====
-exit /b 0
+exit /b %SENDRC%

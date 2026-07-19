@@ -936,14 +936,26 @@ def main():
             if cur.get('sgg'): weekly['sgg'] = cur['sgg']
         if weekly['rows'] and differs(weekly, cur):
             adv['weekly'] = weekly
-            changed.append('weekly(~%s)' % weekly['rows'][-1]['p'])
+            # '바이트가 달라짐'과 '새 주차가 나옴'은 다르다. 부동산원이 과거 주차를
+            # 소급 수정하기만 해도 differs()는 참이 되는데, 그때 'weekly' 토큰을 넣으면
+            # 이미 보낸 주차의 뉴스레터가 한 번 더 나간다(2026-07-16 실제 중복 발송).
+            # 데이터는 갱신하되 발송 트리거는 기간이 실제로 전진했을 때만 세운다.
+            # send_newsletter는 부분문자열로 검사하므로 소급 토큰은 'weekly'를 피해야 한다.
+            new_last = weekly['rows'][-1]['p']
+            changed.append(('weekly(~%s)' % new_last) if new_last > cur_last
+                           else ('주간소급수정(~%s)' % new_last))
     except Exception as e:
         print('weekly skip:', e)
     try:
         monthly = fetch_monthly()
+        mo_cur = adv.get('monthly') or {}
+        mo_last = mo_cur['rows'][-1]['p'] if mo_cur.get('rows') else ''
         if monthly['rows'] and differs(monthly, adv.get('monthly')):
             adv['monthly'] = monthly
-            changed.append('monthly(~%s)' % monthly['rows'][-1]['p'])
+            # weekly와 같은 이유 — 소급 수정은 커밋만 하고 발송은 하지 않는다.
+            mo_new = monthly['rows'][-1]['p']
+            changed.append(('monthly(~%s)' % mo_new) if mo_new > mo_last
+                           else ('월간소급수정(~%s)' % mo_new))
     except Exception as e:
         print('monthly skip:', e)
     try:

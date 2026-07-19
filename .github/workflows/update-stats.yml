@@ -41,18 +41,20 @@ jobs:
 
       - name: 변경 시 커밋·푸시
         run: |
-          if git diff --quiet index.html; then
+          # 데이터는 index.html이 아니라 data.js에 있다(2026-07 분리).
+          # 예전에는 index.html을 검사해 항상 '변경 없음'이 나왔고,
+          # exit 0이 스텝만 끝내는 바람에 잡은 계속 진행해 아래 발송 스텝이 돌았다.
+          if git diff --quiet -- data.js; then
             echo "변경 없음"
             exit 0
           fi
           git config user.name "stats-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add index.html
+          git add data.js
           git commit -m "통계 데이터 자동 갱신 (KOSIS)"
           git push
 
-      - name: 주간 알림 발송 (Buttondown)
-        env:
-          # 시크릿 없으면 발송만 건너뜀 (주간 데이터가 갱신된 실행에서만 발송)
-          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY || secrets.BUTTONDOWN }}
-        run: python tools/send_newsletter.py
+      # 뉴스레터 발송 스텝은 의도적으로 두지 않는다.
+      # 여기서 보내면 푸시 성공 여부와 무관하게 나가고, 로컬 배치(금 09:30)와
+      # 30분 차이로 겹쳐 같은 메일이 두 번 나간다 — 2026-07-16에 실제로 발생했다.
+      # 발송 주체는 tools/run_weekly_update.bat 하나로 통일한다.
