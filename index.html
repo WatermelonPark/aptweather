@@ -82,26 +82,25 @@
 
   <section class="home-sec" id="sec-score"><div class="wrap">
     <h2>지금 어디에 상승 압력이 쌓이고 있나</h2>
-    <p class="sc-lead">전국 생활권의 아파트 공급이 <b>적정량 대비 몇 세대 모자라는지</b> 잰 아공맵 자체 지표입니다.</p>
+    <p class="sc-lead">생활권마다 아파트 공급이 <b>적정량보다 모자란지 남는지</b> 잽니다.</p>
     <div class="sc-key">
       <div class="k-l"><b>+ 공급 과잉</b><i>하락 압력</i></div>
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
-    <div class="sc-keycap">가운데 0 = 적정 공급량</div>
 
-    <div class="thead"><div class="th-line"><b class="th-t">표1 · 생활권별 누적 순부족</b><span class="th-u">(단위: 호)</span></div><div class="th-m">n=36 · 통근·생활권 기준 · 인구 30만 이상 · 매주 갱신 · 수도권은 하나로 묶음 · 지역을 누르면 상세</div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대</span></div></div>
     <div id="score-wrap" style="text-align:left"></div>
-    <div class="thead"><div class="th-line"><b class="th-t">표2 · 권역별 분포</b><span class="th-u">(단위: 호)</span></div><div class="th-m">n=36 · 타일을 누르면 상세</div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
 
     <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 반대로 <b>이자가 월세보다 싸면</b> <b style="color:#7a4fb5">★ 실거주 유리</b> 플래그로만 표시합니다.</div></details>
-    <p class="sc-src">아공맵 자체 산출 · 재료: 한국부동산원 입주예정물량(단지 주소→생활권)·행안부 주민등록인구·인허가·주택멸실·전세가율·전월세전환율(KOSIS)·주담대 금리(한국은행)</p>
+    <p class="sc-src">아공맵 자체 산출 · 매주 갱신</p>
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
     <div class="hs-kicker">10문항 · 3분</div>
     <h2>내 부동산 감각, 몇 점일까?</h2>
-    <p>LTV·전세·청약 기초부터 집값 전망을 읽는 사이클 감각까지 — 2지선다 10문항, 즉시 채점·해설. 결과 카드를 공유하면 친구와 같은 문제로 대결할 수 있습니다.</p>
+    <p>10문항으로 재는 내 부동산 감각. 결과는 친구와 대결할 수 있습니다.</p>
     <div class="hs-cta">
       <button class="home-cta" onclick="goQuiz('beginner')">🐣 부린이 테스트 · 난이도 하</button>
       <button class="home-cta alt" onclick="goQuiz('investor')">🦅 투자자 테스트 · 난이도 중</button>
@@ -112,21 +111,21 @@
   <section class="home-sec"><div class="wrap">
     <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
     <h2>이번 주, 어디가 오르고 내렸을까?</h2>
-    <p>전국 시군구·서울 구별 지도를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>으로 한눈에. 한국부동산원 발표에 맞춰 매주 자동 갱신되고, 새 통계가 나오면 이메일로 알려드립니다.</p>
+    <p>전국 시군구 시세를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b> 지도로.</p>
     <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">이번 주 시세 지도 보기</button></div>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
     <div class="hs-kicker">15개 시도 · 20년</div>
     <h2>집값은 왜 돌고 도는가</h2>
-    <p>공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올리고, 새 공급이 다시 전세를 누른다 — 15개 시도 20년 데이터로 이 사이클의 6개 고리를 하나씩 검증한 리포트입니다.</p>
+    <p>공급 → 전세 → 매매 → 다시 공급. 20년 데이터로 검증한 순환의 6개 고리.</p>
     <div class="hs-cta"><a class="home-cta" href="/cycle/" onclick="track('home_cta',{to:'cycle'})">사이클 리포트 읽기</a></div>
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
     <div class="hs-kicker">KOSIS · 한국은행 · 국토교통부</div>
     <h2>국가기관 원자료 그대로</h2>
-    <p>실거래지수·전세가율·인허가·착공·준공·금리를 지역·기간별로. 그래프↔표 전환, 전 지역 매트릭스, 행열전환까지 — 전부 KOSIS·한국은행 API로 매주 자동 갱신됩니다.</p>
+    <p>실거래지수·인허가·착공·준공·금리를 지역과 기간으로 나눠 봅니다.</p>
     <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">통계 원자료 보기</button></div>
   </div></section>
 
@@ -159,13 +158,13 @@
   <div class="dash" id="stats-market"><div class="wrap">
     <div class="subs" id="subs-card" style="display:none">
       <b>📬 집값 브리핑 받기</b>
-      <p><b>새로운 통계가 업데이트되면 메일로 알려드립니다.</b> 주간·월간 시세부터 인허가·입주물량·금리까지 — 갱신이 있는 날에만 발송되고, 메일 하단에서 언제든 수신거부할 수 있습니다.</p>
+      <p>새 통계가 나오면 메일로 알려드립니다.</p>
       <form onsubmit="return subsSubmit(this)">
         <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
         <button type="submit">알림 받기</button>
       </form>
       <span class="subs-msg" id="subs-msg"></span>
-      <p class="subs-consent">구독하면 <b>이메일 주소</b>를 통계 갱신 알림 발송에 이용하며, 구독 해지 시 즉시 파기합니다. 발송은 미국 소재 Buttondown을 통해 이뤄집니다(국외 이전). 메일 하단 수신거부 링크로 언제든 즉시 해지할 수 있습니다. 자세한 내용은 <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a>을 확인하세요.</p>
+      <p class="subs-consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국). <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a></p>
     </div>
     <section class="adv-sec gsec gm-m" id="sec-week">
       <div class="adv-h"><h3>주간 아파트 동향</h3>
