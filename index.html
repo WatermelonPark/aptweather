@@ -1647,7 +1647,7 @@ function renderTrPeriods(k){
   const cur=T.periods[TRP[k]];
   if(!cur||(cur[1]>0&&cur[1]>have))TRP[k]=T.periods.length-1;   // 감춰진 칸이 선택돼 있으면 '전체'로
   el.innerHTML=T.periods.map((p,i)=>
-    (p[1]>0&&p[1]>have)?'':
+    (p[1]>0&&have<p[1]*0.95)?'':
     '<button type="button" class="'+(TRP[k]===i?'on':'')+'" onclick="trSetPeriod(&#39;'+k+'&#39;,'+i+')">'
     +p[0]+'</button>').join('');
 }
