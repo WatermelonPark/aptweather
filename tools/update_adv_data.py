@@ -973,9 +973,28 @@ def main():
     try:
         if DATAGO_KEY:
             lz = fetch_livezone()
-            if lz['zones'] and differs(lz, adv.get('livezone')):
+            prev = (adv.get('livezone') or {}).get('zones') or []
+            n_new, n_old = len(lz['zones']), len(prev)
+            # 가드 1: 생활권이 급감하면 채택하지 않는다.
+            # make_zone_pages는 매 실행마다 /zone/ 전체를 지우고 이 목록으로만 재생성하므로,
+            # API 부분 응답을 그대로 받으면 색인된 URL이 무더기로 404가 된다.
+            if n_old >= 10 and n_new < n_old * 0.8:
+                print('livezone GUARD: 생활권이 %d개 -> %d개로 급감해 채택하지 않음 '
+                      '(API 부분 응답 의심). zone 페이지·sitemap 보존.' % (n_old, n_new))
+            elif lz['zones'] and differs(lz, adv.get('livezone')):
+                if n_new < n_old:   # 급감은 아니어도 감소는 항상 눈에 띄게 (URL이 사라진다)
+                    gone = sorted({z['z'] for z in prev} - {z['z'] for z in lz['zones']})
+                    print('livezone NOTE: 생활권 %d -> %d개로 감소. 사라진 곳: %s '
+                          '(해당 zone 페이지가 삭제되고 sitemap에서 빠짐)' % (n_old, n_new, ', '.join(gone) or '?'))
                 adv['livezone'] = lz
                 changed.append('livezone(%d)' % len(lz['zones']))
+                # 가드 2: 공급 원자료가 비어 산출 불가한 생활권을 로그에 드러낸다.
+                # (조용히 '부족'으로 계산되던 결함 — 진주권 사례)
+                nd = [z['z'] for z in lz['zones']
+                      if not (z.get('supply') or 0) or not (z.get('sgg') or [])]
+                if nd:
+                    print('livezone NOTE: 입주예정 원자료 없음 %d곳 -> %s '
+                          '(순위/판정에서 제외되며 자료없음으로 표시됨)' % (len(nd), ', '.join(nd)))
         else:
             print('livezone skip: DATA_GO_KR_KEY 없음')
     except Exception as e:

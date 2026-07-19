@@ -100,7 +100,7 @@ if errorlevel 1 echo WARN: send_newsletter failed
 python tools\send_instagram.py
 if errorlevel 1 echo WARN: send_instagram failed
 
-python tools\ping_indexnow.py / /weekly/
+python tools\ping_indexnow.py --sitemap
 if errorlevel 1 echo WARN: ping_indexnow failed
 
 echo ===== update end %date% %time% =====
