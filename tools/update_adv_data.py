@@ -467,9 +467,23 @@ def update_occupancy(adv, full=False):
         rows_map[k] = [by.get(r) for r in regs]
         est.discard(k)                          # 실적 확정 → 예정 딱지 제거
     last_cq = max(cq) if cq else None
+    # 미래 분기는 입주예정 스냅샷으로 통째로 덮어쓴다. API가 일부 지역을 누락한
+    # 부분 응답을 주면 그 분기 물량이 조용히 반토막 나고, 그대로 '공급 절벽'으로
+    # 렌더된다. livezone과 같은 급감 가드를 둔다.
+    prev_tot = {}
+    if not full:
+        for r in O['rows']:
+            if r.get('e'):
+                prev_tot[_q_of(r['p'])] = sum(v for v in r['v'] if v)
     for k, by in mv.items():
         if last_cq and k <= last_cq: continue   # 준공 실적이 있으면 실적 우선
-        rows_map[k] = [by.get(r, 0) for r in regs]
+        new_v = [by.get(r, 0) for r in regs]
+        old_t, new_t = prev_tot.get(k), sum(v for v in new_v if v)
+        if old_t and old_t >= 1000 and new_t < old_t * 0.8:
+            print('occupancy GUARD: %s 입주예정이 %s호 -> %s호로 급감해 채택하지 않음 '
+                  '(API 부분 응답 의심)' % (_qlabel(*k), format(old_t, ','), format(new_t, ',')))
+            continue                            # 기존 값 유지 (rows_map에 이미 있음)
+        rows_map[k] = new_v
         est.add(k)                              # 입주예정 기반 = 미확정 표시
     if full and mv:
         # 준공 이후~입주예정 커버리지 안의 빈 분기는 '예정 없음(0)'으로 채움
@@ -919,6 +933,7 @@ def main():
     assert arg == '--update', 'usage: --update | --seed-bubble | --seed-livezone | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
+    failed = []     # 어떤 지표 fetch가 죽었는지 집계 — 전량 실패를 '변경 없음'과 구분한다
 
     def differs(a, b):
         return json.dumps(a, sort_keys=True, ensure_ascii=False) != json.dumps(b, sort_keys=True, ensure_ascii=False)
@@ -945,7 +960,7 @@ def main():
             changed.append(('weekly(~%s)' % new_last) if new_last > cur_last
                            else ('주간소급수정(~%s)' % new_last))
     except Exception as e:
-        print('weekly skip:', e)
+        failed.append('weekly'); print('weekly skip:', e)
     try:
         monthly = fetch_monthly()
         mo_cur = adv.get('monthly') or {}
@@ -957,21 +972,21 @@ def main():
             changed.append(('monthly(~%s)' % mo_new) if mo_new > mo_last
                            else ('월간소급수정(~%s)' % mo_new))
     except Exception as e:
-        print('monthly skip:', e)
+        failed.append('monthly'); print('monthly skip:', e)
     try:
         rows = fetch_permits()
         if rows and len(rows) >= len(adv['permits']['rows']) and differs(rows, adv['permits']['rows']):
             adv['permits']['rows'] = rows
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
-        print('permits skip:', e)
+        failed.append('permits'); print('permits skip:', e)
     try:
         before = json.dumps(adv['occupancy']['rows'], sort_keys=True)
         occ_ch = update_occupancy(adv)
         if occ_ch and json.dumps(adv['occupancy']['rows'], sort_keys=True) != before:
             changed += occ_ch
     except Exception as e:
-        print('occupancy skip:', e)
+        failed.append('occupancy'); print('occupancy skip:', e)
     try:
         if ECOS_KEY:
             bub = fetch_bubble()
@@ -981,7 +996,7 @@ def main():
         else:
             print('bubble skip: ECOS_API_KEY 없음')
     except Exception as e:
-        print('bubble skip:', e)
+        failed.append('bubble'); print('bubble skip:', e)
     try:
         if DATAGO_KEY:
             lz = fetch_livezone()
@@ -1016,10 +1031,18 @@ def main():
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
     # 후속 단계(뉴스레터 발송 등)에 변경 내역 전달 — 커밋 대상 아님
     io.open(os.path.join(ROOT, '.stats_changed'), 'w', encoding='utf-8').write(','.join(changed))
+    if failed:
+        print('WARN: fetch 실패 %d개 -> %s' % (len(failed), ', '.join(failed)))
     if changed:
         print('updated:', ', '.join(changed))
     else:
         print('no changes')
+    # 전량 실패는 '변경 없음'과 겉모습이 같다. 예전에는 이 둘이 구분되지 않아
+    # 데이터 소스가 멎어도 배치가 매일 'OK'를 보고했다(watchdog 13일 임계까지 무증상).
+    # 주요 지표가 하나도 안 살아 돌아왔으면 배치를 중단시킨다(배치 rc=12).
+    if len(failed) >= 5 and not changed:
+        print('ERROR: 주요 지표 fetch가 모두 실패했다 — 데이터 소스 장애로 판단해 중단한다')
+        sys.exit(3)
 
 
 if __name__ == '__main__':

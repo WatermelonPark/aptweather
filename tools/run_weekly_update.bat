@@ -16,6 +16,7 @@ rem   (a local script cannot report that it never ran).
 rem
 rem   exit codes: 10 keys 11 pull 12 update 13 share
 rem               14 add 15 commit 16 push 17 zone-pages 18 newsletter
+rem               19 already-running
 rem   Newsletter send failure does NOT abort (stats are already live),
 rem   but it is reported as rc=18 so a silent non-send cannot look like OK.
 rem ============================================================
@@ -27,9 +28,12 @@ for /f %%i in ('python -c "import datetime;print(datetime.date.today().isoformat
 if "%TODAY%"=="" set TODAY=unknown
 if not exist logs mkdir logs
 set LOG=logs\weekly-%TODAY%.log
+set LOCK=%~dp0..\.batch.lock
 
 call :main >> "%LOG%" 2>&1
 set RC=%ERRORLEVEL%
+rem Release the lock unless we aborted *because* someone else held it (rc=19).
+if not "%RC%"=="19" rmdir "%LOCK%" 2>nul
 if not "%RC%"=="0" (
   echo [%date% %time%] FAILED rc=%RC% - see %LOG%
   echo [%date% %time%] FAILED rc=%RC% >> "%LOG%"
@@ -41,15 +45,37 @@ exit /b 0
 :main
 echo ===== update start %date% %time% =====
 
+rem Concurrency lock. Task Scheduler's IgnoreNew only guards its own instances;
+rem a manual run and a scheduled run could still overlap and double-send.
+rem mkdir is atomic on NTFS, so it works as a lock even under a race.
+mkdir "%LOCK%" 2>nul
+if errorlevel 1 (
+  echo ERROR: another run holds the lock ^(%LOCK%^) - aborting
+  echo If no run is active, delete that folder by hand.
+  exit /b 19
+)
+
 if not exist "%USERPROFILE%\.aptweather_keys.bat" (
   echo ERROR: key file not found
   exit /b 10
 )
 call "%USERPROFILE%\.aptweather_keys.bat"
 
-git pull --rebase origin main
+rem A prior run may have died mid-rebase, leaving the repo wedged. Clear it first,
+rem otherwise every later run fails at pull forever with no way out.
+if exist ".git\rebase-merge" (
+  echo WARN: leftover rebase state found - aborting it
+  git rebase --abort
+)
+if exist ".git\rebase-apply" (
+  echo WARN: leftover rebase state found - aborting it
+  git rebase --abort
+)
+rem --autostash: a parallel session's uncommitted edits must not wedge the batch.
+git pull --rebase --autostash origin main
 if errorlevel 1 (
   echo ERROR: git pull failed - aborting before any update
+  git rebase --abort 2>nul
   exit /b 11
 )
 
