@@ -263,15 +263,21 @@ def build_page(r, allrows, prd, today):
             '과거 2008년·2022년 급락기가 이 조건에서 시작됐습니다. 공급이 모자라더라도 보유 비용이 수익을 잠식하는 구간이라 '
             '진입 시점은 신중히 볼 필요가 있습니다.</p></div></section>' % (ps, r['loan'], r['hi']))
 
-    navsrc = [x for x in allrows if x['z']['region'] != '수도권']
-    nav = '<a href="/zone/수도권/">수도권</a>' if nm != '수도권' else ''
+    # 예전에는 수도권 소속 생활권을 네비에서 통째로 뺐다. 그 결과 서울권·인천권 등
+    # 16장이 인바운드 링크 1개짜리 고아가 됐다 — 검색 수요가 가장 큰 페이지들이
+    # 링크 자산을 가장 적게 받는 역전이었다.
+    nav = '<a href="/zone/"><b>전체 생활권</b></a>'
+    nav += '<a href="/zone/수도권/">수도권</a>' if nm != '수도권' else ''
     nav += ''.join('<a href="/zone/%s/">%s</a>' % (x['z']['z'], x['z']['z'])
-                   for x in navsrc if x['z']['z'] != nm)
+                   for x in allrows if x['z']['z'] != nm)
 
     title = '%s 아파트 공급 분석 — 입주예정·인허가로 본 %s | 아공맵' % (nm, tname)
-    desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 향후 2년 입주예정 %s세대, 구성: %s. '
+    # sgg가 비면 '구성: —'가 그대로 메타 설명에 나갔다. odcloud는 물량이 없는
+    # 지역의 행을 보내지 않으므로, 빈 sgg는 '입주예정 단지가 없다'는 뜻이다.
+    comp = ('구성: %s. ' % ', '.join(sgg_names[:3])) if sgg_names else '예정 단지 없음. '
+    desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 향후 2년 입주예정 %s세대, %s'
             '한국부동산원·국토교통부 통계로 매주 자동 갱신.' % (
-                nm, disp, tname, num(z['supply']), ', '.join(sgg_names[:3]) or '—'))
+                nm, disp, tname, num(z['supply']), comp))
 
     ld = {
         "@context": "https://schema.org", "@type": "Article",
@@ -416,13 +422,183 @@ function zsubs(f){
         css=CSS)
 
 
-def update_sitemap(names, today):
+DATE_RE = re.compile(r'"date(?:Published|Modified)": "(\d{4}-\d{2}-\d{2})"')
+
+
+def strip_dates(html):
+    """날짜만 지운 본문 — '내용이 실제로 바뀌었나'의 판정 기준."""
+    return DATE_RE.sub('"date": "-"', html or '')
+
+
+def read_old(path):
+    try:
+        return io.open(path, encoding='utf-8').read()
+    except IOError:
+        return ''
+
+
+def keep_dates(new_html, old_html, today):
+    """내용이 같으면 옛 날짜를 그대로 둔다. (반환: html, lastmod, 변경여부)
+
+    이 배치는 매일 돈다. 예전에는 today를 무조건 심어서, 데이터가 하나도
+    안 바뀐 날에도 37장과 sitemap의 lastmod가 날짜만 바뀐 채 커밋됐다.
+    검색엔진에 '매일 갱신'이라 신고하면서 내용은 그대로면 신선도 신호의
+    신뢰도가 깎이고, 최초 발행일이어야 할 datePublished마저 매일 리셋됐다.
+    """
+    if not old_html or strip_dates(new_html) != strip_dates(old_html):
+        return new_html, today, True
+    olds = DATE_RE.findall(old_html)
+    if len(olds) < 2:
+        return new_html, today, True
+    pub, mod = olds[0], olds[1]
+    out = new_html.replace('"datePublished": "%s"' % today, '"datePublished": "%s"' % pub, 1)
+    out = out.replace('"dateModified": "%s"' % today, '"dateModified": "%s"' % mod, 1)
+    return out, mod, False
+
+
+HUB_TPL = u"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전국 생활권 아파트 공급 순위 %(n)d곳 — 입주예정·인허가로 본 부족·과잉 | 아공맵</title>
+<meta name="description" content="전국 %(n)d개 생활권의 아파트 공급을 적정물량과 비교해 누적 순부족 순으로 정렬했습니다. 공급 절벽부터 공급 과잉까지 한눈에. 기준 %(prd)s.">
+<link rel="canonical" href="%(site)s/zone/">
+<link rel="icon" type="image/png" href="/app_icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#16203a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="전국 생활권 아파트 공급 순위 %(n)d곳">
+<meta property="og:description" content="적정물량 대비 누적 순부족 순. 공급 절벽부터 과잉까지.">
+<meta property="og:url" content="%(site)s/zone/">
+<meta property="og:image" content="%(site)s/og-brand.png">
+<script type="application/ld+json">
+%(ld)s
+</script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+:root{--ink:#16203a;--paper:#f4f6f5;--line:#e2dbc9;--muted:#6f6a5c;--body:#3a352b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--body);word-break:keep-all;padding-bottom:78px;
+ font-family:'Pretendard Variable','Pretendard',-apple-system,'Malgun Gothic',sans-serif;line-height:1.7}
+.wrap{max-width:660px;margin:0 auto;padding:0 20px}
+header{padding:46px 0 26px;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(23px,5.4vw,31px);color:var(--ink);letter-spacing:-.02em;line-height:1.32}
+.lead{color:var(--muted);font-size:14.5px;margin-top:10px}
+section{padding:26px 0;border-bottom:1px solid var(--line)}
+h2{font-size:18px;color:var(--ink);margin-bottom:6px}
+p{font-size:14.5px;margin:8px 0}
+table{width:100%%;border-collapse:collapse;font-size:14.5px;margin-top:12px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.04em;color:var(--muted);white-space:nowrap}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.rk{color:var(--muted);width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
+a.z{color:var(--ink);text-decoration:none;font-weight:700}
+a.z:hover{text-decoration:underline}
+.tag{font-size:11.5px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--ink);
+ display:flex;justify-content:center;z-index:100}
+.nav-btn{flex:1;max-width:220px;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;gap:3px;color:#97a0b8;font-size:11.5px;font-weight:700;text-decoration:none}
+.nav-btn svg{display:block}
+footer{padding:24px 0 40px;color:var(--muted);font-size:12.5px}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>전국 생활권 아파트 공급 순위</h1>
+  <p class="lead">%(n)d개 생활권을 적정물량 대비 <b>누적 순부족</b>이 큰 순으로 정렬했습니다.
+    양수는 공급이 모자란 곳, 음수는 남는 곳입니다. 기준 %(prd)s.</p>
+</div></header>
+
+<section><div class="wrap">
+  <h2>순위표</h2>
+  <p>생활권 이름을 누르면 그 지역의 분기별 입주예정·인허가·적정물량 비교를 볼 수 있습니다.</p>
+  <table>
+    <thead><tr><th>#</th><th>생활권</th><th class="num">누적 순부족</th><th>판정</th></tr></thead>
+    <tbody>
+%(rows)s
+    </tbody>
+  </table>
+</div></section>
+
+<section><div class="wrap">
+  <h2>이 숫자는 무엇인가</h2>
+  <p><b>누적 순부족</b>은 앞으로 들어올 아파트가 그 지역에 필요한 양보다 얼마나 모자라는지를 세대수로 나타낸 값입니다.
+    향후 2년 입주예정, 인허가(3~4년 뒤 공급), 최근 1년 실적을 가중 합산합니다.</p>
+  <p>공급이 모자란다고 값이 반드시 오르는 것도, 남는다고 반드시 내리는 것도 아닙니다.
+    공급은 사이클을 움직이는 여러 힘 가운데 하나이며, 금리·전세가율·심리가 함께 작용합니다.
+    <a href="/cycle/">사이클이 어떻게 도는지 보기 →</a></p>
+</div></section>
+
+<footer><div class="wrap">
+  <a href="/">agongmap.co.kr</a> · 자료: 한국부동산원 입주예정물량 · 국토교통부 주택건설실적 · 행정안전부 주민등록인구<br>
+  <a href="/privacy/">개인정보처리방침</a> · 본 자료는 공공 데이터를 가공한 참고 자료이며 투자자문이 아닙니다.
+</div></footer>
+
+<nav class="bottomnav">
+  <a class="nav-btn" href="/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>홈</span></a>
+  <a class="nav-btn" href="/#test"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="7.4" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7.4" cy="12" r="1.7" fill="currentColor"/><circle cx="16.6" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>퀴즈</span></a>
+  <a class="nav-btn" href="/#stats"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>통계</span></a>
+  <a class="nav-btn" href="/cycle/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>리포트</span></a>
+</nav>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
+"""
+
+
+def build_hub(pages, prd, today):
+    """전 생활권을 한 페이지에 모은 허브.
+
+    존재 이유는 링크다. 홈의 생활권 타일은 JS 런타임 생성이라 정적 HTML에
+    /zone/ 링크가 하나도 없었고, 37장의 사실상 유일한 발견 경로가 sitemap이었다.
+    sitemap은 발견은 시켜주지만 링크 가치를 전달하지 않는다.
+    """
+    # 입주예정 0은 '자료 없음'이 아니라 그냥 0이다(3c897f7 확정). 전부 순위에 넣는다.
+    live = sorted(pages, key=lambda r: -r['tot'])
+    rows = []
+    for i, r in enumerate(live):
+        nm = r['z']['z']
+        tname, tcol = tier(r['tot'])
+        rows.append(
+            '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
+            '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
+            % (i + 1, nm, nm, tcol, signed(r['tot']), tname))
+    ld = json.dumps({
+        "@context": "https://schema.org", "@type": "Article",
+        "headline": "전국 생활권 아파트 공급 순위",
+        "description": "전국 %d개 생활권의 아파트 공급을 적정물량과 비교해 누적 순부족 순으로 정렬." % len(live),
+        "datePublished": today, "dateModified": today,
+        "author": {"@type": "Organization", "name": "아공맵"},
+        "publisher": {"@type": "Organization", "name": "아공맵"},
+        "mainEntityOfPage": '%s/zone/' % SITE,
+    }, ensure_ascii=False, indent=2)
+    return HUB_TPL % dict(n=len(live), prd=prd, site=SITE, ld=ld,
+                          rows='\n'.join(rows))
+
+
+def update_sitemap(names, lastmods):
     p = os.path.join(ROOT, 'sitemap.xml')
     x = io.open(p, encoding='utf-8').read()
     x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/[^<]*</loc>.*?</url>', '', x, flags=re.S)
-    block = ''.join(
+    x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/</loc>.*?</url>', '', x, flags=re.S)
+    newest = max(lastmods.values()) if lastmods else ''
+    block = ('\n  <url>\n    <loc>%s/zone/</loc>\n    <lastmod>%s</lastmod>\n'
+             '    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>'
+             % (SITE, newest))
+    block += ''.join(
         '\n  <url>\n    <loc>%s/zone/%s/</loc>\n    <lastmod>%s</lastmod>\n'
-        '    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>' % (SITE, quote(n), today)
+        '    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>'
+        % (SITE, quote(n), lastmods.get(n, ''))
         for n in names)
     x = x.replace('</urlset>', block + '\n</urlset>')
     io.open(p, 'w', encoding='utf-8', newline='\n').write(x)
@@ -434,6 +610,14 @@ def main():
     prd = adv['livezone'].get('prd', '')
     today = datetime.date.today().isoformat()
     outdir = os.path.join(ROOT, 'zone')
+    # ⚠️ 삭제 전에 읽어야 한다 — 날짜 유지 판정에 옛 내용이 필요하다.
+    old_pages = {}
+    if os.path.isdir(outdir):
+        for d in os.listdir(outdir):
+            fp = os.path.join(outdir, d, 'index.html')
+            if os.path.exists(fp):
+                old_pages[d] = read_old(fp)
+    old_hub = read_old(os.path.join(outdir, 'index.html'))
     # 옛 페이지 정리(생활권 구성이 바뀌었을 수 있음)
     if os.path.isdir(outdir):
         for d in os.listdir(outdir):
@@ -444,16 +628,21 @@ def main():
                 os.rmdir(os.path.join(outdir, d))
     cap = make_capital(rows)
     pages = list(rows) + ([cap] if cap else [])
-    names = []
+    names, lastmods, nchanged = [], {}, 0
     for r in pages:
         nm = r['z']['z']
         d = os.path.join(outdir, nm)
         os.makedirs(d, exist_ok=True)
-        io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(
-            build_page(r, rows, prd, today))
+        html, lm, ch = keep_dates(build_page(r, rows, prd, today), old_pages.get(nm, ''), today)
+        io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
         names.append(nm)
-    update_sitemap(names, today)
-    print('zone pages: %d개 생성 → /zone/ · sitemap 갱신' % len(names))
+        lastmods[nm] = lm
+        nchanged += 1 if ch else 0
+    hub, _, _ = keep_dates(build_hub(pages, prd, today), old_hub, today)
+    io.open(os.path.join(outdir, 'index.html'), 'w', encoding='utf-8', newline='\n').write(hub)
+    update_sitemap(names, lastmods)
+    print('zone pages: %d개 + 허브 1개 생성 (내용 변경 %d개) → /zone/ · sitemap 갱신'
+          % (len(names), nchanged))
 
 
 if __name__ == '__main__':
