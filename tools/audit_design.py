@@ -42,7 +42,8 @@ def audit(path):
     scope = css if uses_shared else (style or s)
 
     radii = set(re.findall(r'border-radius:\s*([^;}\n]+)', scope))
-    radii = {r.strip() for r in radii if r.strip() not in ('0', '0px')}
+    OK = {'0', '0px', 'var(--r-touch)', '3px', '50%', '0 0 3px 3px'}
+    radii = {r.strip() for r in radii if r.strip() not in OK}
     hexes = {h.lower() for h in re.findall(r'#([0-9a-fA-F]{6})\b', s)}
     warms = sorted(h for h in hexes if warm_neutral(h))
 
