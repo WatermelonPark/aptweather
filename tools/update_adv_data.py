@@ -960,32 +960,17 @@ def fetch_livezone():
             q = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
             supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
             qset[z].add(q); byq[z]['%dQ%d' % q] += n
-    # ── 청약홈으로 시야 확장 ──────────────────────────────────────
-    # odcloud가 덮는 마지막 분기까지는 odcloud를 그대로 쓰고(더 완전하다),
-    # 그 뒤 분기만 청약홈으로 채운다. 같은 분기를 두 원천에서 더하면
-    # 절반이 중복(단지명 일치 338/675 실측)이라 물량이 1.5배로 부푼다.
-    def _qnum(s):
-        return int(s[:4]) * 4 + int(s[5]) - 1
-    occ_last = max((_qnum(k) for zz in byq.values() for k in zz), default=None)
-    n_ext = 0
-    if occ_last is not None:
-        try:
-            for sd, sg, qk, n, _nm in _fetch_chung():
-                if _qnum(qk) <= occ_last:
-                    continue                      # odcloud 관할 구간 — 건드리지 않는다
-                sd2 = LZ_SIDO_FULL.get(sd, sd)    # '서울특별시' -> '서울'
-                z = zone_of(sd2, sg)
-                if not z:
-                    continue
-                supply[z] += n
-                detail[z][LZ_GU2SI.get(sg, sg)] += n
-                qset[z].add((int(qk[:4]), int(qk[5])))
-                byq[z][qk] += n
-                n_ext += n
-            print('livezone: 청약홈으로 %s 이후 %s세대 확장' % (
-                '%dQ%d' % (occ_last // 4, occ_last % 4 + 1), format(n_ext, ',')))
-        except Exception as e:
-            print('livezone NOTE: 청약홈 확장 건너뜀 —', e)
+    # ── 청약홈 확장은 의도적으로 하지 않는다 (2026-07-20 실측 후 철회) ──
+    # 청약홈 분양정보는 입주예정월이 2031년까지 있어 시야가 넓어 보이지만,
+    # **분양 공고 기준**이라 후분양·임대·조합 물량이 빠진다.
+    # 겹치는 구간 실측: odcloud 414,906세대 vs 청약홈 278,125세대 = 67%만 포착.
+    # 게다가 그 편향이 지역마다 균일하지 않다(12분기 창의 뒤 4분기 물량이
+    # 광주권 0% ~ 목포권 1133%). 균일하면 순위가 안 바뀌지만 이렇게 벌어지면
+    # 순위가 통째로 흔들린다 — 실제로 37곳 중 15곳이 3계단 이상 요동쳤다.
+    # 또 분양->입주가 약 29개월(10분기)이라, 그보다 먼 분기는 아직 분양 자체가
+    # 안 돼 구조적으로 과소집계된다(2029Q2부터 급감 실측).
+    # 결론: 시야를 넓히는 대신 순위를 왜곡한다. odcloud만 쓴다.
+    # _fetch_chung()은 나중에 쓸 수 있게 남겨두되 여기서 호출하지 않는다.
     def mk(z, region):
         pop = zone_pop(z); s = supply.get(z, 0); qs = sorted(qset.get(z, []))
         span = ((qs[-1][0] - qs[0][0]) * 4 + (qs[-1][1] - qs[0][1]) + 1) if qs else 0
