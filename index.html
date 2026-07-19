@@ -167,7 +167,7 @@
       <p class="subs-consent">구독하면 <b>이메일 주소</b>를 통계 갱신 알림 발송에 이용하며, 구독 해지 시 즉시 파기합니다. 발송은 미국 소재 Buttondown을 통해 이뤄집니다(국외 이전). 메일 하단 수신거부 링크로 언제든 즉시 해지할 수 있습니다. 자세한 내용은 <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a>을 확인하세요.</p>
     </div>
     <section class="adv-sec gsec gm-m" id="sec-week">
-      <div class="adv-h"><h3>주간 아파트 동향</h3><span class="adv-badge">매주 발표</span><span class="adv-badge">전주 대비 %</span>
+      <div class="adv-h"><h3>주간 아파트 동향</h3>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
       <p class="adv-note">가장 빠른 속보 지표다. 매주 발표되는 아파트 <b>매매·전세가격지수 변동률</b>로 지금 어느 지역이 오르고 내리는지 확인한다. <span style="color:#c0392b;font-weight:600">빨강=상승</span>, <span style="color:#1a5276;font-weight:600">파랑=하락</span>.</p>
       <div class="adv-regsel"><select id="adv-week-reg" onchange="renderWeekSec()"></select></div>
@@ -177,7 +177,7 @@
           </div></div>
         <div class="tilemap" id="week-map"></div>
       </div>
-      <div class="gt-g"><div class="chart-legend"><span class="cl-ma">매매</span><span class="cl-je">전세</span></div><div class="chart-unit">변동률(%)</div><div class="chart-frame"><canvas class="chart-yaxis" id="weekChartY"></canvas><div class="chart-scroll"><div class="chartwrap sm" id="weekChartBox"><canvas id="weekChart"></canvas></div></div></div><div class="map-hint">그래프를 옆으로 밀면 과거 시세까지 볼 수 있어요 ↔</div></div>
+      <div class="gt-g"><div class="period trp" id="week-period"></div><div class="chart-legend"><span class="cl-ma">매매</span><span class="cl-je">전세</span></div><div class="chart-unit">변동률(%)</div><div class="chartwrap sm" id="weekChartBox"><canvas id="weekChart"></canvas></div></div>
       <div class="gt-t">
         <div class="tr-row"><button class="trbtn" onclick="trFlip('week',this)">⇄ 행열 전환</button></div>
         <div class="adv-tblwrap matrix" id="adv-week-matrix"></div>
@@ -187,7 +187,7 @@
     </section>
 
     <section class="adv-sec gsec gm-m" id="sec-month">
-      <div class="adv-h"><h3>월간 아파트 동향</h3><span class="adv-badge">매월 발표</span><span class="adv-badge">전월 대비 %</span>
+      <div class="adv-h"><h3>월간 아파트 동향</h3>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('month','m')">지도</button><button data-v="g" onclick="gtSet('month','g')">그래프</button><button data-v="t" onclick="gtSet('month','t')">표</button></div></div>
       <p class="adv-note">주간보다 표본이 넓고 안정적인 <b>월간 매매·전세가격지수 변동률</b>이다. 주간의 잔파도를 걷어내고 추세를 확인할 때 본다. <span style="color:#c0392b;font-weight:600">빨강=상승</span>, <span style="color:#1a5276;font-weight:600">파랑=하락</span>.</p>
       <div class="adv-regsel"><select id="adv-month-reg" onchange="renderMonthSec()"></select></div>
@@ -197,7 +197,7 @@
           </div></div>
         <div class="tilemap" id="month-map"></div>
       </div>
-      <div class="gt-g"><div class="chart-legend"><span class="cl-ma">매매</span><span class="cl-je">전세</span></div><div class="chart-unit">변동률(%)</div><div class="chart-frame"><canvas class="chart-yaxis" id="monthChartY"></canvas><div class="chart-scroll"><div class="chartwrap sm" id="monthChartBox"><canvas id="monthChart"></canvas></div></div></div><div class="map-hint">그래프를 옆으로 밀면 과거 시세까지 볼 수 있어요 ↔</div></div>
+      <div class="gt-g"><div class="period trp" id="month-period"></div><div class="chart-legend"><span class="cl-ma">매매</span><span class="cl-je">전세</span></div><div class="chart-unit">변동률(%)</div><div class="chartwrap sm" id="monthChartBox"><canvas id="monthChart"></canvas></div></div>
       <div class="gt-t">
         <div class="tr-row"><button class="trbtn" onclick="trFlip('month',this)">⇄ 행열 전환</button></div>
         <div class="adv-tblwrap matrix" id="adv-month-matrix"></div>
@@ -1456,8 +1456,8 @@ function wkCell(v){
 }
 /* --- 주간·월간 동향 (기본통계) — 표 + 막대 차트 공용 --- */
 const TREND={
-  week:{sel:'adv-week-reg',matrix:'adv-week-matrix',compact:'adv-week-compact',chart:'weekChart',col:'주간',lab:p=>p.slice(2),tick:l=>l.slice(3),map:'week-map',maplab:'week-maplab',unit:'전주 대비'},
-  month:{sel:'adv-month-reg',matrix:'adv-month-matrix',compact:'adv-month-compact',chart:'monthChart',col:'월간',lab:p=>p,tick:l=>l.slice(2),map:'month-map',maplab:'month-maplab',unit:'전월 대비'}
+  week:{sel:'adv-week-reg',matrix:'adv-week-matrix',compact:'adv-week-compact',chart:'weekChart',col:'주간',lab:p=>p.slice(2),tick:l=>l.slice(3),periods:[['3개월',13],['1년',52],['2년',0]],map:'week-map',maplab:'week-maplab',unit:'전주 대비'},
+  month:{sel:'adv-month-reg',matrix:'adv-month-matrix',compact:'adv-month-compact',chart:'monthChart',col:'월간',lab:p=>p,tick:l=>l.slice(2),periods:[['1년',12],['3년',36],['5년',0]],map:'month-map',maplab:'month-maplab',unit:'전월 대비'}
 };
 /* --- 시도 타일 지도 (빨강=상승 · 파랑=하락, 진할수록 변동 큼) --- */
 const NATION_TILE={cols:12,rows:19,t:[["a0","전국",0,0,1],["a8","경기",1,0,1],["a80603","파주",2,0,0],["a80602","고양",3,0,0],["a80703","양주",4,0,0],["a80702","동두천",5,0,0],["a80701","포천",6,0,0],["a80704","의정부",7,0,0],["a80402","구리",8,0,0],["a80401","남양주",9,0,0],["c1","강원",10,0,1],["c106","속초",11,0,0],["a9","인천",0,1,1],["a908","서",1,1,0],["a80601","김포",2,1,0],["a7","서울",3,1,1],["a7010301","은평",4,1,0],["a7010206","강북",5,1,0],["a7010207","도봉",6,1,0],["a7010208","노원",7,1,0],["c101","춘천",10,1,0],["c103","강릉",11,1,0],["a902","동",0,2,0],["a906","부평",1,2,0],["a907","계양",2,2,0],["a7010302","서대문",3,2,0],["a7010101","종로",4,2,0],["a7010205","성북",5,2,0],["a7010203","동대문",6,2,0],["a7010204","중랑",7,2,0],["c102","원주",10,2,0],["c104","동해",11,2,0],["a901","중",0,3,0],["a903","미추홀",1,3,0],["a905","남동",2,3,0],["a7010303","마포",3,3,0],["a7010102","중",4,3,0],["a7010103","용산",5,3,0],["a7010201","성동",6,3,0],["a7010202","광진",7,3,0],["c105","태백",10,3,0],["c107","삼척",11,3,0],["a904","연수",0,4,0],["a80301","부천",1,4,0],["a80304","광명",2,4,0],["a7020102","강서",3,4,0],["a7020101","양천",4,4,0],["a7020105","영등포",5,4,0],["a7020106","동작",6,4,0],["a7020202","강남",7,4,0],["a7020203","송파",8,4,0],["a7020204","강동",9,4,0],["a80303","시흥",0,5,0],["a80302","안산",1,5,0],["a80102","안양",2,5,0],["a7020103","구로",3,5,0],["a7020104","금천",4,5,0],["a7020107","관악",5,5,0],["a7020201","서초",6,5,0],["a80101","과천",7,5,0],["a80103","성남",8,5,0],["a80403","하남",9,5,0],["a80104","군포",0,6,0],["a80105","의왕",1,6,0],["a80203","수원",2,6,0],["a80202","용인",3,6,0],["a80404","광주",4,6,0],["a80501","이천",5,6,0],["a80502","여주",6,6,0],["a80307","평택",0,7,0],["a80305","화성",1,7,0],["a80306","오산",2,7,0],["a80201","안성",3,7,0],["c3","충남",0,8,1],["c313","당진",1,8,0],["c306","아산",2,8,0],["c301","천안",3,8,1],["c302","동남",4,8,0],["c303","서북",5,8,0],["c2","충북",6,8,1],["c206","음성",7,8,0],["c203","충주",8,8,0],["c204","제천",9,8,0],["c307","서산",0,9,0],["c311","홍성",1,9,0],["c312","예산",2,9,0],["c304","공주",3,9,0],["c309","계룡",4,9,0],["b6","세종",5,9,1],["c201","청주",6,9,1],["c20103","흥덕",7,9,0],["c20104","청원",8,9,0],["c20101","상당",9,9,0],["c20102","서원",10,9,0],["c305","보령",0,10,0],["c308","논산",1,10,0],["b4","대전",3,10,1],["b404","유성",4,10,0],["b405","대덕",5,10,0],["b403","서",6,10,0],["b402","중",7,10,0],["b401","동",8,10,0],["c4","전북",0,11,1],["c404","군산",1,11,0],["c405","익산",2,11,0],["c401","전주",3,11,1],["c402","완산",4,11,0],["c403","덕진",5,11,0],["c6","경북",6,11,1],["c606","영주",7,11,0],["c609","문경",8,11,0],["c605","안동",9,11,0],["c603","포항",10,11,1],["c60302","북",11,11,0],["c408","김제",0,12,0],["c406","정읍",1,12,0],["c407","남원",2,12,0],["c608","상주",6,12,0],["c602","구미",7,12,0],["c611","칠곡",8,12,0],["c604","김천",9,12,0],["c610","경산",10,12,0],["c60301","남",11,12,0],["b3","광주",0,13,1],["b304","북",1,13,0],["b305","광산",2,13,0],["b302","서",3,13,0],["b301","동",4,13,0],["b303","남",5,13,0],["b2","대구",6,13,1],["b205","북",7,13,0],["b202","동",8,13,0],["b206","수성",9,13,0],["c607","영천",10,13,0],["c601","경주",11,13,0],["c5","전남",0,14,1],["c504","나주",1,14,0],["c503","순천",2,14,0],["c505","광양",3,14,0],["c506","무안",4,14,0],["c501","목포",5,14,0],["c502","여수",6,14,0],["b203","서",7,14,0],["b201","중",8,14,0],["b207","달서",9,14,0],["b208","달성",10,14,0],["b204","남",11,14,0],["c7","경남",0,15,1],["c703","진주",1,15,0],["c705","사천",2,15,0],["c704","통영",3,15,0],["c708","거제",4,15,0],["c707","밀양",5,15,0],["b5","울산",6,15,1],["b501","중",7,15,0],["b503","동",8,15,0],["b504","북",9,15,0],["b505","울주",10,15,0],["b502","남",11,15,0],["c701","창원",1,16,1],["c70101","의창",2,16,0],["c70102","성산",3,16,0],["c70104","마산회원",4,16,0],["c70103","마산합포",5,16,0],["c702","진해",6,16,0],["c706","김해",7,16,0],["c709","양산",8,16,0],["b1","부산",9,16,1],["b10202","금정",10,16,0],["b10204","기장",11,16,0],["b10302","강서",4,17,0],["b10303","사상",5,17,0],["b10301","북",6,17,0],["b10203","동래",7,17,0],["b10201","해운대",8,17,0],["b10105","부산진",9,17,0],["b10107","연제",10,17,0],["b10108","수영",11,17,0],["b10304","사하",5,18,0],["b10102","서",6,18,0],["b10101","중",7,18,0],["b10106","남",8,18,0],["b10103","동",9,18,0],["b10104","영도",10,18,0],["c8","제주",0,18,1],["c801","제주",1,18,0],["c802","서귀포",2,18,0]]};
@@ -1640,66 +1640,18 @@ function areaGrad(color,topHex){
 }
 function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); return GCH[id]=new Chart(document.getElementById(id),cfg); }
 // 가로 스크롤 추이 차트의 y축을 왼쪽에 고정 복제 (스크롤해도 항상 보이게)
-function drawFixedYAxis(T,chart){
-  /* 차트가 가로로 스크롤되면 y축이 같이 밀려나가므로 고정 눈금을 따로 그린다.
-     핵심은 위치다 — 이 캔버스는 .chart-frame 기준 absolute인데 실제 차트
-     캔버스는 .chartwrap의 테두리+패딩 안쪽에서 시작한다. 그 오프셋을 빼먹으면
-     라벨이 격자선과 세로로 어긋나 '오버레이가 따로 노는' 화면이 된다.
-     상수로 박지 않고 매번 실측한다(패딩이 바뀌어도 따라오도록). */
-  const yc=document.getElementById(T.chart+'Y'); if(!yc||!chart||!chart.scales||!chart.scales.y)return;
-  const ys=chart.scales.y, cv=chart.canvas, frame=yc.parentElement;
-  const wrap=cv.parentElement, scroll=frame.querySelector('.chart-scroll');
-  if(!wrap||!scroll)return;
-  const fr=frame.getBoundingClientRect(), sr=scroll.getBoundingClientRect();
-  const wr=wrap.getBoundingClientRect(), wcs=getComputedStyle(wrap);
-  const offL=parseFloat(wcs.borderLeftWidth)+parseFloat(wcs.paddingLeft);
-  const offT=parseFloat(wcs.borderTopWidth)+parseFloat(wcs.paddingTop);
-  /* 폭은 축 너비만이 아니라 '플롯이 시작되는 x'까지 전부 덮어야 한다.
-     축 너비만 덮으면 프레임 왼쪽 가장자리와 래퍼 패딩 사이에 틈이 남고,
-     스크롤되는 그래프가 그 틈으로 그대로 비친다. */
-  const gutter=(sr.left-fr.left)+offL;
-  const dpr=window.devicePixelRatio||1, w=Math.ceil(gutter+ys.width), h=Math.round(cv.getBoundingClientRect().height);
-  if(w<2||h<2){yc.width=0;yc.height=0;return;}
-  yc.width=w*dpr; yc.height=h*dpr; yc.style.width=w+'px'; yc.style.height=h+'px';
-  yc.style.left='0px';                         /* 가로: 프레임 왼쪽 끝부터 덮어 틈을 없앤다 */
-  yc.style.top=(wr.top-fr.top+offT)+'px';      /* 세로: 래퍼 실측 — margin까지 반영된다 */
-  const ctx=yc.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-  /* 스크롤되며 지나가는 원래 축 라벨을 가려야 하므로 불투명하게. 이제 패딩
-     안쪽에만 칠하므로 카드 테두리를 덮지 않는다. */
-  ctx.fillStyle=getComputedStyle(wrap).backgroundColor||'#fff'; ctx.fillRect(0,0,w,h);
-  ctx.font='500 10px '+FONT; ctx.textAlign='right'; ctx.textBaseline='middle';
-  (ys.ticks||[]).forEach(t=>{
-    const y=ys.getPixelForValue(t.value);
-    ctx.fillStyle=t.value===0?INK:MUTED;   /* 0선 라벨만 먹색 — 기준선이 어디인지 */
-    ctx.fillText(String(+Number(t.value).toFixed(3)), w-6, y);
-  });
-  /* 축과 플롯을 가르는 괘선 */
-  ctx.fillStyle=GRID; ctx.fillRect(w-1,0,1,h);
-}
-/* 뷰포트나 DPR이 바뀌면(회전·주소창 접힘·창 크기 조절) 오버레이는 CSS 폭만
-   유지한 채 백킹 스토어가 옛 배율로 남아 늘어난다. 차트는 responsive라 알아서
-   다시 그려지지만 이 캔버스는 남의 소관이므로 직접 따라가야 한다. */
-let _yaxTimer;
-addEventListener('resize',()=>{
-  clearTimeout(_yaxTimer);
-  _yaxTimer=setTimeout(()=>{
-    ['week','month'].forEach(k=>{
-      const T=TREND&&TREND[k]; if(!T)return;
-      const cv=document.getElementById(T.chart); if(!cv)return;
-      const c=window.Chart&&Chart.getChart(cv); if(c)drawFixedYAxis(T,c);
-    });
-  },160);
-});
 function drawTrendChart(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
   const reg=advSel(T.sel,W.regions), ri=W.regions.indexOf(reg);
-  const n=W.rows.length, box=document.getElementById(T.chart+'Box');
-  if(box)box.style.width=Math.max(box.parentElement.clientWidth,n*15)+'px';   // 15px/구간 — 타이트한 밀도
+  renderTrPeriods(k);
+  const cnt=(T.periods&&T.periods[TRP[k]])?T.periods[TRP[k]][1]:0;
+  const rows=cnt>0?W.rows.slice(-cnt):W.rows;   // 탭이 고른 만큼만 — 가로 스크롤 없이 한 화면에
+  const n=rows.length;
   const chart=mkChart(T.chart,{type:'line',
-    data:{labels:W.rows.map(r=>T.lab(r.p)),datasets:[
-      {label:'매매',data:W.rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','1a'),fill:'origin',
+    data:{labels:rows.map(r=>T.lab(r.p)),datasets:[
+      {label:'매매',data:rows.map(r=>r.ma[ri]),borderColor:'#e0564a',backgroundColor:areaGrad('#e0564a','1a'),fill:'origin',
         borderWidth:2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true},
-      {label:'전세',data:W.rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:areaGrad('#a98be0','1a'),fill:'origin',
+      {label:'전세',data:rows.map(r=>r.je[ri]),borderColor:'#a98be0',backgroundColor:areaGrad('#a98be0','1a'),fill:'origin',
         borderWidth:2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},
@@ -1710,20 +1662,6 @@ function drawTrendChart(k){
           callback:function(v){const l=this.getLabelForValue(v);return T.tick?T.tick(l):l;}}},
         y:{grid:{color:c=>c.tick.value===0?INK:GRID,lineWidth:c=>c.tick.value===0?1.2:1},
           ticks:{callback:v=>String(+Number(v).toFixed(3)),maxTicksLimit:6,padding:2,font:{size:10}},title:{display:false}}}}});
-  drawFixedYAxis(T,chart);
-  /* resize 이벤트만 믿기엔 부족하다 — 주소창 접힘·회전·컨테이너 변화는
-     window resize를 안 쏘는 경우가 있다. 컨테이너 크기를 직접 관찰한다. */
-  const sc=box&&box.parentElement;
-  if(sc&&window.ResizeObserver&&!sc._yaxRO){
-    sc._yaxRO=new ResizeObserver(()=>{
-      clearTimeout(sc._yaxT);
-      sc._yaxT=setTimeout(()=>{
-        const c=window.Chart&&Chart.getChart(document.getElementById(T.chart));
-        if(c)drawFixedYAxis(T,c);
-      },120);
-    });
-    sc._yaxRO.observe(sc);
-  }
 }
 function renderWeekSec(){ renderTrendTables('week'); drawTrendChart('week'); drawTrendMap('week'); }
 function renderMonthSec(){ renderTrendTables('month'); drawTrendChart('month'); drawTrendMap('month'); }
@@ -1795,9 +1733,6 @@ function gtSet(sec,v){
     const box=document.getElementById(sec+'ChartBox');
     const ch=box&&window.Chart&&Chart.getChart(box.querySelector('canvas'));
     if(ch)ch.resize();   // display:none에서 생성된 차트는 표시 시 직접 리사이즈해야 canvas가 그려짐
-    if(ch&&(sec==='week'||sec==='month'))setTimeout(()=>drawFixedYAxis(TREND[sec],ch),0);   // 리사이즈 후 y축 오버레이 갱신
-    const toLatest=()=>{if(box&&box.parentElement)box.parentElement.scrollLeft=box.parentElement.scrollWidth;};   // 최신 구간부터(독립 매크로태스크 재시도)
-    [0,120,300,600].forEach(d=>setTimeout(toLatest,d));
   }
   track('stats_gt',{section:sec,view:v});
 }
