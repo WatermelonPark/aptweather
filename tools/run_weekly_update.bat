@@ -106,9 +106,9 @@ if errorlevel 1 (
   exit /b 17
 )
 
-git diff --quiet data.js data-core.js data-rest.json index.html share\weekly-map.png zone sitemap.xml
+git diff --quiet data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
 if errorlevel 1 (
-  git add data.js data-core.js data-rest.json index.html share\weekly-map.png zone sitemap.xml
+  git add data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
   if errorlevel 1 (
     echo ERROR: git add failed
     exit /b 14
