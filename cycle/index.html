@@ -34,51 +34,26 @@
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "아파트 사이클이란 — 집값은 왜 돌고 도는가",
-  "description": "아파트 사이클 6개 고리(공급 부족→전세 상승→매매 상승→신축 공급→입주→전세·매매 하락)를 15개 시도 20년 국가 통계로 검증한 리포트 요약.",
+  "description": "아파트 사이클 6개 고리(공급 부족→전세 상승→매매 상승→신축 공급→입주→전세·매매 하락)를 15개 시도 20년 국가 통계로 검증한 리포트.",
   "url": "https://www.agongmap.co.kr/cycle/",
+  "mainEntityOfPage": "https://www.agongmap.co.kr/cycle/",
   "inLanguage": "ko",
+  "datePublished": "2026-07-19",
+  "dateModified": "2026-07-19",
   "author": {"@type": "Organization", "name": "아공맵 (agongmap.co.kr)"},
-  "publisher": {"@type": "Organization", "name": "아공맵 (agongmap.co.kr)"},
-  "mainEntityOfPage": "https://www.agongmap.co.kr/cycle/"
+  "publisher": {"@type": "Organization", "name": "아공맵 (agongmap.co.kr)"}
 }
 </script>
+<!-- 홈과 같은 폰트·CSS를 공유한다. 복제하면 반드시 드리프트한다(구 팔레트 사고). -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="/app.css">
 <style>
-  :root{--ink:#16203a;--ink2:#3b4569;--paper:#f6f4ee;--paper2:#edeae1;--accent:#c0392b;
-    --gold:#b8862f;--muted:#6f6a5c;--line:#dad5c9;--jeonse:#6c4ab6;--stock:#1f8a70;--green:#1a6b54}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
-    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-    line-height:1.7;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:560px;margin:0 auto;padding:0 22px}
-  header{padding:56px 0 30px;text-align:center}
-  .chip{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.1em;color:#fff;
-    background:var(--stock);padding:6px 16px;border-radius:20px;margin-bottom:18px}
-  h1{font-size:clamp(26px,6vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.3;margin-bottom:12px}
-  h1 em{font-style:normal;color:var(--accent)}
-  .lead{font-size:15.5px;color:var(--ink2);max-width:470px;margin:0 auto}
-  section{padding:30px 0;border-top:1px solid var(--line)}
-  h2{font-size:21px;font-weight:800;letter-spacing:-.01em;margin-bottom:14px}
-  p{font-size:15px;color:var(--ink2);margin-bottom:12px}
-  ol.steps{list-style:none;counter-reset:s;margin:16px 0}
-  ol.steps li{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:14px;
-    padding:14px 18px 14px 54px;margin-bottom:10px;font-size:14.5px;color:var(--ink2);position:relative}
-  ol.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:26px;height:26px;
-    background:var(--ink);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:13px;font-weight:800}
-  ol.steps b{color:var(--ink)}
-  .note{background:#fff;border-left:4px solid var(--gold);border-radius:0 12px 12px 0;padding:14px 18px;
-    font-size:14px;color:var(--ink2);margin:14px 0}
-  .cta{display:block;width:100%;max-width:400px;margin:22px auto 0;text-align:center;text-decoration:none;
-    background:var(--ink);color:#fff;font-size:17px;font-weight:800;padding:16px 24px;border-radius:14px;
-    box-shadow:0 6px 20px rgba(22,32,58,.18)}
-  .cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;margin-top:12px;font-size:15px;padding:13px 24px}
-  .links{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-  .links a{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;
-    padding:14px 18px;text-decoration:none;color:var(--ink);font-size:14.5px;font-weight:700}
-  .links a span{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:2px}
-  footer{padding:26px 0 60px;text-align:center;font-size:12.5px;color:var(--muted)}
-  footer a{color:var(--muted)}
-
+/* 이 페이지에만 있는 요소. app.css의 토큰을 폴백과 함께 참조한다. */
+.links{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.links a{display:block;background:#fff;border:1px solid var(--line,#e2dbc9);border-radius:12px;
+  padding:14px 18px;text-decoration:none;color:var(--ink,#16203a);font-size:14.5px;font-weight:700}
+.links a span{display:block;font-size:13px;font-weight:400;color:var(--muted,#6f6a5c);margin-top:2px}
 .subsbox{background:#fff;border:1.5px solid var(--line,#e2dbc9);border-radius:14px;padding:16px 18px;margin:22px 0 0}
 .subsbox b{display:block;font-size:15px;margin-bottom:4px}
 .subsbox p{font-size:12.5px;color:var(--muted,#6f6a5c);margin:4px 0 10px;line-height:1.5}
@@ -89,33 +64,348 @@
   border:1px solid #16203a;background:#16203a;color:#fff;cursor:pointer}
 .subsbox .consent{font-size:11.5px;line-height:1.55;margin:8px 0 0}
 .subsbox .subs-msg{display:block;font-size:12.5px;color:var(--muted,#6f6a5c);margin-top:8px}
+/* 네비를 <a>로 쓰므로 밑줄을 지운다(홈은 <button>이라 필요 없었다). */
+.bottomnav .nav-btn{text-decoration:none}
 </style>
 </head>
 <body>
 
-<header><div class="wrap">
-  <div class="chip">🔄 아파트 사이클</div>
-  <h1>집값은 <em>돌고 돈다</em><br>— 왜, 어떻게?</h1>
-  <p class="lead">감이나 뉴스가 아니라 KOSIS·국토교통부·한국은행의 20년 통계로, 집값이 순환하는 6개 고리를 하나씩 검증했다.</p>
+<header class="hero"><div class="wrap">
+  
+  <h1>집값은 돌고 돈다<br><em>전세</em>가 끌고 <em>공급</em>이 누른다</h1>
+  <p class="sub">공급이 부족하면 전세가 오르고, 전세가 매매를 밀어올린다. 오른 매매가 새 공급을 부르고, 그 공급이 다시 전세를 눌러 사이클을 돌린다. 그리고 금리가 이 순환 전체를 흔든다. 15개 시도 데이터로 한 고리씩 추적했다.</p>
+  <div class="meta"><span>2006–2026 분기·연</span><span class="dot"></span>
+    <span>15개 시도 · 4개 생활권</span><span class="dot"></span><span>KOSIS·한국은행</span></div>
 </div></header>
 
-<section><div class="wrap">
-  <h2>사이클의 6개 고리</h2>
-  <ol class="steps">
-    <li>집이 모자라면 <b>전세부터 오른다</b> — 살 곳은 당장 필요하니까</li>
-    <li>오른 전세가 <b>매매를 밀어올린다</b> — 전세가율이 좁혀지면 "이 돈이면 사자"</li>
-    <li>값이 오르니 건설사가 <b>새 집을 짓는다</b> — 인허가·착공 증가</li>
-    <li>인허가에서 입주까지 <b>4~6년이 걸린다</b> — 공급은 즉시 못 온다</li>
-    <li>입주가 시작되면 몰린 물량이 <b>전세를 누른다</b> — 입주장의 전세 약세</li>
-    <li>전세가 빠지면 <b>매매도 따라 내린다</b> — 그리고 공급이 끊기면 1번부터 다시</li>
-  </ol>
-  <div class="note"><b>⚡ 금리</b>는 이 순환 바깥에서 사이클 전체를 흔드는 외부 변수다. 2021년의 저금리, 2022년의 급격한 인상이 대표적 사례.</div>
-  <p>15개 시도 데이터로 관측하면 이 한 바퀴가 <b>지방은 약 5년, 수도권은 약 10년</b>이다. 지금 어느 국면인지는 전세가율·입주물량·인허가를 함께 보면 읽힌다.</p>
-  <a class="cta" href="/#report">📑 전체 리포트 읽기 (근거 데이터 포함)</a>
-  <a class="cta sub" href="/#stats-market">🗺️ 지금 시장은 어느 국면? 이번 주 지도 보기</a>
+<!-- 30초 요약 (첫 방문자용 진입로) -->
+<section class="tldr"><div class="wrap">
+  <div class="tldr-kicker">30초 요약</div>
+  <h2 class="tldr-h">부동산은 <b>공급</b>이 만드는 <b>사이클</b>로 돈다</h2>
+  <div class="tldr-grid">
+    <div class="tldr-diagram"><svg viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="부동산 공급 사이클 순환 다이어그램" style="width:100%;max-width:440px;height:auto">
+<circle cx="230" cy="230" r="152" fill="none" stroke="#d2dad6" stroke-width="2.5"/>
+<polygon points="315.5,103.9 303.9,87.9 295.9,101.8" fill="#b8862f"/>
+<polygon points="382.0,241.0 390.0,223.0 374.0,223.0" fill="#b8862f"/>
+<polygon points="296.5,367.1 316.1,365.1 308.1,351.2" fill="#b8862f"/>
+<polygon points="144.5,356.1 156.1,372.1 164.1,358.2" fill="#b8862f"/>
+<polygon points="78.0,219.0 70.0,237.0 86.0,237.0" fill="#b8862f"/>
+<polygon points="163.5,92.9 143.9,94.9 151.9,108.8" fill="#b8862f"/>
+<text x="230" y="205" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="15" fill="#5e6f74">한 바퀴</text>
+<text x="230" y="233" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#1f8a70">지방 5년</text>
+<text x="230" y="260" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="20" fill="#c0392b">수도권 10년</text>
+<a href="#link1" class="cycbox" onclick="track('cycle_jump',{to:'link1'})" aria-label="공급 부족 — 고리① 근거로 이동">
+<rect class="cb" x="170.5" y="58.0" width="119.0" height="40" rx="12" fill="#fff" stroke="#16203a" stroke-width="2.5"/>
+<text x="230.0" y="84.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#16203a">공급 부족</text>
+<rect x="206.0" y="37.5" width="48.0" height="25.0" rx="12.5" fill="#16203a"/>
+<text x="230.0" y="54.4" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="13" fill="#fff">시작</text>
+</a>
+<a href="#link1" class="cycbox" onclick="track('cycle_jump',{to:'link1'})" aria-label="고리① 전세 상승 근거로 이동">
+<rect class="cb" x="311.6" y="134.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
+<text x="361.6" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#6c4ab6">전세 ↑</text>
+<circle cx="361.6" cy="126.0" r="12.5" fill="#6c4ab6"/>
+<text x="361.6" y="130.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">1</text>
+</a>
+<a href="#link2" class="cycbox" onclick="track('cycle_jump',{to:'link2'})" aria-label="고리② 매매 상승 근거로 이동">
+<rect class="cb" x="311.6" y="286.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
+<text x="361.6" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#c0392b">매매 ↑</text>
+<circle cx="361.6" cy="278.0" r="12.5" fill="#c0392b"/>
+<text x="361.6" y="282.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">2</text>
+</a>
+<a href="#link3" class="cycbox" onclick="track('cycle_jump',{to:'link3'})" aria-label="고리③④ 공급 증가와 리드타임 근거로 이동">
+<rect class="cb" x="165.3" y="362.0" width="129.4" height="40" rx="12" fill="#fff" stroke="#1f8a70" stroke-width="2.5"/>
+<text x="230.0" y="388.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#1f8a70">신축공급</text>
+<rect x="211.0" y="341.5" width="38.0" height="25.0" rx="12.5" fill="#1f8a70"/>
+<text x="230.0" y="358.4" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">3·4</text>
+</a>
+<a href="#link6" class="cycbox" onclick="track('cycle_jump',{to:'link6'})" aria-label="고리⑤ 입주가 전세를 누르는 근거로 이동">
+<rect class="cb" x="48.4" y="286.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#6c4ab6" stroke-width="2.5"/>
+<text x="98.4" y="312.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#6c4ab6">전세 ↓</text>
+<circle cx="98.4" cy="278.0" r="12.5" fill="#6c4ab6"/>
+<text x="98.4" y="282.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">5</text>
+</a>
+<a href="#link2" class="cycbox" onclick="track('cycle_jump',{to:'link2'})" aria-label="고리⑥ 매매 하락 근거로 이동">
+<rect class="cb" x="48.4" y="134.0" width="100.0" height="40" rx="12" fill="#fff" stroke="#c0392b" stroke-width="2.5"/>
+<text x="98.4" y="160.0" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="16.5" fill="#c0392b">매매 ↓</text>
+<circle cx="98.4" cy="126.0" r="12.5" fill="#c0392b"/>
+<text x="98.4" y="130.9" text-anchor="middle" font-family="sans-serif" font-weight="600" font-size="14" fill="#fff">6</text>
+</a>
+</svg></div>
+    <div class="tldr-text">
+      <ol class="tldr-steps">
+        <li><a href="#link1" onclick="track('tldr_jump',{to:'link1'})"><span class="ts-n">①</span><span class="ts-t">집이 모자라면 <b class="j">전세</b>부터 오른다</span></a></li>
+        <li><a href="#link2" onclick="track('tldr_jump',{to:'link2'})"><span class="ts-n">②</span><span class="ts-t">오른 전세가 <b class="m">매매</b>를 밀어올린다</span></a></li>
+        <li><a href="#link3" onclick="track('tldr_jump',{to:'link3'})"><span class="ts-n">③</span><span class="ts-t">값이 오르니 건설사가 <b class="s">새 집을 짓는다</b></span></a></li>
+        <li><a href="#link45" onclick="track('tldr_jump',{to:'link45'})"><span class="ts-n">④</span><span class="ts-t">인허가에서 입주까지 <b class="s">몇 년이 걸린다</b></span></a></li>
+        <li><a href="#link6" onclick="track('tldr_jump',{to:'link6'})"><span class="ts-n">⑤</span><span class="ts-t">입주가 시작되면 늘어난 물량이 <b class="j">전세를 누른다</b></span></a></li>
+        <li><a href="#link2" onclick="track('tldr_jump',{to:'link2'})"><span class="ts-n">⑥</span><span class="ts-t">전세가 빠지면 <b class="m">매매도 따라 내린다</b></span></a></li>
+      </ol>
+    </div>
+    <p class="tldr-rate"><b>⚡ 금리</b>는 이 사이클 <b>바깥</b>에서 순환 전체를 흔드는 외부 힘이다. 2021년 저금리가 대표적.</p>
+    <p class="tldr-more">아래에서 <b>15개 시도 데이터</b>로 이 고리를 하나씩 검증했다. <span class="tldr-arrow">↓</span></p>
+  </div>
 </div></section>
 
+<div class="howto"><div class="wrap">
+  <div class="ic">?</div>
+  <div>
+    <b>이 리포트를 읽는 법.</b> 어려운 통계 용어는 쓰지 않았다. 대신 두 가지만 알아두면 충분하다.
+    <div class="gloss">
+      <div><b>상관(r)</b> — 두 값이 함께 움직이는 정도. 1에 가까울수록 강하게 같이 움직이고, 0이면 무관, 음수(−)면 반대로 움직인다. 0.7 이상이면 매우 강한 편.</div>
+      <div><b>유의성(신뢰도)</b> — 그 관계가 우연이 아닐 가능성. 이 리포트에선 <b>초록=신뢰 높음, 노랑=보통</b>으로 표시했다. (우연일 가능성이 큰 <b>빨강=약함</b> 관계는 애초에 고리로 싣지 않았다.)</div>
+    </div>
+    <div style="margin-top:12px;font-size:13px;color:#aab0c2">※ 상관은 '함께 움직인다'는 뜻이지 '반드시 원인'이라는 증명은 아닙니다. 다만 이 분석은 시간 순서(먼저 움직인 쪽 → 나중 움직인 쪽)를 따져, 인과의 방향을 최대한 가렸다.</div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #313c5e;font-size:13.5px;color:#c2c7d6">각 고리마다 <b style="color:#fff">신뢰 게이지</b>(●●●●●)를 달았다. 채워진 점이 많을수록 — 상관이 강하고, 우연일 확률이 낮고, 여러 지역에서 똑같이 재현될수록 — 믿을 만한 연결이다.</div>
+  </div>
+</div></div>
+
+
+<!-- 본문 파트 배너 -->
+<div class="mainbanner"><div class="wrap">
+  <span class="mainkicker">본문</span>
+  <p>국가기관 통계로 직접 검증한 <b>6개의 고리</b>다. 공급 부족에서 시작해 전세·매매·공급을 돌아 다시 제자리로 — 각 고리가 데이터로 얼마나 단단한지 신뢰 게이지로 표시했다.</p>
+</div></div>
+
+
+<!-- STEP 1 -->
+<section class="step" id="link1"><div class="wrap">
+  <div class="stepnum"><span class="badge">고리 ①</span><span class="arc">공급 부족 → 전세가 상승</span></div>
+  <h2 class="t">집이 모자란 곳에서, 전세가 먼저 오른다</h2>
+  <span class="verdict v-strong"><span class="v-dot"></span>신뢰 높음 · 생활권 단위 · 시차 1분기</span>
+  <div class="conf"><span class="clevel cl-high">신뢰 높음</span>
+    <span class="gauge"><i class="on"></i><i class="on"></i><i class="on"></i><i class="mid"></i><i></i></span>
+    <span class="ctxt"><b>공급과 전세가는 반대로 움직인다.</b> 추세를 걷어내고 보면, 공급(입주)이 늘어난 분기엔 전세 상승이 눌리고 공급이 마르면 전세가 오릅니다. 생활권 단위에서 뚜렷하다.
+    <span class="meta">근거: 수도권 분기 · r −0.29 · 약 1분기 시차</span></span></div>
+  <p class="lead">사이클의 출발점은 공급 부족이다. 그리고 그 부족이 가장 먼저 드러나는 곳은 매매가 아니라 <strong>전세</strong>다.</p>
+  <p>공급이 부족하면 실수요가 전세로 몰려 전세가가 오른다. 반대로 입주가 쏟아지면 전세가 눌린다. 수도권을 하나의 생활권으로 묶어 보면 이 관계가 또렷하다 — <strong>공급이 많았던 분기의 전세 상승률은 공급이 적었던 분기의 절반 이하</strong>로 떨어진다.</p>
+  <div class="chartbox">
+    <h4>수도권: 공급 수준별 전세 상승률</h4>
+    <div class="cap">분기별 공급(입주) 물량을 3등분해 비교. 양끝을 보면 공급 많은 분기의 전세 상승은 적은 분기의 절반 이하 — 다만 계단식으로 내려가진 않는다(아래 노트).</div>
+    <div class="cwrap"><canvas id="cL1"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>공급이 적은 시기엔 수도권 전세가 분기당 <b>1.4%</b>씩 올랐지만, 입주가 몰린 시기엔 <b>0.6%</b>로 꺾였다. 공급이 전세를 직접 누른다는 뜻이다. 이 효과는 <b>서울만 떼어 보면 안 보이고</b>(입주가 경기·인천으로 분산), 수도권 전체로 묶어야 드러납니다.</div>
+  <div class="note"><b>왜 '보통'이 가장 높을까 — 공급은 국면을 타고 작동한다.</b> 막대가 계단처럼 내려가지 않는 것은 오류가 아니다. 수도권 월별 원자료(2014~2026 분기화)로 공급 국면을 나눠 확인하면 — 입주가 늘기 시작해도 <b>누적 물량이 아직 적은 초입에는 전세가 분기 +1.9%씩 계속 오르고</b>, 물량이 계속 쌓여 <b>누적 수준이 높아진 국면에서는 상승이 0%로 멈춘다.</b> 입주가 잦아들면 다시 +2%대로 회복한다. '보통' 분기에는 이 상승 초입 국면이 섞여 있어 평균이 높게 나온다. 한편 억제 효과 자체는 즉각적이라(같은 분기~1분기 뒤 상관이 가장 강하고, 2년 누적으로 갈수록 약해짐) 공급의 힘은 '얼마나 오래 쌓였나'보다 <b>'지금 얼마나 쏟아지고 있고, 이미 얼마나 쌓였나'</b>의 조합으로 읽어야 한다.</div>
+  <div class="note"><b>고리 ①과 고리 ⑥은 동전의 양면이다.</b> "공급 부족 → 전세 상승"(①)과 "입주 → 전세 하락"(⑥)은 결국 <b>공급과 전세가 반대로 움직인다</b>는 하나의 원리다. 사이클의 시작과 끝에서 같은 메커니즘이 작동하며 순환을 닫는다.</div>
+</div></section>
+
+<!-- STEP 2 -->
+<section class="step" id="link2"><div class="wrap">
+  <div class="stepnum"><span class="badge">고리 ②</span><span class="arc">전세가 상승 → 매매가 상승</span></div>
+  <h2 class="t">전세가 매매를 밀어올린다</h2>
+  <span class="verdict v-strong"><span class="v-dot"></span>신뢰 매우 높음 · 전 지역 예외 없음</span>
+  <div class="conf"><span class="clevel cl-high">신뢰 매우 높음</span>
+    <span class="gauge"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+    <span class="ctxt"><b>분석한 15개 시도 전부에서 확인.</b> 재현율 100% — 한 곳도 예외 없이 전세와 매매가 같은 방향으로 움직였다. 가장 보편적인 고리다.
+    <span class="meta">근거: 시도 15개 모두 유의 · 평균 r 0.71</span></span></div>
+  <p class="lead">전세가는 매매가의 바닥을 받친다. 전세가 오르면, 매매가도 따라 오른다.</p>
+  <p>전세 변화와 매매 변화의 동조성은 분석한 <strong>15개 시도 전부에서</strong> 양(+)으로 확인됐다. 전세가 매매를 떠받치는 힘은 어디서나 작동한다. 다만 그 강도는 지역마다 다르다 — 지방 대도시(대구·부산 0.8)는 거의 한 몸으로 움직이고, <strong>서울은 0.58로 가장 느슨</strong>하다.</p>
+  <div class="chartbox">
+    <h4>전세–매매 동조성 (높을수록 함께 움직임)</h4>
+    <div class="cap">빨강=수도권. 서울이 맨 아래 — 전세와 매매가 가장 따로 노는 시장이다.</div>
+    <div class="cwrap tall"><canvas id="c6"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>대부분 지역은 전세가 오르면 매매도 바로 따라 오릅니다. 그런데 <b>서울은 이 결속이 가장 느슨</b>해서, 전세와 무관하게 매매가 따로 움직일 여지가 큽니다. 이게 다음 이야기(고리 ③)로 이어집니다.</div>
+  <div class="note"><b>2018년 수도권, 전세를 두고 매매만 달렸다.</b> 2018년 수도권은 전세가 밀리거나 횡보하는데도 매매만 분기마다 1~2%포인트 더 올랐다. 서울은 그해 3분기 매매가 +7%까지 튀었지만 전세는 +2%에 그쳤다. 펀더멘털(전세)을 앞질러 기대가 가격을 끌어올린 국면으로, 2021년 대폭등의 예고편이었다.</div>
+</div></section>
+
+<!-- PIVOT: 서울 디커플링 -->
+
+<!-- STEP 3 -->
+<section class="step" id="link3"><div class="wrap">
+  <div class="stepnum"><span class="badge">고리 ③</span><span class="arc">매매가 상승 → 인허가 증가</span></div>
+  <h2 class="t">오른 집값이 공급을 부른다 — 땅이 있는 곳에서는</h2>
+  <span class="verdict v-mid"><span class="v-dot"></span>지역별로 갈림 · 시차 약 1년</span>
+  <div class="conf"><span class="clevel cl-mid">지역에 따라 다름</span>
+    <span class="gauge"><i class="on"></i><i class="on"></i><i class="on"></i><i class="mid"></i><i></i></span>
+    <span class="ctxt"><b>고리 자체는 뚜렷하지만, 지역에 따라 살아있기도 끊기기도 한다.</b> 택지에 여유가 있는 충북·부산·광주 등에선 매매 상승이 1년 뒤 인허가로 이어집니다(r 0.3~0.5). 반대로 택지가 포화된 수도권(서울·경기)에선 이 고리가 끊깁니다. 전국 평균만 보면 이 둘이 상쇄돼 약해 보일 뿐이다.
+    <span class="meta">근거: 시도별 연 19개 · 강한 지역 평균 r 0.38 · 수도권 음(-)</span></span></div>
+  <p class="lead">집값이 오르면 건설사가 움직인다. 단, 즉시가 아니라 <strong>약 1년의 시차</strong>를 두고서, 그리고 <strong>지을 땅이 있는 곳에서만</strong>이다.</p>
+  <p>건설사는 매매가가 오른다고 바로 삽을 뜨지 않는다. 반년에서 1년쯤 시장을 지켜보다 사업성이 확실해지면 부지를 사고 인허가를 신청한다. 그런데 이 반응은 <strong>땅이 있어야 가능</strong>하다. 택지가 넉넉한 지방은 가격 신호에 공급이 또렷하게 반응하지만, 택지가 바닥난 수도권은 집값이 아무리 올라도 인허가가 따라오지 못한다.</p>
+  <div class="chartbox">
+    <h4>매매 상승 → 인허가, 지역별 연결 강도 (1년 시차)</h4>
+    <div class="cap">막대가 오른쪽으로 길수록 고리가 강함. 충북·부산 등은 뚜렷이 살아있고(초록), 수도권(서울·경기)은 음(-)으로 끊겨 있다(빨강).</div>
+    <div class="cwrap tall"><canvas id="cL3"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>"집값 오르면 공급 는다"는 <b>땅이 있는 지역에서만</b> 성립한다. 충북·부산처럼 택지 여유가 있으면 1년 뒤 공급이 따라오지만, <b>서울·경기는 땅이 없어 이 고리가 끊깁니다.</b> 전국을 뭉뚱그리면 이 둘이 섞여 약해 보이지만, 실제로는 강한 지역과 끊긴 지역으로 갈리는 겁니다.</div>
+  <div class="note"><b>왜 수도권에서 끊기나.</b> 택지가 포화돼 신규 공급 부지가 없기 때문이다. 매매가 상승이라는 신호는 똑같이 와도, 받아줄 땅이 없으니 인허가로 이어지지 못한다. 이 끊긴 고리가 수도권의 만성 공급 부족과 긴 사이클(참고 ③)의 근본 원인이다.</div>
+</div></section>
+
+
+<!-- STEP 4 -->
+<section class="step" id="link45"><div class="wrap">
+  <div class="stepnum"><span class="badge">고리 ④⑤</span><span class="arc">인허가 → 착공 → 준공</span></div>
+  <h2 class="t">공급은 수 년에 걸쳐 현실이 된다 — 그 기간이 점점 길어지고 있다</h2>
+  <span class="verdict v-strong"><span class="v-dot"></span>신뢰 매우 높음 · 착공→준공 r 0.82</span>
+  <div class="conf"><span class="clevel cl-high">신뢰 매우 높음</span>
+    <span class="gauge"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+    <span class="ctxt"><b>착공이 준공으로 이어지는 관계는 가장 단단하다(r 0.82).</b> 물리적 건설 일정이라 시장 심리에 흔들리지 않는다. 다만 그 <b>리드타임이 고정이 아니라 길어지고 있다</b> — 과거(2011~17) 약 27개월에서 최근(2018~25) 약 37개월로.
+    <span class="meta">근거: 전국 월별 이동평균 시차상관 · 최강 시차 과거 27개월 → 최근 37개월</span></span></div>
+  <p class="lead">인허가가 나면 곧 착공으로, 착공은 수 년 뒤 준공(입주)으로 이어진다. 이 구간은 사이클에서 가장 단단하지만, <strong>완공까지 걸리는 시간이 예전보다 길어졌다</strong>.</p>
+  <p>인허가와 착공은 거의 동시에 움직인다(r 0.74). 착공에서 준공까지는 과거 <strong>약 27개월(2년 남짓)</strong>이었지만, 최근에는 <strong>약 37개월(3년~3년 반)</strong>로 늘었다. 공사비 급등·인력난·안전기준 강화 등이 겹친 결과로 보인다. 같은 양을 착공해도 입주가 더 늦게 도착한다는 뜻이다.</p>
+  <div class="note"><b>업계 조사도 같은 방향을 가리킨다.</b> 부동산R114에 따르면 아파트 평균 공사기간(분양→입주)이 2020–23년 25개월에서 2024년 입주단지 29개월로 늘었고, 재개발은 33개월에 달했다. 측정 기준(분양 기준 vs 착공 기준)이 달라 절대 개월 수는 차이가 있지만, "최근 공사기간이 길어졌다"는 방향은 국토부 원자료 분석과 업계 조사가 일치한다.</div>
+  <div class="chartbox">
+    <h4>전국 아파트 공급 흐름: 인허가 → 착공 → 준공</h4>
+    <div class="cap">세 선이 시차를 두고 같은 봉우리를 그린다. 인허가 정점이 수 년 뒤 준공 정점으로 이어진다. 착공·준공 통계는 2011년 전후부터 제공돼 그 이전 구간은 표시하지 않았다.</div>
+    <div class="cwrap"><canvas id="cFlow"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>오늘 착공해도 실제 입주는 <b>예전엔 2년 남짓, 요즘은 3년~3년 반 뒤</b>다. 완공이 느려졌다는 건, 지금의 공급 부족이 생각보다 <b>더 오래 이어질 수 있다</b>는 뜻이기도 하다. (시기별 변화는 <b>통계보기 → 착공·준공 리드타임</b>에서 직접 확인할 수 있다.)</div>
+</div></section>
+
+<!-- STEP 5 -->
+<section class="step" id="link6"><div class="wrap">
+  <div class="stepnum"><span class="badge">고리 ⑥</span><span class="arc">준공 → 전세가 하락 → 다시 처음으로</span></div>
+  <h2 class="t">입주가 시작되면, 전세가 먼저 꺾인다</h2>
+  <span class="verdict v-strong"><span class="v-dot"></span>신뢰 높음 · 지역 단위에서만 보임</span>
+  <div class="conf"><span class="clevel cl-high">신뢰 높음 (지역 한정)</span>
+    <span class="gauge"><i class="on"></i><i class="on"></i><i class="on"></i><i class="mid"></i><i></i></span>
+    <span class="ctxt"><b>15개 시도 중 11곳에서 확인.</b> 입주가 전세를 누르는 효과는 분명하지만, <b>전국을 뭉뚱그리면 사라지고 지역으로 내려가야 보인다.</b> 지역마다 입주 시점이 달라 전국 평균에선 상쇄되기 때문이다. 서울은 예외로, 효과가 잡히지 않는다.
+    <span class="meta">근거: 시도 11/15 음(-) 유의 · 평균 r −0.30 · 즉시~1분기 시차</span></span></div>
+  <p class="lead">마침내 입주가 시작되면, 늘어난 물량이 전세가를 누른다. 사이클이 한 바퀴를 돌아 다시 출발점으로 돌아온다.</p>
+  <p>준공(입주) 물량이 늘면 약 1분기 뒤 전세가가 내린다(음의 상관). 핵심은 <strong>이 효과가 전국 단위에선 보이지 않고, 지역으로 내려가야 드러난다</strong>는 점이다. 입주장은 본래 그 동네의 현상이라, 전국을 뭉뚱그리면 지역마다 다른 입주 시점이 서로 상쇄돼 사라진다.</p>
+  <div class="chartbox">
+    <h4>입주 → 전세 하락, 지역별 강도</h4>
+    <div class="cap">막대가 길수록 입주가 전세를 강하게 누른다. 대부분 지역에서 뚜렷하지만 <b>서울은 거의 작동하지 않는다</b>(회색=통계적으로 약함) — 입주가 경기·인천으로 분산되고 수요가 두껍기 때문. 유의한 지역만 보면 지방은 즉시, 수도권은 한 분기 늦게 반응한다. 색: 빨강=수도권, 초록=지방, 회색=효과 약함.</div>
+    <div class="cwrap tall"><canvas id="cL6"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>새 아파트가 입주를 시작하면 그 지역 전세가 약해집니다. <b>지방은 대체로 즉시, 수도권(경기·인천)은 한 분기쯤 뒤</b>에 반응한다. 단 서울만은 예외 — 들어오는 물량을 수요가 다 흡수해버려, 입주가 전세를 누르는 효과가 통계적으로 잡히지 않는다.</div>
+  <div class="note"><b>회색 지역들은 왜 약할까 — 같은 원리, 작은 스케일.</b> 전남·경남·충북이 약한 건 한 '도' 안에 독립된 생활권이 여러 개 흩어져 있어서다(전남=여수·순천·목포, 경남=창원·김해·진주, 충북=청주·충주). 도시마다 입주 시점이 달라 도 전체로 합치면 서로 상쇄된다. 실제로 단일 도시인 <b>광역시는 평균 −0.36으로 강하고, 여러 도시가 섞인 도는 −0.29로 약하다.</b> 이것은 고리⑥이 전국 단위에서 사라지는 것과 똑같은 원리가, 한 단계 작은 스케일에서 일어나는 것이다.</div>
+  <div class="note"><b>서울은 한 겹 더 있다 — 전세는 주춤해도 매매는 버틴다.</b> 서울의 입주 효과가 약한 건 물량이 경기·인천으로 분산되기 때문만이 아니다(수도권으로 묶으면 −0.08 → −0.38로 살아난다). 한 겹 더 있는데, 서울은 전세와 매매가 <b>같은 시점에선 강하게 묶이지만(r 0.58) 시차를 두면 끊긴다.</b> 즉 입주로 전세가 잠시 주춤해도, 매매는 두꺼운 투자·기대 수요(참고②, 낮은 전세가율)에 받쳐져 더 오래 오른다. 서울에서 사이클의 마지막 고리가 가장 느슨한 이유다.</div>
+  <div class="note"><b>그리고 다시 처음으로.</b> 늘어난 공급이 전세를 누르고, 전세가 매매를 끌어내린다. 시간이 지나 공급이 멈추면 부족이 다시 쌓이고, 전세가 다시 오르기 시작한다. 한 바퀴 도는 데 <b>지방은 5년 안팎, 수도권은 10년 안팎</b> — 짧은 전세 파동 위에 긴 매매 파동이 겹친다. 이것이 수요·금리가 아니라 <b>공급의 시차</b>가 만드는 부동산의 맥박이다.</p></div>
+</div></section>
+
+<!-- 지역별 사이클 강도 -->
+<section class="step" id="score"><div class="wrap">
+  <div class="stepnum"><span class="badge">종합</span><span class="arc">사이클은 지역마다 다르게 돈다</span></div>
+  <h2 class="t">어디서 사이클이 잘 돌고, 어디서 끊기나</h2>
+  <p class="lead">같은 사이클이라도 지역마다 강도가 다르다. 6개 고리 중 몇 개가 제대로 작동하는지 점수로 매겨봤다.</p>
+  <p>수도권·경기·인천·강원·경남은 사이클이 뚜렷하게 돈다(고리 대부분 작동). 반면 <strong>세종·충북</strong>은 거의 돌지 않는다 — 세종은 행정도시 공급폭탄이 사이클을 교란한 탓이다. 특히 <strong>서울은 '매매→공급' 고리가 끊겨</strong>, 사이클이 완결되지 못하고 상승 압력만 쌓이는 구조다.</p>
+  <div class="chartbox">
+    <h4>지역별 사이클 작동 점수 (6점 만점)</h4>
+    <div class="cap">높을수록 순환 고리가 잘 닫힘. 공급이 가격을 주기적으로 눌러주는 시장.</div>
+    <div class="cwrap tall"><canvas id="cStr"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>지방은 공급이 가격을 주기적으로 식혀주지만, <b>서울은 그 브레이크가 약하다.</b> 공급이 못 따라오니, 한번 오른 가격이 잘 안 내려오는 겁니다.</div>
+</div></section>
+
+<!-- 참고 구분 배너 -->
+<div class="refbanner"><div class="wrap">
+  <span class="refkicker">참고</span>
+  <p>아래 네 가지는 순환 사슬의 <b>고리는 아니지만</b>, 사이클을 이해하고 활용하는 데 도움이 되는 곁가지다. ① 사슬을 흔드는 외부 힘(금리), ② 사슬이 만든 지역 구조(전세가율), ③ 그래서 어떻게 볼 것인가(투자 호흡), ④ 사슬 위에 겹치는 더 긴 파동(멸실).</p>
+</div></div>
+
+<!-- 참고1: 금리 -->
+<section class="step ref" id="ref1"><div class="wrap">
+  <div class="stepnum"><span class="badge">참고 ①</span><span class="arc">사슬을 흔드는 외부 힘</span></div>
+  <h2 class="t">금리 — 사이클 밖에서 전체를 흔드는 변수</h2>
+  <p class="lead">금리는 사슬의 고리가 아니다. 사슬 <strong>바깥</strong>에서 순환 전체를 흔드는 <strong>외부 변수</strong>다. 공급 사이클은 정해진 순서로 천천히 도는 반면, 금리는 그 흐름과 무관하게 갑자기 움직여 순환 전체를 흔든다.</p>
+  <p>저금리는 조달 비용을 전세가율·임대수익률 아래로 끌어내려, 대기하던 <strong>잠재 수요를 매수로 전환</strong>시킨다. 없던 수요를 만드는 게 아니라 있던 수요에 불을 붙이는 것이다. 그렇게 오른 가격이 추가 상승 기대를 낳는 재귀적 상승으로 번진다. <strong>2021년 저금리 국면에서는 공급 사이클상 상승기가 아닌데도 매매가가 단기 폭등했고, 2022년 고금리 전환은 예정보다 이른 시점에 시장을 얼어붙게 했다.</strong> 금리 충격이 잦아들면 공급 사이클은 다시 원래의 흐름을 되찾는다.</p>
+  <div class="conf"><span class="clevel cl-high">신뢰 매우 높음</span>
+    <span class="gauge"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+    <span class="ctxt"><b>수도권 금리변화와 매매변화의 상관 −0.65.</b> 금리가 내리면 매매가 오른다. 우연일 확률 0.1% 미만.
+    <span class="meta">근거: 수도권 분기 36개 · r −0.65 · p&lt;0.001</span></span></div>
+  <div class="chartbox" style="background:#1d2742;border-color:#2c3760">
+    <h4 style="color:#fff">수도권 매매·전세 vs CD금리</h4>
+    <div class="cap" style="color:#9aa0b4">금리(노랑, 우축 역방향)가 바닥을 친 2021년, 매매(빨강)가 전세(보라)를 크게 이탈해 솟구쳤다. 금리가 치솟은 2022년엔 매매가 먼저 꺾인다.</div>
+    <div class="legend"><span style="color:#cfd3df"><i class="sw" style="background:#e0564a"></i>매매</span>
+      <span style="color:#cfd3df"><i class="sw" style="background:#a98be0"></i>전세</span>
+      <span style="color:#cfd3df"><i class="sw" style="background:#e8b84b"></i>CD금리(역방향)</span></div>
+    <div class="cwrap tall"><canvas id="cRate"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>2021년 수도권 매매는 1년 만에 <b>+29%</b> 뛰었는데 전세는 <b>+8%</b>에 그쳤다. 이 격차를 만든 게 <b>0.7%까지 내려간 금리</b>다. 금리는 전국에 동시에 작용하므로, 지역마다 다르던 사이클을 일순간 똑같이 만든다 — 2022년 전국이 함께 꺾인 이유다.</div>
+  <div class="chartbox" style="background:#1d2742;border-color:#2c3760">
+    <h4 style="color:#fff">생활권별 매매·전세 추이</h4>
+    <div class="cap" style="color:#9aa0b4">버튼으로 생활권 전환. 수도권만 2021년 매매가 전세를 크게 따돌린다.</div>
+    <div class="toggle" id="ztog"></div>
+    <div class="legend"><span style="color:#cfd3df"><i class="sw" style="background:#e0564a"></i>매매</span>
+      <span style="color:#cfd3df"><i class="sw" style="background:#a98be0"></i>전세</span></div>
+    <div class="cwrap"><canvas id="c5"></canvas></div>
+  </div>
+</div></section>
+
+<!-- 참고2: 전세가율 -->
+<section class="step ref" id="ref2"><div class="wrap">
+  <div class="stepnum"><span class="badge">참고 ②</span><span class="arc">사슬이 만든 지역 구조</span></div>
+  <h2 class="t">수도권은 투자 시장, 지방은 실거주 시장</h2>
+  <p class="lead">전세가율(전세÷매매)은 그 시장에 <strong>투자 수요가 얼마나 끼어 있는가</strong>를 보여주는 지표다.</p>
+  <p>전세가율이 <strong>낮으면</strong>(수도권) 매매가가 전세보다 훨씬 높다는 뜻 — 사람들이 거주 가치보다 미래 상승 기대에 더 많이 지불하는, <strong>투자성이 강한 시장</strong>이다. 전세가율이 <strong>높으면</strong>(지방) 가격이 거주 가치에 수렴한, <strong>실거주성이 강한 시장</strong>이다. 광역시는 그 중간이다.</p>
+  <div class="chartbox">
+    <h4>시도별 전세가율 — 투자성 ↔ 실거주성 스펙트럼</h4>
+    <div class="cap">왼쪽(낮은 전세가율)일수록 투자성, 오른쪽일수록 실거주성. 수도권·광역시·지방이 띠를 이룬다.</div>
+    <div class="cwrap tall"><canvas id="c4"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>서울(55%)은 집값의 절반 가까이가 '미래 기대'로 채워진 투자 시장이다. 전북·충북(80%)은 거의 거주 가치 그대로인 실거주 시장이고요. 부산·대구·대전(70%대)은 그 사이에 있다. <b>전세가율이 낮을수록 기대·금리에 민감하게 출렁인다.</b></div>
+</div></section>
+
+<!-- 참고3: 투자 호흡 -->
+<section class="step ref" id="ref3"><div class="wrap">
+  <div class="stepnum"><span class="badge">참고 ③</span><span class="arc">그래서 어떻게 볼 것인가</span></div>
+  <h2 class="t">지방은 빠른 순환에 올라타고, 수도권은 긴 사이클을 안고 간다</h2>
+  <p class="lead">사이클의 길이가 지역마다 다른 건, 결국 <strong>공급이 얼마나 빨리 나오느냐</strong>의 차이다. 그리고 그 차이가 투자의 호흡을 가른다.</p>
+  <p><strong>지방</strong>은 택지가 많아 공급이 금방 나오고, 시장이 작아 적은 물량도 전세·매매에 곧장 반영된다. 그래서 사이클이 <strong>짧고 또렷</strong>하다. <strong>수도권</strong>은 택지가 없어 공급이 굼뜨고, 투자 수요가 두꺼워 기대·금리가 펀더멘털을 자주 압도한다. 그래서 사이클이 <strong>길다</strong>.</p>
+  <div class="hbox">
+    <div class="hcol short">
+      <div class="htag">지방 · 빠른 순환</div>
+      <div class="hbig">순환에 올라타기</div>
+      <ul>
+        <li>인허가 기준 <b>향후 입주물량 3년치</b>를 확인해 공급 공백기에 진입</li>
+        <li>공급이 가격에 즉각 반영 → 사이클이 짧고 회전이 빠름</li>
+        <li>보유 <b>2년차(양도세 중과 해제)</b>에 매도 고려</li>
+      </ul>
+    </div>
+    <div class="hcol long">
+      <div class="htag">수도권 · 긴 사이클</div>
+      <div class="hbig">사이클을 안고 가기</div>
+      <ul>
+        <li>공급이 굼뜨고 투자 수요가 두꺼워 사이클이 길다</li>
+        <li>긴 시계열로 접근 — 단기 입주 타이밍보다 보유가 유효</li>
+        <li><b>대규모 멸실(재건축) 국면</b> 진입 → 공급 공백이 장기 상승 압력</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note" style="border-color:var(--muted)"><b>멸실은 아직 전망이다.</b> 노후 아파트의 대규모 재건축·멸실이 수도권 공급을 더 조일 것이라는 부분은, 이 분석에서 데이터로 검증한 사실이 아니라 향후 주목할 구조 변화다. 멸실·노후도 통계로 별도 검증이 필요하다.</div>
+  <div class="disc">※ 이 글은 데이터 분석과 시장 해석을 공유하는 정보 제공 목적이며, 특정 종목·지역의 매매를 권유하지 않는다. 세제·정책은 수시로 바뀌고 투자 결과는 개인 상황에 따라 다르므로, 실제 의사결정은 본인 책임 아래 최신 정보로 판단해야 한다.</div>
+</div></section>
+
+<!-- 참고4: 멸실 슈퍼사이클 -->
+<section class="step ref" id="ref4"><div class="wrap">
+  <div class="stepnum"><span class="badge">참고 ④</span><span class="arc">사슬 위에 겹치는 더 긴 파동</span></div>
+  <h2 class="t">2028년, 멸실의 시간이 온다</h2>
+  <p class="lead">지금까지의 사슬이 지역에 따라 <strong>5년(지방)~10년(수도권)</strong>을 도는 <strong>중기 순환</strong>이라면, 그 위에 훨씬 느린 <strong>40년짜리 파동</strong>이 하나 더 겹친다. 주택의 수명, 곧 <strong>멸실</strong>이다.</p>
+  <p>아파트는 보통 준공 40년 안팎에 재건축 연한에 들어가고, 50년을 넘기긴 어렵다. 그렇다면 언제 많이 지었는지를 보면, 언제 많이 헐어야 하는지가 보인다. 1988년 서울올림픽을 기점으로 아파트 공급이 폭증했고 1995년 <strong>연 43만 호</strong>로 정점을 찍었다 — 이 물량이 40년 뒤인 <strong>2028년부터 차례로 멸실 연한에 도달</strong>한다.</p>
+  <div class="chartbox">
+    <h4>아파트 준공 연도 → 40년 후 멸실 연한 도달</h4>
+    <div class="cap">막대는 그해 준공된 아파트 물량. 88올림픽 이후 급증한 물량이 40년 시차를 두고 2028년부터 멸실 대상이 된다.</div>
+    <div class="cwrap tall"><canvas id="cSuper"></canvas></div>
+  </div>
+  <p>문제는 <strong>헐어야 할 양과 헐 수 있는 양의 격차</strong>다. 2028~2045년에 40년 연한에 도달하는 아파트는 누적 약 <strong>566만 호</strong>, 연평균 33만 호다. 그런데 최근 실제 아파트 멸실은 <strong>연 2만 호</strong> 수준 — 도달 속도의 16분의 1에 불과하다. 격차만큼 노후 재고가 쌓인다. 실제로 30년 이상 아파트는 2015년 50만 호에서 2024년 <strong>252만 호로 5배</strong> 늘었다.</p>
+  <div class="chartbox">
+    <h4>멸실 속도별 — 1988~95년 공급분(239만 호) 처리에 걸리는 시간</h4>
+    <div class="cap">1988년 준공분의 50년 상한은 2038년. 연 10만 호로도 2051년에야 끝나 상한을 넘긴다.</div>
+    <div class="cwrap"><canvas id="cMelt"></canvas></div>
+  </div>
+  <div class="read"><span class="lab">쉽게 말하면</span>50년 넘은 아파트에 다 같이 살 수는 없으니 결국 헐어야 한다. 그런데 <b>50년 안에 처리하려면 연 20만 호 이상</b> 헐어야 하는데, 지금은 연 2만 호뿐이다. 빨리 헐면 이주 수요로 전세가 폭등하고, 천천히 헐면 노후 아파트가 쌓인다. <b>어느 쪽이든 공급 부족</b>으로 이어집니다.</div>
+  <div class="note"><b>왜 이것이 사슬과 겹치면 위험한가.</b> 멸실은 신규 공급을 깎아낸다 — 서울은 2016~24년 준공 35만 호 중 멸실이 <b>26.6만 호(76%)</b>를 상쇄해, 순증은 24%뿐이었다. 일부 연도(2015~17)는 멸실이 준공을 넘어 <b>재고가 순감소</b>했다. 여기에 중기 순환의 공급 부족(고리 ③ 수도권 끊김)까지 겹치면, 2028년 전후로 두 개의 공급 부족이 동시에 온다.</div>
+  <div class="note" style="border-color:var(--muted)"><b>이 부분의 한계.</b> 멸실 연한을 40~50년으로 본 것은 통상적 기준이며, 실제 멸실 시점·속도는 재건축 사업성·정책·이주 여건에 좌우된다. "2028년부터 도달"은 준공 시점에 40년을 더한 산술적 추정이고, 노후주택 통계가 '30년 이상'까지만 구분돼 40년·50년 도달 물량은 준공 시계열로 추정했다. 큰 그림(도달 속도가 멸실 속도를 크게 앞선다)은 실측으로 확정적이나, 구체적 연도별 멸실량은 변동 가능하다.</div>
+  <div class="disc">데이터: 국토교통부 아파트주거환경통계(연도별 건설현황 1970~2024)·주택멸실현황 · 주택총조사(노후기간별 주택). 모두 통계보기 탭에서 직접 확인할 수 있다.</div>
+</div></section>
+
+<!-- TAKEAWAYS -->
+<section class="take" id="summary"><div class="wrap">
+  <h2 class="t" style="border:0">한눈에 보는 요약</h2>
+  <ol>
+    <li><b>공급이 부족하면 전세가 먼저 오른다.</b> 공급과 전세는 반대로 움직인다(수도권 공급 많은 분기 전세 상승 0.6% vs 적은 분기 1.4%). 사이클의 방아쇠는 전세다.</li>
+    <li><b>전세가 매매를 밀어올린다.</b> 15개 시도 전부에서 확인. 단 서울은 연결이 가장 느슨해 매매가 따로 달리기 쉽다.</li>
+    <li><b>오른 집값은 1년 뒤 공급을 부른다.</b> 단 땅이 있는 지역에서만 — 충북·부산은 살아있고, 서울·경기는 택지가 없어 끊긴다.</li>
+    <li><b>공급은 수 년에 걸쳐 도착한다.</b> 착공→준공은 가장 단단한 구간이지만, 그 기간이 과거 2년 남짓에서 최근 3년 반으로 길어졌다.</li>
+    <li><b>입주가 전세를 누르며 한 바퀴가 끝난다.</b> 지역으로 봐야 보이는 효과. 한 순환에 지방은 5년, 수도권은 10년 안팎.</li>
+    <li><b>금리는 사이클을 덮어쓰는 외부 힘이다.</b> 2021년 저금리가 잠재 수요를 매수로 전환시켜 수도권 매매를 전세의 3배 속도로 끌어올렸다. 금리 급변기엔 공급 사이클이 일시 정지된다.</li>
+    <li><b>2028년부터 멸실의 시간이 겹친다.</b> 88올림픽 이후 지은 아파트가 40년 연한에 도달한다. 50년 안에 헐려면 연 20만 호 이상 필요한데 현실은 연 2만 호 — 빨리 헐면 전세난, 천천히 헐면 노후화, 어느 쪽이든 공급 부족이 길어진다.</li>
+  </ol>
+</div></section>
+
+
 <section><div class="wrap">
+
   <h2>사이클을 읽는 3가지 지표</h2>
   <p><b>① 전세가율</b> — 매매가 대비 전세가. 높아질수록 매매 전환 압력이 쌓인다.</p>
   <p><b>② 입주물량</b> — 지역별 적정 밴드와 비교해 공급 과잉·부족을 판단한다. 미래 2년치 입주예정까지 미리 보인다.</p>
@@ -126,7 +416,7 @@
     <a href="/weekly/">🗺️ 이번 주 아파트 시세 지도<span>전국 시군구·서울 구별 주간 변동률</span></a>
     <a href="/faq/">❓ 부동산 데이터 FAQ<span>전세가율·입주물량 기초 개념 8문답</span></a>
     <a href="/burini-test/">🐣 부린이 테스트<span>사이클 감각 포함 10문항, 3분</span></a>
-  </div>
+  
 </div></section>
 
 <section><div class="wrap">
@@ -145,9 +435,206 @@
 </div></section>
 
 <footer><div class="wrap">
-  <a href="/">agongmap.co.kr</a> · 자료: KOSIS·국토교통부·한국은행 (2006–2026, 15개 시도)
+  <div><b>방법.</b> KOSIS 아파트 실거래가격지수(매매·전세)·주택건설 인허가/착공/준공·주택보급률, 한국은행 CD금리를 시도×분기로 정합. 각 고리는 시차상관(한쪽이 먼저 움직이고 다른 쪽이 따라오는 시간차를 0~수년 범위에서 탐색)으로 추정. 인허가는 연말 쏠림(4분기 43%)이 커 매매→인허가 고리만 연 단위로 분석. 상관(r)은 함께 움직이는 정도, 신뢰도는 우연일 확률(p)로 판정.</div>
+  <div class="src"><b>한계.</b> 가격은 지수(절대가격 아님), 누적 공급은 2011년 이후 신규분. 표본은 시도당 분기 40~80개·연 13~19개. 상관은 인과의 충분한 증명이 아니며, 시간 순서로 방향을 가렸을 뿐이다. 2020–22년은 금리 급변이 사이클을 일시적으로 압도했다.<br>
+    <span style="display:inline-block;margin-top:8px">만든이: shpark1132@gmail.com</span></div>
+  <div class="legal-disc"><a href="/privacy/" style="color:inherit">개인정보처리방침</a> · <b>투자 면책 고지</b> · 본 서비스의 모든 지표·지도·점수·분석은 공공 데이터를 가공한 <b>참고 자료</b>이며, 특정 지역이나 매물의 매수·매도를 권유하는 투자자문이 아닙니다. 원자료의 정정·지연이나 가공 과정의 한계로 정확성·완전성을 보장하지 않으며, 이를 활용한 <b>투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</b></div>
 </div></footer>
 
+<nav class="bottomnav">
+  <a class="nav-btn" href="/">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>홈</span>
+  </a>
+  <a class="nav-btn" href="/#test">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="7.4" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7.4" cy="12" r="1.7" fill="currentColor"/><circle cx="16.6" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+    <span>퀴즈</span>
+  </a>
+  <a class="nav-btn" href="/#stats">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>통계</span>
+  </a>
+  <a class="nav-btn on" href="/cycle/" aria-current="page">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>리포트</span>
+  </a>
+</nav>
+
+<script src="/chart-4.4.1.umd.js"></script>
+<script>
+/* 이 페이지는 data.js(STATS·ADV)를 싣지 않는다 — 리포트는 아래 D만 쓴다. */
+const D={"flow_vs_stock": [{"region": "서울", "flow": 0.053, "stock": 0.88}, {"region": "경기", "flow": 0.041, "stock": 0.779}, {"region": "인천", "flow": 0.175, "stock": 0.574}, {"region": "부산", "flow": 0.074, "stock": 0.731}, {"region": "대구", "flow": 0.157, "stock": 0.434}, {"region": "대전", "flow": 0.013, "stock": 0.678}, {"region": "광주", "flow": 0.003, "stock": 0.905}, {"region": "울산", "flow": 0.007, "stock": 0.397}, {"region": "강원", "flow": 0.057, "stock": 0.785}, {"region": "충북", "flow": 0.0, "stock": 0.22}, {"region": "충남", "flow": 0.107, "stock": 0.125}, {"region": "전북", "flow": 0.01, "stock": 0.513}, {"region": "전남", "flow": 0.04, "stock": 0.783}, {"region": "경북", "flow": 0.022, "stock": 0.039}, {"region": "경남", "flow": 0.001, "stock": 0.042}], "flow_mean": 0.051, "stock_mean": 0.526, "supply_ratio": [{"region": "강원", "bogup": 109.6, "jratio": 76.5}, {"region": "경기", "bogup": 99.1, "jratio": 64.5}, {"region": "경남", "bogup": 109.2, "jratio": 75.9}, {"region": "경북", "bogup": 113.6, "jratio": 78.4}, {"region": "광주", "bogup": 105.7, "jratio": 75.1}, {"region": "대구", "bogup": 103.4, "jratio": 69.8}, {"region": "대전", "bogup": 97.4, "jratio": 70.1}, {"region": "부산", "bogup": 102.7, "jratio": 64.3}, {"region": "서울", "bogup": 93.7, "jratio": 54.9}, {"region": "울산", "bogup": 108.2, "jratio": 73.2}, {"region": "인천", "bogup": 98.7, "jratio": 66.2}, {"region": "전남", "bogup": 112.7, "jratio": 77.7}, {"region": "전북", "bogup": 109.5, "jratio": 78.8}, {"region": "충남", "bogup": 111.5, "jratio": 77.5}, {"region": "충북", "bogup": 111.6, "jratio": 77.8}], "sr_corr": 0.91, "jratio_level": [{"region": "서울", "val": 55.4, "sudo": true, "type": "투자성"}, {"region": "경기", "val": 66.0, "sudo": true, "type": "중간"}, {"region": "부산", "val": 66.2, "sudo": false, "type": "중간"}, {"region": "인천", "val": 68.5, "sudo": true, "type": "중간"}, {"region": "대전", "val": 70.4, "sudo": false, "type": "중간"}, {"region": "대구", "val": 70.8, "sudo": false, "type": "중간"}, {"region": "울산", "val": 73.0, "sudo": false, "type": "실거주성"}, {"region": "경남", "val": 75.6, "sudo": false, "type": "실거주성"}, {"region": "광주", "val": 76.1, "sudo": false, "type": "실거주성"}, {"region": "충남", "val": 77.5, "sudo": false, "type": "실거주성"}, {"region": "강원", "val": 77.6, "sudo": false, "type": "실거주성"}, {"region": "전남", "val": 78.0, "sudo": false, "type": "실거주성"}, {"region": "경북", "val": 78.5, "sudo": false, "type": "실거주성"}, {"region": "충북", "val": 78.5, "sudo": false, "type": "실거주성"}, {"region": "전북", "val": 79.6, "sudo": false, "type": "실거주성"}], "sudo_mean": 63.3, "jibang_mean": 75.1, "seoul": {"t": [2010.5, 2010.75, 2011.0, 2011.25, 2011.5, 2011.75, 2012.0, 2012.25, 2012.5, 2012.75, 2013.0, 2013.25, 2013.5, 2013.75, 2014.0, 2014.25, 2014.5, 2014.75, 2015.0, 2015.25, 2015.5, 2015.75, 2016.0, 2016.25, 2016.5, 2016.75, 2017.0, 2017.25, 2017.5, 2017.75, 2018.0, 2018.25, 2018.5, 2018.75, 2019.0, 2019.25, 2019.5, 2019.75, 2020.0, 2020.25, 2020.5, 2020.75, 2021.0, 2021.25, 2021.5, 2021.75, 2022.0, 2022.25, 2022.5, 2022.75, 2023.0, 2023.25, 2023.5, 2023.75, 2024.0, 2024.25, 2024.5, 2024.75, 2025.0, 2025.25, 2025.5, 2025.75, 2026.0], "price": [78.1, 79.2, 81.6, 80.6, 80.1, 78.6, 77.6, 75.7, 73.7, 72.6, 72.9, 73.6, 73.7, 74.5, 75.5, 75.7, 76.4, 77.4, 78.6, 80.8, 83.2, 84.5, 84.4, 85.6, 89.2, 91.5, 91.2, 93.5, 98.0, 100.1, 104.7, 108.1, 115.8, 121.0, 117.2, 117.8, 124.0, 130.0, 135.1, 137.5, 152.1, 159.5, 169.8, 176.0, 187.3, 187.8, 183.5, 184.2, 171.3, 151.1, 148.6, 155.3, 161.1, 160.5, 159.4, 162.2, 169.5, 170.4, 171.4, 176.1, 182.0, 189.0, 195.3], "stock": [2.7, 11.7, 21.8, 28.4, 35.2, 49.0, 53.8, 58.5, 63.7, 72.3, 78.1, 82.8, 89.4, 101.9, 110.3, 123.6, 133.7, 140.0, 142.2, 147.6, 154.8, 155.4, 159.7, 163.1, 170.0, 182.6, 186.7, 191.0, 199.2, 202.4, 204.6, 210.7, 214.4, 230.8, 240.5, 245.1, 256.1, 264.5, 276.2, 285.5, 298.1, 304.8, 316.1, 316.9, 324.4, 332.8, 338.0, 339.4, 341.6, 347.7, 349.2, 352.3, 362.3, 368.1, 368.4, 366.4, 367.5, 382.7, 387.2, 402.5, 405.5, 412.9, 413.7]}, "zones": {"수도권": {"t": [2006.0, 2006.25, 2006.5, 2006.75, 2007.0, 2007.25, 2007.5, 2007.75, 2008.0, 2008.25, 2008.5, 2008.75, 2009.0, 2009.25, 2009.5, 2009.75, 2010.0, 2010.25, 2010.5, 2010.75, 2011.0, 2011.25, 2011.5, 2011.75, 2012.0, 2012.25, 2012.5, 2012.75, 2013.0, 2013.25, 2013.5, 2013.75, 2014.0, 2014.25, 2014.5, 2014.75, 2015.0, 2015.25, 2015.5, 2015.75, 2016.0, 2016.25, 2016.5, 2016.75, 2017.0, 2017.25, 2017.5, 2017.75, 2018.0, 2018.25, 2018.5, 2018.75, 2019.0, 2019.25, 2019.5, 2019.75, 2020.0, 2020.25, 2020.5, 2020.75, 2021.0, 2021.25, 2021.5, 2021.75, 2022.0, 2022.25, 2022.5, 2022.75, 2023.0, 2023.25, 2023.5, 2023.75, 2024.0, 2024.25, 2024.5, 2024.75, 2025.0, 2025.25, 2025.5, 2025.75, 2026.0], "maemae": [62.4, 64.5, 66.3, 73.7, 78.2, 79.1, 81.7, 83.8, 86.8, 92.0, 93.6, 85.4, 83.4, 87.9, 91.8, 91.4, 91.1, 87.7, 85.5, 86.2, 88.1, 87.2, 86.5, 85.1, 84.0, 82.3, 80.2, 79.1, 78.9, 79.4, 79.8, 80.7, 81.8, 82.3, 82.9, 84.1, 85.5, 87.8, 90.2, 91.3, 91.2, 92.0, 94.5, 96.4, 96.0, 97.2, 99.6, 100.1, 101.4, 102.3, 105.3, 107.4, 105.4, 105.1, 107.4, 110.0, 114.3, 118.1, 126.1, 131.4, 141.6, 151.3, 165.9, 170.1, 166.5, 165.7, 153.7, 135.9, 131.9, 136.6, 140.7, 140.3, 139.5, 141.0, 145.0, 145.0, 144.7, 146.6, 148.9, 151.8, 154.7], "jeonse": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 72.3, 72.7, 74.1, 77.0, 80.2, 83.8, 88.7, 92.4, 93.6, 94.2, 96.1, 98.0, 98.2, 99.2, 100.5, 99.5, 98.4, 97.6, 99.1, 99.2, 96.8, 97.1, 100.3, 104.3, 106.3, 108.0, 112.8, 119.2, 119.1, 123.3, 127.4, 129.2, 126.9, 128.8, 125.8, 116.5, 110.8, 112.8, 116.9, 121.2, 122.3, 124.1, 126.7, 124.9, 122.2, 123.4, 125.6, 129.7, 131.4]}, "부산권": {"t": [2006.0, 2006.25, 2006.5, 2006.75, 2007.0, 2007.25, 2007.5, 2007.75, 2008.0, 2008.25, 2008.5, 2008.75, 2009.0, 2009.25, 2009.5, 2009.75, 2010.0, 2010.25, 2010.5, 2010.75, 2011.0, 2011.25, 2011.5, 2011.75, 2012.0, 2012.25, 2012.5, 2012.75, 2013.0, 2013.25, 2013.5, 2013.75, 2014.0, 2014.25, 2014.5, 2014.75, 2015.0, 2015.25, 2015.5, 2015.75, 2016.0, 2016.25, 2016.5, 2016.75, 2017.0, 2017.25, 2017.5, 2017.75, 2018.0, 2018.25, 2018.5, 2018.75, 2019.0, 2019.25, 2019.5, 2019.75, 2020.0, 2020.25, 2020.5, 2020.75, 2021.0, 2021.25, 2021.5, 2021.75, 2022.0, 2022.25, 2022.5, 2022.75, 2023.0, 2023.25, 2023.5, 2023.75, 2024.0, 2024.25, 2024.5, 2024.75, 2025.0, 2025.25, 2025.5, 2025.75, 2026.0], "maemae": [54.4, 54.0, 54.3, 55.1, 55.8, 56.1, 56.5, 57.5, 58.3, 59.5, 60.5, 60.4, 60.0, 61.0, 62.6, 64.2, 66.1, 68.1, 70.3, 73.9, 80.5, 86.0, 88.6, 88.6, 89.1, 88.2, 87.0, 86.3, 86.7, 87.3, 88.3, 88.9, 89.8, 90.6, 91.3, 92.8, 94.0, 95.9, 97.7, 99.0, 98.9, 98.8, 100.5, 102.7, 102.7, 102.6, 101.8, 99.9, 97.7, 95.8, 93.9, 92.5, 90.4, 88.6, 87.7, 88.6, 90.5, 90.7, 92.6, 98.5, 104.1, 107.4, 112.5, 114.3, 114.1, 114.3, 110.8, 104.7, 101.1, 102.1, 102.7, 101.9, 100.7, 99.8, 99.6, 99.1, 97.6, 97.0, 97.3, 98.0, 98.7], "jeonse": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 91.9, 92.7, 93.9, 95.6, 98.5, 100.5, 102.5, 104.5, 106.3, 107.2, 108.7, 110.6, 108.4, 102.8, 99.7, 99.7, 98.9, 97.7, 97.0, 98.2, 96.2, 94.0, 93.7, 97.2, 100.0, 101.5, 104.7, 113.1, 113.9, 118.1, 122.5, 124.4, 124.0, 126.2, 122.8, 114.9, 109.8, 109.5, 111.6, 113.0, 113.3, 112.8, 113.6, 114.5, 113.8, 113.8, 115.7, 118.6, 119.2]}, "대경권": {"t": [2006.0, 2006.25, 2006.5, 2006.75, 2007.0, 2007.25, 2007.5, 2007.75, 2008.0, 2008.25, 2008.5, 2008.75, 2009.0, 2009.25, 2009.5, 2009.75, 2010.0, 2010.25, 2010.5, 2010.75, 2011.0, 2011.25, 2011.5, 2011.75, 2012.0, 2012.25, 2012.5, 2012.75, 2013.0, 2013.25, 2013.5, 2013.75, 2014.0, 2014.25, 2014.5, 2014.75, 2015.0, 2015.25, 2015.5, 2015.75, 2016.0, 2016.25, 2016.5, 2016.75, 2017.0, 2017.25, 2017.5, 2017.75, 2018.0, 2018.25, 2018.5, 2018.75, 2019.0, 2019.25, 2019.5, 2019.75, 2020.0, 2020.25, 2020.5, 2020.75, 2021.0, 2021.25, 2021.5, 2021.75, 2022.0, 2022.25, 2022.5, 2022.75, 2023.0, 2023.25, 2023.5, 2023.75, 2024.0, 2024.25, 2024.5, 2024.75, 2025.0, 2025.25, 2025.5, 2025.75, 2026.0], "maemae": [63.2, 63.3, 64.2, 65.0, 66.2, 66.0, 65.5, 65.2, 65.5, 65.4, 65.5, 64.0, 62.7, 63.4, 64.5, 65.4, 65.8, 65.2, 65.4, 66.4, 68.4, 70.6, 72.8, 74.5, 76.2, 77.6, 78.9, 80.3, 82.5, 85.0, 87.9, 90.5, 92.8, 94.5, 96.4, 99.6, 102.8, 106.4, 109.7, 108.4, 104.6, 102.4, 101.4, 100.9, 99.8, 99.1, 100.0, 99.9, 99.4, 98.5, 98.1, 97.5, 96.1, 95.1, 95.5, 96.2, 96.8, 97.9, 100.3, 105.7, 112.9, 115.5, 118.2, 117.7, 115.4, 114.4, 110.6, 104.0, 100.2, 100.8, 101.9, 101.6, 100.7, 99.5, 99.4, 98.7, 97.8, 96.7, 96.6, 96.9, 97.2], "jeonse": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 95.2, 97.3, 99.0, 103.2, 105.9, 107.0, 110.7, 110.0, 106.6, 101.7, 100.0, 103.2, 103.2, 101.3, 100.3, 100.0, 99.5, 98.6, 99.3, 100.2, 100.0, 100.7, 103.3, 106.5, 106.5, 107.0, 111.1, 119.0, 120.5, 123.2, 127.2, 127.1, 125.9, 124.2, 119.9, 111.7, 105.7, 104.4, 105.4, 106.1, 105.3, 103.8, 104.2, 103.8, 104.0, 104.4, 105.6, 107.5, 106.8]}, "대전권": {"t": [2006.0, 2006.25, 2006.5, 2006.75, 2007.0, 2007.25, 2007.5, 2007.75, 2008.0, 2008.25, 2008.5, 2008.75, 2009.0, 2009.25, 2009.5, 2009.75, 2010.0, 2010.25, 2010.5, 2010.75, 2011.0, 2011.25, 2011.5, 2011.75, 2012.0, 2012.25, 2012.5, 2012.75, 2013.0, 2013.25, 2013.5, 2013.75, 2014.0, 2014.25, 2014.5, 2014.75, 2015.0, 2015.25, 2015.5, 2015.75, 2016.0, 2016.25, 2016.5, 2016.75, 2017.0, 2017.25, 2017.5, 2017.75, 2018.0, 2018.25, 2018.5, 2018.75, 2019.0, 2019.25, 2019.5, 2019.75, 2020.0, 2020.25, 2020.5, 2020.75, 2021.0, 2021.25, 2021.5, 2021.75, 2022.0, 2022.25, 2022.5, 2022.75, 2023.0, 2023.25, 2023.5, 2023.75, 2024.0, 2024.25, 2024.5, 2024.75, 2025.0, 2025.25, 2025.5, 2025.75, 2026.0], "maemae": [68.9, 68.8, 68.5, 68.6, 68.7, 68.0, 67.8, 68.2, 69.1, 69.8, 70.4, 69.8, 69.1, 70.1, 72.2, 74.1, 75.6, 76.7, 77.9, 80.6, 85.3, 89.4, 93.4, 94.4, 95.2, 94.3, 94.1, 94.1, 95.3, 95.7, 96.8, 97.9, 99.3, 100.1, 101.0, 102.0, 102.4, 102.1, 102.3, 101.8, 101.3, 100.4, 100.6, 100.9, 100.8, 100.4, 100.3, 100.0, 99.0, 98.0, 96.9, 96.4, 95.3, 94.8, 95.8, 98.2, 102.2, 106.7, 111.5, 115.9, 122.1, 128.1, 135.7, 139.4, 137.1, 136.1, 131.7, 123.4, 120.3, 122.6, 125.6, 126.4, 125.8, 125.1, 125.4, 124.9, 123.5, 123.0, 123.5, 123.7, 124.3], "jeonse": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 91.1, 89.7, 89.9, 91.2, 92.0, 92.0, 93.3, 95.6, 96.8, 96.9, 98.8, 99.7, 100.3, 98.7, 98.8, 99.6, 98.2, 96.6, 97.2, 96.0, 96.7, 98.5, 99.3, 102.9, 104.8, 108.2, 112.6, 117.2, 119.4, 124.6, 130.5, 132.3, 130.4, 131.4, 128.8, 122.2, 118.5, 119.0, 123.2, 128.2, 128.5, 127.0, 127.7, 128.8, 125.8, 125.4, 126.5, 128.9, 130.8]}}, "sync": [{"region": "서울", "corr": 0.58, "sudo": true}, {"region": "광주", "corr": 0.59, "sudo": false}, {"region": "전북", "corr": 0.6, "sudo": false}, {"region": "전남", "corr": 0.68, "sudo": false}, {"region": "경기", "corr": 0.69, "sudo": true}, {"region": "인천", "corr": 0.69, "sudo": true}, {"region": "충남", "corr": 0.71, "sudo": false}, {"region": "경남", "corr": 0.73, "sudo": false}, {"region": "대전", "corr": 0.74, "sudo": false}, {"region": "충북", "corr": 0.75, "sudo": false}, {"region": "강원", "corr": 0.77, "sudo": false}, {"region": "경북", "corr": 0.77, "sudo": false}, {"region": "울산", "corr": 0.79, "sudo": false}, {"region": "부산", "corr": 0.8, "sudo": false}, {"region": "대구", "corr": 0.81, "sudo": false}], "l2_lagcurve": [{"lag": 0, "r": 0.138, "p": 0.0057}, {"lag": 1, "r": 0.246, "p": 0.0}, {"lag": 2, "r": 0.134, "p": 0.0109}, {"lag": 3, "r": 0.153, "p": 0.0047}], "cycle_links": [{"from": "누적공급\n부족", "to": "전세가\n상승", "lag": "구조적", "r": -0.29, "desc": "공급 늘면 전세 눌림(1분기 시차)", "strong": true, "sign": "역"}, {"from": "전세가\n상승", "to": "매매가\n상승", "lag": "동시~선행", "r": 0.7, "desc": "전세가 매매를 떠받쳐 밀어올림", "strong": true, "sign": "정"}, {"from": "매매가\n상승", "to": "인허가\n증가", "lag": "약 1년", "r": 0.25, "desc": "건설사 관망 후 사업 추진", "strong": false, "sign": "정"}, {"from": "인허가\n증가", "to": "착공\n증가", "lag": "동시", "r": 0.74, "desc": "인허가 나면 곧 착공", "strong": true, "sign": "정"}, {"from": "착공\n증가", "to": "준공\n증가", "lag": "2~3년+", "r": 0.82, "desc": "공사기간(길어지는 중)", "strong": true, "sign": "정"}, {"from": "준공\n증가", "to": "전세가\n하락", "lag": "약 1분기", "r": -0.38, "desc": "입주물량이 전세를 누름", "strong": true, "sign": "역"}], "cycle_strength": [{"region": "인천", "score": 4}, {"region": "경남", "score": 4}, {"region": "경기", "score": 4}, {"region": "강원", "score": 4}, {"region": "서울", "score": 3}, {"region": "충남", "score": 3}, {"region": "전남", "score": 3}, {"region": "울산", "score": 3}, {"region": "부산", "score": 3}, {"region": "경북", "score": 3}, {"region": "대전", "score": 2}, {"region": "대구", "score": 2}, {"region": "광주", "score": 2}, {"region": "제주", "score": 2}, {"region": "전북", "score": 2}, {"region": "세종", "score": 1}, {"region": "충북", "score": 1}], "seoul_l2": {"note": "서울은 매매가 올라도 인허가가 거의 안 따라온다(택지 부족). 사이클의 공급 고리가 끊겨 만성 공급부족이 지속된다."}, "flow_chain": {"t": [2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "permit": [476.5, 263.2, 297.2, 277.0, 356.8, 376.1, 278.7, 367.1, 562.8, 532.5, 510.6, 412.2, 403.5, 365.5, 419.3, 415.3, 380.2, 397.9, 346.8], "start": [0.0, 0.0, 0.0, 0.0, 252.5, 287.7, 274.6, 364.1, 532.4, 489.5, 406.6, 352.1, 409.7, 437.5, 430.2, 301.8, 204.9, 269.6, 241.5], "done": [0.0, 0.0, 0.0, 129.1, 216.7, 193.6, 235.2, 295.6, 299.4, 326.0, 396.5, 469.7, 403.4, 354.9, 310.3, 326.9, 372.8, 374.3, 312.1]}, "rate_overlay": {"t": [2015.0, 2015.25, 2015.5, 2015.75, 2016.0, 2016.25, 2016.5, 2016.75, 2017.0, 2017.25, 2017.5, 2017.75, 2018.0, 2018.25, 2018.5, 2018.75, 2019.0, 2019.25, 2019.5, 2019.75, 2020.0, 2020.25, 2020.5, 2020.75, 2021.0, 2021.25, 2021.5, 2021.75, 2022.0, 2022.25, 2022.5, 2022.75, 2023.0, 2023.25, 2023.5, 2023.75, 2024.0, 2024.25, 2024.5, 2024.75, 2025.0, 2025.25, 2025.5, 2025.75, 2026.0], "maemae": [85.5, 87.8, 90.2, 91.3, 91.2, 92.0, 94.5, 96.4, 96.0, 97.2, 99.6, 100.1, 101.4, 102.3, 105.3, 107.4, 105.4, 105.1, 107.4, 110.0, 114.3, 118.1, 126.1, 131.4, 141.6, 151.3, 165.9, 170.1, 166.5, 165.7, 153.7, 135.9, 131.9, 136.6, 140.7, 140.3, 139.5, 141.0, 145.0, 145.0, 144.7, 146.6, 148.9, 151.8, 154.7], "jeonse": [80.2, 83.8, 88.7, 92.4, 93.6, 94.2, 96.1, 98.0, 98.2, 99.2, 100.5, 99.5, 98.4, 97.6, 99.1, 99.2, 96.8, 97.1, 100.3, 104.3, 106.3, 108.0, 112.8, 119.2, 119.1, 123.3, 127.4, 129.2, 126.9, 128.8, 125.8, 116.5, 110.8, 112.8, 116.9, 121.2, 122.3, 124.1, 126.7, 124.9, 122.2, 123.4, 125.6, 129.7, 131.4], "rate": [2.07, 1.77, 1.63, 1.61, 1.65, 1.54, 1.35, 1.44, 1.49, 1.4, 1.39, 1.5, 1.65, 1.65, 1.65, 1.77, 1.88, 1.83, 1.57, 1.5, 1.37, 0.97, 0.7, 0.65, 0.72, 0.69, 0.81, 1.17, 1.46, 1.8, 2.74, 3.9, 3.64, 3.63, 3.74, 3.83, 3.69, 3.59, 3.52, 3.4, 2.94, 2.66, 2.53, 2.69, 2.77], "jratio": [67.5, 68.3, 71.7, 72.3, 72.9, 73.5, 73.8, 73.8, 73.9, 74.0, 73.7, 74.2, 74.6, 73.7, 72.9, 72.2, 68.9, 68.7, 68.6, 68.6, 67.3, 66.4, 66.1, 67.1, 67.1, 65.7, 65.0, 64.2, 64.1, 63.9, 63.9, 63.2, 60.7, 59.6, 59.5, 60.2, 61.0, 61.7, 61.9, 62.3, 62.5, 62.5, 62.3, 62.2, 62.3]}, "rate_facts": {"rate_2021_low": 0.69, "rate_2022_high": 3.9, "maemae_2021_rise": 29.4, "jeonse_2021_rise": 8.4}, "confidence": {"link1": {"level": "높음", "r": -0.29, "basis": "수도권 분기 추세제거 후 상관 -0.29(1분기 시차). 공급 늘면 전세 눌림", "n": "수도권 분기"}, "link2": {"level": "매우 높음", "r": 0.71, "basis": "15개 시도 전부에서 양(+)·통계적으로 유의. 재현율 100%", "n": "시도당 분기 80개"}, "link3": {"level": "지역별로 갈림", "r": 0.3, "basis": "택지 여유 지역(충북·부산·광주 등)은 1년 뒤 인허가로 이어짐(r 0.3~0.5). 택지 포화된 수도권(서울·경기)은 끊김(음의 상관)", "n": "시도별 연 19개"}, "link45": {"level": "매우 높음", "r": 0.82, "basis": "착공→준공 리드타임이 과거 27개월→최근 37개월로 증가. 관계 자체는 r 0.82로 견고", "n": "전국 월별"}, "link6": {"level": "높음(지역한정)", "r": -0.38, "basis": "15개 시도 중 9곳에서 음(-) 유의. 전국 단위에선 안 보이고 지역서만 나타남", "n": "시도당 분기 40~80개"}, "rate": {"level": "매우 높음", "r": -0.65, "basis": "수도권 금리변화 vs 매매변화 상관 -0.65, 우연일 확률 0.1% 미만", "n": "분기 36개"}}, "link1_new": {"levels": ["공급 적음", "보통", "공급 많음"], "jeonse_rise": [1.42, 1.81, 0.63], "r": -0.29, "p": 0.052, "lag": 1}, "link3_regional": [{"region": "충북", "r": 0.48, "sudo": false}, {"region": "부산", "r": 0.42, "sudo": false}, {"region": "광주", "r": 0.34, "sudo": false}, {"region": "경남", "r": 0.3, "sudo": false}, {"region": "경북", "r": 0.28, "sudo": false}, {"region": "강원", "r": 0.27, "sudo": false}, {"region": "전북", "r": 0.24, "sudo": false}, {"region": "대구", "r": 0.23, "sudo": false}, {"region": "인천", "r": 0.17, "sudo": true}, {"region": "충남", "r": 0.09, "sudo": false}, {"region": "대전", "r": 0.07, "sudo": false}, {"region": "전남", "r": 0.03, "sudo": false}, {"region": "울산", "r": -0.02, "sudo": false}, {"region": "서울", "r": -0.21, "sudo": true}, {"region": "경기", "r": -0.27, "sudo": true}], "link3_split": {"strong_mean": 0.38, "strong_regions": ["충북", "부산", "광주", "경남"], "broken_mean": -0.05, "broken_regions": ["충남", "대전", "전남", "울산", "서울", "경기"]}, "leadtime": {"old_months": 27, "new_months": 37, "old_r": 0.959, "new_r": 0.814, "all_months": 32, "all_r": 0.818}, "super": {"timeline": [{"build": 1980, "reach40": 2020, "units": 72988}, {"build": 1981, "reach40": 2021, "units": 70795}, {"build": 1982, "reach40": 2022, "units": 68081}, {"build": 1983, "reach40": 2023, "units": 88448}, {"build": 1984, "reach40": 2024, "units": 91219}, {"build": 1985, "reach40": 2025, "units": 94749}, {"build": 1986, "reach40": 2026, "units": 98908}, {"build": 1987, "reach40": 2027, "units": 106531}, {"build": 1988, "reach40": 2028, "units": 162028}, {"build": 1989, "reach40": 2029, "units": 180651}, {"build": 1990, "reach40": 2030, "units": 201504}, {"build": 1991, "reach40": 2031, "units": 270821}, {"build": 1992, "reach40": 2032, "units": 381141}, {"build": 1993, "reach40": 2033, "units": 368703}, {"build": 1994, "reach40": 2034, "units": 398341}, {"build": 1995, "reach40": 2035, "units": 429898}, {"build": 1996, "reach40": 2036, "units": 364483}, {"build": 1997, "reach40": 2037, "units": 417762}, {"build": 1998, "reach40": 2038, "units": 364988}, {"build": 1999, "reach40": 2039, "units": 337538}, {"build": 2000, "reach40": 2040, "units": 281523}, {"build": 2001, "reach40": 2041, "units": 337367}, {"build": 2002, "reach40": 2042, "units": 288262}, {"build": 2003, "reach40": 2043, "units": 266840}, {"build": 2004, "reach40": 2044, "units": 299739}, {"build": 2005, "reach40": 2045, "units": 304114}], "peak_year": 1995, "peak_units": 429898, "acc_8895": 2393087, "reach_2845_total": 5655703, "reach_2845_avg": 314205, "melt_scenarios": [{"melt": 2, "years": 120, "done": 2148, "ok": false}, {"melt": 5, "years": 48, "done": 2076, "ok": false}, {"melt": 10, "years": 24, "done": 2052, "ok": false}, {"melt": 20, "years": 12, "done": 2040, "ok": true}, {"melt": 30, "years": 8, "done": 2036, "ok": true}], "recent_melt": 20000, "need_annual": 210000, "stock30_2024": 2517244, "stock2030_2024": 3763170}, "link6_regional": [{"region": "인천", "r": -0.46, "lag": 1, "zone": "수도권", "p": 0.001, "sig": true, "lagtxt": "1분기 뒤"}, {"region": "대전", "r": -0.46, "lag": 0, "zone": "지방", "p": 0.001, "sig": true, "lagtxt": "즉시"}, {"region": "충남", "r": -0.42, "lag": 0, "zone": "지방", "p": 0.003, "sig": true, "lagtxt": "즉시"}, {"region": "대구", "r": -0.4, "lag": 1, "zone": "지방", "p": 0.004, "sig": true, "lagtxt": "1분기 뒤"}, {"region": "전북", "r": -0.4, "lag": 1, "zone": "지방", "p": 0.005, "sig": true, "lagtxt": "1분기 뒤"}, {"region": "광주", "r": -0.38, "lag": 0, "zone": "지방", "p": 0.008, "sig": true, "lagtxt": "즉시"}, {"region": "경기", "r": -0.33, "lag": 1, "zone": "수도권", "p": 0.021, "sig": true, "lagtxt": "1분기 뒤"}, {"region": "부산", "r": -0.31, "lag": 1, "zone": "지방", "p": 0.035, "sig": true, "lagtxt": "1분기 뒤"}, {"region": "강원", "r": -0.28, "lag": 0, "zone": "지방", "p": 0.055, "sig": true, "lagtxt": "즉시"}, {"region": "경북", "r": -0.28, "lag": 0, "zone": "지방", "p": 0.052, "sig": true, "lagtxt": "즉시"}, {"region": "울산", "r": -0.25, "lag": 1, "zone": "지방", "p": 0.089, "sig": true, "lagtxt": "1분기 뒤"}, {"region": "전남", "r": -0.24, "lag": 0, "zone": "지방", "p": 0.104, "sig": false, "lagtxt": "효과 약함"}, {"region": "경남", "r": -0.21, "lag": 0, "zone": "지방", "p": 0.145, "sig": false, "lagtxt": "효과 약함"}, {"region": "충북", "r": -0.18, "lag": 0, "zone": "지방", "p": 0.216, "sig": false, "lagtxt": "효과 약함"}, {"region": "서울", "r": -0.08, "lag": 0, "zone": "수도권", "p": 0.603, "sig": false, "lagtxt": "효과 약함"}]};
+const FONT="'Pretendard Variable','Pretendard',-apple-system,'Malgun Gothic',sans-serif";
+const INK="#131e24",INK2="#4c5f66",GRID="#dde4e1",MUTED="#5e6f74";
+const MAEMAE="#c0392b",JEONSE="#6c4ab6",STOCK="#1f8a70",FLOW="#d99a00",GOLD="#b8862f";
+Chart.defaults.font.family=FONT;Chart.defaults.font.size=12;Chart.defaults.color=INK2;
+Chart.defaults.plugins.legend.display=false;
+/* Chart.js는 생성 시점에 텍스트를 한 번 래스터화하고 폰트 로드로 다시 그리지 않는다.
+   이게 없으면 웹폰트가 늦게 도착할 때 차트 라벨만 폴백 폰트로 굳어 본문과 어긋난다.
+   호출부 14곳을 건드리는 대신 캔버스를 훑는다 — 이 시점 이후 만들어지는 차트는
+   이미 로드된 폰트로 그려지므로 한 번의 스윕이면 충분하다. */
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(()=>{
+    document.querySelectorAll('canvas').forEach(cv=>{
+      const c=Chart.getChart(cv); if(c)c.update('none');
+    });
+  }).catch(()=>{});
+}
+const fy=t=>Math.floor(t),SUDO=["서울","경기","인천"];
+function fmtN(v,dec){return (v==null||isNaN(v))?'-':Number(v).toLocaleString('ko-KR',{maximumFractionDigits:dec==null?2:dec});}
+function areaGrad(color,topHex){
+  topHex=topHex||'38';
+  return function(ctx){
+    const ch=ctx.chart, area=ch.chartArea;
+    if(!area) return color+'00';
+    const g=ch.ctx.createLinearGradient(0,area.top,0,area.bottom);
+    g.addColorStop(0,color+topHex); g.addColorStop(1,color+'00');
+    return g;
+  };
+}
+function track(ev,params){try{if(typeof gtag==='function')gtag('event',ev,params||{});}catch(e){}}
+
+function initReport(){
+/* ===== cL1: 수도권 공급수준별 전세 상승률 ===== */
+const jibC="#2c5f9e";
+new Chart(cL1,{type:'bar',data:{labels:D.link1_new.levels,
+  datasets:[{data:D.link1_new.jeonse_rise,
+    backgroundColor:['#e0564a','#c0cbc5','#3a7bd5'],borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'전세 상승률 '+fmtN(c.raw)+'%'}}},
+    scales:{x:{grid:{display:false},title:{display:true,text:'분기별 공급(입주) 수준'}},
+      y:{beginAtZero:true,grid:{color:GRID},title:{display:true,text:'전세 상승률 (%/분기)'},
+        ticks:{callback:v=>v+'%'}}}},
+  plugins:[{afterDatasetsDraw(ch){const t=ch.ctx;t.save();t.font='700 13px '+FONT;t.fillStyle=INK;t.textAlign='center';
+    ch.getDatasetMeta(0).data.forEach((p,i)=>t.fillText(D.link1_new.jeonse_rise[i]+'%',p.x,p.y-8));t.restore()}}]});
+
+/* ===== C6 sync ===== */
+D.sync.sort((a,b)=>b.corr-a.corr);
+new Chart(c6,{type:'bar',data:{labels:D.sync.map(r=>r.region),
+  datasets:[{data:D.sync.map(r=>r.corr),backgroundColor:D.sync.map(r=>r.sudo?'#127a70':'#a89578'),borderRadius:3}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{tooltip:{callbacks:{label:c=>'동조성 '+fmtN(c.raw)}}},
+    scales:{x:{beginAtZero:true,max:1,grid:{color:GRID},title:{display:true,text:'전세–매매 동조성 (1에 가까울수록 함께 움직임)'}},
+      y:{grid:{display:false}}}}});
+
+/* ===== c4: 전세가율 투자성↔실거주성 ===== */
+const jtColor=t=>t==='투자성'?'#e0a93b':(t==='실거주성'?'#2f8f6f':'#a5b5ad');
+new Chart(c4,{type:'bar',data:{labels:D.jratio_level.map(r=>r.region),
+  datasets:[{data:D.jratio_level.map(r=>r.val),
+    backgroundColor:D.jratio_level.map(r=>jtColor(r.type)),borderRadius:3}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const r=D.jratio_level[c.dataIndex];return `전세가율 ${r.val}% · ${r.type}`}}}},
+    scales:{x:{beginAtZero:false,min:50,max:82,grid:{color:GRID},
+        title:{display:true,text:'← 투자성(낮음)      전세가율 (%)      실거주성(높음) →'},
+        ticks:{callback:v=>v+'%'}},
+      y:{grid:{display:false}}}}});
+
+/* ===== C5 zones ===== */
+let zc;const zn=Object.keys(D.zones);
+function dz(name){const z=D.zones[name];if(zc)zc.destroy();
+  zc=new Chart(c5,{type:'line',data:{labels:z.t.map(fy),
+    datasets:[{data:z.maemae,borderColor:'#e0564a',fill:true,backgroundColor:areaGrad('#e0564a','26'),pointRadius:0,borderWidth:2.4,tension:.3},
+      {data:z.jeonse,borderColor:'#a98be0',fill:true,backgroundColor:areaGrad('#a98be0','26'),pointRadius:0,borderWidth:2.4,tension:.3}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      scales:{y:{grid:{color:'#2c3760'},ticks:{color:'#9aa0b4'},title:{display:true,text:'지수',color:'#9aa0b4'}},
+        x:{grid:{display:false},ticks:{color:'#9aa0b4',maxTicksLimit:8}}}}});}
+const zt=document.getElementById('ztog');
+zn.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;if(!i)b.classList.add('on');
+  b.style.cssText='color:#dfe3ee;border-color:#3a4569';b.onclick=()=>{document.querySelectorAll('#ztog button').forEach(x=>{x.classList.remove('on');x.style.background='transparent';x.style.color='#dfe3ee'});b.classList.add('on');b.style.background='#dfe3ee';b.style.color='#1d2742';dz(n)};zt.appendChild(b)});
+document.querySelector('#ztog button').style.background='#dfe3ee';
+document.querySelector('#ztog button').style.color='#1d2742';
+dz(zn[0]);
+
+/* ===== cL3: 매매→인허가 지역별 강도 ===== */
+new Chart(cL3,{type:'bar',data:{labels:D.link3_regional.map(d=>d.region),
+  datasets:[{data:D.link3_regional.map(d=>d.r),
+    backgroundColor:D.link3_regional.map(d=>d.r<0?'#a5b5ad':(d.r>=0.3?'#2f8f6f':'#e0a93b')),borderRadius:3}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const d=D.link3_regional[c.dataIndex];return `연결강도 r=${d.r}${d.sudo?' (수도권)':''}`}}}},
+    scales:{x:{grid:{color:GRID},title:{display:true,text:'← 끊김      매매→인허가 연결강도 (r)      살아있음 →'}},
+      y:{grid:{display:false}}}}});
+
+/* ===== cL6: 준공→전세하락 지역별 강도 (수도권/지방 색구분) ===== */
+new Chart(cL6,{type:'bar',data:{labels:D.link6_regional.map(d=>d.region),
+  datasets:[{data:D.link6_regional.map(d=>Math.abs(d.r)),
+    backgroundColor:D.link6_regional.map(d=>!d.sig?'#c6d0cb':(d.zone==='수도권'?'#127a70':'#a89578')),borderRadius:3}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>{const d=D.link6_regional[c.dataIndex];
+        return [`전세 억제력 |r|=${Math.abs(d.r)}`,`${d.zone} · ${d.lagtxt}`]}}}},
+    scales:{x:{grid:{color:GRID},beginAtZero:true,
+        title:{display:true,text:'입주 → 전세 억제력 (강할수록 길게)'}},
+      y:{grid:{display:false}}}}});
+
+/* ===== cFlow supply chain ===== */
+const FC=D.flow_chain,noZero=a=>a.map(v=>v>0?v:null);
+new Chart(cFlow,{type:'line',data:{labels:FC.t,datasets:[
+  {label:'인허가',data:FC.permit,borderColor:'#2563eb',fill:true,backgroundColor:areaGrad('#2563eb','1e'),pointRadius:0,borderWidth:2.2,tension:.35},
+  {label:'착공',data:noZero(FC.start),borderColor:FLOW,fill:true,backgroundColor:areaGrad(FLOW,'1e'),pointRadius:0,borderWidth:2.2,tension:.35},
+  {label:'준공',data:noZero(FC.done),borderColor:STOCK,fill:true,backgroundColor:areaGrad(STOCK,'1e'),pointRadius:0,borderWidth:2.2,tension:.35}]},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,padding:14}}},
+    scales:{y:{grid:{color:GRID},title:{display:true,text:'물량 (천 호)'}},
+      x:{grid:{display:false}}}}});
+
+/* ===== cRate: 수도권 매매·전세 vs 금리(역축) ===== */
+(function(){const R=D.rate_overlay;
+new Chart(cRate,{type:'line',data:{labels:R.t.map(fy),datasets:[
+  {label:'매매',data:R.maemae,yAxisID:'y',borderColor:'#e0564a',fill:true,backgroundColor:areaGrad('#e0564a','26'),pointRadius:0,borderWidth:2.6,tension:.3},
+  {label:'전세',data:R.jeonse,yAxisID:'y',borderColor:'#a98be0',fill:true,backgroundColor:areaGrad('#a98be0','26'),pointRadius:0,borderWidth:2.6,tension:.3},
+  {label:'CD금리',data:R.rate,yAxisID:'yr',borderColor:'#e8b84b',pointRadius:0,borderWidth:2,
+    borderDash:[5,4],tension:.3}]},
+  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtN(c.raw)+(c.dataset.label==='CD금리'?'%':'')}}},
+    scales:{
+      y:{position:'left',grid:{color:'#2c3760'},ticks:{color:'#9aa0b4'},
+         title:{display:true,text:'매매·전세 지수',color:'#9aa0b4'}},
+      yr:{position:'right',reverse:true,grid:{display:false},ticks:{color:'#e8b84b'},
+         title:{display:true,text:'CD금리 (%) — 아래로 갈수록 고금리',color:'#e8b84b'}},
+      x:{grid:{display:false},ticks:{color:'#9aa0b4',maxTicksLimit:9}}}}});
+})();
+
+/* ===== cStr strength ===== */
+new Chart(cStr,{type:'bar',data:{labels:D.cycle_strength.map(d=>d.region),
+  datasets:[{data:D.cycle_strength.map(d=>d.score),
+    backgroundColor:D.cycle_strength.map(d=>d.score>=4?'#2f8f6f':(d.score<=1?'#a5b5ad':'#e0a93b')),
+    borderColor:D.cycle_strength.map(d=>SUDO.includes(d.region)?'#0c5f56':'rgba(0,0,0,0)'),
+    borderWidth:D.cycle_strength.map(d=>SUDO.includes(d.region)?3:0),
+    borderRadius:3}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{tooltip:{callbacks:{label:c=>(SUDO.includes(D.cycle_strength[c.dataIndex].region)?'수도권 · ':'')+c.raw+'/6 고리 작동'}}},
+    scales:{x:{beginAtZero:true,max:6,grid:{color:GRID},title:{display:true,text:'작동하는 고리 수 (6점 만점) · 굵은 테두리=수도권'},ticks:{stepSize:1}},
+      y:{grid:{display:false}}}}});
+
+/* ===== cSuper: 준공연도→40년 멸실도달 타임라인 ===== */
+new Chart(cSuper,{type:'bar',data:{labels:D.super.timeline.map(d=>d.build),
+  datasets:[{data:D.super.timeline.map(d=>d.units),
+    backgroundColor:D.super.timeline.map(d=>d.reach40>=2028?'#e0a93b':'#cdc3a8'),borderRadius:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{title:c=>D.super.timeline[c[0].dataIndex].build+'년 준공',
+        label:c=>{const t=D.super.timeline[c.dataIndex];return [`${t.units.toLocaleString()}호`,`→ ${t.reach40}년 40년 도달`]}}}},
+    scales:{x:{grid:{display:false},title:{display:true,text:'준공 연도 (빨강=2028년 이후 40년 도달)'},
+        ticks:{maxTicksLimit:10,callback:function(v,i){const y=D.super.timeline[i].build;return y%5===0?y:''}}},
+      y:{grid:{color:GRID},title:{display:true,text:'아파트 준공 (호)'},ticks:{callback:v=>(v/10000)+'만'}}}}});
+
+/* ===== cMelt: 멸실 속도별 처리 연수 ===== */
+new Chart(cMelt,{type:'bar',data:{labels:D.super.melt_scenarios.map(s=>'연 '+s.melt+'만호'),
+  datasets:[{data:D.super.melt_scenarios.map(s=>s.years),
+    backgroundColor:D.super.melt_scenarios.map(s=>s.ok?'#3aa17e':'#e0564a'),borderRadius:4}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>{const s=D.super.melt_scenarios[c.dataIndex];
+        return [`${s.years}년 소요 (${s.done}년 완료)`, s.ok?'50년 상한 내 ✓':'50년 상한 초과 ✗']}}}},
+    scales:{x:{beginAtZero:true,max:145,grid:{color:GRID},title:{display:true,text:'처리 소요 연수 (초록=50년내, 빨강=초과)'}},
+      y:{grid:{display:false}}}},
+  plugins:[{afterDatasetsDraw(ch){const t=ch.ctx;t.save();t.font='700 11px '+FONT;t.fillStyle=INK;t.textAlign='left';
+    ch.getDatasetMeta(0).data.forEach((p,i)=>{const s=D.super.melt_scenarios[i];
+      t.fillText(s.years+'년 ('+s.done+')',p.x+6,p.y+4)});t.restore()}}]});
+}
+
+initReport();
+</script>
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{});});
