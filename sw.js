@@ -3,13 +3,12 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v8'; // 홈 데이터를 data-core.js로 분리(2026-07-19).
+const VERSION = 'v9'; // 홈 데이터를 data-core.js로 분리(2026-07-19).
                       // 옛 캐시는 data.js 전량을 받는 index.html을 갖고 있어 반드시 버려야 한다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
   '/',
-  '/data.js',
   '/data-core.js',   // 홈이 실제로 읽는 것
   '/app.css',
   '/chart-4.4.1.umd.js',

@@ -87,7 +87,7 @@
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
 
-    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대</span></div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대 · 막대는 제곱근 비례</span></div></div>
     <div id="score-wrap" style="text-align:left"></div>
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
@@ -439,22 +439,30 @@ function loadFullData(){
   /* 홈은 core(48KB)만 받고, 주간 155주·기본통계 11계열은 통계 탭을 열 때 받는다.
      data.js를 런타임에 정규식으로 파싱하지 않는다 — 선언 형태가 조금만 바뀌어도
      조용히 깨지므로 분리기가 낸 JSON을 그대로 읽는다. */
-  if(_fullData)return _fullData;
+  return loadData('/data-trend.json');
+}
+let _loaded={};
+function loadData(url){
+  /* 통계 탭 진입에 필요한 건 그래프(주간·월간)뿐이다. 기본통계 11계열은
+     세그먼트를 눌러야 보이므로 그때 받는다 — 진입 부담을 절반으로 줄인다. */
+  if(_loaded[url])return _loaded[url];
   const box=document.getElementById('stats-loading');
   if(box){box.textContent='통계 데이터를 불러오는 중…';box.style.display='';}
-  _fullData=fetch('/data-rest.json').then(r=>{
+  _loaded[url]=fetch(url).then(r=>{
     if(!r.ok)throw new Error('HTTP '+r.status);
     return r.json();
   }).then(d=>{
     Object.assign(ADV,d.ADV); Object.assign(STATS,d.STATS);
     if(box)box.style.display='none';
   }).catch(e=>{
-    _fullData=null;   // 다음 진입에서 다시 시도할 수 있게
+    delete _loaded[url];   // 다음 진입에서 다시 시도할 수 있게
     if(box){box.textContent='통계 데이터를 불러오지 못했습니다. 새로고침해 주세요.';box.style.display='';}
     throw e;
   });
-  return _fullData;
+  return _loaded[url];
 }
+/* 기본통계(11계열)는 이 함수를 거쳐서만 그린다 */
+function ensureBasicStats(){ return loadData('/data-rest.json'); }
 function showView(v,updateHash){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
   vHome.style.display=v==='home'?'':'none';
@@ -463,7 +471,12 @@ function showView(v,updateHash){
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){
     statsInited=true;
-    loadFullData().then(initStats).catch(()=>{statsInited=false;});
+    loadFullData()
+      .then(()=>{ if(typeof renderWeekSec==='function')renderWeekSec();
+                  if(typeof renderMonthSec==='function')renderMonthSec(); })
+      .then(ensureBasicStats)
+      .then(initStats)
+      .catch(()=>{statsInited=false;});
   }
   if(updateHash!==false){
     const tgtHash=v==='home'?'':'#'+v, tgtUrl=v==='home'?location.pathname:'#'+v;

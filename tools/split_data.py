@@ -25,6 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'data.js')
 OUT = os.path.join(ROOT, 'data-core.js')
 REST = os.path.join(ROOT, 'data-rest.json')
+TREND = os.path.join(ROOT, 'data-trend.json')
 
 # 홈이 쓰는 STATS 계열 — 아공맵 스코어가 순공급을 계산할 때 참조한다.
 # 나머지 9계열(매매지수·인허가·준공·착공·전세지수·금리·보급률·노후주택30년·
@@ -67,15 +68,21 @@ def main():
 
     # 나머지는 JSON으로 따로 낸다. 런타임에 data.js를 정규식으로 파싱하는 방식은
     # 선언 형태가 조금만 바뀌어도 조용히 깨지므로 쓰지 않는다.
-    io.open(REST, 'w', encoding='utf-8', newline='\n').write(
-        dump({'ADV': adv, 'STATS': stats}))
+    # 통계 탭에서 먼저 보이는 건 그래프(주간·월간)다. 기본통계 11계열은 그 아래
+    # 세그먼트를 눌러야 나오므로 한 번에 받을 이유가 없다 — 둘로 더 쪼갠다.
+    io.open(TREND, 'w', encoding='utf-8', newline='\n').write(
+        dump({'ADV': adv, 'STATS': {k: stats[k] for k in CORE_STATS if k in stats}}))
+    # rest에 ADV를 또 담으면 trend와 중복돼 총 전송량이 오히려 는다(399→629KB).
+    # rest는 기본통계 계열만 담는다 — ADV는 trend가 이미 실어 보냈다.
+    io.open(REST, 'w', encoding='utf-8', newline='\n').write(dump({'STATS': stats}))
 
     full = len(src)
     rest = os.path.getsize(REST)
     print('data.js        %7.1f KB  (그대로 유지 — 다른 소비자 보호)' % (full / 1024))
     print('data-core.js   %7.1f KB  (홈 즉시 로드, %.0f%% 절감)'
           % (len(body) / 1024, 100 * (1 - len(body) / full)))
-    print('data-rest.json %7.1f KB  (통계 탭 열 때만)' % (rest / 1024))
+    print('data-trend.json%7.1f KB  (그래프 — 통계 탭 진입 시)' % (os.path.getsize(TREND) / 1024))
+    print('data-rest.json %7.1f KB  (기본통계 — 세그먼트 누를 때)' % (rest / 1024))
     print('  core ADV   :', ', '.join(core_adv))
     print('  core STATS :', ', '.join(core_stats))
 
