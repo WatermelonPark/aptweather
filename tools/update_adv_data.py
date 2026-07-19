@@ -49,7 +49,10 @@ CONF = {
         'maega':  {'orgId': '408', 'tblId': 'DT_304004_WEEK_001_B'},
         'jeonse': {'orgId': '408', 'tblId': 'DT_304004_WEEK_003_B'},
         'weeks': 12,           # 서울 구·시군구 상세 유지 주수
-        'weeks_hist': 104,     # 시도 시계열 유지 주수 (그래프 과거 탐색용)
+        # 3년. 주간은 objL1=ALL이라 주당 ~240행이고 156주면 약 37,400셀 —
+        # KOSIS 4만 제한에 여유가 6%뿐이라 아래 _fetch_weekly_kosis가 실패 시
+        # 짧은 기간으로 자동 재시도한다. 지역이 늘면 이 값을 먼저 의심할 것.
+        'weeks_hist': 156,     # 시도 시계열 유지 주수 (그래프 과거 탐색용)
     },
     'monthly': {               # 월간 아파트 가격지수 (부동산원 월간동향) — 전월비 변동률 계산
         'maega':  {'orgId': '408', 'tblId': 'DT_30404_B012'},   # 유형별 매매가격지수 (C1=유형, C2=지역)
@@ -353,8 +356,24 @@ def fetch_weekly():
 
 
 def _fetch_weekly_kosis():
+    """긴 기간을 먼저 시도하고, KOSIS 셀 제한에 걸리면 짧게 재시도한다.
+
+    weeks_hist(156주)는 4만 셀 제한에 여유가 크지 않다. 한도를 넘겨 통째로
+    실패하면 그 주 통계가 통으로 멈추므로, 실패는 기간을 줄여 흡수한다.
+    """
     w = CONF['weekly']
-    hist = w.get('weeks_hist', w['weeks'])   # 105주 x ~240행 = 25k셀 < KOSIS 40k 제한
+    hist = w.get('weeks_hist', w['weeks'])
+    try:
+        return _weekly_kosis_at(hist)
+    except Exception as e:
+        if hist <= w['weeks']:
+            raise
+        print('weekly hist %d failed (%s) — retrying with %d' % (hist, e, w['weeks']))
+        return _weekly_kosis_at(w['weeks'])
+
+
+def _weekly_kosis_at(hist):
+    w = CONF['weekly']
     ma, ma_se, ma_sg = _fetch_weekly_one(w['maega'], hist)
     time.sleep(0.2)
     je, je_se, je_sg = _fetch_weekly_one(w['jeonse'], hist)
