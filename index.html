@@ -334,7 +334,7 @@
       <div class="quiz-hero">
         
         <h1>당신의 부동산 감각,<br>몇 점일까?</h1>
-        <p>난이도를 고르세요. 각 10문항, 즉시 채점됩니다.</p>
+        
         <div class="qpick">
           <button class="qpick-card" onclick="startQuiz('beginner')">
             <div class="pc-top">
@@ -486,9 +486,10 @@ const R2C=new Set(["report", "c4", "c5", "c6", "cFlow", "cL1", "cL3", "cL6", "cM
 function applyHash(){
   const h=location.hash.replace('#','');
   if(!h){showView('home',false);return;}
-  if(h==='test-beginner'||h==='test-investor'||h==='test-calc'){showView('test',false);startQuiz(h.slice(5));return;}
+  if(h==='test-beginner'||h==='test-investor'||h==='test-calc'){showView('test',false);startQuiz(h.slice(5),undefined,true);return;}
   if(h==='stats-adv'||h==='stats-market'||h==='stats-basic'||h==='stats-more'){showView('stats',false);setStatsMode(h.slice(6));return;}
   if(h==='score'){showView('home',false);requestAnimationFrame(()=>{const el=document.getElementById('sec-score');if(el)el.scrollIntoView();});return;}
+  if(h==='test'){showView('test',false);backToPick(true);return;}
   if(h==='home'||h==='stats'||h==='test'){showView(h,false);return;}
   // 리포트는 /cycle/로 이전했다. 옛 해시로 들어온 링크·북마크를 넘긴다.
   // replace를 쓰는 이유: push면 뒤로가기가 이 페이지로 되돌아와 무한 왕복한다.
@@ -1109,8 +1110,14 @@ function drawQuiz(setKey,seed){
   return pick;
 }
 let curSet='investor', QUIZ=drawQuiz('investor'), qIdx=0, qScore=0, qAnswered=false, qResults=[];
-function startQuiz(setKey,seed){
+function startQuiz(setKey,seed,fromHash){
   if(setKey){curSet=setKey;}
+  /* 뒤로가기가 테스트 목록으로 돌아오려면 여기서 한 칸을 쌓아야 한다.
+     해시로 들어온 경우(fromHash)는 이미 그 상태에 있으므로 쌓지 않는다. */
+  if(!fromHash&&curSet){
+    const want='#test-'+curSet;
+    if(location.hash!==want)history.pushState(null,'',want);
+  }
   QUIZ=drawQuiz(curSet,seed);
   qIdx=0;qScore=0;qResults=[];
   track('quiz_start',{quiz_type:curSet});
@@ -1120,11 +1127,12 @@ function startQuiz(setKey,seed){
   renderChalBar();
   renderQ();
 }
-function backToPick(){
+function backToPick(fromHash){
   document.getElementById('quiz-play').style.display='none';
   document.getElementById('quiz-result').style.display='none';
   document.getElementById('quiz-intro').style.display='';
   window.scrollTo(0,0);
+  if(!fromHash&&location.hash!=='#test')history.pushState(null,'','#test');
 }
 function renderQ(){
   qAnswered=false;
