@@ -1015,13 +1015,16 @@ def main():
                           '(해당 zone 페이지가 삭제되고 sitemap에서 빠짐)' % (n_old, n_new, ', '.join(gone) or '?'))
                 adv['livezone'] = lz
                 changed.append('livezone(%d)' % len(lz['zones']))
-                # 가드 2: 공급 원자료가 비어 산출 불가한 생활권을 로그에 드러낸다.
-                # (조용히 '부족'으로 계산되던 결함 — 진주권 사례)
-                nd = [z['z'] for z in lz['zones']
-                      if not (z.get('supply') or 0) or not (z.get('sgg') or [])]
-                if nd:
-                    print('livezone NOTE: 입주예정 원자료 없음 %d곳 -> %s '
-                          '(순위/판정에서 제외되며 자료없음으로 표시됨)' % (len(nd), ', '.join(nd)))
+                # 가드 2: 입주예정 물량이 0인 생활권을 로그에 드러낸다.
+                # 0은 결측이 아니라 실제 공급 가뭄이므로 그대로 '부족'으로 계산한다
+                # (2026-07-19 확정). 다만 갑자기 0이 되면 원자료 이상 신호일 수 있어
+                # 눈에 띄게 남긴다. 데이터셋 건강성 자체는 위 가드 1이 지킨다.
+                zero = [z['z'] for z in lz['zones'] if not (z.get('supply') or 0)]
+                if zero:
+                    print('livezone NOTE: 입주예정 물량 0인 생활권 %d곳 -> %s '
+                          '(결측이 아니라 0으로 간주해 부족으로 계산됨. '
+                          '이전에 물량이 있던 곳이 0이 됐다면 원자료를 확인할 것)'
+                          % (len(zero), ', '.join(zero)))
         else:
             print('livezone skip: DATA_GO_KR_KEY 없음')
     except Exception as e:

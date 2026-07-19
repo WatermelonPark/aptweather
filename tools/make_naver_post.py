@@ -105,9 +105,7 @@ def draft_weekly(adv, rows):
 
     # 아공맵 상위 — 홈과 같은 기준(수도권 통합)
     cap = Z.make_capital(rows)
-    # 자료 없는 생활권은 순위표에서 뺀다(홈 renderScoreSec과 같은 기준).
-    units = [cap] + [r for r in rows
-                     if r['z']['region'] != '수도권' and not r.get('nd')]
+    units = [cap] + [r for r in rows if r['z']['region'] != '수도권']
     units.sort(key=lambda r: -r['tot'])
     top = units[:5]
 
@@ -356,12 +354,8 @@ def main():
     p = adv['weekly']['rows'][-1]['p']
 
     d1 = draft_weekly(adv, rows)
-    # nd = 입주예정 원자료에 단지가 없는 생활권(진주권 사례). tot이 계산돼 있긴 하나
-    # '자료 없음'을 '부족'으로 단정한 값이라, 이걸로 글을 쓰면 없는 근거로 발행하게 된다.
-    # 사이트는 4f90c4c에서 순위 제외 처리했고, 발행물도 같은 기준을 따라야 한다.
     pool = [r for r in rows
-            if (r['z']['region'] != '수도권' or r['z']['z'] == '서울권')
-            and not r.get('nd')]
+            if r['z']['region'] != '수도권' or r['z']['z'] == '서울권']
     pick, seq, total = pick_zone(pool)
     d2 = draft_zone(adv, pick, seq, total)
 

@@ -123,6 +123,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://www.agongmap.co.kr/zone/%EC%A7%84%EC%A3%BC%EA%B6%8C/</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.agongmap.co.kr/zone/%EA%B5%AC%EB%AF%B8%EA%B6%8C/</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>weekly</changefreq>
@@ -238,12 +244,6 @@
   </url>
   <url>
     <loc>https://www.agongmap.co.kr/zone/%EB%8C%80%EC%A0%84%EC%84%B8%EC%A2%85%EA%B6%8C/</loc>
-    <lastmod>2026-07-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.agongmap.co.kr/zone/%EC%A7%84%EC%A3%BC%EA%B6%8C/</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
