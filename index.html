@@ -2401,7 +2401,9 @@ function showResult(){
     </div>`;
   window.scrollTo(0,0);
 }
-const SHARE_URL='https://www.agongmap.co.kr/#test';
+// 공유 링크는 퀴즈 전용 OG(og-test.png)를 가진 /burini-test/로 보낸다.
+// 해시(#test)나 루트(?c=)로 보내면 홈 OG(og-brand.png)로 언펄돼 퀴즈 훅이 사라진다.
+const SHARE_URL='https://www.agongmap.co.kr/burini-test/';
 /* ===== 친구 대결 (서버 없이 URL 파라미터로) ===== */
 let CHALLENGE=null;
 function readChallenge(){
@@ -2420,7 +2422,8 @@ function readChallenge(){
   return null;
 }
 function challengeURL(){
-  return `https://www.agongmap.co.kr/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
+  // /burini-test/가 파라미터를 홈으로 넘겨준다(OG는 퀴즈 카드로 뜨게).
+  return `https://www.agongmap.co.kr/burini-test/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
 }
 function renderChalBar(){
   const b=document.getElementById('chal-bar');
