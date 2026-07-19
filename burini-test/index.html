@@ -10,6 +10,18 @@
   gtag('config', 'G-3FJNG6G1F3');
 </script>
 <meta charset="UTF-8">
+<script>
+/* 대결 링크(?c=&s=&q=)로 들어오면 홈으로 넘긴다.
+   이 페이지는 퀴즈 전용 OG 카드를 제공하는 역할이고, 대결 파라미터 해석은 홈이 한다.
+   언펄 봇은 JS를 실행하지 않으므로 미리보기는 이 페이지의 OG가 그대로 뜬다. */
+(function(){
+  var q=location.search;
+  if(/[?&]c=\d/.test(q)&&/[?&]s=(beginner|investor|calc)/.test(q)){
+    location.replace('/'+q);
+  }
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>부린이 테스트 — 내 부동산 감각, 몇 점일까? (10문항 3분)</title>
 <meta name="description" content="부린이 테스트: 내집마련 전 꼭 알아야 할 부동산 상식 10문항을 3분 만에 확인. LTV·전세·청약 기초부터 집값 전망을 읽는 아파트 사이클 감각까지 즉시 채점·해설.">
