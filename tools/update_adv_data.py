@@ -36,6 +36,11 @@ RONE_API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
 RONE_TBL = {'maega': 'T244183132827305', 'jeonse': 'T247713133046872'}
 # 한국부동산원 주택공급정보 입주예정물량정보 (data.go.kr/data/15111714) — 반기 갱신, 30세대 이상 단지별
 OCC_API = 'https://api.odcloud.kr/api/15111714/v1/uddi:0b257760-ac19-4841-adb4-b38b4d153397'
+# 청약홈 APT 분양정보 — 입주예정월이 2031년까지 있어 odcloud(2027-12까지)보다 멀리 본다.
+# 다만 분양 공고 기준이라 후분양·임대·조합 물량이 빠져 같은 구간에서는 odcloud보다 적다
+# (2026-01~2027-12 실측: odcloud 414,906세대 vs 청약홈 278,125세대).
+# 그래서 odcloud를 대체하지 않고 '그 시야 밖'만 채운다.
+CHUNG_API = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail'
 
 # ---- KOSIS 표 설정 ------------------------------------------------------
 # tblId는 `--discover <검색어>` 로 확인 후 채운다.
@@ -886,6 +891,39 @@ def _lz_pop():
         sgg[(cur, nm)] = pop
     return sido, sgg
 
+def _fetch_chung():
+    """청약홈 분양정보 전량 → [(시도, 시군구, 'YYYYQn', 세대수, 단지명)]"""
+    out = []
+    for pg in range(1, 8):
+        d = http_json(CHUNG_API + '?' + urllib.parse.urlencode(
+            {'page': pg, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
+        rows = d.get('data') or []
+        if not rows:
+            break
+        for r in rows:
+            ym = str(r.get('MVN_PREARNGE_YM') or '')          # 입주예정월 YYYYMM
+            if len(ym) != 6 or not ym.isdigit():
+                continue
+            mm = int(ym[4:6])
+            if not 1 <= mm <= 12:
+                continue
+            adr = str(r.get('HSSPLY_ADRES') or '').split()
+            if len(adr) < 2:
+                continue
+            sd, sg = adr[0], adr[1]
+            try:
+                n = int(r.get('TOT_SUPLY_HSHLDCO') or 0)
+            except (TypeError, ValueError):
+                continue
+            if n <= 0:
+                continue
+            out.append((sd, sg, '%sQ%d' % (ym[:4], (mm - 1) // 3 + 1), n,
+                        str(r.get('HOUSE_NM') or '')))
+        if len(rows) < 1000:
+            break
+    return out
+
+
 def fetch_livezone():
     import collections, datetime
     assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
@@ -922,6 +960,32 @@ def fetch_livezone():
             q = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
             supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
             qset[z].add(q); byq[z]['%dQ%d' % q] += n
+    # ── 청약홈으로 시야 확장 ──────────────────────────────────────
+    # odcloud가 덮는 마지막 분기까지는 odcloud를 그대로 쓰고(더 완전하다),
+    # 그 뒤 분기만 청약홈으로 채운다. 같은 분기를 두 원천에서 더하면
+    # 절반이 중복(단지명 일치 338/675 실측)이라 물량이 1.5배로 부푼다.
+    def _qnum(s):
+        return int(s[:4]) * 4 + int(s[5]) - 1
+    occ_last = max((_qnum(k) for zz in byq.values() for k in zz), default=None)
+    n_ext = 0
+    if occ_last is not None:
+        try:
+            for sd, sg, qk, n, _nm in _fetch_chung():
+                if _qnum(qk) <= occ_last:
+                    continue                      # odcloud 관할 구간 — 건드리지 않는다
+                sd2 = LZ_SIDO_FULL.get(sd, sd)    # '서울특별시' -> '서울'
+                z = zone_of(sd2, sg)
+                if not z:
+                    continue
+                supply[z] += n
+                detail[z][LZ_GU2SI.get(sg, sg)] += n
+                qset[z].add((int(qk[:4]), int(qk[5])))
+                byq[z][qk] += n
+                n_ext += n
+            print('livezone: 청약홈으로 %s 이후 %s세대 확장' % (
+                '%dQ%d' % (occ_last // 4, occ_last % 4 + 1), format(n_ext, ',')))
+        except Exception as e:
+            print('livezone NOTE: 청약홈 확장 건너뜀 —', e)
     def mk(z, region):
         pop = zone_pop(z); s = supply.get(z, 0); qs = sorted(qset.get(z, []))
         span = ((qs[-1][0] - qs[0][0]) * 4 + (qs[-1][1] - qs[0][1]) + 1) if qs else 0

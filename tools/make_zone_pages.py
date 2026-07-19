@@ -250,11 +250,8 @@ def build_page(r, allrows, prd, today):
         flag_html = ('<section><div class="wrap"><h2>★ 실거주라면 검토해볼 구간입니다</h2>'
             '<p>%s의 임대수익률(전세가율 × 전월세전환율 = 연 <b>%.1f%%</b>)이 주택담보대출 금리 <b>%.2f%%</b>보다 높습니다. '
             '쉽게 말해 <b>이 지역은 대출 이자가 월세보다 쌉니다.</b></p>'
-            '<p>어차피 어딘가에는 살아야 합니다. 전세든 월세든 주거비는 나가는데, 같은 집에 월세로 사는 비용보다 '
-            '갚아야 할 이자가 적다면 <b>실거주 목적의 매수를 검토해볼 만한 조건</b>입니다. '
-            '여기에 공급까지 모자란 상태라면, 기다리는 동안의 보유 부담도 그만큼 가볍습니다.</p>'
-            '<p class="note">다만 <b>이자만 비교한 값</b>입니다. 원금 상환, 취득세·재산세·수선비 같은 보유 비용, '
-            'LTV·DSR 대출 한도, 그리고 집값이 내릴 가능성은 각자 따로 따져야 합니다.</p></div></section>'
+            '<p class="note">이자만 비교한 값입니다. 원금·세금·대출 한도와 하락 가능성은 따로 따져야 합니다.</p>'
+            '</div></section>'
             % (ps, r['lo'], r['loan']))
     elif r['flag'] == 'warn':
         flag_html = ('<section><div class="wrap"><h2>⚠ 보유 부담이 큰 구간입니다</h2>'
@@ -329,22 +326,19 @@ def build_page(r, allrows, prd, today):
 
 <section><div class="wrap">
   <h2>이 생활권은 어디를 묶은 건가</h2>
-  <p>행정구역이 아니라 <b>실제로 하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다. 같은 도(道)라도 통근권이 다르면 집값도 따로 움직이기 때문입니다.
-  예를 들어 목포와 광양은 같은 전남이지만 직선거리 100km가 넘는 별개 시장입니다.</p>
+  <p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>
   <div class="card"><b>%(nm)s 구성</b><span>%(members)s</span></div>%(sublist)s
-  <p class="note">입주예정 물량은 단지별 주소를 시군구로 분류해 이 생활권 몫만 집계한 <b>실측치</b>입니다. 예정 시기는 %(span)s입니다.</p>
+  <p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(%(span)s).</p>
 </div></section>
 
 <section><div class="wrap">
   <h2>어떻게 계산했나</h2>
-  <p>공급이 충분한지는 <b>적정물량</b>과 비교해야 알 수 있습니다. 적정물량은 과거 이 지역에서 가격이 하락에서 상승으로(또는 그 반대로) 돌아섰던 시점의 입주물량을 실측해 잡은 기준선입니다.</p>
+  <p><b>적정물량</b>은 과거 이 지역의 가격이 방향을 바꾼 시점의 입주물량입니다.</p>
   <table>
     <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
     <tbody>%(rows)s</tbody>
   </table>
-  <p class="note" style="margin-top:10px">과거를 <b>3년</b>으로 보는 이유는 부족이 재고처럼 쌓이기 때문입니다 — 몇 해 모자랐던 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실(철거)을 뺀 순공급</b> 기준입니다. %(dYtxt)s
-  인허가와 최근 실적은 시군구 단위 통계가 존재하지 않아 <b>소속 시도(%(ps)s) 값을 인구 비중(%(sharep).1f%%)으로 배분한 추정치</b>입니다 —
-  이 지역에 실제로 인허가가 몰렸는지까지는 알 수 없다는 한계가 있습니다. 반면 향후 2년 입주예정은 단지 주소 기반 실측이라 가장 정확합니다.</p>
+  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 향후 2년 입주예정만 실측입니다.</p>
 </div></section>
 
 %(flag)s
@@ -354,7 +348,6 @@ def build_page(r, allrows, prd, today):
   <div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>
   <div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>
   <div class="card"><b>절대량으로 비교한다</b><span>인구 대비 비율이 아니라 세대수 절대량이라, 시장이 큰 곳일수록 부족 규모도 크게 잡힙니다. 작은 지역의 가뭄은 순위에서 희석될 수 있습니다.</span></div>
-  <p class="note">공급이 어떻게 가격으로 이어지는지는 사이클 리포트에서 6개 고리로 나눠 검증했습니다 — 공급 부족이 전세를 올리고, 전세가 매매를 밀어올리고, 새 공급이 다시 전세를 누르는 과정입니다.</p>
   <a class="cta" href="/cycle/">사이클 리포트 읽기 →</a>
 </div></section>
 
@@ -367,8 +360,7 @@ def build_page(r, allrows, prd, today):
       <button type="submit">알림 받기</button>
     </form>
     <span class="subs-msg" id="subs-msg"></span>
-    <p class="consent">구독하면 <b>이메일 주소</b>를 통계 갱신 알림 발송에 이용하며, 구독 해지 시 즉시 파기합니다.
-      발송은 미국 소재 Buttondown을 통해 이뤄집니다(국외 이전). 메일 하단 수신거부 링크로 언제든 즉시 해지할 수 있습니다.
+    <p class="consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국).
       자세한 내용은 <a href="/privacy/">개인정보처리방침</a>을 확인하세요.</p>
   </div>
 </div></section>
@@ -408,13 +400,10 @@ function zsubs(f){
 </html>""" % dict(
         title=title, desc=desc, site=SITE, nm=nm, enc=quote(nm), tname=tname, tcol=tcol, disp=disp,
         ranktxt=ranktxt, prd=prd, fq=r['fq'], head=head_line, need=num(r['need']), sup=num(r['fsup']),
-        calcsent=('여기에 3~4년 뒤 입주로 이어질 인허가와 최근 3년간 실제 입주량까지 더해 계산한 결과가 '
-                  '<b style="color:%s">%s세대</b>입니다.' % (tcol, disp)),
-        legend=('<p class="note">숫자가 <b>음수(−)</b>면 그만큼 <b>모자란다</b>는 뜻이고, 양수(+)면 남는다는 뜻입니다. '
-                '모자랄수록 가격에는 상승 압력으로, 남을수록 하락 압력으로 작용합니다.</p>'),
+        calcsent=('인허가와 최근 입주까지 더하면 <b style="color:%s">%s세대</b>입니다.' % (tcol, disp)),
+        legend=('<p class="note">음수(−)는 부족, 양수(+)는 초과입니다.</p>'),
         h1=('%s 아파트,<br>앞으로 얼마나 부족할까' % nm),
-        supsent=('앞으로 %d개 분기 동안 이 지역에 필요한 아파트는 약 <b>%s세대</b>인데, '
-                 '실제로 입주가 예정된 물량은 <b>%s세대</b>입니다.' % (
+        supsent=('앞으로 %d개 분기에 필요한 <b>%s세대</b> 중 입주 예정은 <b>%s세대</b>입니다.' % (
                      r['fq'], num(r['need']), num(r['fsup']))),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
         dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
