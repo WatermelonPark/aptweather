@@ -14,7 +14,7 @@ rem   propagated so Task Scheduler shows a non-zero "Last Run Result".
 rem   Notification is handled externally by .github/workflows/watchdog.yml
 rem   (a local script cannot report that it never ran).
 rem
-rem   exit codes: 10 keys 11 pull 12 update 13 share
+rem   exit codes: 10 keys 11 pull 12 update 20 split 13 share
 rem               14 add 15 commit 16 push 17 zone-pages 18 newsletter
 rem               19 already-running
 rem   Newsletter send failure does NOT abort (stats are already live),
@@ -85,6 +85,15 @@ if errorlevel 1 (
   exit /b 12
 )
 
+rem data.js에서 홈 전용 조각(data-core.js)과 나머지(data-rest.json)를 다시 만든다.
+rem 이 단계를 빠뜨리면 홈만 지난주 데이터를 계속 보여준다 — data.js는 갱신됐는데
+rem 홈이 읽는 건 data-core.js이기 때문이다.
+python tools\split_data.py
+if errorlevel 1 (
+  echo ERROR: split_data failed - newsletter skipped
+  exit /b 20
+)
+
 python tools\make_weekly_share.py
 if errorlevel 1 (
   echo ERROR: make_weekly_share failed - newsletter skipped
@@ -97,9 +106,9 @@ if errorlevel 1 (
   exit /b 17
 )
 
-git diff --quiet data.js index.html share\weekly-map.png zone sitemap.xml
+git diff --quiet data.js data-core.js data-rest.json index.html share\weekly-map.png zone sitemap.xml
 if errorlevel 1 (
-  git add data.js index.html share\weekly-map.png zone sitemap.xml
+  git add data.js data-core.js data-rest.json index.html share\weekly-map.png zone sitemap.xml
   if errorlevel 1 (
     echo ERROR: git add failed
     exit /b 14

@@ -3,12 +3,14 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v7'; // CSS·Chart.js 외부화(2026-07-19). 인라인 시절 HTML 캐시를 버려야 한다.
+const VERSION = 'v8'; // 홈 데이터를 data-core.js로 분리(2026-07-19).
+                      // 옛 캐시는 data.js 전량을 받는 index.html을 갖고 있어 반드시 버려야 한다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
   '/',
   '/data.js',
+  '/data-core.js',   // 홈이 실제로 읽는 것
   '/app.css',
   '/chart-4.4.1.umd.js',
   '/cycle/',
@@ -52,7 +54,8 @@ self.addEventListener('fetch', (e) => {
   //    깨진 중간 상태가 보인다. 그 원자성을 유지한다.
   //  - chart-4.4.1.umd.js는 파일명에 버전이 박혀 있어 cache-first로 안전하다.
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
-  if (url.pathname === '/data.js' || url.pathname === '/app.css') {
+  if (url.pathname === '/data.js' || url.pathname === '/app.css'
+      || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json') {
     e.respondWith(
       fetch(req)
         .then((res) => {
