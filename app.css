@@ -706,3 +706,7 @@
     *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
       transition-duration:.01ms !important;scroll-behavior:auto !important}
   }
+
+/* 리포트가 /cycle/로 이전하며 .nav-btn·.home-cta 일부가 <a>가 되었다.
+   버튼일 땐 필요 없던 밑줄 제거가 필요하다. */
+a.nav-btn,a.home-cta{text-decoration:none}
