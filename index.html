@@ -1653,10 +1653,14 @@ function drawFixedYAxis(T,chart){
   const wr=wrap.getBoundingClientRect(), wcs=getComputedStyle(wrap);
   const offL=parseFloat(wcs.borderLeftWidth)+parseFloat(wcs.paddingLeft);
   const offT=parseFloat(wcs.borderTopWidth)+parseFloat(wcs.paddingTop);
-  const dpr=window.devicePixelRatio||1, w=Math.ceil(ys.width), h=Math.round(cv.getBoundingClientRect().height);
+  /* 폭은 축 너비만이 아니라 '플롯이 시작되는 x'까지 전부 덮어야 한다.
+     축 너비만 덮으면 프레임 왼쪽 가장자리와 래퍼 패딩 사이에 틈이 남고,
+     스크롤되는 그래프가 그 틈으로 그대로 비친다. */
+  const gutter=(sr.left-fr.left)+offL;
+  const dpr=window.devicePixelRatio||1, w=Math.ceil(gutter+ys.width), h=Math.round(cv.getBoundingClientRect().height);
   if(w<2||h<2){yc.width=0;yc.height=0;return;}
   yc.width=w*dpr; yc.height=h*dpr; yc.style.width=w+'px'; yc.style.height=h+'px';
-  yc.style.left=(sr.left-fr.left+offL)+'px';   /* 가로: 스크롤해도 왼쪽에 고정 */
+  yc.style.left='0px';                         /* 가로: 프레임 왼쪽 끝부터 덮어 틈을 없앤다 */
   yc.style.top=(wr.top-fr.top+offT)+'px';      /* 세로: 래퍼 실측 — margin까지 반영된다 */
   const ctx=yc.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
   /* 스크롤되며 지나가는 원래 축 라벨을 가려야 하므로 불투명하게. 이제 패딩
@@ -1671,6 +1675,20 @@ function drawFixedYAxis(T,chart){
   /* 축과 플롯을 가르는 괘선 */
   ctx.fillStyle=GRID; ctx.fillRect(w-1,0,1,h);
 }
+/* 뷰포트나 DPR이 바뀌면(회전·주소창 접힘·창 크기 조절) 오버레이는 CSS 폭만
+   유지한 채 백킹 스토어가 옛 배율로 남아 늘어난다. 차트는 responsive라 알아서
+   다시 그려지지만 이 캔버스는 남의 소관이므로 직접 따라가야 한다. */
+let _yaxTimer;
+addEventListener('resize',()=>{
+  clearTimeout(_yaxTimer);
+  _yaxTimer=setTimeout(()=>{
+    ['week','month'].forEach(k=>{
+      const T=TREND&&TREND[k]; if(!T)return;
+      const cv=document.getElementById(T.chart); if(!cv)return;
+      const c=window.Chart&&Chart.getChart(cv); if(c)drawFixedYAxis(T,c);
+    });
+  },160);
+});
 function drawTrendChart(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
   const reg=advSel(T.sel,W.regions), ri=W.regions.indexOf(reg);
@@ -1689,6 +1707,19 @@ function drawTrendChart(k){
         y:{grid:{color:c=>c.tick.value===0?INK:GRID,lineWidth:c=>c.tick.value===0?1.2:1},
           ticks:{callback:v=>(v>0?'+':'')+v+'%',maxTicksLimit:6},title:{display:false}}}}});
   drawFixedYAxis(T,chart);
+  /* resize 이벤트만 믿기엔 부족하다 — 주소창 접힘·회전·컨테이너 변화는
+     window resize를 안 쏘는 경우가 있다. 컨테이너 크기를 직접 관찰한다. */
+  const sc=box&&box.parentElement;
+  if(sc&&window.ResizeObserver&&!sc._yaxRO){
+    sc._yaxRO=new ResizeObserver(()=>{
+      clearTimeout(sc._yaxT);
+      sc._yaxT=setTimeout(()=>{
+        const c=window.Chart&&Chart.getChart(document.getElementById(T.chart));
+        if(c)drawFixedYAxis(T,c);
+      },120);
+    });
+    sc._yaxRO.observe(sc);
+  }
 }
 function renderWeekSec(){ renderTrendTables('week'); drawTrendChart('week'); drawTrendMap('week'); }
 function renderMonthSec(){ renderTrendTables('month'); drawTrendChart('month'); drawTrendMap('month'); }
