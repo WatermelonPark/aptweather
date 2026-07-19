@@ -3,12 +3,15 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v6'; // data.js 분리(2026-07-19). 데이터가 인라인이던 옛 HTML 캐시를 반드시 버려야 한다.
+const VERSION = 'v7'; // CSS·Chart.js 외부화(2026-07-19). 인라인 시절 HTML 캐시를 버려야 한다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
   '/',
   '/data.js',
+  '/app.css',
+  '/chart-4.4.1.umd.js',
+  '/cycle/',
   '/404.html',
   '/burini-test/',
   '/app_icon.png',
@@ -42,9 +45,14 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // GA·카카오 등은 통과
 
-  // data.js: HTML과 같은 데이터라 network-first (cache-first면 통계가 stale 된다)
+  // data.js·app.css: HTML과 한 몸이라 network-first.
+  //  - data.js를 cache-first로 두면 통계가 stale 된다.
+  //  - app.css는 원래 HTML 인라인이라 마크업과 원자적으로 배포됐다. 외부화 후
+  //    cache-first로 두면 새 마크업 + 옛 CSS가 한 박자 공존해 색 토큰을 바꿀 때
+  //    깨진 중간 상태가 보인다. 그 원자성을 유지한다.
+  //  - chart-4.4.1.umd.js는 파일명에 버전이 박혀 있어 cache-first로 안전하다.
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
-  if (url.pathname === '/data.js') {
+  if (url.pathname === '/data.js' || url.pathname === '/app.css') {
     e.respondWith(
       fetch(req)
         .then((res) => {

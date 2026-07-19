@@ -15,7 +15,7 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = 'https://www.agongmap.co.kr'
-DEFAULT = ['/', '/weekly/', '/faq/', '/burini-test/']
+DEFAULT = ['/', '/weekly/', '/faq/', '/burini-test/', '/cycle/']
 
 
 def main():
