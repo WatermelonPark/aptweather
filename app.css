@@ -359,7 +359,7 @@
   @media(max-width:560px){
     .ctrl-row{flex-wrap:wrap}
     .shero h1{font-size:25px}
-    .chartwrap{height:260px}
+    .chartwrap{height:290px}
   }
   /* 30초 요약 */
   .tldr{padding:44px 0 8px}
@@ -490,12 +490,15 @@
   .chart-scroll .chartwrap.sm{min-width:100%}
   .chart-frame{position:relative}
   .chart-yaxis{position:absolute;left:0;top:0;z-index:2;pointer-events:none}
+  /* 단위는 축 눈금마다 반복하지 않고 여기서 한 번만 말한다.
+     눈금이 '+0.15%'에서 '0.15'로 짧아지는 만큼 축이 좁아지고 플롯이 넓어진다. */
+  .chart-unit{text-align:right;font-size:11px;font-weight:500;color:var(--muted);margin:0 0 2px}
   .chart-legend{display:flex;gap:18px;justify-content:center;font-size:12.5px;font-weight:500;color:var(--ink2);margin:0 0 8px}
   .chart-legend span{display:inline-flex;align-items:center;gap:6px}
   .chart-legend span::before{content:'';width:13px;height:13px;border-radius:0}
   .chart-legend .cl-ma::before{background:#e0564a}
   .chart-legend .cl-je::before{background:#a98be0}
-  @media(max-width:720px){.chartwrap.sm{height:240px}}
+  @media(max-width:720px){.chartwrap.sm{height:270px}}
   .adv-tabs{display:flex;gap:8px;margin:2px 0 20px;flex-wrap:wrap}
   .adv-tabs button{font-family:inherit;font-size:13.5px;font-weight:600;padding:8px 18px;border-radius:var(--r-touch);
     border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;transition:.15s}
