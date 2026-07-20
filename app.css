@@ -649,19 +649,17 @@
   .sc-keycap{font-size:11.5px;color:var(--muted);margin-top:8px}
   .sc-hd{max-width:640px;margin:26px auto 8px;font-size:12px;font-weight:500;
     color:var(--muted);text-align:left;line-height:1.6}
-  .sc-how{max-width:640px;margin:24px auto 0;text-align:left;
+  .sc-how{margin:24px 0 0;text-align:left;
     border-top:1px solid var(--line);padding-top:13px}
+  /* 한 줄 각주: 왼쪽 = 산출 방법 토글 · 오른쪽 = 출처·주기.
+     따로 떠 있던 텍스트 조각 두 개를 합친 것이다. */
   .sc-how summary{list-style:none;cursor:pointer;font-size:13px;font-weight:600;
-    color:var(--ink);display:flex;align-items:center;gap:7px}
+    color:var(--ink);display:flex;align-items:baseline;justify-content:space-between;gap:12px}
   .sc-how summary::-webkit-details-marker{display:none}
-  .sc-how summary::after{content:'▾';flex:none;font-size:11px;font-weight:600;
-    color:var(--muted);line-height:1}
-  .sc-how[open] summary::after{content:'▴'}
-  .sc-how summary:hover{color:var(--ink)}
-  .sc-how summary:hover::after{color:var(--ink)}
+  .sc-how summary .t::after{content:' ▾';font-size:11px;font-weight:600;color:var(--muted)}
+  .sc-how[open] summary .t::after{content:' ▴'}
+  .sc-how .src{font-size:11.5px;font-weight:500;color:var(--muted)}
   .sc-how .body{margin-top:9px;font-size:13px;line-height:1.9;color:var(--ink2)}
-  .sc-src{max-width:640px;margin:14px auto 0;text-align:left;font-size:11.5px;
-    line-height:1.7;color:var(--muted)}
   .sc-track{flex:1;min-width:56px;height:14px;background:#dee4e1;border-radius:0;position:relative}
   .sc-fill{position:absolute;top:0;bottom:0;border-radius:0}
   /* 영점(적정 공급) 척추 — 막대는 카드 속 그래픽이 아니라 이 선에서
@@ -697,10 +695,6 @@
   .lz-tile.lz-nd{background:var(--paper);border:1px dashed var(--line);color:var(--muted)}
 .lz-tile.lz-nd .lz-tv{color:var(--muted);font-weight:700}
 .lz-tile{border:1px solid #d8dfdc;border-radius:0;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06);position:relative}
-  /* 순위 행의 ›와 같은 어휘를 타일에도 준다 — "타일을 누르면 상세" 같은
-     안내문 대신 생김새가 말하게 한다. */
-  .lz-tile::after{content:"›";position:absolute;top:1px;right:4px;
-    font-size:11px;font-weight:600;color:var(--ink);opacity:.32}
   .lz-tile:active{outline:1.5px solid var(--ink);outline-offset:-1.5px}
   .lz-tn{font-size:12px;font-weight:600;color:#1b2426}
   .lz-tv{font-size:11px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
