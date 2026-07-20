@@ -92,8 +92,7 @@
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
 
-    <details class="sc-how"><summary>산출 방법</summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 반대로 <b>이자가 월세보다 싸면</b> <b style="color:#7a4fb5">★ 실거주 유리</b> 플래그로만 표시합니다.</div></details>
-    <p class="sc-src">아공맵 자체 산출 · 매주 갱신</p>
+    <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">아공맵 자체 산출 · 매주 갱신</span></summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 반대로 <b>이자가 월세보다 싸면</b> <b style="color:#7a4fb5">★ 실거주 유리</b> 플래그로만 표시합니다.</div></details>
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
@@ -443,8 +442,9 @@ function loadFullData(){
 }
 let _loaded={};
 function loadData(url){
-  /* 통계 탭 진입에 필요한 건 그래프(주간·월간)뿐이다. 기본통계 11계열은
-     세그먼트를 눌러야 보이므로 그때 받는다 — 진입 부담을 절반으로 줄인다. */
+  /* 통계 탭 진입 시 trend(그래프) → rest(기본통계 11계열) 순서로 둘 다 받는다.
+     둘로 쪼갠 이유는 진입 화면(주간·월간 그래프)이 rest 194KB를 기다리지
+     않게 하기 위해서다 — 세그먼트 UI(initStats)만 rest 도착을 기다린다. */
   if(_loaded[url])return _loaded[url];
   const box=document.getElementById('stats-loading');
   if(box){box.textContent='통계 데이터를 불러오는 중…';box.style.display='';}
@@ -475,6 +475,11 @@ function showView(v,updateHash){
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){
     statsInited=true;
+    /* 3년시계·버블밴드·구독 카드는 fetch를 기다리지 않는다 — 입력
+       (ADV.occupancy·permits·bubble, STATS 전세가율·주택멸실)이 전부
+       data-core.js에 있어 부팅 때 이미 와 있다. 기본 활성 모드(시황)의
+       섹션이라 체인 뒤에 세우면 사용자에게 이유 없이 빈 채로 보인다. */
+    renderClockSec();renderBubbleSec();initSubs();
     loadFullData()
       .then(()=>{ if(typeof renderWeekSec==='function')renderWeekSec();
                   if(typeof renderMonthSec==='function')renderMonthSec(); })
@@ -569,7 +574,8 @@ function initStats(){
   }));
   document.getElementById('reg-sel').addEventListener('change',e=>{ST.reg=e.target.value;drawStat();});
   fillRegions();renderAux();drawStat();
-  renderClockSec();renderBubbleSec();initSubs();   // 주간·월간은 진입 시 이미 그렸다(:475)
+  // 주간·월간·시계·버블·구독 카드는 탭 진입 시 이미 그렸다 —
+  // 여기는 STATS 11계열(data-rest.json)이 있어야만 가능한 것만 남긴다.
 }
 function fillRegions(){
   const sel=document.getElementById('reg-sel');
