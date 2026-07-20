@@ -140,6 +140,8 @@ def signed(v):
 
 
 CSS = """b,strong{font-weight:600}
+  tr.rollup td{border-top:1.5px solid var(--ink);color:var(--muted)}
+  tr.rollup .sub{font-size:11.5px;color:var(--muted)}
 :root{--ink:#131e24;--ink2:#4c5f66;--paper:#f4f6f5;--paper2:#e9edeb;--muted:#5e6f74;--line:#c4cec9}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
@@ -474,7 +476,7 @@ gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 <style>
-:root{--ink:#16203a;--paper:#f4f6f5;--line:#d8dfdc;--muted:#5e7b6d;--body:#264d39}
+b,strong{font-weight:600}:root{--ink:#131e24;--paper:#f4f6f5;--paper2:#e9edeb;--line:#c4cec9;--muted:#5e6f74;--body:#4c5f66}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--paper);color:var(--body);word-break:keep-all;padding-bottom:78px;
  font-family:'Pretendard Variable','Pretendard',-apple-system,'Malgun Gothic',sans-serif;line-height:1.7}
@@ -557,7 +559,12 @@ def build_hub(pages, prd, today):
     sitemap은 발견은 시켜주지만 링크 가치를 전달하지 않는다.
     """
     # 입주예정 0은 '자료 없음'이 아니라 그냥 0이다(3c897f7 확정). 전부 순위에 넣는다.
-    live = sorted(pages, key=lambda r: -r['tot'])
+    # 다만 수도권은 16개 생활권을 묶은 상위 단위라 개별 생활권과 같은 순위표에
+    # 넣으면 이중 계상이 되고, 그 아래 행이 상세 페이지와 1씩 어긋난다.
+    # 홈(index.html)이 이미 쓰는 방식대로 순위 밖 소계로 분리한다.
+    ROLLUP = '수도권'
+    live = sorted([r for r in pages if r['z']['z'] != ROLLUP], key=lambda r: -r['tot'])
+    roll = next((r for r in pages if r['z']['z'] == ROLLUP), None)
     rows = []
     for i, r in enumerate(live):
         nm = r['z']['z']
@@ -566,6 +573,14 @@ def build_hub(pages, prd, today):
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
             '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
             % (i + 1, nm, nm, tcol, signed(r['tot']), tname))
+    if roll is not None:
+        tname, tcol = tier(roll['tot'])
+        sub = len(roll['z'].get('subs') or []) or 16
+        rows.append(
+            '      <tr class="rollup"><td class="rk">—</td>'
+            '<td><a class="z" href="/zone/%s/">%s</a> <span class="sub">%d개 생활권 합계</span></td>'
+            '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
+            % (ROLLUP, ROLLUP, sub, tcol, signed(roll['tot']), tname))
     ld = json.dumps({
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",

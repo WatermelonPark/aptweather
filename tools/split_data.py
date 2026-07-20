@@ -71,7 +71,7 @@ def main():
     # 통계 탭에서 먼저 보이는 건 그래프(주간·월간)다. 기본통계 11계열은 그 아래
     # 세그먼트를 눌러야 나오므로 한 번에 받을 이유가 없다 — 둘로 더 쪼갠다.
     io.open(TREND, 'w', encoding='utf-8', newline='\n').write(
-        dump({'ADV': adv, 'STATS': {k: stats[k] for k in CORE_STATS if k in stats}}))
+        dump({'ADV': adv}))
     # rest에 ADV를 또 담으면 trend와 중복돼 총 전송량이 오히려 는다(399→629KB).
     # rest는 기본통계 계열만 담는다 — ADV는 trend가 이미 실어 보냈다.
     io.open(REST, 'w', encoding='utf-8', newline='\n').write(dump({'STATS': stats}))

@@ -565,7 +565,7 @@ function initStats(){
   }));
   document.getElementById('reg-sel').addEventListener('change',e=>{ST.reg=e.target.value;drawStat();});
   fillRegions();renderAux();drawStat();
-  renderWeekSec();renderMonthSec();renderClockSec();renderBubbleSec();initSubs();
+  renderClockSec();renderBubbleSec();initSubs();   // 주간·월간은 진입 시 이미 그렸다(:475)
 }
 function fillRegions(){
   const sel=document.getElementById('reg-sel');
