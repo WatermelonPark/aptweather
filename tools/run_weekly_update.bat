@@ -106,6 +106,13 @@ if errorlevel 1 (
   exit /b 17
 )
 
+rem 이중 구현 정합성 검사. 아공맵 스코어는 index.html scCalc()와
+rem make_zone_pages.py calc() 양쪽에 있어서, 한쪽만 고치면 같은 지표가
+rem 홈과 zone 페이지에 다르게 나온다(2026-07-20 실제 발생, 홈이 2.4배).
+rem 비치명적 — 불일치가 통계 갱신을 막지는 않게 WARN만 남긴다.
+python tools\check_dual_calc.py
+if errorlevel 1 echo WARN: scCalc vs calc mismatch - home and zone pages differ
+
 git diff --quiet data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
 if errorlevel 1 (
   git add data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
