@@ -623,14 +623,16 @@
   .sc-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:13px 0 0}
   .sc-chips span{font-size:11.5px;font-weight:500;color:var(--muted);background:#fff;
     border:1px solid var(--line);border-radius:0;padding:4px 11px}
-  .sc-key{display:flex;max-width:430px;margin:18px auto 0;background:#fff;
-    border:1px solid var(--line);border-radius:0;overflow:hidden}
-  .sc-key>div{flex:1;padding:7px 12px}
-  /* 왼쪽=과잉(하락 압력)=파랑, 오른쪽=부족(상승 압력)=빨강 — 막대 색과 반드시 일치시킬 것 */
-  .sc-key .k-l{text-align:left;border-right:1px solid #c5cfca;
-    background:linear-gradient(90deg,rgba(26,82,118,.13),rgba(26,82,118,.02))}
-  .sc-key .k-r{text-align:right;
-    background:linear-gradient(90deg,rgba(169,50,38,.02),rgba(169,50,38,.13))}
+  /* 색 범례 — 축 지시물이 아니다. 이전 형태(반으로 가른 상자)는 가운데 경계가
+     0선을 가리키는 척했지만 트랙 좌우 고정폭이 비대칭이라 실제 0선과 22px
+     어긋나 있었다(감사 M-2). 경계를 주장하지 않는 칩 범례로 격하한다.
+     칩 색은 막대 색과 반드시 일치시킬 것: 과잉=파랑 #1a5276 · 부족=빨강 #a93226 */
+  .sc-key{display:flex;justify-content:center;gap:22px;margin:16px auto 0}
+  .sc-key>div{flex:none}
+  .sc-key .k-l::before,.sc-key .k-r::before{content:"";display:inline-block;
+    width:9px;height:9px;margin-right:6px}
+  .sc-key .k-l::before{background:#1a5276}
+  .sc-key .k-r::before{background:#a93226}
   .sc-key b{display:inline;font-size:12.5px;font-weight:600;letter-spacing:-.01em}
   .sc-key .k-l b{color:#1a5276}
   .sc-key .k-r b{color:#a93226}
