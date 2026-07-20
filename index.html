@@ -463,6 +463,10 @@ function loadData(url){
 }
 /* 기본통계(11계열)는 이 함수를 거쳐서만 그린다 */
 function ensureBasicStats(){ return loadData('/data-rest.json'); }
+/* 감소 모션은 호출 시점에 읽는다 — .matches를 스냅샷으로 잡아두면
+   사용자가 세션 중 OS 설정을 바꿔도 따라가지 못한다. */
+const _rm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
+const scrollBehavior=()=>(_rm&&_rm.matches)?'auto':'smooth';
 function showView(v,updateHash){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
   vHome.style.display=v==='home'?'':'none';
@@ -1179,7 +1183,7 @@ function answerQ(choice){
   exp.innerHTML=`<div class="ehead ${ok?'o':'x'}">${ok?'○ 정답!':'✕ 아쉬워요'}</div><p>${item.exp}</p>`;
   exp.classList.add('show');
   document.getElementById('qnext').classList.add('show');
-  setTimeout(()=>{document.getElementById('qnext').scrollIntoView({behavior:'smooth',block:'center'});},150);
+  setTimeout(()=>{document.getElementById('qnext').scrollIntoView({behavior:scrollBehavior(),block:'center'});},150);
 }
 function nextQ(){
   qIdx++;
@@ -1876,7 +1880,7 @@ function clockToggle(tr){
     d.classList.add('open');
     tr.setAttribute('aria-expanded','true');
     const w=tr.closest('.adv-tblwrap');   // 모바일: 표가 옆으로 스크롤돼 있으면 상세가 안 보이므로 복귀
-    if(w&&w.scrollLeft>0)w.scrollTo({left:0,behavior:'smooth'});
+    if(w&&w.scrollLeft>0)w.scrollTo({left:0,behavior:scrollBehavior()});
     track('clock_detail',{region:tr.querySelector('th').textContent});
   }
 }
