@@ -1861,7 +1861,7 @@ function renderClockSec(){
       +(pv!=null?dueY+'년 무렵: '+ph[0].p+'~'+ph[1].p+' 인허가 합계 <b>'+f(pv)+'호</b> — 과거 연간 저점 '+f(P.ref[rg]&&P.ref[rg][0])+'호 / 고점 '+f(P.ref[rg]&&P.ref[rg][1])+'호와 비교 → '
         +(pcls==='lo'?'<b style="color:#a93226">저점에도 못 미쳐 3년 뒤 공급 부족 예고</b>':pcls==='hi'?'<b style="color:#1a5276">고점 이상 — 3년 뒤 공급 과다 예고</b>':'평년 범위 안')+'.'
         :dueY+'년 무렵: 이 지역의 인허가 집계가 없어 판정을 생략했습니다.');
-    h+='<tr class="crow" role="button" aria-expanded="false" onclick="clockToggle(this)"><th>'+rg+'</th><td class="'+nowCls+'">'+f(nowA)+'</td>'
+    h+='<tr class="crow" role="button" tabindex="0" aria-expanded="false" onclick="clockToggle(this)" onkeydown="rowKey(event,this)"><th>'+rg+'</th><td class="'+nowCls+'">'+f(nowA)+'</td>'
       +'<td class="'+nxtCls+'">'+f(nxtA)+'</td>'
       +'<td class="'+pcls+'">'+f(pv)+'</td><td>'+arrow+'</td></tr>'
       +'<tr class="clock-det"><td colspan="5"><div class="cd-in">'+det+'</div></td></tr>';
@@ -1870,6 +1870,11 @@ function renderClockSec(){
   const lab=document.getElementById('clock-lab');
   if(lab)lab.textContent='단위: 호 · 입주 실적 '+rows[lastAct].p+'까지 반영 · 인허가는 '+ph[0].p+'~'+ph[1].p+' 합계를 연간 평년 범위와 비교 · 지역을 누르면 상세 근거';
 }
+/* role="button" 행 공용 키 핸들러 — Enter/Space를 클릭으로 위임한다.
+   el.click()이 기존 onclick(clockToggle/bbToggle)을 그대로 태우므로
+   aria-expanded 갱신 경로가 마우스와 키보드에서 갈라지지 않는다.
+   preventDefault는 Space의 페이지 스크롤을 막기 위해 필요하다. */
+function rowKey(e,el){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); } }
 function clockToggle(tr){
   const d=tr.nextElementSibling;
   if(!d||!d.classList.contains('clock-det'))return;
@@ -2049,7 +2054,7 @@ function renderBubbleSec(){
     else pos='금리는 밴드 안이고, 상단(위험선)까지 '+(hi-loan).toFixed(1)+'%p 남았습니다.';
     const det='밴드: 전세가율 '+jr+'% × 전월세전환율 '+cv+'% = 하단(매수신호선) <b>'+lo.toFixed(1)+'%</b> · 그 2배 = 상단(위험선) <b>'+hi.toFixed(1)+'%</b>.<br>'
       +'금리: 현재 주택담보대출 <b>'+loan.toFixed(2)+'%</b> — '+pos;
-    h+='<div class="bb-row" role="button" aria-expanded="false" onclick="bbToggle(this)"><span class="bb-lab">'+rg+'</span>'
+    h+='<div class="bb-row" role="button" tabindex="0" aria-expanded="false" onclick="bbToggle(this)" onkeydown="rowKey(event,this)"><span class="bb-lab">'+rg+'</span>'
       +'<div class="bb-track" title="전세가율 '+jr+'% × 전환율 '+cv+'% → 하단 '+lo.toFixed(1)+'% · 상단 '+hi.toFixed(1)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div></div>'
