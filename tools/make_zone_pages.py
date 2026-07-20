@@ -215,7 +215,7 @@ def build_page(r, allrows, prd, today):
     sgg = z.get('sgg') or []
     subs = r.get('subs') or []
     if subs:
-        members = '%d개 생활권 · 인구 %s명 · 향후 2년 입주예정 %s세대' % (len(subs), num(z['pop']), num(z['supply']))
+        members = '%d개 생활권 · 인구 %s명 · 입주예정 %s세대' % (len(subs), num(z['pop']), num(z['supply']))
         sublist = ('<div class="zlist" style="margin-top:9px">' +
                    ''.join('<a href="/zone/%s/">%s %s</a>' % (c['z']['z'], c['z']['z'], signed(c['tot']))
                            for c in subs) + '</div>')
@@ -276,7 +276,7 @@ def build_page(r, allrows, prd, today):
     # sgg가 비면 '구성: —'가 그대로 메타 설명에 나갔다. odcloud는 물량이 없는
     # 지역의 행을 보내지 않으므로, 빈 sgg는 '입주예정 단지가 없다'는 뜻이다.
     comp = ('구성: %s. ' % ', '.join(sgg_names[:3])) if sgg_names else '예정 단지 없음. '
-    desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 향후 2년 입주예정 %s세대, %s'
+    desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 입주예정 %s세대, %s'
             '한국부동산원·국토교통부 통계로 매주 자동 갱신.' % (
                 nm, disp, tname, num(z['supply']), comp))
 
@@ -344,7 +344,7 @@ def build_page(r, allrows, prd, today):
     <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
     <tbody>%(rows)s</tbody>
   </table>
-  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 향후 2년 입주예정만 실측입니다.</p>
+  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>
 </div></section>
 
 %(flag)s
