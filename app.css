@@ -163,9 +163,7 @@
     align-items:center;justify-content:center;gap:3px;color:#97a0b8;
     font-size:11.5px;font-weight:600;cursor:pointer;transition:color .15s;position:relative}
   .nav-btn.on{color:#fff}
-  .nav-btn.on::before{content:"";position:absolute;top:0;width:34px;height:3px;
-    border-radius:0 0 3px 3px;background:var(--ink)}
-  .nav-btn svg{display:block}
+    .nav-btn svg{display:block}
 
 
   /* ===== 테스트 ===== */
