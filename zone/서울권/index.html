@@ -8,17 +8,17 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 <title>서울권 아파트 공급 분석 — 입주예정·인허가로 본 공급 절벽 | 아공맵</title>
-<meta name="description" content="서울권의 아파트 공급은 적정물량 대비 −30,824세대(공급 절벽). 입주예정 44,355세대, 구성: 서초구, 성북구, 마포구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.">
+<meta name="description" content="서울권의 아파트 공급은 적정물량 대비 −30,824세대(공급 절벽). 입주예정 44,116세대, 구성: 서초구, 성북구, 강동구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.">
 <link rel="canonical" href="https://www.agongmap.co.kr/zone/%EC%84%9C%EC%9A%B8%EA%B6%8C/">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <meta name="theme-color" content="#16203a">
 <meta property="og:type" content="article">
 <meta property="og:title" content="서울권 아파트 공급 분석 — 공급 절벽">
-<meta property="og:description" content="서울권의 아파트 공급은 적정물량 대비 −30,824세대(공급 절벽). 입주예정 44,355세대, 구성: 서초구, 성북구, 마포구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.">
+<meta property="og:description" content="서울권의 아파트 공급은 적정물량 대비 −30,824세대(공급 절벽). 입주예정 44,116세대, 구성: 서초구, 성북구, 강동구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.">
 <meta property="og:url" content="https://www.agongmap.co.kr/zone/%EC%84%9C%EC%9A%B8%EA%B6%8C/">
 <meta property="og:image" content="https://www.agongmap.co.kr/og-brand.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "서울권 아파트 공급 분석", "description": "서울권의 아파트 공급은 적정물량 대비 −30,824세대(공급 절벽). 입주예정 44,355세대, 구성: 서초구, 성북구, 마포구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.", "datePublished": "2026-07-22", "dateModified": "2026-07-22", "author": {"@type": "Organization", "name": "아공맵"}, "publisher": {"@type": "Organization", "name": "아공맵"}, "mainEntityOfPage": "https://www.agongmap.co.kr/zone/%EC%84%9C%EC%9A%B8%EA%B6%8C/", "about": {"@type": "Place", "name": "서울권"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "서울권 아파트 공급 분석", "description": "서울권의 아파트 공급은 적정물량 대비 −30,824세대(공급 절벽). 입주예정 44,116세대, 구성: 서초구, 성북구, 강동구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.", "datePublished": "2026-07-22", "dateModified": "2026-07-22", "author": {"@type": "Organization", "name": "아공맵"}, "publisher": {"@type": "Organization", "name": "아공맵"}, "mainEntityOfPage": "https://www.agongmap.co.kr/zone/%EC%84%9C%EC%9A%B8%EA%B6%8C/", "about": {"@type": "Place", "name": "서울권"}}</script>
 <style>b,strong{font-weight:600}
   tr.rollup td{border-top:1.5px solid var(--ink);color:var(--muted)}
   tr.rollup .sub{font-size:11.5px;color:var(--muted)}
@@ -114,7 +114,29 @@ details.fold summary::before{content:'▸';color:var(--muted);transition:transfo
 details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold .dbody{padding:2px 16px 15px}
 details.fold .dbody p{font-size:14px}
-@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}</style>
+@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}
+.ucnt{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:4px}
+.ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
+.utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
+.utable thead th.on.asc::after{content:' 91'}
+.utable thead th.on.desc::after{content:' 93'}
+.utable th:nth-child(1){width:21%;text-align:left}
+.utable th:nth-child(2){text-align:left}
+.utable th:nth-child(3){width:17%}
+.utable th:nth-child(4){width:20%}
+.utable td{padding:8px 10px}
+.utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:560px){
+ .utable{display:table;font-size:12.5px}
+ .utable thead{display:table-header-group}
+ .utable tbody{display:table-row-group}
+ .utable tr{display:table-row;border:0;padding:0}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+ .utable tbody tr:last-child td{border-bottom:0}
+}</style>
 </head>
 <body>
 
@@ -133,6 +155,15 @@ details.fold .dbody p{font-size:14px}
 </div></section>
 
 <section><div class="wrap">
+  <h2>입주 예정 단지 <span class="ucnt">74곳 · 27,857세대</span></h2>
+  <div class="ulist"><table class="utable" id="utable">
+    <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
+    <tbody><tr><td>은평구</td><td class="uname" title="힐스테이트 메디알레">힐스테이트 메디알레</td><td class="num">2,451</td><td class="num">2026.10</td></tr><tr><td>중랑구</td><td class="uname" title="중랑구묵동165(청년안심주택)">중랑구묵동165(청년안심주택)</td><td class="num">927</td><td class="num">2026.10</td></tr><tr><td>중랑구</td><td class="uname" title="중랑구묵동8(청년안심주택)">중랑구묵동8(청년안심주택)</td><td class="num">724</td><td class="num">2026.10</td></tr><tr><td>강서구</td><td class="uname" title="힐스테이트 등촌역">힐스테이트 등촌역</td><td class="num">543</td><td class="num">2026.10</td></tr><tr><td>강북구</td><td class="uname" title="에드가 수유(청년안심주택)">에드가 수유(청년안심주택)</td><td class="num">426</td><td class="num">2026.10</td></tr><tr><td>성북구</td><td class="uname" title="에드가 미아(청년안심주택)">에드가 미아(청년안심주택)</td><td class="num">415</td><td class="num">2026.10</td></tr><tr><td>강남구</td><td class="uname" title="래미안 레벤투스">래미안 레벤투스</td><td class="num">308</td><td class="num">2026.10</td></tr><tr><td>마포구</td><td class="uname" title="마포구염리동172-10(청년안심주택)">마포구염리동172-10(청년안심주택)</td><td class="num">299</td><td class="num">2026.10</td></tr><tr><td>중랑구</td><td class="uname" title="중랑구상봉동116-49(청년안심주택)">중랑구상봉동116-49(청년안심주택)</td><td class="num">299</td><td class="num">2026.10</td></tr><tr><td>성북구</td><td class="uname" title="성북구석관동173-1(청년안심주택)">성북구석관동173-1(청년안심주택)</td><td class="num">242</td><td class="num">2026.10</td></tr><tr><td>동작구</td><td class="uname" title="한누리주차장(행복주택)">한누리주차장(행복주택)</td><td class="num">46</td><td class="num">2026.10</td></tr><tr><td>동작구</td><td class="uname" title="힐스테이트 동작 시그니쳐">힐스테이트 동작 시그니쳐</td><td class="num">608</td><td class="num">2026.11</td></tr><tr><td>광진구</td><td class="uname" title="강변역 센트럴 아이파크">강변역 센트럴 아이파크</td><td class="num">215</td><td class="num">2026.11</td></tr><tr><td>서초구</td><td class="uname" title="서초구양재동산17-7(청년안심주택)">서초구양재동산17-7(청년안심주택)</td><td class="num">192</td><td class="num">2026.11</td></tr><tr><td>마포구</td><td class="uname" title="홍대입구역 센트럴 아르떼 해모로">홍대입구역 센트럴 아르떼 해모로</td><td class="num">123</td><td class="num">2026.11</td></tr><tr><td>성동구</td><td class="uname" title="성동자이리버뷰">성동자이리버뷰</td><td class="num">1,670</td><td class="num">2026.12</td></tr><tr><td>송파구</td><td class="uname" title="송파구장지동842-1(청년안심주택)">송파구장지동842-1(청년안심주택)</td><td class="num">484</td><td class="num">2026.12</td></tr><tr><td>구로구</td><td class="uname" title="두산위브더프레스티지">두산위브더프레스티지</td><td class="num">302</td><td class="num">2026.12</td></tr><tr><td>서대문구</td><td class="uname" title="서대문구창천동502-11(청년안심주택)">서대문구창천동502-11(청년안심주택)</td><td class="num">288</td><td class="num">2026.12</td></tr><tr><td>금천구</td><td class="uname" title="금천구시흥동103-3(청년안심주택)">금천구시흥동103-3(청년안심주택)</td><td class="num">180</td><td class="num">2026.12</td></tr><tr><td>강서구</td><td class="uname" title="강서구공항동50-5(청년안심주택)">강서구공항동50-5(청년안심주택)</td><td class="num">157</td><td class="num">2026.12</td></tr><tr><td>서초구</td><td class="uname" title="서초구서초동1676-4(청년안심주택)">서초구서초동1676-4(청년안심주택)</td><td class="num">252</td><td class="num">2027.01</td></tr><tr><td>중랑구</td><td class="uname" title="상봉라온프라이빗">상봉라온프라이빗</td><td class="num">219</td><td class="num">2027.01</td></tr><tr><td>서초구</td><td class="uname" title="서초구방배동1955(청년안심주택)">서초구방배동1955(청년안심주택)</td><td class="num">144</td><td class="num">2027.01</td></tr><tr><td>중구</td><td class="uname" title="마포로5-09-1">마포로5-09-1</td><td class="num">68</td><td class="num">2027.01</td></tr><tr><td>용산구</td><td class="uname" title="이촌르엘">이촌르엘</td><td class="num">750</td><td class="num">2027.02</td></tr><tr><td>서대문구</td><td class="uname" title="서대문구북가좌동333-1(청년안심주택)">서대문구북가좌동333-1(청년안심주택)</td><td class="num">382</td><td class="num">2027.02</td></tr><tr><td>동작구</td><td class="uname" title="동작구노량진동39-20(청년안심주택)">동작구노량진동39-20(청년안심주택)</td><td class="num">260</td><td class="num">2027.02</td></tr><tr><td>성북구</td><td class="uname" title="푸르지오 라디우스 파크">푸르지오 라디우스 파크</td><td class="num">1,637</td><td class="num">2027.03</td></tr><tr><td>강동구</td><td class="uname" title="고덕강일3단지(사전예약)">고덕강일3단지(사전예약)</td><td class="num">1,305</td><td class="num">2027.03</td></tr><tr><td>마포구</td><td class="uname" title="마포자이힐스테이트 라첼스">마포자이힐스테이트 라첼스</td><td class="num">1,101</td><td class="num">2027.03</td></tr><tr><td>서초구</td><td class="uname" title="서초구서초동1448-1(청년안심주택)">서초구서초동1448-1(청년안심주택)</td><td class="num">835</td><td class="num">2027.03</td></tr><tr><td>마포구</td><td class="uname" title="마포구염리동85-2(청년안심주택)">마포구염리동85-2(청년안심주택)</td><td class="num">499</td><td class="num">2027.03</td></tr><tr><td>성북구</td><td class="uname" title="성북구하월곡동80-55(청년안심주택)">성북구하월곡동80-55(청년안심주택)</td><td class="num">254</td><td class="num">2027.03</td></tr><tr><td>양천구</td><td class="uname" title="신월">신월</td><td class="num">127</td><td class="num">2027.03</td></tr><tr><td>양천구</td><td class="uname" title="목동가로주택정비(LH참여)">목동가로주택정비(LH참여)</td><td class="num">85</td><td class="num">2027.03</td></tr><tr><td>은평구</td><td class="uname" title="힐스테이트 DMC">힐스테이트 DMC</td><td class="num">299</td><td class="num">2027.04</td></tr><tr><td>강동구</td><td class="uname" title="대명아파트가로주택정비사업">대명아파트가로주택정비사업</td><td class="num">94</td><td class="num">2027.04</td></tr><tr><td>강남구</td><td class="uname" title="강남구논현동221-16(청년안심주택)">강남구논현동221-16(청년안심주택)</td><td class="num">94</td><td class="num">2027.05</td></tr><tr><td>영등포구</td><td class="uname" title="서울대방 신혼희망타운(공공분양)">서울대방 신혼희망타운(공공분양)</td><td class="num">183</td><td class="num">2027.06</td></tr><tr><td>노원구</td><td class="uname" title="하우스토리 센트럴포레">하우스토리 센트럴포레</td><td class="num">161</td><td class="num">2027.06</td></tr><tr><td>서초구</td><td class="uname" title="해링턴플레이스서초">해링턴플레이스서초</td><td class="num">69</td><td class="num">2027.06</td></tr><tr><td>중랑구</td><td class="uname" title="신일빌라">신일빌라</td><td class="num">68</td><td class="num">2027.06</td></tr><tr><td>송파구</td><td class="uname" title="삼전동쌍용하이츠빌라(가로주택정비사업)">삼전동쌍용하이츠빌라(가로주택정비사업)</td><td class="num">65</td><td class="num">2027.06</td></tr><tr><td>양천구</td><td class="uname" title="삼진연립재건축">삼진연립재건축</td><td class="num">40</td><td class="num">2027.06</td></tr><tr><td>용산구</td><td class="uname" title="원효로3가(청년안심주택)">원효로3가(청년안심주택)</td><td class="num">988</td><td class="num">2027.07</td></tr><tr><td>성동구</td><td class="uname" title="오티에르 포레">오티에르 포레</td><td class="num">287</td><td class="num">2027.07</td></tr><tr><td>강남구</td><td class="uname" title="도곡아테라">도곡아테라</td><td class="num">82</td><td class="num">2027.07</td></tr><tr><td>은평구</td><td class="uname" title="빌리브 에이센트">빌리브 에이센트</td><td class="num">77</td><td class="num">2027.07</td></tr><tr><td>중구</td><td class="uname" title="마포로5구역10·11지구">마포로5구역10·11지구</td><td class="num">421</td><td class="num">2027.08</td></tr><tr><td>강동구</td><td class="uname" title="성내동(청년안심주택)">성내동(청년안심주택)</td><td class="num">281</td><td class="num">2027.08</td></tr><tr><td>강서구</td><td class="uname" title="우장범진가로주택정비사업">우장범진가로주택정비사업</td><td class="num">70</td><td class="num">2027.08</td></tr><tr><td>성동구</td><td class="uname" title="한신아파트가로주택정비사업">한신아파트가로주택정비사업</td><td class="num">105</td><td class="num">2027.09</td></tr><tr><td>동대문구</td><td class="uname" title="제기동역파밀리에더센트럴(공성아파트)">제기동역파밀리에더센트럴(공성아파트)</td><td class="num">76</td><td class="num">2027.09</td></tr><tr><td>강서구</td><td class="uname" title="서울빌라가로주택정비사업">서울빌라가로주택정비사업</td><td class="num">52</td><td class="num">2027.09</td></tr><tr><td>강동구</td><td class="uname" title="고덕강일 대성베르힐">고덕강일 대성베르힐</td><td class="num">613</td><td class="num">2027.10</td></tr><tr><td>노원구</td><td class="uname" title="공릉군관사신혼희망타운(공공분양)">공릉군관사신혼희망타운(공공분양)</td><td class="num">214</td><td class="num">2027.10</td></tr><tr><td>구로구</td><td class="uname" title="서울시노동자복지관복합화사업">서울시노동자복지관복합화사업</td><td class="num">132</td><td class="num">2027.10</td></tr><tr><td>성북구</td><td class="uname" title="창경궁 롯데캐슬 시그니처">창경궁 롯데캐슬 시그니처</td><td class="num">1,223</td><td class="num">2027.11</td></tr><tr><td>서초구</td><td class="uname" title="아크로 리츠카운티">아크로 리츠카운티</td><td class="num">707</td><td class="num">2027.11</td></tr><tr><td>성동구</td><td class="uname" title="성동구 도선동 286(청년안심주택)">성동구 도선동 286(청년안심주택)</td><td class="num">381</td><td class="num">2027.11</td></tr><tr><td>서초구</td><td class="uname" title="서초구 양재동 1-26(청년안심주택)">서초구 양재동 1-26(청년안심주택)</td><td class="num">342</td><td class="num">2027.11</td></tr><tr><td>강동구</td><td class="uname" title="올림픽파크 서한포레스트">올림픽파크 서한포레스트</td><td class="num">128</td><td class="num">2027.11</td></tr><tr><td>서대문구</td><td class="uname" title="연희공동주택복합시설조성사업(빗물펌프장)">연희공동주택복합시설조성사업(빗물펌프장)</td><td class="num">96</td><td class="num">2027.11</td></tr><tr><td>강서구</td><td class="uname" title="마곡동1410(공공임대)">마곡동1410(공공임대)</td><td class="num">75</td><td class="num">2027.11</td></tr><tr><td>양천구</td><td class="uname" title="목동657의1번지일원가로주택정비사업">목동657의1번지일원가로주택정비사업</td><td class="num">268</td><td class="num">2027.12</td></tr><tr><td>성동구</td><td class="uname" title="성동구용답동68-2(청년안심주택)">성동구용답동68-2(청년안심주택)</td><td class="num">228</td><td class="num">2027.12</td></tr><tr><td>서초구</td><td class="uname" title="어퍼하우스르엘">어퍼하우스르엘</td><td class="num">222</td><td class="num">2027.12</td></tr><tr><td>금천구</td><td class="uname" title="한신더휴 하이엔에듀포레">한신더휴 하이엔에듀포레</td><td class="num">219</td><td class="num">2027.12</td></tr><tr><td>서대문구</td><td class="uname" title="홍은동355번지일대가로주택정비사업">홍은동355번지일대가로주택정비사업</td><td class="num">177</td><td class="num">2027.12</td></tr><tr><td>마포구</td><td class="uname" title="합정동447일원가로주택정비사업">합정동447일원가로주택정비사업</td><td class="num">163</td><td class="num">2027.12</td></tr><tr><td>서대문구</td><td class="uname" title="홍은동322-1일원가로주택정비사업">홍은동322-1일원가로주택정비사업</td><td class="num">152</td><td class="num">2027.12</td></tr><tr><td>마포구</td><td class="uname" title="성도.서광가로주택정비사업">성도.서광가로주택정비사업</td><td class="num">133</td><td class="num">2027.12</td></tr><tr><td>송파구</td><td class="uname" title="석촌동224-4번지일원LH참여형가로주택정비사업">석촌동224-4번지일원LH참여형가로주택정비사업</td><td class="num">55</td><td class="num">2027.12</td></tr></tbody>
+  </table></div>
+  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
+</div></section>
+
+<section><div class="wrap">
   <h2>이 숫자는 어디서 왔나</h2>
   <div class="trio"><div class="t-card"><div class="t-lab">입주예정</div><div class="t-sub">2년 안 · 실측</div><div class="t-val" style="color:#a93226">−30,856</div><div class="t-w">영향 55%</div></div><div class="t-card"><div class="t-lab">인허가</div><div class="t-sub">3~4년 뒤 · 추정</div><div class="t-val" style="color:#1a5276">+6,366</div><div class="t-w">영향 35%</div></div><div class="t-card"><div class="t-lab">최근 3년</div><div class="t-sub">입주 실적 · 추정</div><div class="t-val" style="color:#a93226">−6,334</div><div class="t-w">영향 10%</div></div></div>
   <p class="note" style="margin-top:9px">세 값을 더한 것이 맨 위의 <b style="color:#a93226">−30,824세대</b>입니다. 음수(−)는 부족, 양수(+)는 여유.</p>
@@ -144,7 +175,7 @@ details.fold .dbody p{font-size:14px}
   <h2>더 알아보기</h2>
   <details class="fold"><summary>이 생활권은 어디를 묶었나</summary><div class="dbody">
   <p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>
-  <div class="card"><b>서울권 구성</b><span>서초구 8,457세대 · 성북구 3,970세대 · 마포구 3,114세대 · 강동구 3,073세대 · 성동구 2,937세대 · 은평구 2,827세대 · 송파구 2,692세대 · 중랑구 2,237세대 · 강서구 1,924세대 · 용산구 1,738세대 · 동작구 1,606세대 · 동대문구 1,419세대 · 서대문구 1,294세대 · 금천구 988세대 · 노원구 949세대 · 영등포구 890세대 · 광진구 828세대 · 구로구 790세대 · 강북구 686세대 · 양천구 623세대 · 강남구 525세대 · 중구 489세대 · 도봉구 299세대</span></div>
+  <div class="card"><b>서울권 구성</b><span>서초구 8,457세대 · 성북구 3,970세대 · 강동구 3,073세대 · 성동구 2,937세대 · 마포구 2,875세대 · 은평구 2,827세대 · 송파구 2,692세대 · 중랑구 2,237세대 · 강서구 1,924세대 · 용산구 1,738세대 · 동작구 1,606세대 · 동대문구 1,419세대 · 서대문구 1,294세대 · 금천구 988세대 · 노원구 949세대 · 영등포구 890세대 · 광진구 828세대 · 구로구 790세대 · 강북구 686세대 · 양천구 623세대 · 강남구 525세대 · 중구 489세대 · 도봉구 299세대</span></div>
   <p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(2026Q1~2027Q4).</p>
   </div></details>
 
@@ -207,6 +238,28 @@ function zsubs(f){
     .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
   return false;
 }
+(function(){
+  var t=document.getElementById('utable'); if(!t) return;
+  var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;
+  function val(row,k,isNum){
+    var s=row.cells[k].textContent.trim();
+    return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||0) : s;
+  }
+  Array.prototype.forEach.call(ths, function(h,i){
+    h.addEventListener('click', function(){
+      var isNum=h.hasAttribute('data-num');
+      dir=(cur===i)?-dir:1; cur=i;
+      var rows=Array.prototype.slice.call(tb.rows);
+      rows.sort(function(a,b){
+        var x=val(a,i,isNum), y=val(b,i,isNum);
+        return (x<y?-1:x>y?1:0)*dir;
+      });
+      rows.forEach(function(rw){ tb.appendChild(rw); });
+      Array.prototype.forEach.call(ths, function(o){ o.classList.remove('on','asc','desc'); });
+      h.classList.add('on', dir>0?'asc':'desc');
+    });
+  });
+})();
 </script>
 
 </body>

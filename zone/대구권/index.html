@@ -114,7 +114,29 @@ details.fold summary::before{content:'▸';color:var(--muted);transition:transfo
 details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold .dbody{padding:2px 16px 15px}
 details.fold .dbody p{font-size:14px}
-@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}</style>
+@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}
+.ucnt{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:4px}
+.ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
+.utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
+.utable thead th.on.asc::after{content:' 91'}
+.utable thead th.on.desc::after{content:' 93'}
+.utable th:nth-child(1){width:21%;text-align:left}
+.utable th:nth-child(2){text-align:left}
+.utable th:nth-child(3){width:17%}
+.utable th:nth-child(4){width:20%}
+.utable td{padding:8px 10px}
+.utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:560px){
+ .utable{display:table;font-size:12.5px}
+ .utable thead{display:table-header-group}
+ .utable tbody{display:table-row-group}
+ .utable tr{display:table-row;border:0;padding:0}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+ .utable tbody tr:last-child td{border-bottom:0}
+}</style>
 </head>
 <body>
 
@@ -130,6 +152,15 @@ details.fold .dbody p{font-size:14px}
   <p class="note" style="margin-bottom:9px">앞으로 5분기 · 입주예정 단지 실측</p>
   <div class="gauge"><div class="g-row"><div class="g-lab"><span>필요한 집</span><b>26,000</b></div><div class="g-bar"><div class="g-fill" style="width:100.0%;background:#9aa8ae"></div></div></div><div class="g-row"><div class="g-lab"><span>들어올 집</span><b>2,431</b></div><div class="g-bar"><div class="g-fill" style="width:9.3%;background:#c0392b"></div></div></div><div class="g-gap" style="color:#c0392b">대구권은 앞으로 아파트가 <b>모자랄</b> 쪽입니다. → 이 기간에만 <b>23,569세대 부족</b></div></div>
   <div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div><div class="qchart"><div class="q-col"><span class="q-v">360</span><div class="q-bar" style="height:13%"></div><span class="q-l">27Q1</span></div><div class="q-col"><span class="q-v">2,071</span><div class="q-bar" style="height:72%"></div><span class="q-l">27Q2</span></div></div></div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>입주 예정 단지 <span class="ucnt">5곳 · 2,431세대</span></h2>
+  <div class="ulist"><table class="utable" id="utable">
+    <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
+    <tbody><tr><td>달서구</td><td class="uname" title="본리동자이">본리동자이</td><td class="num">360</td><td class="num">2027.02</td></tr><tr><td>경산시</td><td class="uname" title="경산 2차 IPARK">경산 2차 IPARK</td><td class="num">745</td><td class="num">2027.04</td></tr><tr><td>동성로1가</td><td class="uname" title="동성로1가 주상복합 임대주택">동성로1가 주상복합 임대주택</td><td class="num">174</td><td class="num">2027.04</td></tr><tr><td>북구</td><td class="uname" title="두산위브더제니스 센트럴시티">두산위브더제니스 센트럴시티</td><td class="num">1,098</td><td class="num">2027.06</td></tr><tr><td>수성구</td><td class="uname" title="만촌파크드림에디움">만촌파크드림에디움</td><td class="num">54</td><td class="num">2027.06</td></tr></tbody>
+  </table></div>
+  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -207,6 +238,28 @@ function zsubs(f){
     .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
   return false;
 }
+(function(){
+  var t=document.getElementById('utable'); if(!t) return;
+  var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;
+  function val(row,k,isNum){
+    var s=row.cells[k].textContent.trim();
+    return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||0) : s;
+  }
+  Array.prototype.forEach.call(ths, function(h,i){
+    h.addEventListener('click', function(){
+      var isNum=h.hasAttribute('data-num');
+      dir=(cur===i)?-dir:1; cur=i;
+      var rows=Array.prototype.slice.call(tb.rows);
+      rows.sort(function(a,b){
+        var x=val(a,i,isNum), y=val(b,i,isNum);
+        return (x<y?-1:x>y?1:0)*dir;
+      });
+      rows.forEach(function(rw){ tb.appendChild(rw); });
+      Array.prototype.forEach.call(ths, function(o){ o.classList.remove('on','asc','desc'); });
+      h.classList.add('on', dir>0?'asc':'desc');
+    });
+  });
+})();
 </script>
 
 </body>

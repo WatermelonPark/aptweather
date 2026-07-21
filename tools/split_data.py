@@ -44,6 +44,19 @@ def main():
 
     core_adv = {k: adv[k] for k in CORE_ADV if k in adv}
 
+    def strip_units(a):
+        """livezone.zones[].units 제거 — 단지 목록(~40KB)은 zone 정적 페이지
+        전용이다. 홈·통계탭 페이로드가 실어 나를 이유가 없다."""
+        lz = a.get('livezone')
+        if lz and lz.get('zones'):
+            lz = dict(lz)
+            lz['zones'] = [{k: v for k, v in z.items() if k != 'units'} for z in lz['zones']]
+            a = dict(a)
+            a['livezone'] = lz
+        return a
+
+    core_adv = strip_units(core_adv)
+
     # 히어로 배경 지도는 마지막 한 주만 쓴다(renderHeroMap: rows[rows.length-1]).
     # 전체 sgg는 59.7KB인데 그중 필요한 건 4.8KB뿐이다.
     w = adv.get('weekly') or {}
@@ -71,7 +84,7 @@ def main():
     # 통계 탭에서 먼저 보이는 건 그래프(주간·월간)다. 기본통계 11계열(rest)도
     # 탭 진입 시 이어서 받지만, 그래프가 rest 크기를 기다리지 않도록 둘로 쪼갠다.
     io.open(TREND, 'w', encoding='utf-8', newline='\n').write(
-        dump({'ADV': adv}))
+        dump({'ADV': strip_units(adv)}))
     # rest에 ADV를 또 담으면 trend와 중복돼 총 전송량이 오히려 는다(399→629KB).
     # rest는 기본통계 계열만 담는다 — ADV는 trend가 이미 실어 보냈다.
     io.open(REST, 'w', encoding='utf-8', newline='\n').write(dump({'STATS': stats}))

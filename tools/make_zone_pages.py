@@ -234,7 +234,29 @@ details.fold summary::before{content:'▸';color:var(--muted);transition:transfo
 details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold .dbody{padding:2px 16px 15px}
 details.fold .dbody p{font-size:14px}
-@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}"""
+@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}
+.ucnt{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:4px}
+.ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
+.utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
+.utable thead th.on.asc::after{content:' \2191'}
+.utable thead th.on.desc::after{content:' \2193'}
+.utable th:nth-child(1){width:21%;text-align:left}
+.utable th:nth-child(2){text-align:left}
+.utable th:nth-child(3){width:17%}
+.utable th:nth-child(4){width:20%}
+.utable td{padding:8px 10px}
+.utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:560px){
+ .utable{display:table;font-size:12.5px}
+ .utable thead{display:table-header-group}
+ .utable tbody{display:table-row-group}
+ .utable tr{display:table-row;border:0;padding:0}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+ .utable tbody tr:last-child td{border-bottom:0}
+}"""
 
 
 def build_page(r, allrows, prd, today):
@@ -321,6 +343,40 @@ def build_page(r, allrows, prd, today):
         tcard('입주예정', '2년 안 · 실측', 0.55 * r['dA'], 55),
         tcard('인허가', '3~4년 뒤 · 추정', 0.35 * r['dC'], 35),
         tcard('최근 3년', '입주 실적 · 추정', 0.10 * r['dB'], 10)))
+
+    # ── 입주 예정 단지 목록 (아실 스타일) — 미래 분기만, 차트·게이지와 동일 규칙 ──
+    uraw = list(z.get('units') or [])
+    if subs and not uraw:
+        for cc in subs:
+            uraw += list(cc['z'].get('units') or [])
+    ufut = []
+    for u in uraw:
+        try:
+            uy, um = int(u[3][:4]), int(u[3][5:7])
+        except (ValueError, IndexError, TypeError):
+            continue
+        if 1 <= um <= 12 and uy * 4 + (um - 1) // 3 > _curq:
+            ufut.append(u)
+    ufut.sort(key=lambda u: (u[3], -u[2]))
+    if ufut:
+        _esc = lambda s: str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        urows = ''.join(
+            '<tr><td>%s</td><td class="uname" title="%s">%s</td>'
+            '<td class="num">%s</td><td class="num">%s</td></tr>' % (
+                _esc(u[0]), _esc(u[1]), _esc(u[1]), num(u[2]), u[3].replace('-', '.'))
+            for u in ufut)
+        unitsec = (
+            '<section><div class="wrap">\n'
+            '  <h2>입주 예정 단지 <span class="ucnt">%d곳 · %s세대</span></h2>\n'
+            '  <div class="ulist"><table class="utable" id="utable">\n'
+            '    <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th>'
+            '<th class="on asc">입주예정</th></tr></thead>\n'
+            '    <tbody>%s</tbody>\n'
+            '  </table></div>\n'
+            '  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>\n'
+            '</div></section>\n' % (len(ufut), num(sum(u[2] for u in ufut)), urows))
+    else:
+        unitsec = ''
 
     rows_html = ''.join([
         '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
@@ -418,6 +474,7 @@ def build_page(r, allrows, prd, today):
   %(qchart)s
 </div></section>
 
+%(unitsec)s
 <section><div class="wrap">
   <h2>이 숫자는 어디서 왔나</h2>
   %(trio)s
@@ -493,6 +550,28 @@ function zsubs(f){
     .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
   return false;
 }
+(function(){
+  var t=document.getElementById('utable'); if(!t) return;
+  var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;
+  function val(row,k,isNum){
+    var s=row.cells[k].textContent.trim();
+    return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||0) : s;
+  }
+  Array.prototype.forEach.call(ths, function(h,i){
+    h.addEventListener('click', function(){
+      var isNum=h.hasAttribute('data-num');
+      dir=(cur===i)?-dir:1; cur=i;
+      var rows=Array.prototype.slice.call(tb.rows);
+      rows.sort(function(a,b){
+        var x=val(a,i,isNum), y=val(b,i,isNum);
+        return (x<y?-1:x>y?1:0)*dir;
+      });
+      rows.forEach(function(rw){ tb.appendChild(rw); });
+      Array.prototype.forEach.call(ths, function(o){ o.classList.remove('on','asc','desc'); });
+      h.classList.add('on', dir>0?'asc':'desc');
+    });
+  });
+})();
 </script>
 
 </body>
@@ -502,7 +581,7 @@ function zsubs(f){
         calcsent=('인허가와 최근 입주까지 더하면 <b style="color:%s">%s세대</b>입니다.' % (tcol, disp)),
         legend=('<p class="note">음수(−)는 부족, 양수(+)는 초과입니다.</p>'),
         h1=('%s 아파트,<br>앞으로 얼마나 %s' % (nm, '모자랄까' if lack else '남을까')),
-        gauge=gauge_html, qchart=qchart_html, trio=trio_html,
+        gauge=gauge_html, qchart=qchart_html, trio=trio_html, unitsec=unitsec,
         supsent=('앞으로 %d개 분기에 필요한 <b>%s세대</b> 중 입주 예정은 <b>%s세대</b>입니다.' % (
                      r['fq'], num(r['need']), num(r['fsup']))),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,

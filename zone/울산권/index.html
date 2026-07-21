@@ -114,7 +114,29 @@ details.fold summary::before{content:'▸';color:var(--muted);transition:transfo
 details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold .dbody{padding:2px 16px 15px}
 details.fold .dbody p{font-size:14px}
-@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}</style>
+@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}
+.ucnt{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:4px}
+.ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
+.utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
+.utable thead th.on.asc::after{content:' 91'}
+.utable thead th.on.desc::after{content:' 93'}
+.utable th:nth-child(1){width:21%;text-align:left}
+.utable th:nth-child(2){text-align:left}
+.utable th:nth-child(3){width:17%}
+.utable th:nth-child(4){width:20%}
+.utable td{padding:8px 10px}
+.utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:560px){
+ .utable{display:table;font-size:12.5px}
+ .utable thead{display:table-header-group}
+ .utable tbody{display:table-row-group}
+ .utable tr{display:table-row;border:0;padding:0}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+ .utable tbody tr:last-child td{border-bottom:0}
+}</style>
 </head>
 <body>
 
@@ -130,6 +152,15 @@ details.fold .dbody p{font-size:14px}
   <p class="note" style="margin-bottom:9px">앞으로 5분기 · 입주예정 단지 실측</p>
   <div class="gauge"><div class="g-row"><div class="g-lab"><span>필요한 집</span><b>10,500</b></div><div class="g-bar"><div class="g-fill" style="width:100.0%;background:#9aa8ae"></div></div></div><div class="g-row"><div class="g-lab"><span>들어올 집</span><b>7,357</b></div><div class="g-bar"><div class="g-fill" style="width:70.1%;background:#5e7b6d"></div></div></div><div class="g-gap" style="color:#5e7b6d">울산권은 앞으로 아파트가 <b>모자랄</b> 쪽입니다. → 이 기간에만 <b>3,143세대 부족</b></div></div>
   <div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div><div class="qchart"><div class="q-col"><span class="q-v">2,180</span><div class="q-bar" style="height:72%"></div><span class="q-l">26Q4</span></div><div class="q-col"><span class="q-v">1,025</span><div class="q-bar" style="height:34%"></div><span class="q-l">27Q1</span></div><div class="q-col"><span class="q-v">1,876</span><div class="q-bar" style="height:62%"></div><span class="q-l">27Q2</span></div><div class="q-col"><span class="q-v">1,038</span><div class="q-bar" style="height:34%"></div><span class="q-l">27Q3</span></div><div class="q-col"><span class="q-v">1,238</span><div class="q-bar" style="height:41%"></div><span class="q-l">27Q4</span></div></div></div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>입주 예정 단지 <span class="ucnt">16곳 · 7,357세대</span></h2>
+  <div class="ulist"><table class="utable" id="utable">
+    <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
+    <tbody><tr><td>남구</td><td class="uname" title="e편한세상 신정 스카이하임">e편한세상 신정 스카이하임</td><td class="num">158</td><td class="num">2026.10</td></tr><tr><td>울주군</td><td class="uname" title="우미린 더 시그니처">우미린 더 시그니처</td><td class="num">1,430</td><td class="num">2026.11</td></tr><tr><td>남구</td><td class="uname" title="e편한세상 번영로 리더스포레">e편한세상 번영로 리더스포레</td><td class="num">192</td><td class="num">2026.11</td></tr><tr><td>중구</td><td class="uname" title="다운한양립스더퍼스트하임">다운한양립스더퍼스트하임</td><td class="num">400</td><td class="num">2026.12</td></tr><tr><td>중구</td><td class="uname" title="울산 우정 한라비발디">울산 우정 한라비발디</td><td class="num">533</td><td class="num">2027.01</td></tr><tr><td>남구</td><td class="uname" title="더폴 울산신정">더폴 울산신정</td><td class="num">168</td><td class="num">2027.02</td></tr><tr><td>울주군</td><td class="uname" title="울산태화강변 A1BL">울산태화강변 A1BL</td><td class="num">324</td><td class="num">2027.03</td></tr><tr><td>중구</td><td class="uname" title="울산다운2 A-7블록 영구임대">울산다운2 A-7블록 영구임대</td><td class="num">400</td><td class="num">2027.04</td></tr><tr><td>중구</td><td class="uname" title="울산다운2 A-7BL 행복주택">울산다운2 A-7BL 행복주택</td><td class="num">300</td><td class="num">2027.04</td></tr><tr><td>중구</td><td class="uname" title="울산다운2 A-4블록 행복주택">울산다운2 A-4블록 행복주택</td><td class="num">194</td><td class="num">2027.04</td></tr><tr><td>중구</td><td class="uname" title="울산다운2 A-4블록 국민임대주택">울산다운2 A-4블록 국민임대주택</td><td class="num">194</td><td class="num">2027.04</td></tr><tr><td>중구</td><td class="uname" title="더샵 시에르네">더샵 시에르네</td><td class="num">788</td><td class="num">2027.05</td></tr><tr><td>중구</td><td class="uname" title="울산 다운2지구 우미 린 어반파크">울산 다운2지구 우미 린 어반파크</td><td class="num">731</td><td class="num">2027.07</td></tr><tr><td>울주군</td><td class="uname" title="태화강 에피트">태화강 에피트</td><td class="num">307</td><td class="num">2027.07</td></tr><tr><td>남구</td><td class="uname" title="번영로 하늘채 라크뷰">번영로 하늘채 라크뷰</td><td class="num">803</td><td class="num">2027.11</td></tr><tr><td>울주군</td><td class="uname" title="울산태화강변지구 A-2블록">울산태화강변지구 A-2블록</td><td class="num">435</td><td class="num">2027.11</td></tr></tbody>
+  </table></div>
+  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -207,6 +238,28 @@ function zsubs(f){
     .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
   return false;
 }
+(function(){
+  var t=document.getElementById('utable'); if(!t) return;
+  var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;
+  function val(row,k,isNum){
+    var s=row.cells[k].textContent.trim();
+    return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||0) : s;
+  }
+  Array.prototype.forEach.call(ths, function(h,i){
+    h.addEventListener('click', function(){
+      var isNum=h.hasAttribute('data-num');
+      dir=(cur===i)?-dir:1; cur=i;
+      var rows=Array.prototype.slice.call(tb.rows);
+      rows.sort(function(a,b){
+        var x=val(a,i,isNum), y=val(b,i,isNum);
+        return (x<y?-1:x>y?1:0)*dir;
+      });
+      rows.forEach(function(rw){ tb.appendChild(rw); });
+      Array.prototype.forEach.call(ths, function(o){ o.classList.remove('on','asc','desc'); });
+      h.classList.add('on', dir>0?'asc':'desc');
+    });
+  });
+})();
 </script>
 
 </body>
