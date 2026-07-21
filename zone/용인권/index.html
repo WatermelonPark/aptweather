@@ -114,7 +114,29 @@ details.fold summary::before{content:'▸';color:var(--muted);transition:transfo
 details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold .dbody{padding:2px 16px 15px}
 details.fold .dbody p{font-size:14px}
-@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}</style>
+@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}
+.ucnt{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:4px}
+.ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
+.utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
+.utable thead th.on.asc::after{content:' 91'}
+.utable thead th.on.desc::after{content:' 93'}
+.utable th:nth-child(1){width:21%;text-align:left}
+.utable th:nth-child(2){text-align:left}
+.utable th:nth-child(3){width:17%}
+.utable th:nth-child(4){width:20%}
+.utable td{padding:8px 10px}
+.utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:560px){
+ .utable{display:table;font-size:12.5px}
+ .utable thead{display:table-header-group}
+ .utable tbody{display:table-row-group}
+ .utable tr{display:table-row;border:0;padding:0}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+ .utable tbody tr:last-child td{border-bottom:0}
+}</style>
 </head>
 <body>
 
@@ -130,6 +152,15 @@ details.fold .dbody p{font-size:14px}
   <p class="note" style="margin-bottom:9px">앞으로 5분기 · 입주예정 단지 실측</p>
   <div class="gauge"><div class="g-row"><div class="g-lab"><span>필요한 집</span><b>9,853</b></div><div class="g-bar"><div class="g-fill" style="width:100.0%;background:#9aa8ae"></div></div></div><div class="g-row"><div class="g-lab"><span>들어올 집</span><b>5,984</b></div><div class="g-bar"><div class="g-fill" style="width:60.7%;background:#5e7b6d"></div></div></div><div class="g-gap" style="color:#5e7b6d">용인권은 앞으로 아파트가 <b>모자랄</b> 쪽입니다. → 이 기간에만 <b>3,869세대 부족</b></div></div>
   <div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div><div class="qchart"><div class="q-col"><span class="q-v">820</span><div class="q-bar" style="height:20%"></div><span class="q-l">26Q4</span></div><div class="q-col"><span class="q-v">1,480</span><div class="q-bar" style="height:36%"></div><span class="q-l">27Q1</span></div><div class="q-col"><span class="q-v">68</span><div class="q-bar" style="height:3%"></div><span class="q-l">27Q2</span></div><div class="q-col"><span class="q-v">2,956</span><div class="q-bar" style="height:72%"></div><span class="q-l">27Q3</span></div><div class="q-col"><span class="q-v">660</span><div class="q-bar" style="height:16%"></div><span class="q-l">27Q4</span></div></div></div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>입주 예정 단지 <span class="ucnt">8곳 · 5,984세대</span></h2>
+  <div class="ulist"><table class="utable" id="utable">
+    <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
+    <tbody><tr><td>용인시</td><td class="uname" title="영통역자이 프라시엘">영통역자이 프라시엘</td><td class="num">472</td><td class="num">2026.12</td></tr><tr><td>용인시</td><td class="uname" title="용인 에버랜드역 칸타빌">용인 에버랜드역 칸타빌</td><td class="num">348</td><td class="num">2026.12</td></tr><tr><td>용인시</td><td class="uname" title="역북 서희스타힐스 프라임시티">역북 서희스타힐스 프라임시티</td><td class="num">912</td><td class="num">2027.03</td></tr><tr><td>용인시</td><td class="uname" title="두산위브더제니스 센트럴 용인">두산위브더제니스 센트럴 용인</td><td class="num">568</td><td class="num">2027.03</td></tr><tr><td>용인시</td><td class="uname" title="마평동 734-1번지 일원 공동주택{LH매입임대]">마평동 734-1번지 일원 공동주택{LH매입임대]</td><td class="num">68</td><td class="num">2027.06</td></tr><tr><td>용인시</td><td class="uname" title="용인 푸르지오 원클러스터 1단지">용인 푸르지오 원클러스터 1단지</td><td class="num">1,681</td><td class="num">2027.07</td></tr><tr><td>용인시</td><td class="uname" title="용인 둔전역 에피트">용인 둔전역 에피트</td><td class="num">1,275</td><td class="num">2027.07</td></tr><tr><td>용인시</td><td class="uname" title="힐스테이트 용인마크밸리">힐스테이트 용인마크밸리</td><td class="num">660</td><td class="num">2027.12</td></tr></tbody>
+  </table></div>
+  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -207,6 +238,28 @@ function zsubs(f){
     .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
   return false;
 }
+(function(){
+  var t=document.getElementById('utable'); if(!t) return;
+  var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;
+  function val(row,k,isNum){
+    var s=row.cells[k].textContent.trim();
+    return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||0) : s;
+  }
+  Array.prototype.forEach.call(ths, function(h,i){
+    h.addEventListener('click', function(){
+      var isNum=h.hasAttribute('data-num');
+      dir=(cur===i)?-dir:1; cur=i;
+      var rows=Array.prototype.slice.call(tb.rows);
+      rows.sort(function(a,b){
+        var x=val(a,i,isNum), y=val(b,i,isNum);
+        return (x<y?-1:x>y?1:0)*dir;
+      });
+      rows.forEach(function(rw){ tb.appendChild(rw); });
+      Array.prototype.forEach.call(ths, function(o){ o.classList.remove('on','asc','desc'); });
+      h.classList.add('on', dir>0?'asc':'desc');
+    });
+  });
+})();
 </script>
 
 </body>

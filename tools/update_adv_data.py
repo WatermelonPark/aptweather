@@ -959,13 +959,16 @@ def fetch_livezone():
     detail = collections.defaultdict(lambda: collections.defaultdict(int))
     qset = collections.defaultdict(set)
     byq = collections.defaultdict(lambda: collections.defaultdict(int))
+    units = collections.defaultdict(list)   # 단지별 [시군구, 단지명, 세대수, 'YYYY-MM']
     for pg in range(1, 9):
         d = http_json(OCC_API + '?' + urllib.parse.urlencode({'page': pg, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
         data = d.get('data', [])
         if not data: break
         for r in data:
             sd = (r.get('지역') or '').strip(); ym = str(r.get('입주예정월') or '')
-            if len(ym) < 7 or not ym[5:7].isdigit(): continue
+            # 월 '00'(입주월 미정)이 '2027Q0' 같은 비정상 분기를 만들어
+            # 게이지·차트(유효 분기만)와 단지 표의 합이 어긋났다. 미정은 제외.
+            if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12: continue
             a = (r.get('주소') or '').split(); sg = a[1] if len(a) > 1 else ''
             if sd == '세종': sg = '세종'
             z = zone_of(sd, sg)
@@ -975,6 +978,7 @@ def fetch_livezone():
             q = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
             supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
             qset[z].add(q); byq[z]['%dQ%d' % q] += n
+            units[z].append([LZ_GU2SI.get(sg, sg), (r.get('아파트명') or '').strip(), n, ym[:7]])
     # ── 청약홈 확장은 의도적으로 하지 않는다 (2026-07-20 실측 후 철회) ──
     # 청약홈 분양정보는 입주예정월이 2031년까지 있어 시야가 넓어 보이지만,
     # **분양 공고 기준**이라 후분양·임대·조합 물량이 빠진다.
@@ -994,7 +998,8 @@ def fetch_livezone():
                 'inten': round(s / (pop / 10000), 1) if pop else 0, 'span': span,
                 'q0': ('%dQ%d' % qs[0] if qs else ''), 'q1': ('%dQ%d' % qs[-1] if qs else ''),
                 'sgg': [[k, v] for k, v in det],
-                'byq': dict(byq.get(z, {}))}
+                'byq': dict(byq.get(z, {})),
+                'units': sorted(units.get(z, []), key=lambda u: (u[3], -u[2]))}
     # 편입 임계 20만. 30만이던 시절 수도권 인구의 13%(347만명)가 어느 생활권에도
     # 안 잡혀 수도권 합계가 15%가량 과소 집계됐다. 20만으로 낮추고 위 매핑 버그를
     # 고치면 커버리지가 88.0% -> 95.4%가 된다.
