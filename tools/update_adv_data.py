@@ -929,16 +929,31 @@ def fetch_livezone():
     assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
     sido_pop, sgg_pop = _lz_pop()
     m2z = {m: z for z, mm in LIVEZONE.items() for m in mm}
+    def gg_zone(sg):
+        """경기 시군 → 생활권명.
+
+        ⚠️ replace('시','')를 쓰면 안 된다. 중간의 '시'까지 지워
+        '시흥시'->'흥권', '군포시'->'포권'이 되어 인구 51만·25만 도시가
+        통째로 빠졌다(2026-07-20 실측). 끝의 시/군만 떼야 한다.
+        ⚠️ 경기 광주시는 '광주권'이 되어 광주광역시 생활권과 충돌한다.
+        실제로 경기 광주시 물량 4,797세대가 광주광역시에 합산돼 있었다.
+        이름이 겹치는 곳은 접두어를 붙여 분리한다.
+        """
+        base = re.sub(r'(시|군)$', '', sg)
+        return ('경기' + base + '권') if (base + '권') in LIVEZONE else (base + '권')
+
     def zone_of(sd, sg):
         if (sd, '*') in m2z: return m2z[(sd, '*')]
         sg = LZ_GU2SI.get(sg, sg)
         if (sd, sg) in m2z: return m2z[(sd, sg)]
-        if sd == '경기': return sg.replace('시', '').replace('군', '') + '권'
+        if sd == '경기': return gg_zone(sg)
         return None
     def zone_pop(z):
         if z in LIVEZONE:
             return sum(sido_pop.get(m[0], 0) if m[1] == '*' else sgg_pop.get(m, 0) for m in LIVEZONE[z])
         nm = z[:-1]
+        if nm.startswith('경기'):        # 이름 충돌로 접두어를 붙인 경우
+            nm = nm[2:]
         return sum(sgg_pop.get(('경기', nm + s), 0) for s in ('시', '군'))
     supply = collections.defaultdict(int)
     detail = collections.defaultdict(lambda: collections.defaultdict(int))
@@ -980,11 +995,15 @@ def fetch_livezone():
                 'q0': ('%dQ%d' % qs[0] if qs else ''), 'q1': ('%dQ%d' % qs[-1] if qs else ''),
                 'sgg': [[k, v] for k, v in det],
                 'byq': dict(byq.get(z, {}))}
+    # 편입 임계 20만. 30만이던 시절 수도권 인구의 13%(347만명)가 어느 생활권에도
+    # 안 잡혀 수도권 합계가 15%가량 과소 집계됐다. 20만으로 낮추고 위 매핑 버그를
+    # 고치면 커버리지가 88.0% -> 95.4%가 된다.
+    MIN_POP = 200000
     zones = []
     for z in LIVEZONE:
-        if zone_pop(z) >= 300000: zones.append(mk(z, LZ_REGION.get(z, '기타')))
+        if zone_pop(z) >= MIN_POP: zones.append(mk(z, LZ_REGION.get(z, '기타')))
     for z in supply:
-        if z not in LIVEZONE and zone_pop(z) >= 300000: zones.append(mk(z, '수도권'))
+        if z not in LIVEZONE and zone_pop(z) >= MIN_POP: zones.append(mk(z, '수도권'))
     zones.sort(key=lambda x: -x['inten'])
     td = datetime.date.today()
     spop = dict(sido_pop)
