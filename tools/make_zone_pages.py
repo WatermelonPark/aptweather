@@ -204,7 +204,37 @@ footer a{color:var(--muted)}
  td.lbl{display:block;font-weight:600;color:var(--ink);font-size:14.5px;margin-bottom:7px}
  td.lbl .note{display:block;font-weight:400;margin-top:2px}
  td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:600;flex:none}
-}"""
+}
+.gauge{background:#fff;border:1px solid var(--line);padding:16px 18px 14px}
+.g-row{margin-bottom:10px}
+.g-lab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink2);margin-bottom:4px}
+.g-lab b{font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink)}
+.g-bar{height:14px;background:var(--paper2)}
+.g-fill{height:100%}
+.g-gap{font-size:14.5px;font-weight:600;margin-top:8px}
+.qwrap{background:#fff;border:1px solid var(--line);border-top:0;padding:12px 14px 10px}
+.qtitle{font-size:12px;color:var(--muted);margin-bottom:8px}
+.qchart{display:flex;align-items:flex-end;gap:5px;height:86px}
+.q-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
+.q-bar{width:100%;max-width:36px;background:#8fa3ab}
+.q-v{font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.q-l{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.t-card{background:#fff;border:1px solid var(--line);padding:13px 8px 11px;text-align:center}
+.t-lab{font-size:12px;color:var(--ink);font-weight:600;line-height:1.35}
+.t-sub{font-size:10.5px;color:var(--muted);margin:1px 0 7px}
+.t-val{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.t-w{font-size:10.5px;color:var(--muted);margin-top:4px}
+.t-plus{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px}
+details.fold{background:#fff;border:1px solid var(--line);margin-bottom:9px}
+details.fold summary{cursor:pointer;padding:13px 16px;font-size:14.5px;font-weight:600;color:var(--ink);
+ list-style:none;display:flex;align-items:center;gap:9px;user-select:none}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:'▸';color:var(--muted);transition:transform .15s;flex:none}
+details.fold[open] summary::before{transform:rotate(90deg)}
+details.fold .dbody{padding:2px 16px 15px}
+details.fold .dbody p{font-size:14px}
+@media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}"""
 
 
 def build_page(r, allrows, prd, today):
@@ -233,6 +263,64 @@ def build_page(r, allrows, prd, today):
         rk = [i for i, x in enumerate(allrows, 1) if x['z']['z'] == nm]
         ranktxt = ('생활권 %d곳 중 %d위' % (len(allrows), rk[0])) if rk else ''
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
+
+    # ── 인포그래픽: 게이지 (필요한 집 vs 들어올 집, 미래 창 기준) ──
+    mxg = max(r['need'], r['fsup']) or 1
+    gap_txt = ('이 기간에만 <b>%s세대 부족</b>' % num(r['dA'])) if r['dA'] > 0 else \
+              ('이 기간에는 <b>%s세대 여유</b>' % num(-r['dA']))
+    gauge_html = (
+        '<div class="gauge">'
+        '<div class="g-row"><div class="g-lab"><span>필요한 집</span><b>%s</b></div>'
+        '<div class="g-bar"><div class="g-fill" style="width:%.1f%%;background:#9aa8ae"></div></div></div>'
+        '<div class="g-row"><div class="g-lab"><span>들어올 집</span><b>%s</b></div>'
+        '<div class="g-bar"><div class="g-fill" style="width:%.1f%%;background:%s"></div></div></div>'
+        '<div class="g-gap" style="color:%s">%s → %s</div>'
+        '</div>' % (
+            num(r['need']), r['need'] / mxg * 100,
+            num(r['fsup']), max(r['fsup'] / mxg * 100, 0.8), tcol,
+            tcol, head_line, gap_txt))
+
+    # ── 인포그래픽: 분기별 입주 미니차트 (byq — 수도권은 소속 합산) ──
+    byq = dict(z.get('byq') or {})
+    if subs and not byq:
+        for cc in subs:
+            for q, v in (cc['z'].get('byq') or {}).items():
+                byq[q] = byq.get(q, 0) + v
+    # calc()의 FUTQ와 같은 규칙: 유효한 분기 라벨 + 미래 분기만.
+    # (원자료에 '2027Q0' 같은 비정상 키와 과거 분기가 섞여 있다 — 과거까지 그리면
+    #  게이지의 '들어올 집' 합과 막대 합이 안 맞아 정합성이 깨진다)
+    _qre = re.compile(r'^(\d{4})Q([1-4])$')
+    _now = datetime.date.today()
+    _curq = _now.year * 4 + (_now.month - 1) // 3
+    def qkey(q):
+        m = _qre.match(q)
+        return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else -1
+    qs = sorted((q for q in byq if byq[q] > 0 and qkey(q) > _curq), key=qkey)
+    if qs:
+        mxq = max(byq[q] for q in qs) or 1
+        def qfmt(v):
+            return ('%.1f만' % (v / 10000)) if v >= 10000 else format(v, ',')
+        cols = ''.join(
+            '<div class="q-col"><span class="q-v">%s</span>'
+            '<div class="q-bar" style="height:%.0f%%"></div>'
+            '<span class="q-l">%s</span></div>' % (
+                qfmt(byq[q]), max(byq[q] / mxq * 72, 3), q[2:4] + 'Q' + q[5])
+            for q in qs)
+        qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div>'
+                       '<div class="qchart">%s</div></div>' % cols)
+    else:
+        qchart_html = '<div class="qwrap"><div class="qtitle">입주 예정 단지 없음</div></div>'
+
+    # ── 인포그래픽: 기여 3카드 (가중 반영, 합계 = tot = 히어로 숫자) ──
+    def tcard(lab, sub_, contrib, w):
+        col = '#a93226' if contrib > 0 else ('#1a5276' if contrib < 0 else 'var(--muted)')
+        return ('<div class="t-card"><div class="t-lab">%s</div><div class="t-sub">%s</div>'
+                '<div class="t-val" style="color:%s">%s</div><div class="t-w">영향 %d%%</div></div>'
+                % (lab, sub_, col, signed(contrib), w))
+    trio_html = ('<div class="trio">%s%s%s</div>' % (
+        tcard('입주예정', '2년 안 · 실측', 0.55 * r['dA'], 55),
+        tcard('인허가', '3~4년 뒤 · 추정', 0.35 * r['dC'], 35),
+        tcard('최근 3년', '입주 실적 · 추정', 0.10 * r['dB'], 10)))
 
     rows_html = ''.join([
         '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
@@ -324,36 +412,41 @@ def build_page(r, allrows, prd, today):
 </div></header>
 
 <section><div class="wrap">
-  <h2>한 줄 요약</h2>
-  <p>%(head)s %(supsent)s
-  %(calcsent)s</p>
-  %(legend)s
+  <h2>필요한 집 vs 들어올 집</h2>
+  <p class="note" style="margin-bottom:9px">앞으로 %(fq)s분기 · 입주예정 단지 실측</p>
+  %(gauge)s
+  %(qchart)s
 </div></section>
 
 <section><div class="wrap">
-  <h2>이 생활권은 어디를 묶은 건가</h2>
-  <p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>
-  <div class="card"><b>%(nm)s 구성</b><span>%(members)s</span></div>%(sublist)s
-  <p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(%(span)s).</p>
-</div></section>
-
-<section><div class="wrap">
-  <h2>어떻게 계산했나</h2>
-  <p><b>적정물량</b>은 과거 이 지역의 가격이 방향을 바꾼 시점의 입주물량입니다.</p>
-  <table>
-    <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
-    <tbody>%(rows)s</tbody>
-  </table>
-  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>
+  <h2>이 숫자는 어디서 왔나</h2>
+  %(trio)s
+  <p class="note" style="margin-top:9px">세 값을 더한 것이 맨 위의 <b style="color:%(tcol)s">%(disp)s세대</b>입니다. 음수(−)는 부족, 양수(+)는 여유.</p>
 </div></section>
 
 %(flag)s
 
 <section><div class="wrap">
-  <h2>이 숫자를 어떻게 읽나</h2>
+  <h2>더 알아보기</h2>
+  <details class="fold"><summary>이 생활권은 어디를 묶었나</summary><div class="dbody">
+  <p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>
+  <div class="card"><b>%(nm)s 구성</b><span>%(members)s</span></div>%(sublist)s
+  <p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(%(span)s).</p>
+  </div></details>
+
+  <details class="fold"><summary>어떻게 계산했나</summary><div class="dbody">
+  <p><b>적정물량</b>은 과거 이 지역의 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 기준선입니다.</p>
+  <table>
+    <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
+    <tbody>%(rows)s</tbody>
+  </table>
+  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>
+  </div></details>
+  <details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">
   <div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>
   <div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>
   <div class="card"><b>절대량으로 비교한다</b><span>인구 대비 비율이 아니라 세대수 절대량이라, 시장이 큰 곳일수록 부족 규모도 크게 잡힙니다. 작은 지역의 가뭄은 순위에서 희석될 수 있습니다.</span></div>
+  </div></details>
   <a class="cta" href="/cycle/">사이클 리포트 읽기 →</a>
 </div></section>
 
@@ -408,7 +501,8 @@ function zsubs(f){
         ranktxt=ranktxt, prd=prd, fq=r['fq'], head=head_line, need=num(r['need']), sup=num(r['fsup']),
         calcsent=('인허가와 최근 입주까지 더하면 <b style="color:%s">%s세대</b>입니다.' % (tcol, disp)),
         legend=('<p class="note">음수(−)는 부족, 양수(+)는 초과입니다.</p>'),
-        h1=('%s 아파트,<br>앞으로 얼마나 부족할까' % nm),
+        h1=('%s 아파트,<br>앞으로 얼마나 %s' % (nm, '모자랄까' if lack else '남을까')),
+        gauge=gauge_html, qchart=qchart_html, trio=trio_html,
         supsent=('앞으로 %d개 분기에 필요한 <b>%s세대</b> 중 입주 예정은 <b>%s세대</b>입니다.' % (
                      r['fq'], num(r['need']), num(r['fsup']))),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
