@@ -50,9 +50,8 @@ p{font-size:15px;color:var(--ink2);margin-bottom:11px}
 .card span{font-size:13.5px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:0;overflow:hidden}
 th,td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left}
+td:first-child{text-align:left}
 thead th{background:#edf0ee;font-size:12.5px;color:var(--muted);text-align:center}
-  thead th:first-child{text-align:left}
 tbody tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;font-weight:600}
 .subsbox{background:#fff;border:1.5px solid var(--line);border-radius:0;padding:16px 18px}
@@ -119,21 +118,22 @@ details.fold .dbody p{font-size:14px}
 .ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
 .utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
 .utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
-.utable thead th.on.asc::after{content:' 91'}
-.utable thead th.on.desc::after{content:' 93'}
-.utable th:nth-child(1){width:21%;text-align:left}
-.utable th:nth-child(2){text-align:left}
-.utable th:nth-child(3){width:17%}
-.utable th:nth-child(4){width:20%}
+.utable thead th::after{content:' ⇅';color:#aeb9b5;font-size:11px}
+.utable thead th.on.asc::after{content:' ↑';color:var(--ink)}
+.utable thead th.on.desc::after{content:' ↓';color:var(--ink)}
+.utable th:nth-child(1){width:20%}
+.utable th:nth-child(3){width:15%}
+.utable th:nth-child(4){width:23%}
 .utable td{padding:8px 10px}
 .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable td:nth-child(1),.utable td:nth-child(3),.utable td:nth-child(4){white-space:nowrap}
 .utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:560px){
  .utable{display:table;font-size:12.5px}
  .utable thead{display:table-header-group}
  .utable tbody{display:table-row-group}
  .utable tr{display:table-row;border:0;padding:0}
- .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 6px}
  .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
  .utable tbody tr:last-child td{border-bottom:0}
 }</style>
@@ -160,7 +160,6 @@ details.fold .dbody p{font-size:14px}
     <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
     <tbody><tr><td>장성군</td><td class="uname" title="첨단제일풍경채(A2)">첨단제일풍경채(A2)</td><td class="num">1,845</td><td class="num">2026.10</td></tr><tr><td>장성군</td><td class="uname" title="힐스테이트 첨단센트럴">힐스테이트 첨단센트럴</td><td class="num">1,520</td><td class="num">2026.10</td></tr><tr><td>북구</td><td class="uname" title="위파크 일곡공원">위파크 일곡공원</td><td class="num">1,004</td><td class="num">2026.10</td></tr><tr><td>북구</td><td class="uname" title="첨단 제일풍경채 A5블록">첨단 제일풍경채 A5블록</td><td class="num">584</td><td class="num">2026.10</td></tr><tr><td>북구</td><td class="uname" title="힐스테이트 중외공원 2블록">힐스테이트 중외공원 2블록</td><td class="num">785</td><td class="num">2026.12</td></tr><tr><td>북구</td><td class="uname" title="힐스테이트 중외공원 3블록">힐스테이트 중외공원 3블록</td><td class="num">681</td><td class="num">2026.12</td></tr><tr><td>남구</td><td class="uname" title="두산위브 트레지움 월산">두산위브 트레지움 월산</td><td class="num">320</td><td class="num">2026.12</td></tr><tr><td>소촌동</td><td class="uname" title="소촌어등더포레젠">소촌어등더포레젠</td><td class="num">439</td><td class="num">2027.01</td></tr><tr><td>담양군</td><td class="uname" title="담양삼만 통합공공임대 일자리연계형 지원주택">담양삼만 통합공공임대 일자리연계형 지원주택</td><td class="num">94</td><td class="num">2027.02</td></tr><tr><td>북구</td><td class="uname" title="본촌동코오롱하늘채">본촌동코오롱하늘채</td><td class="num">428</td><td class="num">2027.03</td></tr><tr><td>광산구</td><td class="uname" title="봉산공원 첨단 제일풍경채">봉산공원 첨단 제일풍경채</td><td class="num">948</td><td class="num">2027.05</td></tr><tr><td>나주시</td><td class="uname" title="나주영산 윤슬의아침 더정원">나주영산 윤슬의아침 더정원</td><td class="num">311</td><td class="num">2027.05</td></tr><tr><td>북구</td><td class="uname" title="운암산공원 우미린 리버포레">운암산공원 우미린 리버포레</td><td class="num">734</td><td class="num">2027.06</td></tr><tr><td>서구</td><td class="uname" title="중앙공원 롯데캐슬 시그니처 1BL">중앙공원 롯데캐슬 시그니처 1BL</td><td class="num">929</td><td class="num">2027.08</td></tr><tr><td>서구</td><td class="uname" title="중앙공원 롯데캐슬 시그니처 2-2BL">중앙공원 롯데캐슬 시그니처 2-2BL</td><td class="num">928</td><td class="num">2027.08</td></tr><tr><td>서구</td><td class="uname" title="중앙공원 롯데캐슬 시그니처 2-1BL">중앙공원 롯데캐슬 시그니처 2-1BL</td><td class="num">915</td><td class="num">2027.08</td></tr><tr><td>남구</td><td class="uname" title="진월 더리브 라포레">진월 더리브 라포레</td><td class="num">300</td><td class="num">2027.10</td></tr><tr><td>광산구</td><td class="uname" title="한양립스 에듀포레">한양립스 에듀포레</td><td class="num">470</td><td class="num">2027.11</td></tr><tr><td>남구</td><td class="uname" title="광주 송암공원 중흥 S-클래스 SK VIEW">광주 송암공원 중흥 S-클래스 SK VIEW</td><td class="num">1,575</td><td class="num">2027.12</td></tr><tr><td>서구</td><td class="uname" title="광주화정아이파크(1단지)">광주화정아이파크(1단지)</td><td class="num">389</td><td class="num">2027.12</td></tr><tr><td>서구</td><td class="uname" title="광주화정아이파크(2단지)">광주화정아이파크(2단지)</td><td class="num">316</td><td class="num">2027.12</td></tr><tr><td>남구</td><td class="uname" title="봉선동 르오네뜨 2차">봉선동 르오네뜨 2차</td><td class="num">56</td><td class="num">2027.12</td></tr></tbody>
   </table></div>
-  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
 </div></section>
 
 <section><div class="wrap">
