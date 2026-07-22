@@ -33,7 +33,7 @@ set LOCK=%~dp0..\.batch.lock
 call :main >> "%LOG%" 2>&1
 set RC=%ERRORLEVEL%
 rem Release the lock unless we aborted *because* someone else held it (rc=19).
-if not "%RC%"=="19" rmdir "%LOCK%" 2>nul
+if not "%RC%"=="19" rmdir /s /q "%LOCK%" 2>nul
 if not "%RC%"=="0" (
   echo [%date% %time%] FAILED rc=%RC% - see %LOG%
   echo [%date% %time%] FAILED rc=%RC% >> "%LOG%"
@@ -49,11 +49,25 @@ rem Concurrency lock. Task Scheduler's IgnoreNew only guards its own instances;
 rem a manual run and a scheduled run could still overlap and double-send.
 rem mkdir is atomic on NTFS, so it works as a lock even under a race.
 mkdir "%LOCK%" 2>nul
-if errorlevel 1 (
-  echo ERROR: another run holds the lock ^(%LOCK%^) - aborting
-  echo If no run is active, delete that folder by hand.
-  exit /b 19
-)
+if not errorlevel 1 goto :lock_ok
+rem Lock exists. Reclaim only if its stamp is 24h+ stale (a normal run finishes
+rem in minutes, so a day-old stamp means a prior run died holding it). Do NOT
+rem shorten this: scheduled runs are only 2h apart, and a short window could
+rem steal a still-live lock and double-send. forfiles /d -1 = stamp 24h+ untouched.
+rem NOTE: kept as goto (not a paren block) on purpose -- an echo containing
+rem escaped parens ^(like this^) inside a ( ) block corrupts exit /b in cmd.
+forfiles /p "%LOCK%" /m stamp.txt /d -1 >nul 2>&1
+if not errorlevel 1 goto :lock_reclaim
+echo ERROR: another run holds the lock ^(%LOCK%^) - aborting
+echo If no run is active, delete that folder by hand.
+exit /b 19
+:lock_reclaim
+echo WARN: stale lock ^(24h+^) found - reclaiming
+rmdir /s /q "%LOCK%"
+mkdir "%LOCK%"
+:lock_ok
+rem Stamp for staleness detection by the next run.
+type nul > "%LOCK%\stamp.txt"
 
 if not exist "%USERPROFILE%\.aptweather_keys.bat" (
   echo ERROR: key file not found
