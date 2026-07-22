@@ -346,8 +346,7 @@
   .tbl-wrap{overflow-x:auto;border-radius:0;background:#fff;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
   #stat-tbl{width:100%;border-collapse:collapse;font-size:13px}
   #stat-tbl th{background:var(--paper2);color:var(--ink2);font-weight:600;
-    padding:10px 12px;text-align:right;white-space:nowrap;position:sticky;top:0}
-  #stat-tbl th:first-child{text-align:left}
+    padding:10px 12px;text-align:center;white-space:nowrap;position:sticky;top:0}
   #stat-tbl td{padding:9px 12px;text-align:right;border-top:1px solid var(--paper2);
     font-variant-numeric:tabular-nums;color:var(--ink)}
   #stat-tbl td:first-child{text-align:left;font-weight:600;color:var(--ink2)}
@@ -420,7 +419,7 @@
   table.adv th,table.adv td{padding:6px 9px;border-bottom:1px solid var(--paper2);text-align:center;
     font-variant-numeric:tabular-nums}
   table.adv thead th{background:var(--paper2);color:var(--ink2);font-weight:600;position:sticky;top:0}
-  table.adv th:first-child,table.adv td:first-child{position:sticky;left:0;background:#fff;text-align:left;
+  table.adv th:first-child,table.adv td:first-child{position:sticky;left:0;background:#fff;text-align:left;/*td만*/
     font-weight:600;color:var(--ink);border-right:1px solid var(--line);z-index:1}
   table.adv thead th:first-child{background:var(--paper2);z-index:2}
   table.adv td.hi{background:#eaf3fb;color:#1a5276;font-weight:600}
@@ -473,7 +472,7 @@
   .rank-tbl th,.rank-tbl td{padding:4px 8px;border-bottom:1px solid var(--paper2);
     text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
   .rank-tbl thead th{background:var(--paper2);font-weight:600;color:var(--ink2);font-size:12px}
-  .rank-tbl th:nth-child(2),.rank-tbl td:nth-child(2){text-align:left;font-weight:600}
+  .rank-tbl td:nth-child(2){text-align:left;font-weight:600}
   .rank-tbl td:first-child{color:var(--muted);font-weight:600}
   .rank-tbl td.up{color:#c0392b;font-weight:600}
   .rank-tbl td.dn{color:#1a5276;font-weight:600}
@@ -718,3 +717,6 @@
 /* 리포트가 /cycle/로 이전하며 .nav-btn·.home-cta 일부가 <a>가 되었다.
    버튼일 땐 필요 없던 밑줄 제거가 필요하다. */
 a.nav-btn,a.home-cta{text-decoration:none}
+
+/* 표 헤더는 항상 중앙정렬(2026-07-22 원칙) — 고정컬럼 헤더의 좌측 예외 무효화 */
+table.adv thead th:first-child{text-align:center}
