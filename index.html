@@ -165,7 +165,7 @@
       <p class="subs-consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국). <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a></p>
     </div>
     <section class="adv-sec gsec gm-m" id="sec-week">
-      <div class="adv-h"><h3>주간 아파트 동향</h3>
+      <div class="adv-h"><h3>주간 아파트 동향</h3><span class="rel" id="rel-week"></span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
       <p class="adv-note">매주 나오는 가장 빠른 시세 지표입니다.</p>
       <div class="adv-regsel"><select id="adv-week-reg" onchange="renderWeekSec()"></select></div>
@@ -185,7 +185,7 @@
     </section>
 
     <section class="adv-sec gsec gm-m" id="sec-month">
-      <div class="adv-h"><h3>월간 아파트 동향</h3>
+      <div class="adv-h"><h3>월간 아파트 동향</h3><span class="rel" id="rel-month"></span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('month','m')">지도</button><button data-v="g" onclick="gtSet('month','g')">그래프</button><button data-v="t" onclick="gtSet('month','t')">표</button></div></div>
       <p class="adv-note">주간의 잔파도를 걷어낸 추세입니다.</p>
       <div class="adv-regsel"><select id="adv-month-reg" onchange="renderMonthSec()"></select></div>
@@ -268,7 +268,7 @@
     </div>
 
     <section class="adv-sec gsec gm-g" id="sec-permit">
-      <div class="adv-h"><h3>인허가 물량 (반기별)</h3><span class="adv-badge">매달 발표 · 반기 집계</span>
+      <div class="adv-h"><h3>인허가 물량 (반기별)</h3><span class="rel">국토교통부 · 매월 말 발표</span>
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('permit','g')">그래프</button><button data-v="t" onclick="gtSet('permit','t')">표</button></div></div>
 
   
@@ -479,7 +479,7 @@ function showView(v,updateHash){
        (ADV.occupancy·permits·bubble, STATS 전세가율·주택멸실)이 전부
        data-core.js에 있어 부팅 때 이미 와 있다. 기본 활성 모드(시황)의
        섹션이라 체인 뒤에 세우면 사용자에게 이유 없이 빈 채로 보인다. */
-    renderClockSec();renderBubbleSec();initSubs();
+    renderClockSec();renderBubbleSec();initSubs();renderReleaseInfo();
     loadFullData()
       .then(()=>{ if(typeof renderWeekSec==='function')renderWeekSec();
                   if(typeof renderMonthSec==='function')renderMonthSec(); })
@@ -1696,7 +1696,34 @@ function areaGrad(color,topHex){
 }
 function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); return GCH[id]=new Chart(document.getElementById(id),cfg); }
 // 가로 스크롤 추이 차트의 y축을 왼쪽에 고정 복제 (스크롤해도 항상 보이게)
-const TRP={week:1,month:1};   /* 기본: 주간 1년 · 월간 3년 */
+const TRP={week:1,month:1};
+/* 발표 일정 안내: 부동산원 주간=매주 목요일, 월간=매월 15일(전월분). 낮 12시 공표.
+   다음 발표일까지 계산해 보여준다 — 유저가 '언제 새로 나오나'를 알 수 있게. */
+function _nextThu(now){
+  const d=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  let add=(4-d.getDay()+7)%7;                 // 목=4
+  if(add===0&&now.getHours()>=12)add=7;       // 오늘 목요일 정오 지나면 다음 주
+  d.setDate(d.getDate()+add); return d;
+}
+function _next15(now){
+  let y=now.getFullYear(),m=now.getMonth();
+  const past=now.getDate()>15||(now.getDate()===15&&now.getHours()>=12);
+  if(past){m++; if(m>11){m=0;y++;}}
+  const d=new Date(y,m,15);
+  while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);  // 주말이면 다음 영업일(공휴일은 근사)
+  return d;
+}
+function _fmtRel(d){
+  const wd=['일','월','화','수','목','금','토'][d.getDay()];
+  return (d.getMonth()+1)+'월 '+d.getDate()+'일('+wd+')';
+}
+function renderReleaseInfo(){
+  const now=new Date();
+  const w=document.getElementById('rel-week');
+  if(w)w.textContent='한국부동산원 · 매주 목요일 발표 · 다음 '+_fmtRel(_nextThu(now));
+  const m=document.getElementById('rel-month');
+  if(m)m.textContent='한국부동산원 · 매월 15일 발표 · 다음 '+_fmtRel(_next15(now));
+}   /* 기본: 주간 1년 · 월간 3년 */
 function renderTrPeriods(k){
   const T=TREND[k], el=document.getElementById(k+'-period'); if(!el||!T.periods)return;
   const W=trendData(k), have=W&&W.rows?W.rows.length:0;
