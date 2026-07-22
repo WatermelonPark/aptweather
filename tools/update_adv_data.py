@@ -34,6 +34,8 @@ RONE_KEY = os.environ.get('RONE_API_KEY', '')       # 부동산원 R-ONE (주간
 # R-ONE 주간 아파트 가격지수 (발표 당일 반영). 지수 → 전주비 변동률 계산.
 RONE_API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
 RONE_TBL = {'maega': 'T244183132827305', 'jeonse': 'T247713133046872'}
+# 월간 아파트 매매/전세 가격지수 (R-ONE, KOSIS보다 한 달 빠름). 시작 2003.
+RONE_MONTHLY_TBL = {'maega': 'A_2024_00045', 'jeonse': 'A_2024_00050'}
 # 한국부동산원 주택공급정보 입주예정물량정보 (data.go.kr/data/15111714) — 반기 갱신, 30세대 이상 단지별
 OCC_API = 'https://api.odcloud.kr/api/15111714/v1/uddi:0b257760-ac19-4841-adb4-b38b4d153397'
 # 청약홈 APT 분양정보 — 입주예정월이 2031년까지 있어 odcloud(2027-12까지)보다 멀리 본다.
@@ -301,8 +303,8 @@ def _gu_regions(*maps):
 # ---- R-ONE 주간 속보 (시도 18 + 서울 25구) --------------------------------
 # KOSIS는 발표 후 4~7일 지연되므로, 주간은 부동산원 R-ONE에서 직접 받는다.
 # 시군구 상세(sgg)는 지역코드 재매핑 부담이 커서 KOSIS 유지(수일 뒤 자동 보충).
-def _rone_recent_rows(tbl, need_rows):
-    base = {'KEY': RONE_KEY, 'Type': 'json', 'pSize': 1000, 'STATBL_ID': tbl, 'DTACYCLE_CD': 'WK'}
+def _rone_recent_rows(tbl, need_rows, cycle='WK'):
+    base = {'KEY': RONE_KEY, 'Type': 'json', 'pSize': 1000, 'STATBL_ID': tbl, 'DTACYCLE_CD': cycle}
     d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=1, pSize=1)))
     k = list(d.keys())[0]
     total = d[k][0]['head'][0]['list_total_count']
@@ -603,7 +605,71 @@ def _idx_to_chg(ma, je, regions):
     return rows
 
 
+def fetch_monthly_rone():
+    """월간 시도·서울구 변동률을 R-ONE에서. 시군구는 fetch_monthly가 KOSIS로 채운다."""
+    months = CONF['monthly'].get('months_hist', CONF['monthly']['months'])
+    need = (months + 2) * 260        # 월당 계층 지역 ~234
+    by = {}
+    for key, tbl in RONE_MONTHLY_TBL.items():
+        m = {}
+        for r in _rone_recent_rows(tbl, need, cycle='MM'):
+            full = (r.get('CLS_FULLNM') or '').strip()
+            tid = (r.get('WRTTIME_IDTFR_ID') or '').strip()   # '202606'
+            try: v = float(r['DTA_VAL'])
+            except (TypeError, ValueError, KeyError): continue
+            if len(tid) == 6 and tid.isdigit():
+                m.setdefault(tid[:4] + '-' + tid[4:6], {})[full] = v
+        by[key] = m
+        time.sleep(0.2)
+    dates = sorted(set(by['maega']) & set(by['jeonse']))[-(months + 1):]
+    if len(dates) < 2:
+        raise RuntimeError('R-ONE 월간 데이터 부족')
+
+    def sido(mon, name):   # 월간은 광주/전남이 단독. '지방'만 '지방권'으로.
+        return mon.get({'지방': '지방권'}.get(name, name))
+
+    def seoul_gu(mon):
+        out = {}
+        for full, v in mon.items():
+            if full.startswith('서울>') and full.endswith('구'):
+                out[full.rsplit('>', 1)[-1]] = v
+        return out
+
+    def chg(a, b):
+        return None if (a in (None, 0) or b is None) else round((b / a - 1) * 100, 4)
+
+    rows, se_rows = [], []
+    gus = sorted(seoul_gu(by['maega'][dates[-1]]))
+    for prev, cur in zip(dates, dates[1:]):
+        rows.append({'p': cur,
+                     'ma': [chg(sido(by['maega'][prev], r), sido(by['maega'][cur], r)) for r in WEEKLY_REGIONS],
+                     'je': [chg(sido(by['jeonse'][prev], r), sido(by['jeonse'][cur], r)) for r in WEEKLY_REGIONS]})
+        ma_p, ma_c = seoul_gu(by['maega'][prev]), seoul_gu(by['maega'][cur])
+        je_p, je_c = seoul_gu(by['jeonse'][prev]), seoul_gu(by['jeonse'][cur])
+        se_rows.append({'p': cur,
+                        'ma': [chg(ma_p.get(g), ma_c.get(g)) for g in gus],
+                        'je': [chg(je_p.get(g), je_c.get(g)) for g in gus]})
+    return {'regions': WEEKLY_REGIONS, 'rows': rows,
+            'seoul': {'regions': gus, 'rows': se_rows[-CONF['monthly']['months']:]},
+            'note': '월간 아파트 매매·전세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
+
+
 def fetch_monthly():
+    kosis = _fetch_monthly_kosis()
+    if not RONE_KEY:
+        return kosis
+    try:
+        rone = fetch_monthly_rone()
+        k_last = kosis['rows'][-1]['p'] if kosis.get('rows') else ''
+        if rone['rows'] and rone['rows'][-1]['p'] >= k_last:
+            rone['sgg'] = kosis.get('sgg')      # 시군구 상세는 KOSIS
+            return rone
+    except Exception as e:
+        print('rone monthly skip:', e)
+    return kosis
+
+
+def _fetch_monthly_kosis():
     m = CONF['monthly']
     ma, ma_se, ma_sg = _fetch_monthly_one(m['maega'], m.get('months_hist', m['months']))
     time.sleep(0.2)
