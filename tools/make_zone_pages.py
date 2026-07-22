@@ -660,8 +660,9 @@ section{padding:26px 0;border-bottom:1px solid var(--line)}
 h2{font-size:18px;color:var(--ink);margin-bottom:6px}
 p{font-size:14.5px;margin:8px 0}
 table{width:100%%;border-collapse:collapse;font-size:14.5px;margin-top:12px}
-th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
-th{font-size:12px;letter-spacing:.04em;color:var(--muted);white-space:nowrap}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line)}
+td{text-align:left}
+th{font-size:12px;letter-spacing:.04em;color:var(--muted);white-space:nowrap;text-align:center}
 td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.rk{color:var(--muted);width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
 a.z{color:var(--ink);text-decoration:none;font-weight:600}
