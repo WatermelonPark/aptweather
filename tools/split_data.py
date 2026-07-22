@@ -33,7 +33,7 @@ TREND = os.path.join(ROOT, 'data-trend.json')
 CORE_STATS = ['전세가율', '주택멸실']
 
 # 홈이 통째로 쓰는 ADV 키
-CORE_ADV = ['livezone', 'occupancy', 'permits', 'bubble']
+CORE_ADV = ['livezone', 'occupancy', 'permits', 'bubble', 'holidays']
 
 
 def main():
