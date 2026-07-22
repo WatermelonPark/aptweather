@@ -85,9 +85,8 @@ if errorlevel 1 (
   exit /b 12
 )
 
-rem data.js에서 홈 전용 조각(data-core.js)과 나머지(data-rest.json)를 다시 만든다.
-rem 이 단계를 빠뜨리면 홈만 지난주 데이터를 계속 보여준다 — data.js는 갱신됐는데
-rem 홈이 읽는 건 data-core.js이기 때문이다.
+rem split data.js -> data-core.js / data-trend.json / data-rest.json.
+rem home reads data-core.js, so skipping this step leaves home stale.
 python tools\split_data.py
 if errorlevel 1 (
   echo ERROR: split_data failed - newsletter skipped
