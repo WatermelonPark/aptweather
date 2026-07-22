@@ -50,9 +50,8 @@ p{font-size:15px;color:var(--ink2);margin-bottom:11px}
 .card span{font-size:13.5px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:0;overflow:hidden}
 th,td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left}
+td:first-child{text-align:left}
 thead th{background:#edf0ee;font-size:12.5px;color:var(--muted);text-align:center}
-  thead th:first-child{text-align:left}
 tbody tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;font-weight:600}
 .subsbox{background:#fff;border:1.5px solid var(--line);border-radius:0;padding:16px 18px}
@@ -119,21 +118,22 @@ details.fold .dbody p{font-size:14px}
 .ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
 .utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
 .utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
-.utable thead th.on.asc::after{content:' 91'}
-.utable thead th.on.desc::after{content:' 93'}
-.utable th:nth-child(1){width:21%;text-align:left}
-.utable th:nth-child(2){text-align:left}
-.utable th:nth-child(3){width:17%}
-.utable th:nth-child(4){width:20%}
+.utable thead th::after{content:' ⇅';color:#aeb9b5;font-size:11px}
+.utable thead th.on.asc::after{content:' ↑';color:var(--ink)}
+.utable thead th.on.desc::after{content:' ↓';color:var(--ink)}
+.utable th:nth-child(1){width:20%}
+.utable th:nth-child(3){width:15%}
+.utable th:nth-child(4){width:23%}
 .utable td{padding:8px 10px}
 .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable td:nth-child(1),.utable td:nth-child(3),.utable td:nth-child(4){white-space:nowrap}
 .utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:560px){
  .utable{display:table;font-size:12.5px}
  .utable thead{display:table-header-group}
  .utable tbody{display:table-row-group}
  .utable tr{display:table-row;border:0;padding:0}
- .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 6px}
  .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
  .utable tbody tr:last-child td{border-bottom:0}
 }</style>
@@ -160,7 +160,6 @@ details.fold .dbody p{font-size:14px}
     <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
     <tbody><tr><td>의정부시</td><td class="uname" title="의정부역 파밀리에 Ⅱ">의정부역 파밀리에 Ⅱ</td><td class="num">150</td><td class="num">2026.10</td></tr><tr><td>의정부시</td><td class="uname" title="호원동 57-3 LH신혼부부아파트(LH매입약정 임대주택)">호원동 57-3 LH신혼부부아파트(LH매입약정 임대주택)</td><td class="num">81</td><td class="num">2027.04</td></tr><tr><td>의정부시</td><td class="uname" title="더샵 의정부역 링크시티">더샵 의정부역 링크시티</td><td class="num">1,401</td><td class="num">2027.10</td></tr><tr><td>의정부시</td><td class="uname" title="의정부 롯데캐슬 나리벡시티">의정부 롯데캐슬 나리벡시티</td><td class="num">671</td><td class="num">2027.11</td></tr><tr><td>의정부시</td><td class="uname" title="의정부 푸르지오 클라시엘">의정부 푸르지오 클라시엘</td><td class="num">656</td><td class="num">2027.12</td></tr></tbody>
   </table></div>
-  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
 </div></section>
 
 <section><div class="wrap">

@@ -50,9 +50,8 @@ p{font-size:15px;color:var(--ink2);margin-bottom:11px}
 .card span{font-size:13.5px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:0;overflow:hidden}
 th,td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left}
+td:first-child{text-align:left}
 thead th{background:#edf0ee;font-size:12.5px;color:var(--muted);text-align:center}
-  thead th:first-child{text-align:left}
 tbody tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;font-weight:600}
 .subsbox{background:#fff;border:1.5px solid var(--line);border-radius:0;padding:16px 18px}
@@ -119,21 +118,22 @@ details.fold .dbody p{font-size:14px}
 .ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
 .utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
 .utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
-.utable thead th.on.asc::after{content:' 91'}
-.utable thead th.on.desc::after{content:' 93'}
-.utable th:nth-child(1){width:21%;text-align:left}
-.utable th:nth-child(2){text-align:left}
-.utable th:nth-child(3){width:17%}
-.utable th:nth-child(4){width:20%}
+.utable thead th::after{content:' ⇅';color:#aeb9b5;font-size:11px}
+.utable thead th.on.asc::after{content:' ↑';color:var(--ink)}
+.utable thead th.on.desc::after{content:' ↓';color:var(--ink)}
+.utable th:nth-child(1){width:20%}
+.utable th:nth-child(3){width:15%}
+.utable th:nth-child(4){width:23%}
 .utable td{padding:8px 10px}
 .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
+.utable td:nth-child(1),.utable td:nth-child(3),.utable td:nth-child(4){white-space:nowrap}
 .utable .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:560px){
  .utable{display:table;font-size:12.5px}
  .utable thead{display:table-header-group}
  .utable tbody{display:table-row-group}
  .utable tr{display:table-row;border:0;padding:0}
- .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 8px}
+ .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 6px}
  .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
  .utable tbody tr:last-child td{border-bottom:0}
 }</style>
@@ -160,7 +160,6 @@ details.fold .dbody p{font-size:14px}
     <thead><tr><th>지역</th><th>단지명</th><th data-num>세대수</th><th class="on asc">입주예정</th></tr></thead>
     <tbody><tr><td>서구</td><td class="uname" title="관저 푸르지오 센트럴파크 2단지">관저 푸르지오 센트럴파크 2단지</td><td class="num">330</td><td class="num">2026.11</td></tr><tr><td>서구</td><td class="uname" title="관저 푸르지오 센트럴파크 1단지">관저 푸르지오 센트럴파크 1단지</td><td class="num">330</td><td class="num">2026.11</td></tr><tr><td>중구</td><td class="uname" title="e편한세상 서대전역 센트로">e편한세상 서대전역 센트로</td><td class="num">749</td><td class="num">2026.12</td></tr><tr><td>동구</td><td class="uname" title="가양동 다우갤러리 휴리움">가양동 다우갤러리 휴리움</td><td class="num">224</td><td class="num">2027.01</td></tr><tr><td>중구</td><td class="uname" title="힐스테이트 선화 더와이즈">힐스테이트 선화 더와이즈</td><td class="num">851</td><td class="num">2027.02</td></tr><tr><td>서구</td><td class="uname" title="도마 포레나해모로">도마 포레나해모로</td><td class="num">818</td><td class="num">2027.03</td></tr><tr><td>대덕구</td><td class="uname" title="대전대덕한양수자인">대전대덕한양수자인</td><td class="num">264</td><td class="num">2027.03</td></tr><tr><td>계룡시</td><td class="uname" title="계룡 펠리피아">계룡 펠리피아</td><td class="num">823</td><td class="num">2027.05</td></tr><tr><td>대덕구</td><td class="uname" title="쌍용 더 플래티넘 네이처">쌍용 더 플래티넘 네이처</td><td class="num">745</td><td class="num">2027.05</td></tr><tr><td>대덕구</td><td class="uname" title="송촌동 560-1,7 도시형생활주택">송촌동 560-1,7 도시형생활주택</td><td class="num">41</td><td class="num">2027.05</td></tr><tr><td>서구</td><td class="uname" title="힐스테이트 가장더퍼스트">힐스테이트 가장더퍼스트</td><td class="num">1,779</td><td class="num">2027.06</td></tr><tr><td>동구</td><td class="uname" title="대전 성남 우미린 뉴시티">대전 성남 우미린 뉴시티</td><td class="num">1,213</td><td class="num">2027.06</td></tr><tr><td>중구</td><td class="uname" title="문화자이SKVIEW">문화자이SKVIEW</td><td class="num">1,746</td><td class="num">2027.08</td></tr><tr><td>유성구</td><td class="uname" title="힐스테이트 도안리버파크 1단지">힐스테이트 도안리버파크 1단지</td><td class="num">1,124</td><td class="num">2027.08</td></tr><tr><td>유성구</td><td class="uname" title="힐스테이트 도안리버파크 5단지">힐스테이트 도안리버파크 5단지</td><td class="num">443</td><td class="num">2027.08</td></tr><tr><td>유성구</td><td class="uname" title="힐스테이트 도안리버파크 2단지">힐스테이트 도안리버파크 2단지</td><td class="num">1,437</td><td class="num">2027.09</td></tr><tr><td>중구</td><td class="uname" title="대전 르에브 스위첸 2단지">대전 르에브 스위첸 2단지</td><td class="num">838</td><td class="num">2027.09</td></tr><tr><td>유성구</td><td class="uname" title="도안 푸르지오 디아델 29블록">도안 푸르지오 디아델 29블록</td><td class="num">772</td><td class="num">2027.09</td></tr><tr><td>유성구</td><td class="uname" title="도안 푸르지오 디아델 31블록">도안 푸르지오 디아델 31블록</td><td class="num">742</td><td class="num">2027.09</td></tr><tr><td>중구</td><td class="uname" title="대전 르에브 스위첸 1단지">대전 르에브 스위첸 1단지</td><td class="num">440</td><td class="num">2027.09</td></tr><tr><td>서구</td><td class="uname" title="둔산 엘리프 더센트럴">둔산 엘리프 더센트럴</td><td class="num">864</td><td class="num">2027.10</td></tr><tr><td>동구</td><td class="uname" title="대전 롯데캐슬 더퍼스트">대전 롯데캐슬 더퍼스트</td><td class="num">952</td><td class="num">2027.11</td></tr><tr><td>중구</td><td class="uname" title="대전 문화공원 수자인">대전 문화공원 수자인</td><td class="num">509</td><td class="num">2027.11</td></tr><tr><td>유성구</td><td class="uname" title="힐스테이트 도안리버파크 3단지">힐스테이트 도안리버파크 3단지</td><td class="num">1,639</td><td class="num">2027.12</td></tr></tbody>
   </table></div>
-  <p class="note" style="margin-top:8px">열 제목을 누르면 정렬됩니다.</p>
 </div></section>
 
 <section><div class="wrap">
