@@ -1699,19 +1699,30 @@ function mkChart(id,cfg){ if(GCH[id])GCH[id].destroy(); return GCH[id]=new Chart
 const TRP={week:1,month:1};
 /* 발표 일정 안내: 부동산원 주간=매주 목요일, 월간=매월 15일(전월분). 낮 12시 공표.
    다음 발표일까지 계산해 보여준다 — 유저가 '언제 새로 나오나'를 알 수 있게. */
+/* 2026 법정공휴일(대체공휴일 포함). 발표일이 휴일이면 다음 영업일로 민다.
+   매년 갱신 필요 — 자동화하려면 공공데이터 특일정보 API 활용신청 후 배치에서 주입.
+   목요일에 걸리는 공휴일: 추석 09-24. 15일에 걸리는 것: 광복절 08-15(토). */
+const _HOLIDAYS=new Set(['2026-01-01','2026-02-16','2026-02-17','2026-02-18',
+  '2026-03-01','2026-03-02','2026-05-05','2026-05-25','2026-06-06','2026-08-15',
+  '2026-08-17','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-05',
+  '2026-10-09','2026-12-25']);
+function _iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function _bizDay(d){   // 주말·공휴일이면 다음 영업일까지 민다
+  while(d.getDay()===0||d.getDay()===6||_HOLIDAYS.has(_iso(d)))d.setDate(d.getDate()+1);
+  return d;
+}
 function _nextThu(now){
   const d=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   let add=(4-d.getDay()+7)%7;                 // 목=4
   if(add===0&&now.getHours()>=12)add=7;       // 오늘 목요일 정오 지나면 다음 주
-  d.setDate(d.getDate()+add); return d;
+  d.setDate(d.getDate()+add);
+  return _bizDay(d);                          // 목요일이 공휴일이면 다음 영업일
 }
 function _next15(now){
   let y=now.getFullYear(),m=now.getMonth();
   const past=now.getDate()>15||(now.getDate()===15&&now.getHours()>=12);
   if(past){m++; if(m>11){m=0;y++;}}
-  const d=new Date(y,m,15);
-  while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);  // 주말이면 다음 영업일(공휴일은 근사)
-  return d;
+  return _bizDay(new Date(y,m,15));
 }
 function _fmtRel(d){
   const wd=['일','월','화','수','목','금','토'][d.getDay()];
