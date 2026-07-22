@@ -1702,7 +1702,9 @@ const TRP={week:1,month:1};
 /* 2026 법정공휴일(대체공휴일 포함). 발표일이 휴일이면 다음 영업일로 민다.
    매년 갱신 필요 — 자동화하려면 공공데이터 특일정보 API 활용신청 후 배치에서 주입.
    목요일에 걸리는 공휴일: 추석 09-24. 15일에 걸리는 것: 광복절 08-15(토). */
-const _HOLIDAYS=new Set(['2026-01-01','2026-02-16','2026-02-17','2026-02-18',
+/* 배치가 특일정보 API로 채운 ADV.holidays가 있으면 그걸, 없으면 이 하드코딩으로.
+   const가 아니라 let인 이유는 데이터 도착 시 갈아끼우기 위함이다. */
+let _HOLIDAYS=new Set(['2026-01-01','2026-02-16','2026-02-17','2026-02-18',
   '2026-03-01','2026-03-02','2026-05-05','2026-05-25','2026-06-06','2026-08-15',
   '2026-08-17','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-05',
   '2026-10-09','2026-12-25']);
@@ -1729,6 +1731,7 @@ function _fmtRel(d){
   return (d.getMonth()+1)+'월 '+d.getDate()+'일('+wd+')';
 }
 function renderReleaseInfo(){
+  if(typeof ADV!=="undefined"&&Array.isArray(ADV.holidays)&&ADV.holidays.length)_HOLIDAYS=new Set(ADV.holidays);
   const now=new Date();
   const w=document.getElementById('rel-week');
   if(w)w.textContent='한국부동산원 · 매주 목요일 발표 · 다음 '+_fmtRel(_nextThu(now));

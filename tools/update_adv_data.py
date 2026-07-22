@@ -33,6 +33,8 @@ DATAGO_KEY = os.environ.get('DATA_GO_KR_KEY', '')   # 공공데이터포털 (입
 RONE_KEY = os.environ.get('RONE_API_KEY', '')       # 부동산원 R-ONE (주간 속보용 — KOSIS보다 4~7일 빠름)
 # R-ONE 주간 아파트 가격지수 (발표 당일 반영). 지수 → 전주비 변동률 계산.
 RONE_API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
+# 공공데이터 특일정보 — 법정공휴일. 발표일 휴일 보정에 쓴다(프론트 _bizDay).
+HOLIDAY_API = 'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo'
 RONE_TBL = {'maega': 'T244183132827305', 'jeonse': 'T247713133046872'}
 # 월간 아파트 매매/전세 가격지수 (R-ONE, KOSIS보다 한 달 빠름). 시작 2003.
 RONE_MONTHLY_TBL = {'maega': 'A_2024_00045', 'jeonse': 'A_2024_00050'}
@@ -605,6 +607,32 @@ def _idx_to_chg(ma, je, regions):
     return rows
 
 
+def fetch_holidays():
+    """올해+내년 법정공휴일 ['YYYY-MM-DD']. 연말 경계까지 다음 발표일을 계산하려면
+    두 해가 필요하다. DATAGO 키가 없거나 실패하면 None(프론트가 하드코딩 폴백)."""
+    import datetime
+    if not DATAGO_KEY:
+        return None
+    yr = datetime.date.today().year
+    out = []
+    for y in (yr, yr + 1):
+        try:
+            url = HOLIDAY_API + '?' + urllib.parse.urlencode(
+                {'serviceKey': DATAGO_KEY, 'solYear': y, 'numOfRows': 50, '_type': 'json'})
+            d = http_json(url)
+            items = (d.get('response', {}).get('body', {}) or {}).get('items') or {}
+            it = items.get('item', []) if items else []
+            if isinstance(it, dict):
+                it = [it]
+            for x in it:
+                v = str(x.get('locdate', ''))
+                if len(v) == 8 and v.isdigit():
+                    out.append('%s-%s-%s' % (v[:4], v[4:6], v[6:8]))
+        except Exception as e:
+            print('holidays %d skip: %s' % (y, e))
+    return sorted(set(out)) or None
+
+
 def fetch_monthly_rone():
     """월간 시도·서울구 변동률을 R-ONE에서. 시군구는 fetch_monthly가 KOSIS로 채운다."""
     months = CONF['monthly'].get('months_hist', CONF['monthly']['months'])
@@ -1174,6 +1202,12 @@ def main():
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
         failed.append('permits'); print('permits skip:', e)
+    try:
+        h = fetch_holidays()
+        if h:
+            adv['holidays'] = h
+    except Exception as e:
+        failed.append('holidays'); print('holidays skip:', e)
     try:
         before = json.dumps(adv['occupancy']['rows'], sort_keys=True)
         occ_ch = update_occupancy(adv)
