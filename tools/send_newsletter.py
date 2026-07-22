@@ -21,6 +21,12 @@ CHANGED = os.path.join(ROOT, '.stats_changed')
 # 이미 발송한 기간을 기록하는 원장. 갱신 판정(update_adv_data)이 뚫리더라도
 # 같은 기간을 두 번 보내지 않게 막는 마지막 방어선이다.
 LEDGER = os.path.join(ROOT, '.last_sent')
+# 발송 트리거를 보존하는 대기열. 발송 성공·이미발송일 때만 지운다.
+# .stats_changed(매 실행 덮어씀)와 달리 실패해도 다음 실행까지 살아남는다.
+PENDING = os.path.join(ROOT, '.pending_send')
+
+def _has_trigger(c):
+    return any(k in c for k in ('weekly', 'monthly', 'permits', 'occupancy', '금리'))
 API = 'https://api.buttondown.com/v1/emails'
 KEY = os.environ.get('BUTTONDOWN_API_KEY', '')
 SITE = 'https://www.agongmap.co.kr'
@@ -175,27 +181,48 @@ def periods_of(changed):
     return out
 
 
+def _clear_pending():
+    try:
+        os.remove(PENDING)
+        print('pending cleared')
+    except OSError:
+        pass
+
+
 def main():
     preview = '--preview' in sys.argv
     if preview:
         args = [a for a in sys.argv[1:] if a != '--preview']
         changed = args[0] if args else 'weekly,monthly'
     else:
-        if not KEY:
-            print('skip: BUTTONDOWN_API_KEY 없음')
-            return
         try:
             changed = io.open(CHANGED, encoding='utf-8').read()
         except IOError:
             changed = ''
-        if not any(k in changed for k in ('weekly', 'monthly', 'permits', 'occupancy', '금리')):
+        # 이번 실행에 발송 트리거가 없으면, 지난 실패분(.pending_send)을 되살려 재시도한다.
+        if not _has_trigger(changed):
+            try:
+                pending = io.open(PENDING, encoding='utf-8').read()
+            except IOError:
+                pending = ''
+            if _has_trigger(pending):
+                changed = pending
+                print('retry: 이전 발송 실패분 재시도(.pending_send)')
+        if not _has_trigger(changed):
             print('skip: 이번 실행에서 통계 갱신 없음')
+            return
+        if not KEY:
+            # 키가 없어도 트리거는 보존한다 — 예전엔 여기서 그냥 끝나 유실됐다.
+            io.open(PENDING, 'w', encoding='utf-8', newline='\n').write(changed)
+            print('skip: BUTTONDOWN_API_KEY 없음 — 발송 보류(.pending_send)')
             return
     periods = periods_of(changed) if not preview else {}
     ledger = read_ledger()
     if periods and all(ledger.get(k) == v for k, v in periods.items()):
         print('skip: 이미 발송한 기간 (%s) — 중복 발송 방지'
               % ', '.join('%s=%s' % kv for kv in sorted(periods.items())))
+        if not preview:
+            _clear_pending()
         return
     subject, body = build_body(changed)
     if preview:
@@ -215,9 +242,11 @@ def main():
             print('sent:', r.status)
     except urllib.error.HTTPError as e:
         print('send failed: HTTP %s — %s' % (e.code, e.read().decode('utf-8', 'replace')[:300]))
+        io.open(PENDING, 'w', encoding='utf-8', newline='\n').write(changed)
         sys.exit(1)
     except Exception as e:
         print('send failed: %s: %s' % (type(e).__name__, e))
+        io.open(PENDING, 'w', encoding='utf-8', newline='\n').write(changed)
         sys.exit(1)
     # 발송이 실제로 성공한 뒤에만 원장을 갱신한다.
     if periods:
@@ -225,6 +254,7 @@ def main():
         io.open(LEDGER, 'w', encoding='utf-8', newline='\n').write(
             json.dumps(ledger, ensure_ascii=False, sort_keys=True, indent=1))
         print('ledger:', ', '.join('%s=%s' % kv for kv in sorted(periods.items())))
+    _clear_pending()
 
 
 if __name__ == '__main__':
