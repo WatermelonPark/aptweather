@@ -103,6 +103,14 @@ BASIC_CONF = {
 BASIC_REGMAP = {'지방소계': '지방', '총계': '전국', '수도권소계': '수도권'}   # KOSIS 지역명 → STATS 지역명
 BASIC_MONTHS = 8                      # 최근 8개월 조회(잠정치 소급 정정 커버)
 
+# 시세(주간·월간)는 3년 히스토리를 매번 전량 재조회하면 R-ONE 페이징이 수십 회라
+# 배치가 느리다(클라우드 40분의 83%). 과거 주/월은 소급수정 외엔 안 바뀌고 저장돼
+# 있으며 main()의 병합이 저장분을 보존하므로, 실제 fetch는 최근 구간만 받는다.
+# 서울 구별 상세(12주/12월)와 병합 겹침을 덮을 여유를 둔다 — 이 값을 넘겨 미조회된
+# 과거가 필요하면 저장분이 이미 그 깊이를 갖고 있어 그래프는 온전하다.
+RECENT_WEEKS = 20     # 주간 fetch 깊이 (서울 12주 + 여유). 3년(156주)은 병합이 보존.
+RECENT_MONTHS = 14    # 월간 fetch 깊이 (서울 12월 + 여유). 10년(120월)은 병합이 보존.
+
 REG15 = ['수도권','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주']
 
 
@@ -322,7 +330,7 @@ def _rone_recent_rows(tbl, need_rows, cycle='WK'):
 
 
 def fetch_weekly_rone():
-    weeks = CONF['weekly'].get('weeks_hist', CONF['weekly']['weeks'])
+    weeks = RECENT_WEEKS            # 최근 구간만 — 3년 히스토리는 main() 병합이 보존
     need = (weeks + 2) * 240        # 주당 ~236행
     by = {}   # {'maega'|'jeonse': {date: {FULLNM: idx}}}
     for key, tbl in RONE_TBL.items():
@@ -392,7 +400,9 @@ def _fetch_weekly_kosis():
     실패하면 그 주 통계가 통으로 멈추므로, 실패는 기간을 줄여 흡수한다.
     """
     w = CONF['weekly']
-    hist = w.get('weeks_hist', w['weeks'])
+    # R-ONE 성공 시 이 rows는 버려지고 sgg만 쓰인다. 폴백일 때도 national 히스토리는
+    # main() 병합이 저장분에서 보존하므로 최근 구간만 받으면 된다(전 156주 재조회 불요).
+    hist = RECENT_WEEKS
     try:
         return _weekly_kosis_at(hist)
     except Exception as e:
@@ -635,7 +645,7 @@ def fetch_holidays():
 
 def fetch_monthly_rone():
     """월간 시도·서울구 변동률을 R-ONE에서. 시군구는 fetch_monthly가 KOSIS로 채운다."""
-    months = CONF['monthly'].get('months_hist', CONF['monthly']['months'])
+    months = RECENT_MONTHS           # 최근 구간만 — 10년 히스토리는 main() 병합이 보존
     need = (months + 2) * 260        # 월당 계층 지역 ~234
     by = {}
     for key, tbl in RONE_MONTHLY_TBL.items():
@@ -699,10 +709,12 @@ def fetch_monthly():
 
 def _fetch_monthly_kosis():
     m = CONF['monthly']
-    ma, ma_se, ma_sg = _fetch_monthly_one(m['maega'], m.get('months_hist', m['months']))
+    # 최근 구간만 — national 히스토리(120월)는 main() 병합이 저장분에서 보존
+    depth = RECENT_MONTHS
+    ma, ma_se, ma_sg = _fetch_monthly_one(m['maega'], depth)
     time.sleep(0.2)
-    je, je_se, je_sg = _fetch_monthly_one(m['jeonse'], m.get('months_hist', m['months']))
-    rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-m.get('months_hist', m['months']):]
+    je, je_se, je_sg = _fetch_monthly_one(m['jeonse'], depth)
+    rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-depth:]
     gus = _gu_regions(ma_se, je_se)
     se_rows = _idx_to_chg(ma_se, je_se, gus)[-m['months']:]
     sg_rows = _idx_to_chg(ma_sg, je_sg, SGG_CODES)[-m['months']:]
