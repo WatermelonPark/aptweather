@@ -1994,6 +1994,18 @@ function scTier(v){
   return v>=15000?['t4','공급 절벽','#a93226']:v>0?['t3','공급 부족','#c0392b']
        :v>=-3000?['t2','공급 충분','#3a7bd5']:['t1','공급 과잉','#1a5276'];
 }
+/* 러닝재고 순부족 — tools/make_zone_pages.py calc()/running_shortage()와 반드시 동치(미러). 정규화 금지. */
+function _qidx(q){var m=/^(\d{4})Q([1-4])$/.exec(q);return m?(+m[1])*4+(+m[2])-1:null;}
+function _qkey(i){return Math.floor(i/4)+'Q'+(i%4+1);}
+function _conf(k){return Math.max(0,1-((k-1)/4)*0.2);}
+var ANCHOR=2010*4;
+function runningShortage(done,sched,refq,curQ,horizon){
+  horizon=horizon||20; var I=0;
+  for(var i=ANCHOR;i<=curQ;i++){ I=Math.max(0, I+((done[_qkey(i)])||0)-refq); }
+  var fut=0;
+  for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; fut+=w*(refq-((sched[_qkey(curQ+k)])||0)); }
+  return fut-I;
+}
 /* 생활권별 누적 순부족(세대) — 적정물량 대비. + = 부족(상승압력), − = 과잉 */
 function scCalc(){
   const LZ=ADV.livezone,B=ADV.bubble,O=ADV.occupancy,P=ADV.permits,J=STATS['전세가율'],DM=STATS['주택멸실'];
@@ -2026,7 +2038,10 @@ function scCalc(){
     const dB=n4.length?(refq*n4.length-(n4.reduce((a,b)=>a+b,0)-dQ*n4.length))*share:0;
     let dC=0,pv=null; const pi=P.regions.indexOf(ps);
     if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}
-    const tot=0.55*dA+0.35*dC+0.10*dB;
+    const tot_fallback=0.55*dA+0.35*dC+0.10*dB;
+    const zdone=(P.done&&P.done[z.z])||{}, zsched=(P.sched&&P.sched[z.z])||{};
+    const invPath=!!(Object.keys(zdone).length||Object.keys(zsched).length);
+    const tot=invPath?runningShortage(zdone,zsched,refq,curQ):tot_fallback;
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
     if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}
