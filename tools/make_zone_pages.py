@@ -187,6 +187,77 @@ def signed(v):
     return s + ('{:,}'.format(int(round(a))))
 
 
+FAR_MONTHS = 36   # 준공예정이 이보다 더 먼 미래면 저신뢰(회색+"지연 가능")
+
+
+def render_units_2sec(units, today=None):
+    """permits.units[zone](또는 수도권처럼 소속 존 합산) → 2섹션 HTML.
+
+    "앞으로 들어올 물량"(sched: 단지명·세대·"YYYY.MM 예정", 연월 결측이면 "미정",
+    준공예정이 오늘로부터 FAR_MONTHS개월 넘게 남았으면 저신뢰 톤+"지연 가능")과
+    "최근 들어온 물량"(done: 단지명·세대·"YYYY.MM 준공")을 만든다.
+
+    units에 sched/done이 둘 다 없으면 빈 문자열을 반환 — 호출부가 이걸로
+    "이 존은 HUB 커버 안 됨"을 판단해 기존 odcloud 리스트로 폴백한다.
+    """
+    if today is None:
+        today = datetime.date.today()
+    units = units or {}
+    sched = list(units.get('sched') or [])
+    done = list(units.get('done') or [])
+    if not sched and not done:
+        return ''
+    esc = lambda s: str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    def months_out(ym):
+        try:
+            y, m = int(ym[:4]), int(ym[5:7])
+        except (TypeError, ValueError, IndexError):
+            return None
+        return (y - today.year) * 12 + (m - today.month)
+
+    def sched_row(u):
+        name, hh = u[0], u[1]
+        ym = u[2] if len(u) > 2 else None
+        mo = months_out(ym) if ym else None
+        far = mo is not None and mo > FAR_MONTHS
+        label = ('%s 예정' % ym.replace('-', '.')) if ym else '미정'
+        hint = ' <span class="hint">지연 가능</span>' if far else ''
+        cls = ' class="far"' if far else ''
+        return ('<tr%s><td class="uname" title="%s">%s</td><td class="num">%s</td>'
+                '<td class="num">%s%s</td></tr>' % (cls, esc(name), esc(name), num(hh), label, hint))
+
+    def done_row(u):
+        name, hh = u[0], u[1]
+        ym = u[2] if len(u) > 2 else None
+        label = ('%s 준공' % ym.replace('-', '.')) if ym else '준공일 미상'
+        return ('<tr><td class="uname" title="%s">%s</td><td class="num">%s</td>'
+                '<td class="num">%s</td></tr>' % (esc(name), esc(name), num(hh), label))
+
+    parts = []
+    if sched:
+        rows = ''.join(sched_row(u) for u in sched)
+        parts.append(
+            '<section><div class="wrap">\n'
+            '  <h2>앞으로 들어올 물량 <span class="ucnt">%d곳 · %s세대</span></h2>\n'
+            '  <div class="ulist"><table class="utable2">\n'
+            '    <thead><tr><th>단지명</th><th>세대수</th><th>준공예정</th></tr></thead>\n'
+            '    <tbody>%s</tbody>\n'
+            '  </table></div>\n'
+            '</div></section>\n' % (len(sched), num(sum(u[1] for u in sched)), rows))
+    if done:
+        rows = ''.join(done_row(u) for u in done)
+        parts.append(
+            '<section><div class="wrap">\n'
+            '  <h2>최근 들어온 물량 <span class="ucnt">%d곳 · %s세대</span></h2>\n'
+            '  <div class="ulist"><table class="utable2">\n'
+            '    <thead><tr><th>단지명</th><th>세대수</th><th>준공</th></tr></thead>\n'
+            '    <tbody>%s</tbody>\n'
+            '  </table></div>\n'
+            '</div></section>\n' % (len(done), num(sum(u[1] for u in done)), rows))
+    return ''.join(parts)
+
+
 CSS = """b,strong{font-weight:600}
   tr.rollup td{border-top:1.5px solid var(--ink);color:var(--muted)}
   tr.rollup .sub{font-size:11.5px;color:var(--muted)}
@@ -304,10 +375,24 @@ details.fold .dbody p{font-size:14px}
  .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 6px}
  .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
  .utable tbody tr:last-child td{border-bottom:0}
-}"""
+}
+.utable2{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable2 thead th{position:sticky;top:0;z-index:1;white-space:nowrap;background:#edf0ee;
+ font-size:12.5px;color:var(--muted);text-align:center;padding:8px 10px}
+.utable2 th:nth-child(1){width:46%}
+.utable2 th:nth-child(2){width:24%}
+.utable2 th:nth-child(3){width:30%}
+.utable2 td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.utable2 tbody tr:last-child td{border-bottom:0}
+.utable2 td:nth-child(1){text-align:left}
+.utable2 td:nth-child(2),.utable2 td:nth-child(3){text-align:right}
+.utable2 .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utable2 tr.far td{color:var(--muted)}
+.utable2 .hint{font-size:11px;color:#a93226}
+@media(max-width:560px){.utable2{font-size:12.5px}}"""
 
 
-def build_page(r, allrows, prd, today):
+def build_page(r, allrows, prd, today, punits=None):
     z = r['z']; nm = z['z']; ps = r['ps']
     tname, tcol = tier(r['tot'])
     lack = r['tot'] > 0
@@ -424,6 +509,23 @@ def build_page(r, allrows, prd, today):
             '</div></section>\n' % (len(ufut), num(sum(u[2] for u in ufut)), urows))
     else:
         unitsec = ''
+
+    # ── HUB 기반 2섹션(앞으로 들어올 물량/최근 들어온 물량) — 커버된 존만.
+    # permits.units에 이 존(또는 수도권처럼 소속 존 합산)이 없으면 render_units_2sec가
+    # 빈 문자열을 돌려주고, 그때는 위에서 이미 만든 옛 odcloud 리스트(unitsec)를 그대로 쓴다.
+    punits = punits or {}
+    zone_units = punits.get(nm) or {}
+    if subs and not (zone_units.get('sched') or zone_units.get('done')):
+        agg_sched, agg_done = [], []
+        for cc in subs:
+            uu = punits.get(cc['z']['z']) or {}
+            agg_sched += uu.get('sched') or []
+            agg_done += uu.get('done') or []
+        if agg_sched or agg_done:
+            zone_units = {'sched': agg_sched, 'done': agg_done}
+    unitsec2 = render_units_2sec(zone_units, _now)
+    if unitsec2:
+        unitsec = unitsec2
 
     rows_html = ''.join([
         '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
@@ -836,6 +938,7 @@ def update_sitemap(names, lastmods):
 def main():
     adv, sts = load()
     rows = calc(adv, sts)
+    punits = (adv.get('permits') or {}).get('units') or {}
     prd = adv['livezone'].get('prd', '')
     today = datetime.date.today().isoformat()
     outdir = os.path.join(ROOT, 'zone')
@@ -862,7 +965,7 @@ def main():
         nm = r['z']['z']
         d = os.path.join(outdir, nm)
         os.makedirs(d, exist_ok=True)
-        html, lm, ch = keep_dates(build_page(r, rows, prd, today), old_pages.get(nm, ''), today)
+        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits), old_pages.get(nm, ''), today)
         io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
         names.append(nm)
         lastmods[nm] = lm

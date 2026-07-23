@@ -133,10 +133,11 @@ def test_parse_items_empty_tag_becomes_empty_string():
 
 def test_aggregate_filters_apt_only_and_classifies_by_stage():
     items = F.parse_items(SAMPLE_XML)
-    done_q, sched_q = F._aggregate(items)
+    done_q, sched_q, units = F._aggregate(items)
     # 단독주택(PK-B)은 apt_records에서 제외되어야 함
     assert done_q == {'2024Q1': 832}
     assert sched_q == {}
+    assert units == [['오산자이', 832, '2024-03', 'done']]
 
 
 def test_aggregate_classifies_latest_stage_once():
@@ -147,9 +148,23 @@ def test_aggregate_classifies_latest_stage_once():
         {'mgmHsrgstPk':'C','purpsCdNm':'공동주택','totHhldCnt':'50','useInsptDay':'','useInsptSchedDay':'','stcnsDay':'','apprvDay':'20240101'},                              # 미정→어디에도 안 감
         {'mgmHsrgstPk':'A','purpsCdNm':'공동주택','totHhldCnt':'100','useInsptDay':'20240310','useInsptSchedDay':'','stcnsDay':'','apprvDay':''},                             # A 중복→dedupe
     ]
-    done, sched = F._aggregate(items)
+    done, sched, units = F._aggregate(items)
     assert done == {'2024Q1': 100}
     assert sched == {'2029Q4': 200}
+    # 세대 큰 순 정렬(B=200 sched 먼저) — bldNm 필드가 픽스처에 없어 빈 문자열
+    assert units == [['', 200, '2029-11', 'sched'], ['', 100, '2024-03', 'done']]
+
+
+def test_aggregate_caps_units_at_top_40_by_household():
+    items = []
+    for i in range(50):
+        items.append({'mgmHsrgstPk': 'K%d' % i, 'purpsCdNm': '공동주택',
+                       'totHhldCnt': str(100 + i), 'useInsptDay': '20240310',
+                       'useInsptSchedDay': '', 'bldNm': '단지%d' % i})
+    done_q, sched_q, units = F._aggregate(items)
+    assert len(units) == F.UNITS_CAP
+    assert units[0][1] == 149   # 세대 최댓값(100+49)이 먼저
+    assert all(units[i][1] >= units[i + 1][1] for i in range(len(units) - 1))
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +321,7 @@ def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_p
         # False를 반환해 run()이 아예 이 함수를 부르지 않아야 한다 — 호출되면 실패.
         if group['name'] == '창원시':
             raise AssertionError('never-scanned 그룹(창원시)에 fetch_group이 호출되면 안 됨')
-        return {'2024Q1': 5}, {}, ['4137011300'], False
+        return {'2024Q1': 5}, {}, [], ['4137011300'], False
 
     monkeypatch.setattr(F, 'fetch_group', fetch_group_stub)
 
@@ -353,7 +368,7 @@ def test_fetch_group_propagates_had_unresolved_error(monkeypatch):
         return [], False
 
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
-    done_q, sched_q, productive, had_unresolved_error = F.fetch_group(group)
+    done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
     assert had_unresolved_error is True
 
 
@@ -361,8 +376,18 @@ def test_fetch_group_no_error_when_all_bjdong_clean(monkeypatch):
     group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
              'bjdong': {'41370': ['11300']}, 'legacy': None}
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: ([], False))
-    done_q, sched_q, productive, had_unresolved_error = F.fetch_group(group)
+    done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
     assert had_unresolved_error is False
+
+
+def test_fetch_group_collects_units_across_bjdong(monkeypatch):
+    group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+             'bjdong': {'41370': ['11300']}, 'legacy': None}
+    items = [{'mgmHsrgstPk': 'X', 'purpsCdNm': '공동주택', 'totHhldCnt': '300',
+              'useInsptDay': '20240310', 'useInsptSchedDay': '', 'bldNm': '오산자이'}]
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: (items, False))
+    done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
+    assert units == [['오산자이', 300, '2024-03', 'done']]
 
 
 def _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub):
@@ -389,7 +414,7 @@ def test_run_does_not_clobber_prior_value_on_unresolved_error(tmp_path, monkeypa
               'productive_bjdong': ['4137011300']}
 
     def fetch_group_stub(group, only_bjdong=None):
-        return {}, {}, [], True   # 지속 장애: 재시도 소진, 결과 신뢰 불가
+        return {}, {}, [], [], True   # 지속 장애: 재시도 소진, 결과 신뢰 불가
 
     result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
     assert result['sgg']['41370']['done_q'] == {'2024Q1': 999}   # 이전 실측값 그대로 보존
@@ -407,7 +432,7 @@ def test_run_does_not_write_empty_placeholder_on_unresolved_error_without_prior_
               'sgg': {}, 'productive_bjdong': ['4812010100']}   # 48120은 캐시상 이미 스캔된 것으로 세팅(should_refresh=True 유도)
 
     def fetch_group_stub(group, only_bjdong=None):
-        return {}, {}, [], True
+        return {}, {}, [], [], True
 
     result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
     assert '48120' not in result['sgg']
@@ -424,10 +449,11 @@ def test_run_clean_scan_writes_result_and_marks_scanned(tmp_path, monkeypatch):
               'sgg': {}, 'productive_bjdong': ['4812010100']}
 
     def fetch_group_stub(group, only_bjdong=None):
-        return {'2024Q1': 3}, {}, ['4812010100'], False
+        return {'2024Q1': 3}, {}, [['창원자이', 300, '2024-03', 'done']], ['4812010100'], False
 
     result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
     assert result['sgg']['48120']['done_q'] == {'2024Q1': 3}
+    assert result['sgg']['48120']['units'] == [['창원자이', 300, '2024-03', 'done']]
     assert result['meta']['scanned'] == ['48120']
 
 
@@ -456,7 +482,7 @@ def test_full_resume_skips_already_scanned_groups(tmp_path, monkeypatch, capsys)
         called.append(group['name'])
         if group['name'] == '오산시':
             raise AssertionError('이미 scanned인 그룹(오산시)은 --full 재트리거에서 재호출되면 안 됨')
-        return {'2024Q1': 7}, {}, ['4812010100'], False
+        return {'2024Q1': 7}, {}, [], ['4812010100'], False
 
     result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
 
@@ -486,7 +512,7 @@ def test_full_resume_rescans_group_killed_mid_scan(tmp_path, monkeypatch):
 
     def fetch_group_stub(group, only_bjdong=None):
         called.append(group['name'])
-        return {'2024Q1': 9}, {}, ['4812010100'], False
+        return {'2024Q1': 9}, {}, [], ['4812010100'], False
 
     result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
 
@@ -509,7 +535,7 @@ def test_reseed_forces_rescan_of_already_scanned_groups(tmp_path, monkeypatch):
 
     def fetch_group_stub(group, only_bjdong=None):
         called.append(group['name'])
-        return {'2024Q1': 42}, {}, ['4137011300'], False
+        return {'2024Q1': 42}, {}, [], ['4137011300'], False
 
     result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub, reseed=True)
 
