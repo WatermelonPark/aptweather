@@ -7,8 +7,10 @@ name: 데이터 자동 갱신 (클라우드 冗長)
 # 띄워 오염 안 된 러너의 산출물만 커밋한다 — 3러너 동시 실패 확률 ≈0.2%.
 on:
   schedule:
-    - cron: '0 9 * * *'    # 매일 18:00 KST — 월간·KOSIS 항목 셀프힐
-    - cron: '30 4 * * 4'   # 목 13:30 KST — 주간 시세 발표(목 12시) 직후
+    # 주간 발표(목)가 정오보다 늦게 R-ONE에 반영되는 경우가 있어(2026-07-23 13시에도
+    # 미반영 확인) 목요일은 오후·저녁 2회로 잡는다. 놓쳐도 다음 일일 런이 흡수.
+    - cron: '0 11 * * *'   # 매일 20:00 KST — 월간·KOSIS 셀프힐 + 목 저녁 주간 반영
+    - cron: '0 7 * * 4'    # 목 16:00 KST — 주간 발표 반영 1차 시도
   workflow_dispatch: {}
   # (검증용 임시) 워크플로 파일이 바뀌면 실행 — 검증 후 이 블록 제거
   push:
@@ -94,8 +96,10 @@ jobs:
             data-core.js
             data-rest.json
             data-trend.json
+            .stats_changed
           retention-days: 1
           if-no-files-found: ignore
+          include-hidden-files: true   # .stats_changed(변경 내역, 뉴스레터용) 포함
 
   commit:
     needs: fetch
@@ -136,3 +140,28 @@ jobs:
             git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
             echo "push 재시도 $i"; sleep 5
           done
+
+      - name: 뉴스레터 발송 (데이터 갱신 시 · 중복방지 원장)
+        env:
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+        run: |
+          if [ -z "$BUTTONDOWN_API_KEY" ]; then
+            echo "BUTTONDOWN 시크릿 없음 — 발송 스킵(데이터만 갱신됨)"; exit 0
+          fi
+          # 변경 내역(.stats_changed)을 clean 산출물에서 가져온다. 없으면 빈 파일 →
+          # send_newsletter가 트리거 없음으로 스킵(단, .pending_send 재시도분은 살림).
+          SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
+          if [ -n "$SRC" ] && [ -f "$SRC/.stats_changed" ]; then cp "$SRC/.stats_changed" .; fi
+          git config user.name  "stats-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # send_newsletter는 .last_sent 원장으로 같은 기간 중복발송을 막는다(체크아웃본=최신 원장).
+          python tools/send_newsletter.py || echo "::warning::뉴스레터 발송 실패 — .pending_send에 보류(다음 회차 재시도)"
+          # 원장/재시도큐 변화를 커밋해 다음 실행이 이어받게 한다.
+          if ! git diff --quiet -- .last_sent .pending_send 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard .last_sent .pending_send)" ]; then
+            git add -- .last_sent .pending_send 2>/dev/null || true
+            git commit -m "뉴스레터 발송 원장 갱신" || true
+            for i in 1 2 3; do
+              git pull --rebase -X theirs origin main && git push && { echo "원장 푸시 완료"; break; }
+              echo "원장 push 재시도 $i"; sleep 5
+            done
+          fi
