@@ -481,13 +481,17 @@ def fetch_moveins(regions):
         if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12:
             continue   # 입주월 미정 단지는 제외
         reg = (r.get('지역') or '').strip()
-        if reg in ('서울', '경기', '인천'): reg = '수도권'
-        if reg not in regions: continue
         try: n = int(r.get('세대수') or 0)
         except (TypeError, ValueError): continue
         key = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
         agg.setdefault(key, {x: 0 for x in regions})
-        agg[key][reg] += n
+        # 서울/경기/인천은 개별 지역으로 유지하면서 수도권 합계에도 더한다.
+        # (odcloud 미래 데이터엔 '수도권' 소계 행이 없어 직접 합산해야 함)
+        if reg in ('서울', '경기', '인천'):
+            if reg in regions: agg[key][reg] += n
+            if '수도권' in regions: agg[key]['수도권'] += n
+        elif reg in regions:
+            agg[key][reg] += n
     return agg
 
 
