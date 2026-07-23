@@ -1,0 +1,37 @@
+name: hub-probe
+
+# Task 2: 클라우드 IP 프로브 (호스팅 게이트)
+# 건축HUB(HsPmsHubService)가 GitHub Actions 러너(Azure IP)를 차단하는지 판정한다.
+# 오산시 세교동(sigunguCd=41370, bjdongCd=11300)을 호출해 <item>이 하나라도
+# 오면 클라우드 경로(Task 8 월배치)가 가능하다고 본다. 차단이면 로컬 폴백 확정.
+on: { workflow_dispatch: {} }
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: HUB Azure IP 호출 (오산 세교동)
+        env:
+          KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음 — 등록 여부 확인 필요"
+            exit 2
+          fi
+          for i in 1 2 3; do
+            R=$(curl -sS -G "https://apis.data.go.kr/1613000/HsPmsHubService/getHpBasisOulnInfo" \
+              --data-urlencode "serviceKey=${KEY}" \
+              --data-urlencode "sigunguCd=41370" \
+              --data-urlencode "bjdongCd=11300" \
+              --data-urlencode "numOfRows=100" \
+              --data-urlencode "pageNo=1")
+            N=$(echo "$R" | grep -c "<item>")
+            echo "try $i: items=$N bytes=${#R}"
+            if [ "$N" -gt 0 ]; then
+              echo "PROBE PASS: items=$N — 클라우드 경로 가능"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "PROBE FAIL: 빈 응답 — Azure IP 차단 의심"
+          exit 1
