@@ -169,15 +169,44 @@ def build_targets():
 
 def classify_response(body):
     """'empty'(재시도 대상) | 'no_data_json'(파라미터 누락형, 정상 무재시도) |
-    'no_data_xml'(진짜 0건, 정상 무재시도) | 'data'."""
+    'no_data_xml'(진짜 0건, 정상 무재시도) | 'error'(인증/쿼터 등 오류, 재시도+로그
+    대상) | 'data'.
+
+    함정(Finding 1): data.go.kr의 인증/쿼터 오류 응답(SERVICE KEY IS NOT
+    REGISTERED ERROR, LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR 등)도
+    <item> 태그가 없는 XML로 온다 — 즉 겉모습이 진짜 "0건" 응답과 똑같다.
+    구분 없이 전부 no_data_xml로 취급하면, 여러 시간 걸리는 --full 실행
+    도중에 발생한 rate-limit 차단이나 키 오류가 "그 법정동은 인허가 0건"으로
+    조용히 기록되어 데이터가 유실된다. 그래서 <item> 없는 XML은 반드시
+    resultCode/오류봉투를 먼저 확인한다: resultCode가 정상(00)일 때만 진짜
+    0건(no_data_xml)이고, 그 외(다른 resultCode, <cmmMsgHeader>/
+    returnReasonCode/returnAuthMsg 오류 봉투, resultCode 자체가 없는 예상 밖
+    포맷)는 전부 'error'로 분류해 재시도·로그 경로를 타게 한다.
+    """
     b = (body or '').strip()
     if len(b) == 0:
         return 'empty'
     if b.startswith('{'):
         return 'no_data_json'
     if '<item>' not in b:
-        return 'no_data_xml'
+        if ('<cmmMsgHeader>' in b or 'returnReasonCode' in b or 'returnAuthMsg' in b):
+            return 'error'
+        m = re.search(r'<resultCode>\s*([^<]*)\s*</resultCode>', b)
+        if m and m.group(1).strip() == '00':
+            return 'no_data_xml'
+        return 'error'
     return 'data'
+
+
+def _extract_error_info(body):
+    """오류 XML에서 코드/메시지 추출(로그 출력용). 봉투 형식이 두 가지라 순서대로 탐색."""
+    b = body or ''
+    code = re.search(r'<returnReasonCode>\s*([^<]*)\s*</returnReasonCode>', b) \
+        or re.search(r'<resultCode>\s*([^<]*)\s*</resultCode>', b)
+    msg = re.search(r'<returnAuthMsg>\s*([^<]*)\s*</returnAuthMsg>', b) \
+        or re.search(r'<resultMsg>\s*([^<]*)\s*</resultMsg>', b)
+    return (code.group(1).strip() if code else '?',
+            msg.group(1).strip() if msg else b[:120].strip())
 
 
 def _curl_get(sigungu, bjdong, page):
@@ -199,15 +228,30 @@ def _curl_get(sigungu, bjdong, page):
 
 
 def fetch_page(sigungu, bjdong, page):
-    """재시도 포함 1페이지 호출. 반환 (body, cls)."""
+    """재시도 포함 1페이지 호출. 반환 (body, cls).
+
+    'error'(Finding 1: 인증/쿼터 오류 등 <item> 없는 오류 XML)는 'empty'와
+    동일하게 재시도 대상으로 취급한다 — 그러지 않으면 rate-limit/키 오류가
+    진짜 0건과 구별 없이 그대로 통과해버린다. 매 시도마다 WARN을 찍어
+    무인 클라우드 실행 로그에서 바로 보이게 하고, 재시도를 다 써도 풀리지
+    않으면 ERROR로 명확히 남긴다(어느 시군구/법정동이 실패했는지 추적 가능).
+    """
     body, cls = '', 'empty'
     for attempt in range(MAX_RETRY):
         body = _curl_get(sigungu, bjdong, page)
         cls = classify_response(body)
+        if cls == 'error':
+            code, msg = _extract_error_info(body)
+            print('WARN %s/%s p%d 시도%d/%d: API 오류 응답(code=%s msg=%s) — 재시도'
+                  % (sigungu, bjdong, page, attempt + 1, MAX_RETRY, code, msg))
         time.sleep(PACE)
-        if cls != 'empty':
+        if cls not in ('empty', 'error'):
             return body, cls
         time.sleep(PACE * (attempt + 1))   # 추가 backoff
+    if cls == 'error':
+        code, msg = _extract_error_info(body)
+        print('ERROR %s/%s p%d: 재시도(%d회) 소진 — API 오류 지속(code=%s msg=%s), 0건으로 기록하지 않음'
+              % (sigungu, bjdong, page, MAX_RETRY, code, msg))
     return body, cls
 
 
@@ -235,7 +279,12 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
         if cls == 'no_data_json' and log is not None:
             log.append('WARN %s/%s p%d: 파라미터 누락형 무자료 응답(호출 확인 필요)'
                         % (sigungu, bjdong, page))
-        break   # no_data_xml, no_data_json, 재시도 소진(empty) 모두 더 페이지 없음
+        # no_data_xml(진짜 0건) / no_data_json / 재시도 소진(empty, error) 모두
+        # 더 페이지 없음으로 종료. 'error'가 재시도 끝까지 안 풀린 경우 이미
+        # fetch_page가 ERROR 라인을 찍었으므로 이 법정동은 0건이 아니라
+        # "수집 실패"로 로그에 남고, items에는 아무것도 추가되지 않는다
+        # (진짜 0건과 겉보기 결과는 같아도 로그로는 구분된다 — Finding 1).
+        break
     return items
 
 
@@ -281,6 +330,25 @@ def fetch_group(group, only_bjdong=None):
             all_items.extend(items)
     permit_q, start_q = _aggregate(all_items)
     return permit_q, start_q, productive
+
+
+def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
+    """기본(증분) 모드에서 이 그룹을 갱신해도 되는지 판정(순수, 네트워크 없음).
+
+    Finding 2: 기본 모드는 그룹 소속 법정동 중 cached_productive에 있는 것만
+    fetch_group(only_bjdong=cached_productive)로 재조회한다. 그런데 자기
+    소속 법정동이 cached_productive에 하나도 없는 그룹(=아직 한 번도 --full/
+    --only로 스캔된 적 없는 그룹)은 fetch_group이 호출을 아예 하지 않고 빈
+    dict({}, {})를 돌려주는데, 이걸 그대로 out['sgg'][key]에 쓰면 "스캔했더니
+    0건"과 "아직 스캔 안 함"이 구별 불가능한 거짓 0으로 기록된다. 148개 그룹 중
+    소수만 seed된 상태에서 인자 없이(기본모드) 실행하면 나머지 대부분이 이렇게
+    오염된다 — 이 함수는 그런 그룹을 걸러 out['sgg'][key]를 건드리지 않게 한다.
+    --full/--only는 실제로 전량(또는 지정 그룹 전량)을 스캔하므로 항상 True.
+    """
+    if mode_full:
+        return True
+    group_bjdong_flat = {member_cd + b for member_cd, bs in group_bjdong.items() for b in bs}
+    return bool(group_bjdong_flat & cached_productive)
 
 
 # ---------------------------------------------------------------------------
@@ -347,6 +415,14 @@ def run(mode_full, only_codes, list_targets_only):
         if group['legacy'] and not group['legacy']['enumerable']:
             print('[SKIP legacy] %s(%s): code_bdong.json에 법정동 없음 — unresolved_legacy 기록' % (key, group['name']))
             unresolved_legacy.add(key)
+        elif not should_refresh_group(key, group['bjdong'], cached_productive, mode_full):
+            # Finding 2: 기본(증분) 모드에서 아직 한 번도 스캔된 적 없는 그룹은
+            # 건드리지 않는다. 그냥 fetch_group을 불러버리면 only_bjdong으로
+            # 넘긴 cached_productive와 이 그룹 소속 법정동이 하나도 안 겹쳐
+            # 호출 없이 빈 dict가 나오고, 그걸 out['sgg'][key]에 쓰면 "스캔해서
+            # 0건"과 "아직 미수집"이 구별 안 되는 거짓 0이 찍힌다.
+            print('[SKIP not-yet-scanned] %s(%s): productive_bjdong 캐시에 자기 법정동 없음 — --full/--only로 먼저 수집 필요'
+                  % (key, group['name']))
         else:
             elapsed = time.time() - t0
             print('[%d/%d] %s(%s) %d개 법정동 수집 시작 (경과 %ds)'
