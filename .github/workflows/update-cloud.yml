@@ -19,7 +19,7 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 40     # 클라우드→한국 지연으로 다건 호출이 느리다. 넉넉히.
+    timeout-minutes: 60     # 클라우드→한국 지연으로 배치가 ~40분. 여유 있게 60.
     strategy:
       fail-fast: false      # 한 러너가 나쁜 IP로 죽어도 나머지는 계속
       matrix:
