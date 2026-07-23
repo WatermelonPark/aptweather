@@ -1,0 +1,23 @@
+name: cloud-ip-test (R-ONE vs KOSIS 접속)
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: R-ONE (부동산원) 접속
+        run: |
+          echo "=== R-ONE reb.or.kr ==="
+          for i in 1 2 3; do
+            code=$(curl -s -m 25 -o /tmp/rone.txt -w "%{http_code}" \
+              "https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do?KEY=probe&Type=json&STATBL_ID=A_2024_00045&DTACYCLE_CD=MM&pSize=1" 2>/dev/null) && break || sleep 3
+          done
+          echo "HTTP: ${code:-NO_RESPONSE(차단/타임아웃)}"
+          echo "본문 앞부분:"; head -c 300 /tmp/rone.txt 2>/dev/null; echo
+      - name: KOSIS 접속 (대조군)
+        run: |
+          echo "=== KOSIS kosis.kr ==="
+          code=$(curl -s -m 25 -o /tmp/kosis.txt -w "%{http_code}" \
+            "https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=probe&orgId=408&tblId=DT_30404_B012" 2>/dev/null)
+          echo "HTTP: ${code:-NO_RESPONSE(차단/타임아웃)}"
+          echo "본문 앞부분:"; head -c 300 /tmp/kosis.txt 2>/dev/null; echo
