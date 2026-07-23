@@ -1,5 +1,7 @@
 name: cloud-ip-test (R-ONE vs KOSIS 접속)
 on:
+  push:
+    paths: ['.github/workflows/cloud-ip-test.yml']
   workflow_dispatch: {}
 jobs:
   probe:
