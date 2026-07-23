@@ -477,6 +477,29 @@ def build_page(r, allrows, prd, today, punits=None):
         tcard('인허가', '3~4년 뒤 · 추정', 0.35 * r['dC'], 35),
         tcard('최근 3년', '입주 실적 · 추정', 0.10 * r['dB'], 10)))
 
+    # Fix I2: inv_path(러닝재고 신모델) 존은 히어로 숫자(tot)가 running_shortage()에서
+    # 나오지, dA/dC/dB 가중합(tot_fallback)에서 나오지 않는다. 그런데 trio 카드와
+    # "세 값을 더한 것이 맨 위의 숫자입니다" 문구는 dA/dC/dB가 tot를 구성한다고
+    # 주장한다 — inv_path 존에서는 이 주장 자체가 거짓이라 숫자가 안 맞는 걸 보고
+    # 사용자가 신뢰를 잃는다. inv_path 존은 이 breakdown을 통째로 숨기고 정직한
+    # 한 줄 요약으로 바꾼다(폴백 존은 기존 그대로).
+    inv = bool(r.get('inv_path'))
+    if inv:
+        breakdown_sec_html = (
+            '<section><div class="wrap">\n'
+            '  <h2>이 숫자는 어디서 왔나</h2>\n'
+            '  <p class="note">적정 공급량 대비 <b>준공(입주 완료)</b>·<b>준공예정</b> 물량 '
+            '실측을 누적한 러닝재고 기준 순부족입니다.</p>\n'
+            '</div></section>\n')
+    else:
+        breakdown_sec_html = (
+            '<section><div class="wrap">\n'
+            '  <h2>이 숫자는 어디서 왔나</h2>\n'
+            '  %s\n'
+            '  <p class="note" style="margin-top:9px">세 값을 더한 것이 맨 위의 '
+            '<b style="color:%s">%s세대</b>입니다. 음수(−)는 부족, 양수(+)는 여유.</p>\n'
+            '</div></section>\n' % (trio_html, tcol, disp))
+
     # ── 입주 예정 단지 목록 (아실 스타일) — 미래 분기만, 차트·게이지와 동일 규칙 ──
     uraw = list(z.get('units') or [])
     if subs and not uraw:
@@ -541,6 +564,25 @@ def build_page(r, allrows, prd, today, punits=None):
             num(r['refq'] * LB * r['share']),
             '#a93226' if r['dB'] > 0 else '#1a5276', signed(r['dB'])),
     ])
+
+    # Fix I2(계속): "어떻게 계산했나" 폴드 안의 적정/실제/부족분 표와 그 아래 note도
+    # dA/dB/dC(구 dC폴백 산식) 기준이라 inv_path 존에서는 히어로 tot와 안 맞는다.
+    # inv_path 존은 표·note를 숨기고, 러닝재고 기준이라는 짧은 설명만 남긴다.
+    if inv:
+        calc_detail_html = (
+            '<p class="note" style="margin-top:10px">이 존은 준공(입주 완료)·준공예정 물량 '
+            '실측을 기반으로 하는 <b>러닝재고</b> 방식입니다. 적정 공급량 대비 쌓인 재고와 '
+            '앞으로 %s분기의 준공예정을 함께 반영한 누적 순부족입니다.</p>' % r['fq'])
+    else:
+        calc_detail_html = (
+            '<table>\n'
+            '    <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>\n'
+            '    <tbody>%s</tbody>\n'
+            '  </table>\n'
+            '  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다'
+            '(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 '
+            '<b>시도(%s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>'
+            % (rows_html, ps))
 
     flag_html = ''
     if r['flag'] == 'watch':
@@ -624,12 +666,7 @@ def build_page(r, allrows, prd, today, punits=None):
 </div></section>
 
 %(unitsec)s
-<section><div class="wrap">
-  <h2>이 숫자는 어디서 왔나</h2>
-  %(trio)s
-  <p class="note" style="margin-top:9px">세 값을 더한 것이 맨 위의 <b style="color:%(tcol)s">%(disp)s세대</b>입니다. 음수(−)는 부족, 양수(+)는 여유.</p>
-</div></section>
-
+%(breakdown_sec)s
 %(flag)s
 
 <section><div class="wrap">
@@ -642,11 +679,7 @@ def build_page(r, allrows, prd, today, punits=None):
 
   <details class="fold"><summary>어떻게 계산했나</summary><div class="dbody">
   <p><b>적정물량</b>은 과거 이 지역의 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 기준선입니다.</p>
-  <table>
-    <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
-    <tbody>%(rows)s</tbody>
-  </table>
-  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>
+  %(calc_detail)s
   </div></details>
   <details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">
   <div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>
@@ -730,10 +763,10 @@ function zsubs(f){
         calcsent=('인허가와 최근 입주까지 더하면 <b style="color:%s">%s세대</b>입니다.' % (tcol, disp)),
         legend=('<p class="note">음수(−)는 부족, 양수(+)는 초과입니다.</p>'),
         h1=('%s 아파트,<br>앞으로 얼마나 %s' % (nm, '모자랄까' if lack else '남을까')),
-        gauge=gauge_html, qchart=qchart_html, trio=trio_html, unitsec=unitsec,
+        gauge=gauge_html, qchart=qchart_html, breakdown_sec=breakdown_sec_html, unitsec=unitsec,
         supsent=('앞으로 %d개 분기에 필요한 <b>%s세대</b> 중 입주 예정은 <b>%s세대</b>입니다.' % (
                      r['fq'], num(r['need']), num(r['fsup']))),
-        members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
+        members=members, sublist=sublist, span=span, calc_detail=calc_detail_html, sharep=r['share'] * 100,
         dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
         flag=flag_html, nav=nav, ld=json.dumps(ld, ensure_ascii=False),
         css=CSS)

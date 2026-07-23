@@ -57,13 +57,24 @@ def main():
         print('  (seed 완료 + activate 이후 재실행하면 실제 diff가 나타납니다)')
         print()
 
-    print('%-10s %10s %10s %6s %6s %6s  %s' % ('zone', 'tot_old', 'tot_new', 'rk_old', 'rk_new', 'drank', 'path'))
+    # Fix I3: 먼 지평(k=13..20)의 미상쇄 수요 크기 — running_shortage()가 이 구간의
+    # sched(준공예정)를 실측 0에 가깝게 받는다는 전제하에, 그 구간이 통째로
+    # refq만큼 부족으로 잡힐 때의 상한값(= Σ conf(k)·refq, 공급 상쇄 전). refq에
+    # 비례하므로 대도시(refq가 큰 존)일수록 이 값도 커진다 — 지평 캡·문서화 검토용
+    # 진단 열이며 모델 자체는 바꾸지 않는다(tot 계산에는 안 쓰인다).
+    far_conf_sum = sum(M._conf(k) for k in range(13, 21))   # 고정 상수(현재 가중식으로 ≈1.8)
+
+    def far_demand(row):
+        return far_conf_sum * (row.get('refq') or 0)
+
+    print('%-10s %10s %10s %6s %6s %6s  %10s  %s' %
+          ('zone', 'tot_old', 'tot_new', 'rk_old', 'rk_new', 'drank', 'far_demand', 'path'))
     for z in sorted(common, key=lambda k: old_rank[k]):
         o, n = old_by_z[z], new_by_z[z]
         drank = new_rank[z] - old_rank[z]
         path = 'inventory' if n.get('inv_path') else 'fallback'
-        print('%-10s %10.0f %10.0f %6d %6d %+6d  %s' %
-              (z, o['tot'], n['tot'], old_rank[z], new_rank[z], drank, path))
+        print('%-10s %10.0f %10.0f %6d %6d %+6d  %10.0f  %s' %
+              (z, o['tot'], n['tot'], old_rank[z], new_rank[z], drank, far_demand(n), path))
 
 
 if __name__ == '__main__':

@@ -115,3 +115,29 @@ def test_build_page_no_permits_units_and_no_odcloud_units_does_not_error():
     html = M.build_page(r, [r], '2026-07', '2026-07-24', punits=None)
     assert '<html' in html
     assert '앞으로 들어올 물량' not in html
+
+
+# ---------------------------------------------------------------------------
+# Fix I2(FINAL review): inv_path(러닝재고) 존은 히어로 tot가 running_shortage()에서
+# 나오는데, 페이지가 여전히 dA/dB/dC 가중합(구 폴백 산식) 기반 breakdown 표·카드·
+# note("...인구 비중으로 배분한 추정치...")를 보여주면 두 숫자가 안 맞아 사용자가
+# 모순을 본다. inv_path 존은 이 breakdown을 숨기고, 폴백 존은 기존 그대로 유지돼야
+# 한다.
+# ---------------------------------------------------------------------------
+
+def test_build_page_inv_path_zone_suppresses_fallback_breakdown():
+    r = _fake_row('테스트권')
+    r['inv_path'] = True
+    html = M.build_page(r, [r], '2026-07', '2026-07-24', punits=None)
+    assert '인허가 — 3~4년 뒤 입주' not in html          # 구 폴백 표 행
+    assert '인구 비중으로 배분한 추정치' not in html      # 시도-배분 note
+    assert '세 값을 더한 것이 맨 위의' not in html         # trio 합계=tot 주장
+    assert '러닝재고' in html                             # 정직한 대체 요약은 남는다
+
+
+def test_build_page_fallback_zone_still_shows_breakdown():
+    r = _fake_row('테스트권')   # inv_path=False (기본)
+    html = M.build_page(r, [r], '2026-07', '2026-07-24', punits=None)
+    assert '인허가 — 3~4년 뒤 입주' in html
+    assert '인구 비중으로 배분한 추정치' in html
+    assert '세 값을 더한 것이 맨 위의' in html
