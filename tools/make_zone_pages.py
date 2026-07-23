@@ -54,6 +54,12 @@ def fut_window(LZ, today=None):
     FUTQ = sorted([k for k in allq if _qi(k) is not None and _qi(k) > cur_q], key=_qi)
     NEARQ = FUTQ[:FUT_NEAR]
     FARQ = ['%dQ%d' % ((cur_q + 1 + j) // 4, (cur_q + 1 + j) % 4 + 1) for j in range(FUT_NEAR, FUT_FAR)]
+    # NEARQ는 실제 데이터에 나타난 라벨이라 이론상 FARQ(산술 생성)와 겹칠 일이
+    # 없지만, 그건 지금까지 관찰로만 보장된 것이지 구조적 보장이 아니다(원자료에
+    # 결측이 있으면 FUTQ가 예상보다 먼 분기까지 포함할 수 있다). 이중집계를
+    # 원천 차단하기 위해 겹치면 near 우선(far에서 제외)으로 명시적으로 배타분할한다.
+    # ※ Task 7의 scCalc()(JS 미러)도 이 가드를 동일하게 적용해야 한다.
+    FARQ = [q for q in FARQ if q not in set(NEARQ)]
     HQ = FUT_FAR   # need는 이제 항상 16분기(4년) 고정 창 — 존마다 다르면 절대량 비교가 깨진다
     return NEARQ, FARQ, HQ, cur_q
 
@@ -155,6 +161,13 @@ def make_capital(rows):
     agg['share'] = sum(c['share'] for c in caps)
     agg['ps'] = '수도권'
     agg['subs'] = sorted(caps, key=lambda c: -c['tot'])
+    # dcsrc는 dict(caps[0])에서 그대로 물려받으면 안 된다 — 수도권은 meas 존
+    # (성남권·오산권 등)과 fallback 존이 섞인 집계라, caps[0]가 우연히 meas 존이면
+    # "이 생활권은 건축HUB 실측"이라는 단일 출처 주장이 거짓이 된다(Task 8로
+    # meas 존이 늘수록 이 확률↑). 하위 존 출처가 전부 같을 때만 그 값을 쓰고,
+    # 섞이면 'mixed' — dcnote(build_page)가 이 값을 보고 문구를 갈라 쓴다.
+    srcs = {c.get('dcsrc') for c in caps}
+    agg['dcsrc'] = srcs.pop() if len(srcs) == 1 else 'mixed'
     return agg
 
 
@@ -438,6 +451,9 @@ def build_page(r, allrows, prd, today):
     # (전국 시딩 전) 대다수는 여전히 폴백 문구를 본다.
     dcnote = ('인허가는 이 생활권의 <b>건축HUB 시군구 실측</b>(연평균 인허가·착공 기준)입니다. '
               '입주예정만 단지 주소 기반 실측입니다.') if r.get('dcsrc') == 'meas' else (
+              '수도권 16개 생활권 합산입니다 — 생활권별로 <b>건축HUB 시군구 실측</b>과 시도 '
+              '인구배분 추정이 섞여 있어 인허가 출처를 하나로 말할 수 없습니다. '
+              '입주예정만 단지 주소 기반 실측입니다.') if r.get('dcsrc') == 'mixed' else (
               '인허가·최근 실적은 시군구 통계가 없어 <b>시도(%s) 값을 인구 비중으로 배분한 추정치</b>'
               '이고, 입주예정만 단지 주소 기반 실측입니다.' % ps)
 

@@ -130,6 +130,58 @@ def _tiny_adv_sts(byq, fwd_far, meas):
     return adv, sts
 
 
+def test_fut_window_near_far_overlap_is_deduped_favor_near():
+    """NEARQ(odcloud 실측 라벨)와 FARQ(산술 생성 라벨)가 우연히 같은 분기 문자열로
+    겹치는 경우(원자료 결측으로 FUTQ가 예상보다 먼 분기까지 뻗을 때) 겹친 라벨은
+    near 쪽에만 남고 far에서는 빠져야 한다 — 이중집계 방지 가드가 구조적으로
+    동작하는지 확인."""
+    today = datetime.date.today()
+    cur_q = _cur_q(today)
+    overlap_q = _qlabel(cur_q + 9)   # FARQ가 산술로 만드는 첫 라벨(offset=FUT_NEAR)과 동일
+    LZ = {'zones': [{'z': '존A', 'byq': {overlap_q: 500}}]}
+    NEARQ, FARQ, HQ, cq = M.fut_window(LZ, today)
+    assert overlap_q in NEARQ
+    assert overlap_q not in FARQ         # 가드가 far 쪽에서 중복 라벨을 제거함
+
+    # fwd_far에도 같은 라벨로 값이 있어도(공급원이 다름) 가드 덕에 near만 반영된다.
+    P = {'fwd_far': {'존A': {overlap_q: 999}}}
+    zz = LZ['zones'][0]
+    fsup, H = M.zone_fut_supply(zz, P, NEARQ, FARQ, HQ)
+    assert fsup == 500                   # 999(far)는 FARQ에서 빠졌으니 합산 안 됨
+
+
+# ---------------------------------------------------------------------------
+# make_capital: 수도권 rollup의 dcsrc — 혼합 출처를 단일 실측처럼 주장하면 안 됨
+# ---------------------------------------------------------------------------
+
+def _cap_row(z, dcsrc, tot=1000):
+    return dict(
+        z={'z': z, 'region': '수도권', 'pop': 1000, 'supply': 500,
+           'sgg': [], 'q0': '2026-01', 'q1': '2026-12', 'span': 1},
+        ps='수도권', share=0.1, need=1000, dA=100, dB=10, dC=50, tot=tot, fsup=900, fq=16,
+        flag=None, lo=None, hi=None, loan=None, pv=700, plo=800, dcsrc=dcsrc, dY=0, refq=100, band=None,
+    )
+
+
+def test_make_capital_mixed_sources_yields_dcsrc_mixed():
+    rows = [_cap_row('성남권', 'meas', tot=2000), _cap_row('오산권', 'meas', tot=1500),
+            _cap_row('안양권', 'fallback', tot=1000)]
+    agg = M.make_capital(rows)
+    assert agg['dcsrc'] == 'mixed'
+
+
+def test_make_capital_all_fallback_stays_fallback():
+    rows = [_cap_row('안양권', 'fallback', tot=1000), _cap_row('부천권', 'fallback', tot=900)]
+    agg = M.make_capital(rows)
+    assert agg['dcsrc'] == 'fallback'
+
+
+def test_make_capital_all_meas_stays_meas():
+    rows = [_cap_row('성남권', 'meas', tot=2000), _cap_row('오산권', 'meas', tot=1500)]
+    agg = M.make_capital(rows)
+    assert agg['dcsrc'] == 'meas'
+
+
 def test_calc_integration_need_uses_16q_and_dc_uses_meas_when_present():
     today = datetime.date.today()
     cur_q = _cur_q(today)
