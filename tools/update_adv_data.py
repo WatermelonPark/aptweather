@@ -1092,13 +1092,42 @@ def _zone_units(hp, z_of, complete):
     return out
 
 
+def _hub_group_reps(bdong):
+    """cd(원시 시군구코드) -> 대표(rep) 코드. fetch_hub_permits.fold_groups의 그룹핑
+    규칙(시도+이름 선두 토큰으로 묶고, 코드 오름차순 첫 값을 대표로 삼음)을 순수
+    함수로 복제한다(fold_groups는 sido_by_code의 short형 시도명으로 묶지만, 실제
+    그룹 파티션은 raw sido_full 문자열로 묶어도 동일하다 — 한 시군구코드의 sido_full은
+    항상 같은 시/도 하나로 고정되므로 short/full 어느 쪽을 그룹 키로 써도 같은 코드들이
+    같은 그룹으로 묶인다).
+
+    hub_permits.json의 sgg 키는 바로 이 rep 코드다(구가 나뉜 다구 도시 — 성남·창원·
+    청주·수원·고양·용인 등 — 는 대표 하나로 접혀 저장된다. 예: 수원시 4개 구
+    41111/41113/41115/41117 + 본체 41110 -> rep=41110). Fix C1: 완결성 판정 시
+    개별 구 코드가 아니라 이 rep로 환산해 hp['sgg']/scanned와 대조해야 한다. 그러지
+    않으면 대표가 아닌 구 코드는 hp['sgg']에 결코 키로 나타나지 않아(수집기가 대표
+    코드로만 저장하므로) 그 존이 영원히 미완결(폴백)로 남는다 — 수원·성남·창원·
+    고양·용인·청주·천안·전주·포항·안양·안산 등 구가 있는 대도시 전부가 여기 해당."""
+    import collections
+    groups = collections.defaultdict(list)
+    for cd, (sido_full, nm) in bdong.items():
+        base = nm.split(' ')[0]
+        groups[(sido_full, base)].append(cd)
+    reps = {}
+    for codes in groups.values():
+        rep = min(codes)
+        for c in codes:
+            reps[c] = rep
+    return reps
+
+
 def hub_derive(adv):
     """hub_permits.json(done_q/sched_q/units) → adv['permits']['done'|'sched'|'units'] 생활권 시계열.
 
     게이트 두 개(둘 다 통과해야 방출):
     1) meta.activate — false/부재면 아무것도 방출하지 않는다(라이브는 pre-HUB 지표 유지).
-    2) 존별 완결성 — 존의 멤버 시군구(unresolved_legacy 제외) 전원이 meta.scanned에
-       있을 때만 그 존을 방출한다. 부분 스캔 존을 섞으면 존 합계가 실제보다 작게 보여
+    2) 존별 완결성 — 존의 멤버 시군구(unresolved_legacy 제외) 전원이, 각자의 fold
+       대표(rep) 코드로 환산했을 때 meta.scanned에 있을 때만 그 존을 방출한다(Fix C1
+       — _hub_group_reps 참고). 부분 스캔 존을 섞으면 존 합계가 실제보다 작게 보여
        "재고가 준다"는 착시를 만든다.
 
     hub_permits.json은 갱신 중인 시군구가 섞여 있어(구스키마 permit_q/start_q만 있고
@@ -1113,7 +1142,9 @@ def hub_derive(adv):
     hp = _load_hub_permits()
     if not hp.get('meta', {}).get('activate', False):
         print('hub_derive: inactive — pre-HUB 지표 유지'); return
-    z_of = _hub_zone_map(_load_bdong_map())
+    bdong = _load_bdong_map()
+    z_of = _hub_zone_map(bdong)
+    reps = _hub_group_reps(bdong)
     scanned = set(hp.get('meta', {}).get('scanned', []))
     unresolved = set(hp.get('meta', {}).get('unresolved_legacy', []))
     # 존별 멤버 시군구(완결성 판정용)
@@ -1127,8 +1158,13 @@ def hub_derive(adv):
         if not z: continue
         for q, n in v.get('done_q', {}).items(): done[z][q] += n
         for q, n in v.get('sched_q', {}).items(): sched[z][q] += n
-    # 완결성 게이트: 존의 모든 멤버가 scanned일 때만 방출
-    complete = {z for z, ms in members.items() if ms and ms <= scanned}
+    # 완결성 게이트(Fix C1): 존의 모든 멤버를 각자의 fold 대표(rep) 코드로 환산한
+    # 뒤, 그 rep 전원이 scanned일 때만 방출. hp['sgg']/scanned 키는 원시 구 코드가
+    # 아니라 항상 rep이므로(수집기가 그렇게 저장), rep 환산 없이 원시 코드로
+    # 비교하면 구가 나뉜 다구 도시(수원·성남·창원 등)를 낀 존은 원시 구 코드가
+    # scanned에 결코 안 나타나 영원히 미완결로 남는다.
+    complete = {z for z, ms in members.items()
+                if ms and {reps.get(c, c) for c in ms} <= scanned}
     adv.setdefault('permits', {})
     adv['permits']['done'] = {z: dict(done[z]) for z in complete if z in done}
     adv['permits']['sched'] = {z: dict(sched[z]) for z in complete if z in sched}
