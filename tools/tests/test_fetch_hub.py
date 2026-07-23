@@ -31,6 +31,74 @@ def test_classify_real_data():
 
 
 # ---------------------------------------------------------------------------
+# Finding 1: 오류 봉투 XML도 <item> 없이 오지만 진짜 0건과 반드시 구분돼야 함
+# ---------------------------------------------------------------------------
+
+def test_classify_service_key_error_envelope_is_error_not_no_data():
+    # data.go.kr 서비스키 미등록 오류: cmmMsgHeader 봉투, resultCode 없음
+    xml = ('<OpenAPI_ServiceResponse><cmmMsgHeader>'
+           '<errMsg>SERVICE ERROR</errMsg>'
+           '<returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>'
+           '<returnReasonCode>30</returnReasonCode>'
+           '</cmmMsgHeader></OpenAPI_ServiceResponse>')
+    assert F.classify_response(xml) == 'error'
+
+
+def test_classify_quota_exceeded_error_envelope_is_error_not_no_data():
+    xml = ('<OpenAPI_ServiceResponse><cmmMsgHeader>'
+           '<returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg>'
+           '<returnReasonCode>22</returnReasonCode>'
+           '</cmmMsgHeader></OpenAPI_ServiceResponse>')
+    assert F.classify_response(xml) == 'error'
+
+
+def test_classify_non_zero_result_code_is_error_not_no_data():
+    # header가 있어도 resultCode가 00이 아니면 무재시도 무자료로 취급하면 안 됨
+    xml = ('<response><header><resultCode>04</resultCode>'
+           '<resultMsg>HTTP ERROR</resultMsg></header><body></body></response>')
+    assert F.classify_response(xml) == 'error'
+
+
+def test_classify_xml_zero_rows_with_result_code_00_still_no_data_xml():
+    # 회귀 방지: 정상 resultCode=00 + 빈 items는 여전히 진짜 0건으로 남아야 함
+    xml = ('<response><header><resultCode>00</resultCode></header><body>'
+           '<items/><numOfRows>10</numOfRows><pageNo>1</pageNo><totalCount>0</totalCount>'
+           '</body></response>')
+    assert F.classify_response(xml) == 'no_data_xml'
+
+
+def test_extract_error_info_reads_reason_code_and_auth_msg():
+    xml = ('<OpenAPI_ServiceResponse><cmmMsgHeader>'
+           '<returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg>'
+           '<returnReasonCode>22</returnReasonCode>'
+           '</cmmMsgHeader></OpenAPI_ServiceResponse>')
+    code, msg = F._extract_error_info(xml)
+    assert code == '22'
+    assert msg == 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR'
+
+
+def test_fetch_page_retries_on_error_and_logs(monkeypatch, capsys):
+    # _curl_get을 스텁으로 대체해 네트워크 없이 error->재시도->소진 경로를 검증.
+    calls = {'n': 0}
+    err_xml = ('<OpenAPI_ServiceResponse><cmmMsgHeader>'
+               '<returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>'
+               '<returnReasonCode>30</returnReasonCode>'
+               '</cmmMsgHeader></OpenAPI_ServiceResponse>')
+
+    def fake_curl_get(sigungu, bjdong, page):
+        calls['n'] += 1
+        return err_xml
+
+    monkeypatch.setattr(F, '_curl_get', fake_curl_get)
+    monkeypatch.setattr(F, 'PACE', 0)   # 테스트 속도: 페이싱 대기 제거
+    body, cls = F.fetch_page('41370', '11300', 1)
+    assert cls == 'error'
+    assert calls['n'] == F.MAX_RETRY   # 재시도를 다 씀 — 조용히 empty/no_data로 안 빠짐
+    out = capsys.readouterr().out
+    assert 'ERROR' in out and 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR' in out
+
+
+# ---------------------------------------------------------------------------
 # XML item 파싱
 # ---------------------------------------------------------------------------
 
@@ -171,6 +239,69 @@ def test_fold_groups_marks_resolvable_legacy():
     old_gu_map = {'41370': ['41135']}   # 실제 bjdong(정자동)이 있는 코드를 옛코드로 가정
     groups = F.fold_groups(targets, sido_by_code, bjdong_by_sgg, old_gu_map)
     assert groups['41370']['legacy']['enumerable'] is True
+
+
+# ---------------------------------------------------------------------------
+# Finding 2: 기본(증분) 모드는 "아직 한 번도 스캔 안 된 그룹"을 거짓 0으로
+# 쓰면 안 된다 — should_refresh_group()으로 판정을 순수함수화해서 검증.
+# ---------------------------------------------------------------------------
+
+def test_should_refresh_group_true_when_full_mode_regardless_of_cache():
+    # --full/--only는 전량 스캔하므로 캐시가 비어 있어도 항상 True.
+    assert F.should_refresh_group('41370', {'41370': ['11300']}, set(), True) is True
+
+
+def test_should_refresh_group_false_when_never_scanned_in_default_mode():
+    # 그룹 자기 법정동이 cached_productive에 하나도 없음 = 아직 한 번도 안 돌았음
+    # -> 기본모드에서 건드리면 안 됨(거짓 0 방지).
+    group_bjdong = {'48120': ['10100'], '48123': ['10200']}
+    cached_productive = {'41370' + '11300'}   # 다른 그룹(오산시)만 캐시에 있음
+    assert F.should_refresh_group('48120', group_bjdong, cached_productive, False) is False
+
+
+def test_should_refresh_group_true_when_own_bjdong_previously_productive():
+    # 자기 소속 법정동 중 하나라도 이전에 productive였다면(=이미 스캔된 그룹)
+    # 기본모드에서 증분 재조회 대상이다.
+    group_bjdong = {'41370': ['11300', '11400']}
+    cached_productive = {'4137011300'}
+    assert F.should_refresh_group('41370', group_bjdong, cached_productive, False) is True
+
+
+def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_path, monkeypatch):
+    # 통합 시나리오(네트워크 없음): 148개 중 1개 그룹만 seed된 상태에서 기본
+    # 모드로 run()을 돌리면, 미스캔 그룹은 out['sgg']에 전혀 쓰이지 않아야
+    # 한다(빈 dict로도 안 됨). fetch_group이 실제로 호출되지 않는지까지 확인.
+    fake_groups = {
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+        '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
+    monkeypatch.setattr(F, 'KEY', 'dummy-key')
+
+    out_path = tmp_path / 'hub_permits.json'
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': []},
+              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'productive_bjdong': ['4137011300']}
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded))
+
+    def fetch_group_stub(group, only_bjdong=None):
+        # 41370(오산시)은 이미 스캔된 그룹(자기 bjdong이 캐시에 있음)이라
+        # 정상적으로 호출된다. 48120(창원시)은 미스캔 그룹이라 should_refresh_group이
+        # False를 반환해 run()이 아예 이 함수를 부르지 않아야 한다 — 호출되면 실패.
+        if group['name'] == '창원시':
+            raise AssertionError('never-scanned 그룹(창원시)에 fetch_group이 호출되면 안 됨')
+        return {'2024Q1': 5}, {}, ['4137011300']
+
+    monkeypatch.setattr(F, 'fetch_group', fetch_group_stub)
+
+    F.run(mode_full=False, only_codes=None, list_targets_only=False)
+
+    result = json.load(io.open(str(out_path), encoding='utf-8'))
+    assert '48120' not in result['sgg']              # 거짓 0으로 찍히지 않음
+    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 5}   # 기존 항목 보존
 
 
 # ---------------------------------------------------------------------------
