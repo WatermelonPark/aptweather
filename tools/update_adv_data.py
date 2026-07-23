@@ -1262,6 +1262,10 @@ def main():
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
     # 후속 단계(뉴스레터 발송 등)에 변경 내역 전달 — 커밋 대상 아님
     io.open(os.path.join(ROOT, '.stats_changed'), 'w', encoding='utf-8').write(','.join(changed))
+    # 클라우드 冗長 러너 게이트용: 이 실행에서 fetch가 하나라도 실패했는지 남긴다.
+    # 나쁜 IP를 뽑은 러너는 여기에 실패 목록이 차므로, 워크플로가 그 러너의
+    # 산출물을 커밋 후보에서 제외한다(오염 데이터 커밋 방지). 성공 러너는 빈 파일.
+    io.open(os.path.join(ROOT, '.fetch_failed'), 'w', encoding='utf-8').write(','.join(failed))
     if failed:
         print('WARN: fetch 실패 %d개 -> %s' % (len(failed), ', '.join(failed)))
     if changed:

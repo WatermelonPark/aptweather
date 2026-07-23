@@ -1,0 +1,114 @@
+name: 데이터 자동 갱신 (클라우드 冗長)
+
+# 집 PC 없이 완전 자동. KOSIS는 GitHub 러너의 Azure IP 일부를 간헐 차단해
+# 단일 러너면 ~12.5% 확률로 그날 전면 실패한다(2026-07 실측). 쿼리 크기 문제가
+# 아니라 IP 룰렛이라 청크 쪼개기로는 못 푼다. 대신 병렬 3러너(=서로 다른 IP)를
+# 띄워 오염 안 된 러너의 산출물만 커밋한다 — 3러너 동시 실패 확률 ≈0.2%.
+on:
+  schedule:
+    - cron: '0 9 * * *'    # 매일 18:00 KST — 월간·KOSIS 항목 셀프힐
+    - cron: '30 4 * * 4'   # 목 13:30 KST — 주간 시세 발표(목 12시) 직후
+  workflow_dispatch: {}
+  # (검증용 임시) 워크플로 파일이 바뀌면 실행 — 검증 후 이 블록 제거
+  push:
+    paths: ['.github/workflows/update-cloud.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false      # 한 러너가 나쁜 IP로 죽어도 나머지는 계속
+      matrix:
+        n: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 데이터 갱신 시도 (러너 ${{ matrix.n }})
+        id: upd
+        env:
+          KOSIS_API_KEY:  ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+          ECOS_API_KEY:   ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
+          RONE_API_KEY:   ${{ secrets.RONE_API_KEY || secrets.RONE }}
+          # BUTTONDOWN(뉴스레터)은 의도적으로 주입 안 함 — 클라우드는 데이터만.
+        run: |
+          if [ -z "$KOSIS_API_KEY" ]; then
+            echo "::warning::KOSIS 시크릿 없음 — 건너뜀"; exit 0
+          fi
+          set +e
+          python tools/update_adv_data.py --update
+          rc=$?
+          set -e
+          echo "batch rc=$rc"
+          python tools/split_data.py
+          # 오염 판정: .fetch_failed가 없거나(크래시) 비어있지 않으면(일부 소스 실패)
+          # 이 러너 산출물은 신뢰 불가 -> 커밋 후보에서 제외.
+          if [ ! -f .fetch_failed ]; then
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+            echo "센티넬 없음(크래시 추정) — 산출물 폐기"
+          elif [ -s .fetch_failed ]; then
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+            echo "fetch 실패: $(cat .fetch_failed) — 산출물 폐기"
+          else
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+            echo "clean 러너 — 산출물 업로드"
+          fi
+
+      - name: 산출물 업로드 (clean 러너만)
+        if: steps.upd.outputs.clean == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-${{ matrix.n }}
+          path: |
+            data.js
+            data-core.js
+            data-rest.json
+            data-trend.json
+          retention-days: 1
+          if-no-files-found: ignore
+
+  commit:
+    needs: fetch
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: clean 산출물 내려받기
+        uses: actions/download-artifact@v4
+        with:
+          path: _art
+          pattern: data-*
+          merge-multiple: false
+        continue-on-error: true    # clean 러너 0개면 아무것도 안 받음
+
+      - name: 변경 있으면 커밋·푸시
+        run: |
+          # clean 산출물은 결정적이라 모두 동일 — 아무거나 하나 고른다.
+          SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
+          if [ -z "$SRC" ]; then
+            echo "::warning::clean 러너 0개 — 이번 회차 갱신 실패(다음 회차 새 IP가 흡수)"
+            exit 0
+          fi
+          echo "채택: $SRC"
+          cp "$SRC/data.js" "$SRC/data-core.js" "$SRC/data-rest.json" "$SRC/data-trend.json" .
+          if git diff --quiet -- data.js data-core.js data-rest.json data-trend.json; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git config user.name  "stats-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.js data-core.js data-rest.json data-trend.json
+          git commit -m "데이터 자동 갱신 (클라우드 冗長)"
+          # 경합 대비 pull --rebase 후 push. rebase에서 'theirs'가 우리 커밋이라
+          # 충돌 시 방금 받은 최신 데이터가 이긴다.
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
+            echo "push 재시도 $i"; sleep 5
+          done
