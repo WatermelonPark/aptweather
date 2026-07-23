@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v13'; // Task 8: HUB 월배치 워크플로 추가(update-hub.yml) — data-core.js에
+const VERSION = 'v14'; // 입주물량에 서울/경기/인천 개별 지역 추가(occupancy 전량 재구축) — data-core.js에
                        // permits.meas/fwd_far가 실측으로 갱신되므로 클라이언트가 새 데이터를
                        // 받도록 캐시 버전을 올린다(2026-07-23).
 const CACHE = `aptweather-${VERSION}`;
