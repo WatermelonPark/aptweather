@@ -172,3 +172,69 @@ band 중앙값)를 검증. `python tools/test_verify_ref_scale.py` → 3개 테�
 재실행 → 비율이 지역 간 일정하면 계수 하나로 `refq`를 보정하거나 HUB준공 쪽에 계수를
 곱해 스케일을 맞추고, 들쭉날쭉하면 단일 계수를 포기하고 지역별 원인(생활권-시도 경계
 불일치, 시군구 커버리지 격차 등)을 따로 조사한다 — 이 판단은 Task 5(순위검토)에서 확정한다.
+
+---
+
+## 준공 러닝재고 go-live 절차 (Task 8)
+
+전제: 코드는 완결(Task 1~7, 86 테스트 통과, 미러 0.0), 스코어 계산 경로는
+`hub_permits.json`의 `meta.activate`(현재 `false`)로 게이트돼 있다. 즉 아래 절차를
+밟기 전까지는 라이브 사이트가 계속 기존(구모델) 스코어를 쓴다. **되돌리기는 언제든
+`meta.activate`를 제거(또는 `false`)하고 커밋하면 즉시 구모델로 복귀**한다(코드 삭제 불필요).
+
+### (a) 전량 시드 — `update-hub.yml` workflow_dispatch, mode=full, 2~3회
+
+- GitHub Actions → `update-hub` 워크플로 → `Run workflow` → `mode=full` 선택.
+- 전량 첫 시딩은 약 12,000회 호출·11~14시간이 걸려 GitHub 호스티드 러너의 6시간
+  캡(`timeout-minutes: 350`)을 넘는다 — 킬돼도 정상이다. `fetch_hub_permits.py --full`은
+  그룹 완료마다 `hub_permits.json`의 `meta['scanned']`에 진행 지점을 즉시 기록하므로,
+  같은 `mode=full`을 **사람이 다시 트리거**하면 끊긴 지점부터 이어서 스캔한다
+  (대략 **2~3회 재트리거**로 전량 완료 — Step 4 실측 기준 추정).
+- **⚠️ 트리거 전 확인**: `DATA_GO_KR_KEY`(`data.go.kr`)의 **일일 호출 쿼터**를 반드시
+  확인할 것. 1회 풀런이 약 12,000회를 소모하므로 일일 한도가 그보다 낮으면 하루 안에
+  못 끝나고(정상 — collector가 429/한도초과를 재시도하지 않고 `unresolved`로 기록,
+  다음날 이어받음) 예상보다 재트리거 횟수가 늘어난다. 한도가 넉넉하면(예: 무제한 또는
+  10만+/일) 2~3회로 끝난다.
+- 진행 상황 확인: 매 트리거 후 커밋된 `hub_permits.json`의 `meta.scanned` 길이(스캔
+  완료 그룹 수)와 워크플로 로그를 보고 다음 재트리거 여부를 판단한다. 전량 완료 판정은
+  `meta.mode` 및 `sgg` 항목 수가 더 이상 늘지 않고 `scanned`가 전체 그룹 수를 덮을 때.
+
+### (b) 검토 — 순위·스케일 확인 (사용자 승인 필요)
+
+전량 시드가 끝난 뒤(또는 상당량 진행된 뒤) 아래 두 진단을 로컬에서 실행한다:
+
+```bash
+python tools/verify_rankdiff.py   # 구모델 vs 신모델 — 생활권 36곳 순위 비교
+python tools/verify_ref_scale.py  # HUB준공 분기평균 vs refq(적정) — 스케일 비율(CV)
+```
+
+- `verify_rankdiff.py`: 기존 KOSIS 기반 순공급 순위와 HUB 준공 기반 러닝재고 순위를
+  36개 생활권에 대해 나란히 비교 출력한다. 순위가 크게 요동치는 존이 있으면(특히 상위권)
+  원인(시군구 커버리지 누락, 부천 옛구 매핑 등)을 먼저 확인한다.
+- `verify_ref_scale.py`: HUB준공 분기평균 / `refq`(기준표 적정 상수) 비율의 변동계수(CV)를
+  본다. `CV<0.3`이면 스케일이 지역 간 일정해 신뢰할 만하고, `CV>=0.3`이면 지역별 원인을
+  더 파야 한다(위 "적정 스케일 검증" 절 참조 — 재피팅이 아니라 검증 목적).
+- 두 출력을 사람이 보고 "납득할 만하다" 판단이 서면 (c)로 진행한다. 이 판단은 자동화하지
+  않는다 — 스코어가 사용자에게 노출되는 핵심 지표라 사람 검토를 반드시 거친다.
+
+### (c) 활성화 — `meta.activate=true`
+
+- 로컬에서 `tools/data/hub_permits.json`을 열어 최상위 `meta.activate`를 `true`로
+  설정하고 커밋·푸시한다(별도 워크플로 없음 — 사람이 직접 값을 바꾸는 1줄짜리 변경).
+- 다음 daily `update-cloud.yml`(`update_adv_data.py --update`)이 실행되면
+  `hub_derive()`가 `meta.activate=true`를 보고 `adv['permits']['done'|'sched'|'units']`를
+  채우고, `make_zone_pages.calc()`/홈 `scCalc()`가 준공 기반 러닝재고 경로로 전환된다.
+  `split_data.py`는 `permits`를 통째로 복사하므로(Task 8 확인 완료) `data-core.js`에도
+  자동으로 실린다 — 추가 배선 불필요.
+- **되돌리기**: `meta.activate`를 지우거나 `false`로 되돌려 커밋하면 다음 daily 런부터
+  즉시 구모델(KOSIS 기반)로 복귀한다. 코드를 되돌릴 필요가 없다.
+
+### 함정 재상기 (Task 2~3에서 확정, go-live 시 다시 확인)
+
+- `bjdongCd` 파라미터 필수 — 생략하면 무자료 JSON(69 bytes)이 온다(진짜 0건 XML `<items/>`
+  ~190 bytes와 다름, 3구분: ①bjdongCd 누락 JSON ②진짜 0건 XML ③auth 에러 XML).
+- `useInsptDay`(준공, 과거) vs `useInsptSchedDay`(준공예정, 미래) — 착공일(`stcnsDay`)은
+  이번 재설계에서 스코어 계산에 쓰지 않는다.
+- 부천은 현재(41190)로 호출하면 0건 — 옛 3구(41192/41194/41196) 폴백 매핑 필요
+  (`unresolved_legacy`로 별도 처리, Step 3 참조). 전량 시드 결과에서 부천 인근 생활권의
+  값이 비정상적으로 낮으면 이 폴백이 제대로 동작했는지 우선 확인할 것.

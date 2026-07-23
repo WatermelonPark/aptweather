@@ -3,9 +3,10 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v14'; // 입주물량에 서울/경기/인천 개별 지역 추가(occupancy 전량 재구축) — data-core.js에
-                       // permits.meas/fwd_far가 실측으로 갱신되므로 클라이언트가 새 데이터를
-                       // 받도록 캐시 버전을 올린다(2026-07-23).
+const VERSION = 'v15'; // 준공 기반 러닝재고(순부족) 스코어 재설계 롤아웃 배선 — hub_derive가
+                       // data-core.js의 ADV.permits에 done/sched/units를 채워 scCalc()가
+                       // 새 지표를 읽는다(현재 meta.activate=false라 즉시 동작 변화는 없지만,
+                       // go-live 시 클라이언트가 새 캐시를 받도록 미리 버전을 올린다, 2026-07-24).
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
