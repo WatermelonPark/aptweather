@@ -459,6 +459,9 @@
   .gsec.gm-m .gt-g,.gsec.gm-m .gt-t{display:none}
   .gsec.gm-g .gt-m,.gsec.gm-t .gt-m{display:none}
   .gsec.gm-g .adv-regsel{display:block}
+  /* 지도 모드에선 지역 드롭다운 불필요(지도가 전 지역을 보여줌). 그래프·표에서만 노출.
+     모바일은 .adv-regsel을 기본 display:block으로 켜므로 지도 모드에서 명시적으로 끈다. */
+  .gsec.gm-m .adv-regsel{display:none}
   .map-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap}
   .map-lab{font-size:12.5px;color:var(--muted);font-weight:500}
   .tilemap{padding:2px 0 4px}
