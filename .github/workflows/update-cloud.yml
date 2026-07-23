@@ -19,6 +19,7 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 20     # 프리플라이트 통과 후 뒤늦게 hang하는 러너 백스톱
     strategy:
       fail-fast: false      # 한 러너가 나쁜 IP로 죽어도 나머지는 계속
       matrix:
@@ -28,6 +29,27 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: IP 프리플라이트 (나쁜 IP 즉시 탈락)
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+        run: |
+          if [ -z "$KOSIS_API_KEY" ]; then echo "KOSIS 시크릿 없음 — 프리플라이트 스킵"; exit 0; fi
+          # 나쁜 IP면 전체 배치가 KOSIS 호출마다 60s×3 재시도로 수십 분 hang한다.
+          # 여기서 작은 KOSIS 호출 하나로 IP 건강성을 15초 내 판정 — 나쁘면 즉시 탈락.
+          python - << 'PY'
+          import os, sys, urllib.parse, urllib.request
+          u='https://kosis.kr/openapi/Param/statisticsParameterData.do?'+urllib.parse.urlencode(
+            dict(method='getList',apiKey=os.environ['KOSIS_API_KEY'],format='json',jsonVD='Y',
+                 orgId='408',tblId='DT_304004_WEEK_001_B',objL1='ALL',itmId='ALL',prdSe='F',
+                 startPrdDe='20260601',endPrdDe='20260620'))
+          try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+              urllib.request.urlopen(req,timeout=15).read()
+              print('프리플라이트 OK — 좋은 IP')
+          except Exception as e:
+              print('프리플라이트 실패(나쁜 IP):',type(e).__name__); sys.exit(1)
+          PY
 
       - name: 데이터 갱신 시도 (러너 ${{ matrix.n }})
         id: upd
@@ -46,17 +68,17 @@ jobs:
           rc=$?
           set -e
           echo "batch rc=$rc"
-          python tools/split_data.py
-          # 오염 판정: .fetch_failed가 없거나(크래시) 비어있지 않으면(일부 소스 실패)
-          # 이 러너 산출물은 신뢰 불가 -> 커밋 후보에서 제외.
-          if [ ! -f .fetch_failed ]; then
+          # 오염 판정: 프리플라이트가 KOSIS IP 건강성을 이미 보장하므로, 여기서는
+          # 배치 exit 코드만 본다. rc!=0 = 크래시 또는 대량 실패(rc 3) = 폐기.
+          # rc==0이면 커밋 — 비핵심 소스(ECOS·DATAGO)가 몇 개 실패해도 해당 값은
+          # 직전 유지될 뿐이라 로컬 배치와 동일하게 부분 갱신을 커밋한다.
+          if [ "$rc" -ne 0 ]; then
             echo "clean=false" >> "$GITHUB_OUTPUT"
-            echo "센티넬 없음(크래시 추정) — 산출물 폐기"
-          elif [ -s .fetch_failed ]; then
-            echo "clean=false" >> "$GITHUB_OUTPUT"
-            echo "fetch 실패: $(cat .fetch_failed) — 산출물 폐기"
+            echo "배치 rc=$rc — 산출물 폐기(다음 회차 흡수)"
           else
+            python tools/split_data.py
             echo "clean=true" >> "$GITHUB_OUTPUT"
+            [ -s .fetch_failed ] && echo "참고: 비핵심 소스 실패 -> $(cat .fetch_failed) (직전 값 유지)"
             echo "clean 러너 — 산출물 업로드"
           fi
 
