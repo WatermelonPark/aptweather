@@ -13,8 +13,7 @@ from urllib.parse import quote
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.js')
 SITE = 'https://www.agongmap.co.kr'
-FUT_NEAR = 8   # ≤2년: odcloud byq(입주예정 실측)
-FUT_FAR = 16   # ≤4년: 착공파생 fwd_far(건축HUB 착공+13분기)까지 확장한 forward 창
+H_MAX = 8  # 앞으로 최대 8분기 — 실제로는 데이터가 있는 미래 분기 수만 사용
 LB = 12  # 과거 누적 3년(12분기) — 부족은 재고처럼 쌓이므로 1년으로는 부족
 W = (0.55, 0.35, 0.10)
 
@@ -36,79 +35,6 @@ def last_of(series, key):
     return 0
 
 
-def _qi(k):
-    m = re.match(r'^(\d{4})Q([1-4])$', k)
-    return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else None
-
-
-def fut_window(LZ, today=None):
-    """전역 미래 분기 창을 근(≤2년·odcloud 실측)/원(2~4년·착공파생) 배타분할로 만든다.
-
-    모든 생활권이 같은 창을 써야 절대량 비교가 성립한다. NEARQ는 실제 데이터에
-    나타난 미래 분기 라벨(최대 FUT_NEAR개) — 기존 로직 그대로. FARQ는 fwd_far
-    (착공+13분기 파생)만 채우는 산술 분기(9~16번째)라 odcloud byq의 원거리분과
-    겹치지 않는다 — 이중집계 방지."""
-    today = today or datetime.date.today()
-    cur_q = today.year * 4 + (today.month - 1) // 3        # 현재 분기 인덱스
-    allq = {k for zz in LZ['zones'] for k in (zz.get('byq') or {})}
-    FUTQ = sorted([k for k in allq if _qi(k) is not None and _qi(k) > cur_q], key=_qi)
-    NEARQ = FUTQ[:FUT_NEAR]
-    FARQ = ['%dQ%d' % ((cur_q + 1 + j) // 4, (cur_q + 1 + j) % 4 + 1) for j in range(FUT_NEAR, FUT_FAR)]
-    # NEARQ는 실제 데이터에 나타난 라벨이라 이론상 FARQ(산술 생성)와 겹칠 일이
-    # 없지만, 그건 지금까지 관찰로만 보장된 것이지 구조적 보장이 아니다(원자료에
-    # 결측이 있으면 FUTQ가 예상보다 먼 분기까지 포함할 수 있다). 이중집계를
-    # 원천 차단하기 위해 겹치면 near 우선(far에서 제외)으로 명시적으로 배타분할한다.
-    # ※ Task 7의 scCalc()(JS 미러)도 이 가드를 동일하게 적용해야 한다.
-    FARQ = [q for q in FARQ if q not in set(NEARQ)]
-    HQ = FUT_FAR   # need는 이제 항상 16분기(4년) 고정 창 — 존마다 다르면 절대량 비교가 깨진다
-    return NEARQ, FARQ, HQ, cur_q
-
-
-def zone_fut_supply(zz, P, NEARQ, FARQ, HQ):
-    """생활권 하나의 미래 입주(fsup)와 그 창(H, 분기수).
-
-    fwd_far[zone] 항목이 있으면(Fix B: 완결 수집된 존) 4년 창 — 근(byq)+원(fwd_far
-    착공파생), H=HQ(=FUT_FAR=16). 없으면(미완결 존이거나 기능 자체가 비활성)
-    2년 창 — 근분기(byq)만, H=len(NEARQ)(보통 FUT_NEAR=8). need의 지평을 항상
-    실제로 공급이 커버하는 지평과 맞춰야 한다 — 안 그러면 4년치 need를 2년치
-    supply와 비교하는 구조적 부족 편향이 생긴다."""
-    b = zz.get('byq') or {}
-    near = sum(b.get(k, 0) for k in NEARQ)
-    ff = (P.get('fwd_far') or {}).get(zz['z'])
-    if ff is None:
-        return near, max(1, len(NEARQ))
-    far = sum(ff.get(k, 0) for k in FARQ)
-    return near + far, HQ
-
-
-def calc_dc(P, ph, ps, z, refq, share, dY):
-    """dC(3~4년 뒤 공급) — 생활권 실측(건축HUB meas)이 있으면 그것, 없으면 기존
-    시도 인구배분 폴백. 반환: (dC, plo, pv, src) — plo/pv는 화면 표시용으로 이미
-    share가 적용된 생활권 스케일 값(추가로 share를 곱하면 안 된다). src는
-    'meas'(건축HUB 실측)/'fallback'(시도 인구배분)/None(둘 다 불가)."""
-    dC = 0; plo = None; pv = None; src = None
-    perm_z = (P.get('meas') or {}).get(z['z'])
-    if perm_z is not None:
-        # Fix E(I2): 이 base(=흡수 기준선, refq*4*share)는 fallback 경로의
-        # plo_sido(=P['ref'][ps][0], 허가 기준선)와 독립적으로 보정된 값이라
-        # 시도별로 서로 다른 비율로 어긋난다(verify_dc_rankdiff.py가 시도별
-        # refq*4 vs P['ref'][ps][0] 비율을 진단 출력한다). 지표 기준선을
-        # 통일하는 건 사용자가 검토할 상품 결정이라 여기서 임의로 맞추지
-        # 않는다 — meas 존이 늘어날수록 fallback 잔존 존과의 이 잔차는
-        # 사용자가 이미 검토·수용한 것으로 취급한다.
-        base = refq * 4 * share            # (A) need-유도 연간 기준선(4분기), 생활권 스케일
-        dC = base - (perm_z - dY * share)  # perm_z=연평균 실측(생활권), dY=시도 멸실 배분
-        plo, pv, src = base, perm_z - dY * share, 'meas'
-    elif ps in P['regions']:              # 폴백: HUB 실측 없는 존만 기존 시도 인구배분
-        pi = P['regions'].index(ps)
-        vals = [r['v'][pi] for r in ph]
-        if all(v is not None for v in vals):
-            pv_sido = sum(vals); plo_sido = P['ref'][ps][0]
-            dC = (plo_sido - (pv_sido - dY)) * share
-            plo, pv, src = plo_sido * share, (pv_sido - dY) * share, 'fallback'
-    return dC, plo, pv, src
-
-
 def calc(adv, sts):
     """홈 renderScoreSec(scCalc)와 동일한 산식으로 생활권별 누적 순부족을 계산."""
     LZ, O, P, B = adv['livezone'], adv['occupancy'], adv['permits'], adv.get('bubble') or {}
@@ -117,9 +43,18 @@ def calc(adv, sts):
     SP = LZ.get('sidopop') or {}
     act = [r for r in O['rows'] if not r.get('e')]
     ph = P['rows'][-2:]
-    NEARQ, FARQ, HQ, cur_q = fut_window(LZ)
+    today = datetime.date.today()
+    cur_q = today.year * 4 + (today.month - 1) // 3        # 현재 분기 인덱스
+    def qi(k):
+        m = re.match(r'^(\d{4})Q([1-4])$', k)
+        return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else None
+    # 전역 미래 분기 창 — 모든 생활권이 같은 창을 써야 절대량 비교가 성립
+    allq = {k for zz in LZ['zones'] for k in (zz.get('byq') or {})}
+    FUTQ = sorted([k for k in allq if qi(k) is not None and qi(k) > cur_q], key=qi)[:H_MAX]
+    HQ = max(1, len(FUTQ))
     def fut_supply(zz):
-        return zone_fut_supply(zz, P, NEARQ, FARQ, HQ)
+        b = zz.get('byq') or {}
+        return sum(b.get(k, 0) for k in FUTQ), HQ
     out = []
     for z in LZ['zones']:
         ps = '수도권' if z['region'] == '수도권' else (z.get('psido') or '수도권')
@@ -137,7 +72,13 @@ def calc(adv, sts):
         dA = need - fsup
         n4 = [r['v'][oi] for r in act[-LB:] if r['v'][oi] is not None]
         dB = (refq * len(n4) - (sum(n4) - dQ * len(n4))) * share if n4 else 0
-        dC, plo, pv, dcsrc = calc_dc(P, ph, ps, z, refq, share, dY)
+        dC = 0; pv = None; plo = None
+        if ps in P['regions']:
+            pi = P['regions'].index(ps)
+            vals = [r['v'][pi] for r in ph]
+            if all(v is not None for v in vals):
+                pv = sum(vals); plo = P['ref'][ps][0]
+                dC = (plo - (pv - dY)) * share
         tot = W[0] * dA + W[1] * dC + W[2] * dB
         flag = None; lo = hi = None
         cv = (B.get('conv') or {}).get(ps)
@@ -152,7 +93,7 @@ def calc(adv, sts):
         # 진주권 실측(2026-07-19): 2027-12까지 입주 0세대, 다음은 2028-06 840세대로
         # 원자료 시야(2026-01~2027-12) 밖. 즉 결측이 아니라 실제 공급 가뭄이다.
         out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
-                        flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dcsrc=dcsrc, dY=dY, refq=refq, band=band))
+                        flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band))
     out.sort(key=lambda r: -r['tot'])
     return out
 
@@ -176,13 +117,6 @@ def make_capital(rows):
     agg['share'] = sum(c['share'] for c in caps)
     agg['ps'] = '수도권'
     agg['subs'] = sorted(caps, key=lambda c: -c['tot'])
-    # dcsrc는 dict(caps[0])에서 그대로 물려받으면 안 된다 — 수도권은 meas 존
-    # (성남권·오산권 등)과 fallback 존이 섞인 집계라, caps[0]가 우연히 meas 존이면
-    # "이 생활권은 건축HUB 실측"이라는 단일 출처 주장이 거짓이 된다(Task 8로
-    # meas 존이 늘수록 이 확률↑). 하위 존 출처가 전부 같을 때만 그 값을 쓰고,
-    # 섞이면 'mixed' — dcnote(build_page)가 이 값을 보고 문구를 갈라 쓴다.
-    srcs = {c.get('dcsrc') for c in caps}
-    agg['dcsrc'] = srcs.pop() if len(srcs) == 1 else 'mixed'
     return agg
 
 
@@ -450,27 +384,16 @@ def build_page(r, allrows, prd, today):
         '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['need']), num(r['fsup']), '#a93226' if r['dA'] > 0 else '#1a5276', signed(r['dA'])),
-        '<tr><td class="lbl">인허가 — 3~4년 뒤 입주<br><span class="note">생활권 실측 또는 시도 배분 추정 · 가중 0.35</span></td>'
+        '<tr><td class="lbl">인허가 — 3~4년 뒤 입주<br><span class="note">시도 배분 추정 · 가중 0.35</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">%s</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
-            num(r['plo']) if r['plo'] else '·',
-            num(r['pv']) if r['pv'] is not None else '·',
+            num(r['plo'] * r['share']) if r['plo'] else '·',
+            num((r['pv'] - r['dY']) * r['share']) if r['pv'] is not None else '·',
             '#a93226' if r['dC'] > 0 else '#1a5276', signed(r['dC'])),
         '<tr><td class="lbl">최근 3년, 입주 실적<br><span class="note">시도 배분 추정 · 가중 0.10</span></td>'
         '<td class="num" data-l="적정">%s</td><td class="num" data-l="실제">·</td><td class="num" data-l="부족분" style="color:%s">%s</td></tr>' % (
             num(r['refq'] * LB * r['share']),
             '#a93226' if r['dB'] > 0 else '#1a5276', signed(r['dB'])),
     ])
-
-    # 인허가 산식 출처 설명 — 건축HUB 시군구 실측 존은 폴백(시도 인구배분)과
-    # 문구를 다르게 준다. 실측이 아직 일부 존(성남·오산·부산권 등)에만 있어
-    # (전국 시딩 전) 대다수는 여전히 폴백 문구를 본다.
-    dcnote = ('인허가는 이 생활권의 <b>건축HUB 시군구 실측</b>(연평균 인허가·착공 기준)입니다. '
-              '입주예정만 단지 주소 기반 실측입니다.') if r.get('dcsrc') == 'meas' else (
-              '수도권 16개 생활권 합산입니다 — 생활권별로 <b>건축HUB 시군구 실측</b>과 시도 '
-              '인구배분 추정이 섞여 있어 인허가 출처를 하나로 말할 수 없습니다. '
-              '입주예정만 단지 주소 기반 실측입니다.') if r.get('dcsrc') == 'mixed' else (
-              '인허가·최근 실적은 시군구 통계가 없어 <b>시도(%s) 값을 인구 비중으로 배분한 추정치</b>'
-              '이고, 입주예정만 단지 주소 기반 실측입니다.' % ps)
 
     flag_html = ''
     if r['flag'] == 'watch':
@@ -576,7 +499,7 @@ def build_page(r, allrows, prd, today):
     <thead><tr><th>구간</th><th>적정</th><th>실제</th><th>부족분</th></tr></thead>
     <tbody>%(rows)s</tbody>
   </table>
-  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>%(dcnote)s</p>
+  <p class="note" style="margin-top:10px">부족은 재고처럼 쌓이므로 <b>3년</b>을 봅니다(멸실 뺀 순공급).<br>인허가·최근 실적은 시군구 통계가 없어 <b>시도(%(ps)s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>
   </div></details>
   <details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">
   <div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>
@@ -665,7 +588,6 @@ function zsubs(f){
                      r['fq'], num(r['need']), num(r['fsup']))),
         members=members, sublist=sublist, span=span, rows=rows_html, ps=ps, sharep=r['share'] * 100,
         dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
-        dcnote=dcnote,
         flag=flag_html, nav=nav, ld=json.dumps(ld, ensure_ascii=False),
         css=CSS)
 
