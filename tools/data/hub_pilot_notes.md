@@ -113,8 +113,12 @@ apprvDay, stcnsSchedDay, stcnsDay, useInsptSchedDay, useInsptDay, crtnDay
 
 ## 클라우드 프로브 결과 (Task 2에서 채움)
 
-*(플레이스홀더 — Task 2 완료 후 이 섹션에 GitHub Actions 등 클라우드 환경에서 HUB API가 IP 차단/정상 없이 호출되는지 실측 결과를 기록)*
+실시일: 2026-07-23. 워크플로: `.github/workflows/hub-probe.yml` (workflow_dispatch).
+런: [WatermelonPark/aptweather run 30004590437](https://github.com/WatermelonPark/aptweather/actions/runs/30004590437) — job `probe`, `completed/success`.
 
-- [ ] 클라우드 환경: (미실시)
-- [ ] 결과: (미실시)
-- [ ] 비고: (미실시)
+- [x] 클라우드 환경: GitHub Actions `ubuntu-latest` (Azure East US 러너, Ubuntu 24.04.4)
+- [x] 결과: **PASS** — 1차 시도에서 성공. 로그: `try 1: items=1 bytes=24675` → `PROBE PASS: items=1 — 클라우드 경로 가능`.
+  (`grep -c "<item>"`는 응답이 단일 라인이라 실제 태그 개수가 아니라 "매치 라인 수"=1을 세지만, `bytes=24675`가 파일럿의 동일 쿼리 응답 크기(25,517 bytes, Step 2)와 근접해 진짜 데이터(31건 상당)가 왔음을 확인. IP 차단 시 나타나는 무자료 형태(JSON 69 bytes 또는 XML `<items/>` ~190 bytes)와는 확연히 다름.)
+- [x] 비고: 시크릿(`DATA_GO_KR_KEY`/`DATAGOKR`)도 정상 해석됨(빈 키였다면 스텝이 exit 2로 즉시 실패했을 것). Azure IP 차단 없음 확인.
+
+**판정: 클라우드 월배치 가능(CLOUD-VIABLE)** — Task 8은 GitHub Actions에서 실행 가능, 로컬 폴백 불필요.
