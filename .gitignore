@@ -1,6 +1,4 @@
 .stats_changed
-.last_sent
-.pending_send
 tools/__pycache__/
 .indexnow_key
 
