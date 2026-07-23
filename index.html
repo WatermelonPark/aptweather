@@ -1285,8 +1285,10 @@ function readChallenge(){
   return null;
 }
 function challengeURL(){
-  // /burini-test/가 파라미터를 홈으로 넘겨준다(OG는 퀴즈 카드로 뜨게).
-  return `https://www.agongmap.co.kr/burini-test/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
+  // 세트별 랜딩이 파라미터를 홈으로 넘겨준다(OG는 세트별 퀴즈 카드로 뜨게).
+  // 세 랜딩 모두 ?c=&s= 대결 파라미터를 홈으로 리다이렉트하므로 라우팅은 동일하다.
+  const slug=curSet==='investor'?'investor-test':curSet==='calc'?'redev-test':'burini-test';
+  return `https://www.agongmap.co.kr/${slug}/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
 }
 function renderChalBar(){
   const b=document.getElementById('chal-bar');
