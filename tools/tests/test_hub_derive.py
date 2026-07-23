@@ -22,9 +22,15 @@ def _write_bdong(tmp_path, rows):
     p.write_text(json.dumps(_bdong_payload(rows), ensure_ascii=False), encoding='utf-8')
 
 
-def _write_hub(tmp_path, sgg, unresolved_legacy=None):
+def _write_hub(tmp_path, sgg, unresolved_legacy=None, activate=True, scanned=None):
+    """activate/scanned 기본값은 '이 sgg가 방금 전부 깨끗하게 스캔 완료됨'을
+    가정한다(Fix A/B 이전 테스트 대다수가 완결 존 emit을 그대로 기대하므로).
+    미완결/비활성 시나리오를 테스트하는 곳만 명시적으로 override한다."""
     p = tmp_path / 'hub_permits.json'
-    payload = {'meta': {'unresolved_legacy': unresolved_legacy or []}, 'sgg': sgg}
+    if scanned is None:
+        scanned = list(sgg.keys())
+    payload = {'meta': {'unresolved_legacy': unresolved_legacy or [],
+                        'activate': activate, 'scanned': scanned}, 'sgg': sgg}
     p.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
 
 
@@ -204,3 +210,140 @@ def test_hub_derive_missing_hub_permits_file_is_noop(tmp_path, monkeypatch, caps
     U.hub_derive(adv)
     assert 'meas' not in adv['permits']
     assert 'hub_derive skip' in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Fix A: activate 게이트 — 비활성이면 meas/fwd_far 키 자체를 안 씀(라이브 지표 불변)
+# ---------------------------------------------------------------------------
+
+def test_hub_derive_inactive_emits_no_meas_or_fwd_far(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [('41370', '경기도', '오산시', None)])
+    _write_hub(tmp_path, {
+        '41370': {'name': '오산시', 'permit_q': {'2024Q1': 10}, 'start_q': {'2024Q1': 5}},
+    }, activate=False)
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert 'meas' not in adv['permits']
+    assert 'fwd_far' not in adv['permits']
+    out = capsys.readouterr().out
+    assert 'hub_derive: inactive (meta.activate=false) — 기존 지표 유지' in out
+
+
+def test_hub_derive_missing_activate_key_defaults_to_inactive(tmp_path, monkeypatch):
+    # meta에 activate 키가 아예 없는(과거 포맷) hub_permits.json도 비활성으로 취급돼야 함.
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [('41370', '경기도', '오산시', None)])
+    p = tmp_path / 'hub_permits.json'
+    p.write_text(json.dumps({'meta': {}, 'sgg': {
+        '41370': {'name': '오산시', 'permit_q': {'2024Q1': 10}, 'start_q': {}},
+    }}, ensure_ascii=False), encoding='utf-8')
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert 'meas' not in adv['permits']
+
+
+# ---------------------------------------------------------------------------
+# Fix B: 존별 완결성 게이트 — 존을 구성하는 모든 시군구가 hp['sgg']에 있고
+# scanned에도 있어야 그 존의 meas/fwd_far가 emit된다.
+# ---------------------------------------------------------------------------
+
+def test_hub_derive_active_complete_zone_emits_meas_and_fwd_far(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [('41370', '경기도', '오산시', None)])
+    _write_hub(tmp_path, {
+        '41370': {'name': '오산시', 'permit_q': {'%dQ1' % datetime.date.today().year: 100},
+                  'start_q': {'2024Q1': 500}},
+    })   # activate=True, scanned=['41370'] (기본값)
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert adv['permits']['meas'] == {'오산권': round(100 / 3)}
+    assert adv['permits']['fwd_far'] == {'오산권': {'2027Q2': 500}}
+    out = capsys.readouterr().out
+    assert 'complete_zones=1 incomplete=0 (meas/fwd_far emitted for 1)' in out
+
+
+def test_hub_derive_zone_missing_a_member_sigungu_stays_incomplete(tmp_path, monkeypatch, capsys):
+    # 부산권 = 부산(*) + 경남 양산시. 양산시가 hp['sgg']에 아예 없으면 미완결.
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [
+        ('26470', '부산광역시', '연제구', None),
+        ('48330', '경상남도', '양산시', None),
+    ])
+    _write_hub(tmp_path, {
+        '26470': {'name': '연제구', 'permit_q': {}, 'start_q': {'2024Q1': 300}},
+        # '48330'(양산시) 없음 — 부산권 완결 조건 불충족
+    })
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert adv['permits']['meas'] == {}
+    assert adv['permits']['fwd_far'] == {}
+    out = capsys.readouterr().out
+    assert 'complete_zones=0 incomplete=1 (meas/fwd_far emitted for 0)' in out
+
+
+def test_hub_derive_zone_member_not_in_scanned_stays_incomplete(tmp_path, monkeypatch, capsys):
+    # hp['sgg']에는 있지만(예: 재시도 중 부분 갱신) scanned에는 없는 시군구가
+    # 있으면(=깨끗하게 스캔 완료된 게 아니면) 그 존은 여전히 미완결.
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [('41370', '경기도', '오산시', None)])
+    _write_hub(tmp_path, {
+        '41370': {'name': '오산시', 'permit_q': {'2024Q1': 10}, 'start_q': {}},
+    }, scanned=[])   # sgg에는 있지만 scanned가 비어 있음
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert adv['permits']['meas'] == {}
+    assert adv['permits']['fwd_far'] == {}
+    out = capsys.readouterr().out
+    assert 'complete_zones=0 incomplete=1 (meas/fwd_far emitted for 0)' in out
+
+
+def test_hub_derive_zone_entirely_unresolved_legacy_stays_incomplete(tmp_path, monkeypatch, capsys):
+    # 부천처럼 존의 유일한 구성원이 unresolved_legacy면 남는 멤버가 없어
+    # '상시 폴백'(미완결) 취급 — meas/fwd_far가 이 존에 절대 안 생겨야 한다.
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [('41190', '경기도', '부천시', None)])
+    _write_hub(tmp_path, {
+        '41190': {'name': '부천시', 'permit_q': {'2024Q1': 999}, 'start_q': {}},
+    }, unresolved_legacy=['41190'])
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert adv['permits']['meas'] == {}
+    out = capsys.readouterr().out
+    assert 'complete_zones=0 incomplete=1 (meas/fwd_far emitted for 0)' in out
+
+
+def test_hub_derive_multi_gu_zone_complete_when_rep_code_scanned(tmp_path, monkeypatch):
+    # 성남시는 구가 나뉜 다구 도시 — hub_permits.json의 sgg 키는 대표(가장 작은)
+    # 코드 하나(41130)뿐이라, 완결성 판정은 개별 구 코드(41131/41133/41135)가
+    # 아니라 그 rep 코드로 환산해서 봐야 한다(Fix B의 핵심 함정).
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [
+        ('41130', '경기도', '성남시', None),
+        ('41131', '경기도', '성남시 수정구', None),
+        ('41133', '경기도', '성남시 중원구', None),
+        ('41135', '경기도', '성남시 분당구', None),
+    ])
+    _write_hub(tmp_path, {
+        '41130': {'name': '성남시', 'permit_q': {'%dQ1' % datetime.date.today().year: 400},
+                  'start_q': {}},
+    })   # sgg/scanned 모두 rep 코드('41130') 하나뿐
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    assert adv['permits']['meas'] == {'성남권': round(400 / 3)}
+
+
+def test_hub_derive_orphan_counter_counts_each_unresolvable_sgg_once(tmp_path, monkeypatch, capsys):
+    # M1(Fix D): orphan은 항상 +=1 이어야 한다(존재하지 않는 'totish' 키를
+    # 참조하던 예전 코드도 우연히 결과값은 같았지만, 의도가 명확한 카운터로 교체).
+    monkeypatch.setattr(U, 'TOOLS_DATA', str(tmp_path))
+    _write_bdong(tmp_path, [('41370', '경기도', '오산시', None)])
+    _write_hub(tmp_path, {
+        '41370': {'name': '오산시', 'permit_q': {'2024Q1': 10}, 'start_q': {}},
+        '11111': {'name': '미상1', 'permit_q': {'2024Q1': 10}, 'start_q': {}},
+        '22222': {'name': '미상2', 'permit_q': {'2024Q1': 10}, 'start_q': {}},
+    })
+    adv = {'permits': {}}
+    U.hub_derive(adv)
+    out = capsys.readouterr().out
+    assert 'orphan_sgg_ignored=2' in out
