@@ -21,7 +21,3 @@ def test_apt_records_filters_and_dedupes():
              {'mgmHsrgstPk':'D','purpsCdNm':'공동주택','totHhldCnt':'0'}]   # 0세대 제외
     out = H.apt_records(items)
     assert [r['mgmHsrgstPk'] for r in out] == ['A']
-
-def test_shift_quarter():
-    assert H.shift_quarter('2024Q1', 13) == '2027Q2'
-    assert H.shift_quarter('2024Q4', 1) == '2025Q1'

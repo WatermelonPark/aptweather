@@ -35,8 +35,3 @@ def apt_records(items):
         except (TypeError, ValueError):
             return False
     return dedupe([it for it in items if ok(it)])
-
-def shift_quarter(q, lag=13):
-    m = re.match(r'^(\d{4})Q([1-4])$', q)
-    idx = int(m.group(1)) * 4 + (int(m.group(2)) - 1) + lag
-    return '%dQ%d' % (idx // 4, idx % 4 + 1)
