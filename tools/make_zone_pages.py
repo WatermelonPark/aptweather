@@ -35,6 +35,44 @@ def last_of(series, key):
     return 0
 
 
+def _qidx(q):
+    m = re.match(r'^(\d{4})Q([1-4])$', q)
+    return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else None
+
+
+def _qkey(idx):
+    return '%dQ%d' % (idx // 4, idx % 4 + 1)
+
+
+def _conf(k):
+    """신뢰가중: k=미래 몇 분기 뒤(1..). 1분기 뒤 1.0 → 20분기(5년) 뒤 0으로 선형 감쇠."""
+    return max(0.0, 1.0 - ((k - 1) / 4.0) * 0.2)
+
+
+ANCHOR = 2010 * 4  # 2010Q1
+
+
+def running_shortage(done, sched, refq, cur_q, horizon=20):
+    """준공 기반 러닝재고 순부족.
+
+    I_now = 2010Q1부터 현재분기까지 매 분기 max(0, 재고+준공-refq)로 굴린 재고(음수 불가).
+    순부족 = Σ_{k=1..horizon} conf(k)*(refq - sched(cur_q+k)) - I_now.
+    양수=부족(발산 막대 오른쪽), 음수=과잉.
+    """
+    I = 0.0
+    for idx in range(ANCHOR, cur_q + 1):
+        I = max(0.0, I + done.get(_qkey(idx), 0) - refq)
+    I_now = I
+    fut = 0.0
+    for k in range(1, horizon + 1):
+        w = _conf(k)
+        if w <= 0:
+            break
+        q = _qkey(cur_q + k)
+        fut += w * (refq - sched.get(q, 0))
+    return fut - I_now
+
+
 def calc(adv, sts):
     """홈 renderScoreSec(scCalc)와 동일한 산식으로 생활권별 누적 순부족을 계산."""
     LZ, O, P, B = adv['livezone'], adv['occupancy'], adv['permits'], adv.get('bubble') or {}
@@ -79,7 +117,13 @@ def calc(adv, sts):
             if all(v is not None for v in vals):
                 pv = sum(vals); plo = P['ref'][ps][0]
                 dC = (plo - (pv - dY)) * share
-        tot = W[0] * dA + W[1] * dC + W[2] * dB
+        tot_fallback = W[0] * dA + W[1] * dC + W[2] * dB
+        zdone = (P.get('done') or {}).get(z['z']) or {}
+        zsched = (P.get('sched') or {}).get(z['z']) or {}
+        inv_path = bool(zdone) or bool(zsched)
+        # done/sched가 있는 존만 러닝재고 산식(신모델)을 쓴다. 없는 존(비완결·inactive)은
+        # pre-HUB 산식(dA/dB/dC 가중합)을 그대로 유지 — activate 게이트 전엔 전 존이 이 경로.
+        tot = running_shortage(zdone, zsched, refq, cur_q) if inv_path else tot_fallback
         flag = None; lo = hi = None
         cv = (B.get('conv') or {}).get(ps)
         jr = last_of(J, ps) or None
@@ -93,7 +137,8 @@ def calc(adv, sts):
         # 진주권 실측(2026-07-19): 2027-12까지 입주 0세대, 다음은 2028-06 840세대로
         # 원자료 시야(2026-01~2027-12) 밖. 즉 결측이 아니라 실제 공급 가뭄이다.
         out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
-                        flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band))
+                        flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band,
+                        inv_path=inv_path, tot_fallback=tot_fallback))
     out.sort(key=lambda r: -r['tot'])
     return out
 
