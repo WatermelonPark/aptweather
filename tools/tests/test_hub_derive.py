@@ -58,6 +58,57 @@ def test_hub_zone_map_unresolvable_sigungu_is_omitted():
     assert U._hub_zone_map(bdong) == {}
 
 
+def test_hub_zone_map_gyeonggi_multi_gu_city_seongnam_bundang():
+    # LZ_GU2SI에 없는 경기 다구 도시("시 구" 결합형) -> parts[-1](구)을 쓰면
+    # gg_zone('분당구')가 존재하지 않는 '분당구권'을 만들어낸다(수정 전 버그).
+    # 선두 토큰("성남시")을 취해야 정상적으로 성남권에 접힌다.
+    bdong = {'41135': ('경기도', '성남시 분당구')}
+    assert U._hub_zone_map(bdong) == {'41135': '성남권'}
+
+
+def test_hub_zone_map_gyeonggi_multi_gu_city_suwon_yeongtong():
+    bdong = {'41117': ('경기도', '수원시 영통구')}
+    assert U._hub_zone_map(bdong) == {'41117': '수원권'}
+
+
+def test_hub_zone_map_gyeonggi_multi_gu_city_goyang_deokyang():
+    bdong = {'41281': ('경기도', '고양시 덕양구')}
+    assert U._hub_zone_map(bdong) == {'41281': '고양권'}
+
+
+def test_hub_zone_map_gyeonggi_multi_gu_city_yongin_giheung():
+    bdong = {'41465': ('경기도', '용인시 기흥구')}
+    assert U._hub_zone_map(bdong) == {'41465': '용인권'}
+
+
+def test_hub_zone_map_changwon_gu_lz_gu2si_still_correct():
+    # LZ_GU2SI에 등록된 구(창원)는 선두 토큰 방식으로도 여전히 올바르다.
+    bdong = {'48125': ('경상남도', '창원시 마산합포구')}
+    assert U._hub_zone_map(bdong) == {'48125': '창원권'}
+
+
+def test_hub_zone_map_cheongju_gu_lz_gu2si_still_correct():
+    bdong = {'43111': ('충청북도', '청주시 상당구')}
+    assert U._hub_zone_map(bdong) == {'43111': '청주권'}
+
+
+def test_hub_zone_map_gyeonggi_gwangju_name_collision_with_metro():
+    # 경기 광주시는 '광주권'(광주광역시)과 이름이 겹쳐 '경기광주권'으로 분리된다.
+    bdong = {'41610': ('경기도', '광주시')}
+    assert U._hub_zone_map(bdong) == {'41610': '경기광주권'}
+
+
+def test_hub_zone_map_gwangju_metro_maps_to_gwangju_zone():
+    bdong = {'29155': ('광주광역시', '서구')}
+    assert U._hub_zone_map(bdong) == {'29155': '광주권'}
+
+
+def test_hub_zone_map_seoul_gu_single_token_falls_to_metro_zone():
+    # 서울 등 광역시 구(1토큰, "구"만) -> zone_of(sd,'*')가 먼저 걸려 서울권.
+    bdong = {'11650': ('서울특별시', '서초구')}
+    assert U._hub_zone_map(bdong) == {'11650': '서울권'}
+
+
 # ---------------------------------------------------------------------------
 # hub_derive: meas 연평균 정규화(윈도우 밖 분기 제외) + fwd_far(착공+13분기 합산)
 # ---------------------------------------------------------------------------
