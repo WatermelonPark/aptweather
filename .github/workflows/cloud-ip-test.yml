@@ -1,4 +1,4 @@
-name: cloud-ip-test (R-ONE vs KOSIS 실키 검증)
+name: cloud-ip-test (KOSIS 청크 크기 실험)
 on:
   push:
     paths: ['.github/workflows/cloud-ip-test.yml']
@@ -10,56 +10,43 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: 실제 키로 데이터 조회 (R-ONE / KOSIS)
+      - name: KOSIS 청크 크기별 응답시간 (주간 매매 objL1=ALL)
         env:
-          RONE_API_KEY:  ${{ secrets.RONE_API_KEY || secrets.RONE }}
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
         run: |
           python - << 'PYEOF'
-          import os, json, urllib.parse, urllib.request
-          def get(url):
-              req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
-              with urllib.request.urlopen(req, timeout=25) as r:
-                  return r.status, r.read().decode('utf-8','replace')
+          import os, json, time, datetime as dt, urllib.parse, urllib.request
+          KEY=os.environ.get('KOSIS_API_KEY','')
+          API='https://kosis.kr/openapi/Param/statisticsParameterData.do'
+          today=dt.date.today()
+          print('KOSIS key len', len(KEY), '| today', today, '\n')
 
-          rone = os.environ.get('RONE_API_KEY','')
-          kos  = os.environ.get('KOSIS_API_KEY','')
-          print('시크릿 존재: RONE=%s(len %d)  KOSIS=%s(len %d)'
-                % (bool(rone), len(rone), bool(kos), len(kos)))
+          def fetch(weeks, timeout):
+              start=today-dt.timedelta(weeks=weeks)
+              q=dict(method='getList',apiKey=KEY,format='json',jsonVD='Y',
+                     orgId='408',tblId='DT_304004_WEEK_001_B',
+                     objL1='ALL',itmId='ALL',prdSe='F',
+                     startPrdDe=start.strftime('%Y%m%d'),endPrdDe=today.strftime('%Y%m%d'))
+              url=API+'?'+urllib.parse.urlencode(q)
+              t0=time.time()
+              try:
+                  req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+                  with urllib.request.urlopen(req,timeout=timeout) as r:
+                      body=r.read().decode('utf-8','replace')
+                  el=time.time()-t0
+                  j=json.loads(body)
+                  if isinstance(j,list):
+                      return el, 'OK rows=%d (~%d셀)'%(len(j),len(j))
+                  return el, 'ERR '+str(j.get('err'))+' '+str(j.get('errMsg'))[:40]
+              except Exception as e:
+                  return time.time()-t0, 'TIMEOUT/FAIL '+type(e).__name__
 
-          print('\n===== R-ONE 월간 매매(A_2024_00045) =====')
-          try:
-              u='https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do?'+urllib.parse.urlencode(
-                  {'KEY':rone or 'none','Type':'json','pSize':5,'STATBL_ID':'A_2024_00045','DTACYCLE_CD':'MM'})
-              st,body=get(u); print('HTTP',st)
-              j=json.loads(body)
-              rows=j.get('SttsApiTblData')
-              if rows and isinstance(rows,list) and len(rows)>1:
-                  data=[x for x in rows[1].get('row',[])]
-                  print('실데이터 행수:',len(data))
-                  if data:
-                      s=data[-1]; print('최신 표본:',s.get('WRTTIME_IDTFR_ID'),s.get('CLS_NM'),s.get('DTA_VAL'))
-                  print('=> R-ONE 클라우드 조회 성공' if data else '=> 빈 응답')
-              else:
-                  print('예외 응답:',body[:300])
-          except Exception as e:
-              print('R-ONE 실패(차단/오류):',repr(e))
-
-          print('\n===== KOSIS 매매지수(DT_KAB_11672_S1) =====')
-          try:
-              u='https://kosis.kr/openapi/Param/statisticsParameterData.do?'+urllib.parse.urlencode(
-                  {'method':'getList','apiKey':kos or 'none','format':'json','jsonVD':'Y',
-                   'orgId':'408','tblId':'DT_KAB_11672_S1','objL1':'ALL','itmId':'ALL',
-                   'prdSe':'M','startPrdDe':'202605','endPrdDe':'202606'})
-              st,body=get(u); print('HTTP',st)
-              j=json.loads(body)
-              if isinstance(j,list):
-                  print('실데이터 행수:',len(j))
-                  if j:
-                      s=j[-1]; print('최신 표본:',s.get('PRD_DE'),s.get('C1_NM'),s.get('DT'))
-                  print('=> KOSIS 클라우드 조회 성공' if j else '=> 빈 응답(차단 의심)')
-              elif isinstance(j,dict):
-                  print('KOSIS 에러/차단:',j.get('err'),j.get('errMsg') or str(j)[:200])
-          except Exception as e:
-              print('KOSIS 실패(차단/오류):',repr(e))
+          # 2패스로 간헐성 확인. 각 사이즈 단일 시도(재시도 없음), 타임아웃 100s로 실지연 측정
+          for p in (1,2):
+              print('===== PASS %d ====='%p)
+              for wk in (4,13,26,39,52):
+                  el,st=fetch(wk,100)
+                  print('  %2d주 : %6.1fs  %s'%(wk,el,st))
+                  time.sleep(2)
+              print()
           PYEOF
