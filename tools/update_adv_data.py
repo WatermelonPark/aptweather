@@ -1012,6 +1012,82 @@ LIVEZONE = {
 }
 LZ_GU2SI = {'서원구':'청주시','상당구':'청주시','흥덕구':'청주시','청원구':'청주시','동남구':'천안시','서북구':'천안시',
  '완산구':'전주시','덕진구':'전주시','의창구':'창원시','성산구':'창원시','마산합포구':'창원시','마산회원구':'창원시','진해구':'창원시'}
+
+# ---- 건축HUB 준공/준공예정(done_q/sched_q) → 생활권 시계열 (hub_derive) ----
+def _load_hub_permits():
+    return json.load(io.open(os.path.join(TOOLS_DATA, 'hub_permits.json'), encoding='utf-8'))
+
+def _load_bdong_map():
+    import math
+    d = json.load(io.open(os.path.join(TOOLS_DATA, 'code_bdong.json'), encoding='utf-8'))
+    out = {}
+    for i in range(len(d['시도명'])):
+        k = str(i); era = d['말소일자'][k]
+        if not (era is None or (isinstance(era, float) and math.isnan(era))): continue
+        nm = d['시군구명'][k]
+        if not isinstance(nm, str) or not nm: continue
+        out.setdefault(str(d['시군구코드'][k]), (d['시도명'][k], nm))
+    return out
+
+def _hub_zone_map(bdong):
+    """시군구코드 → 생활권. fetch_livezone()의 zone_of/gg_zone 규칙을 그대로 복제하되
+    입력이 KOSIS 인구 행이 아니라 code_bdong.json 시군구명이라 leading 토큰만 쓴다
+    ('성남시 분당구' → '성남시' → 성남권)."""
+    m2z = {m: z for z, mm in LIVEZONE.items() for m in mm}
+    def gg_zone(sg):
+        base = re.sub(r'(시|군)$', '', sg)
+        return ('경기' + base + '권') if (base + '권') in LIVEZONE else (base + '권')
+    def zone_of(sd, sg):
+        if (sd, '*') in m2z: return m2z[(sd, '*')]
+        sg = LZ_GU2SI.get(sg, sg)
+        if (sd, sg) in m2z: return m2z[(sd, sg)]
+        if sd == '경기': return gg_zone(sg)
+        return None
+    out = {}
+    for cd, (sido_full, nm) in bdong.items():
+        sd = LZ_SIDO_FULL.get(sido_full)
+        if not sd: continue
+        z = zone_of(sd, nm.split(' ')[0])     # 시/군 leading 토큰
+        if z: out[cd] = z
+    return out
+
+def hub_derive(adv):
+    """hub_permits.json(done_q/sched_q) → adv['permits']['done'|'sched'] 생활권 시계열.
+
+    게이트 두 개(둘 다 통과해야 방출):
+    1) meta.activate — false/부재면 아무것도 방출하지 않는다(라이브는 pre-HUB 지표 유지).
+    2) 존별 완결성 — 존의 멤버 시군구(unresolved_legacy 제외) 전원이 meta.scanned에
+       있을 때만 그 존을 방출한다. 부분 스캔 존을 섞으면 존 합계가 실제보다 작게 보여
+       "재고가 준다"는 착시를 만든다.
+
+    hub_permits.json은 갱신 중인 시군구가 섞여 있어(구스키마 permit_q/start_q만 있고
+    done_q/sched_q가 없는 항목) v.get(..., {})로 방어한다 — 구스키마 항목은 그냥
+    기여분 0으로 취급된다(KeyError 없음).
+    """
+    import collections
+    hp = _load_hub_permits()
+    if not hp.get('meta', {}).get('activate', False):
+        print('hub_derive: inactive — pre-HUB 지표 유지'); return
+    z_of = _hub_zone_map(_load_bdong_map())
+    scanned = set(hp.get('meta', {}).get('scanned', []))
+    unresolved = set(hp.get('meta', {}).get('unresolved_legacy', []))
+    # 존별 멤버 시군구(완결성 판정용)
+    members = collections.defaultdict(set)
+    for cd, z in z_of.items():
+        if cd not in unresolved: members[z].add(cd)
+    done = collections.defaultdict(lambda: collections.defaultdict(int))
+    sched = collections.defaultdict(lambda: collections.defaultdict(int))
+    for cd, v in hp.get('sgg', {}).items():
+        z = z_of.get(cd)
+        if not z: continue
+        for q, n in v.get('done_q', {}).items(): done[z][q] += n
+        for q, n in v.get('sched_q', {}).items(): sched[z][q] += n
+    # 완결성 게이트: 존의 모든 멤버가 scanned일 때만 방출
+    complete = {z for z, ms in members.items() if ms and ms <= scanned}
+    adv.setdefault('permits', {})
+    adv['permits']['done'] = {z: dict(done[z]) for z in complete if z in done}
+    adv['permits']['sched'] = {z: dict(sched[z]) for z in complete if z in sched}
+    print('hub_derive: active, complete_zones=%d' % len(complete))
 LZ_PSIDO = {'서울권':'수도권','인천권':'수도권','부산권':'부산','김해권':'경남','창원권':'경남','진주권':'경남',
  '울산권':'울산','대구권':'대구','포항권':'경북','구미권':'경북','안동권':'경북','대전세종권':'대전',
  '청주권':'충북','천안아산권':'충남','서산당진권':'충남','광주권':'광주','전주권':'전북','군산익산권':'전북',
@@ -1261,6 +1337,10 @@ def main():
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
         failed.append('permits'); print('permits skip:', e)
+    try:
+        hub_derive(adv)
+    except Exception as e:
+        failed.append('hub_derive'); print('hub_derive skip:', e)
     try:
         h = fetch_holidays()
         if h:
