@@ -264,9 +264,19 @@ def parse_items(xml):
 
 
 def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
-    """법정동 하나의 전 페이지를 모아 아이템 리스트로 반환."""
+    """법정동 하나의 전 페이지를 모아 (아이템 리스트, had_error) 반환.
+
+    Fix pass 2: had_error=True는 이 법정동의 마지막 페이지 호출이 재시도
+    (MAX_RETRY)를 다 쓰고도 'error'로 남았다는 뜻 — 즉 fetch_page가 이미
+    ERROR를 찍은 "수집 실패"다(Finding 1과 동일 신호를 여기서 상위로
+    전달). 이 플래그가 하나라도 True인 그룹은 fetch_group이
+    had_unresolved_error로 묶어 올려 run()이 그룹 전체 결과를 신뢰하지
+    않게 한다 — 그러지 않으면 지속 장애 중 일부만 실패한 그룹도 나머지
+    법정동의 빈약한 부분합으로 permit_q/start_q가 조용히 확정돼버린다.
+    """
     items = []
     page = 1
+    had_error = False
     while True:
         body, cls = fetch_page(sigungu, bjdong, page)
         if cls == 'data':
@@ -279,13 +289,15 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
         if cls == 'no_data_json' and log is not None:
             log.append('WARN %s/%s p%d: 파라미터 누락형 무자료 응답(호출 확인 필요)'
                         % (sigungu, bjdong, page))
+        if cls == 'error':
+            had_error = True
         # no_data_xml(진짜 0건) / no_data_json / 재시도 소진(empty, error) 모두
         # 더 페이지 없음으로 종료. 'error'가 재시도 끝까지 안 풀린 경우 이미
         # fetch_page가 ERROR 라인을 찍었으므로 이 법정동은 0건이 아니라
         # "수집 실패"로 로그에 남고, items에는 아무것도 추가되지 않는다
         # (진짜 0건과 겉보기 결과는 같아도 로그로는 구분된다 — Finding 1).
         break
-    return items
+    return items, had_error
 
 
 # ---------------------------------------------------------------------------
@@ -316,20 +328,30 @@ def fetch_group(group, only_bjdong=None):
 
     only_bjdong이 주어지면(증분 모드) 그 집합(10자리 전체 법정동코드)에 속하는
     법정동만 재조회한다. None이면(--full) 그룹 소속 전체 법정동을 조회한다.
+
+    반환에 had_unresolved_error(bool)를 추가(Fix pass 2): 그룹 소속 법정동
+    중 하나라도 재시도 소진 후에도 'error'로 남았으면 True. 지속 장애(인증/
+    쿼터/레이트리밋) 중에는 이미 처리한 법정동의 실제 카운트와 아직 못 푼
+    법정동의 공백이 뒤섞인 permit_q/start_q가 나오므로, 이 신호를 호출자
+    (run())에게 넘겨 "이번 회차 결과를 그룹 값으로 확정하면 안 된다"고
+    판단하게 한다.
     """
     all_items = []
     productive = []
+    had_unresolved_error = False
     for member_cd, bjdongs in group['bjdong'].items():
         for bjdong in bjdongs:
             full = member_cd + bjdong   # 10자리 전체 법정동코드
             if only_bjdong is not None and full not in only_bjdong:
                 continue
-            items = fetch_bjdong_all_pages(member_cd, bjdong)
+            items, had_error = fetch_bjdong_all_pages(member_cd, bjdong)
+            if had_error:
+                had_unresolved_error = True
             if H.apt_records(items):
                 productive.append(full)
             all_items.extend(items)
     permit_q, start_q = _aggregate(all_items)
-    return permit_q, start_q, productive
+    return permit_q, start_q, productive, had_unresolved_error
 
 
 def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
@@ -357,8 +379,13 @@ def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
 
 def load_existing():
     if os.path.exists(OUT_PATH):
-        return json.load(io.open(OUT_PATH, encoding='utf-8'))
-    return {'meta': {'fetched': '', 'mode': '', 'unresolved_legacy': []},
+        d = json.load(io.open(OUT_PATH, encoding='utf-8'))
+        # 하위호환(Fix pass 2): 이 필드 이전에 저장된 hub_permits.json에는
+        # meta['scanned']가 아예 없다 — 없으면 빈 목록으로 취급해 로드가
+        # 죽지 않게 한다(누락 = 아직 아무것도 '깨끗하게 스캔됨'으로 기록 안 됨).
+        d.setdefault('meta', {}).setdefault('scanned', [])
+        return d
+    return {'meta': {'fetched': '', 'mode': '', 'unresolved_legacy': [], 'scanned': []},
             'sgg': {}, 'productive_bjdong': []}
 
 
@@ -395,6 +422,10 @@ def run(mode_full, only_codes, list_targets_only):
     out = load_existing()
     cached_productive = set(out.get('productive_bjdong', []))
     unresolved_legacy = set(out['meta'].get('unresolved_legacy', []))
+    # Fix pass 2: '깨끗하게(무재시도-오류 없이) 스캔 완료'된 그룹 키 집합.
+    # should_refresh_group과 별개로, 스킵 로그가 "아직 스캔 안 함"과 "스캔은
+    # 했는데 진짜 0건"을 구분하는 데 쓴다(Minor).
+    scanned = set(out['meta'].get('scanned', []))
 
     target_keys = list(groups.keys())
     if only_codes:
@@ -421,19 +452,40 @@ def run(mode_full, only_codes, list_targets_only):
             # 넘긴 cached_productive와 이 그룹 소속 법정동이 하나도 안 겹쳐
             # 호출 없이 빈 dict가 나오고, 그걸 out['sgg'][key]에 쓰면 "스캔해서
             # 0건"과 "아직 미수집"이 구별 안 되는 거짓 0이 찍힌다.
-            print('[SKIP not-yet-scanned] %s(%s): productive_bjdong 캐시에 자기 법정동 없음 — --full/--only로 먼저 수집 필요'
-                  % (key, group['name']))
+            # Fix pass 2(Minor): 다만 두 경우(never-scanned / scanned-genuinely-
+            # zero) 모두 cached_productive와 겹치지 않아 이 분기로 온다 —
+            # meta['scanned']로 실제 어느 쪽인지 갈라 로그만 정확히 남긴다
+            # (동작 자체는 두 경우 다 skip으로 동일, 오해를 부르는 로그만 고침).
+            if key in scanned:
+                print('[SKIP scanned-zero] %s(%s): 이전에 깨끗하게 스캔 완료 — 생산적 법정동 없음(증분 재조회 대상 아님)'
+                      % (key, group['name']))
+            else:
+                print('[SKIP not-yet-scanned] %s(%s): productive_bjdong 캐시에 자기 법정동 없음 — --full/--only로 먼저 수집 필요'
+                      % (key, group['name']))
         else:
             elapsed = time.time() - t0
             print('[%d/%d] %s(%s) %d개 법정동 수집 시작 (경과 %ds)'
                   % (n_done, len(target_keys), key, group['name'],
                      sum(len(b) for b in group['bjdong'].values()), int(elapsed)))
-            permit_q, start_q, productive = fetch_group(
+            permit_q, start_q, productive, had_unresolved_error = fetch_group(
                 group, only_bjdong=None if mode_full else cached_productive)
-            out['sgg'][key] = {'name': group['name'], 'permit_q': permit_q, 'start_q': start_q}
-            cached_productive.update(productive)
+            if had_unresolved_error:
+                # Important: 지속 장애(인증/쿼터/레이트리밋 등) 중에 그룹의
+                # 일부 법정동만 실패해도, 그 부분합으로 out['sgg'][key]를
+                # 덮어쓰면 이전에 실측된 진짜 카운트가 빈약한 값으로 조용히
+                # clobber된다(콘솔 ERROR 로그 외엔 흔적이 없음). 기존 값이
+                # 있으면 그대로 두고, 없으면 빈 placeholder도 쓰지 않는다.
+                # productive_bjdong/scanned도 갱신하지 않아 다음 실행이 이
+                # 그룹을 온전히 다시 시도하게 둔다.
+                print('[SKIP error] %s(%s): 재시도 소진된 오류 있음 — 기존 값 보존, 다음 실행에서 재시도'
+                      % (key, group['name']))
+            else:
+                out['sgg'][key] = {'name': group['name'], 'permit_q': permit_q, 'start_q': start_q}
+                cached_productive.update(productive)
+                scanned.add(key)   # 깨끗하게 스캔 완료 — never-scanned/scanned-zero 구분용 기록
         out['productive_bjdong'] = sorted(cached_productive)
         out['meta']['unresolved_legacy'] = sorted(unresolved_legacy)
+        out['meta']['scanned'] = sorted(scanned)
         out['meta']['fetched'] = str(datetime.date.today())
         out['meta']['mode'] = 'full' if mode_full else 'incr'
         save(out)   # 체크포인트: 그룹 하나 끝날 때마다 저장(스킵 포함)
