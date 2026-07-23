@@ -17,6 +17,18 @@ def to_quarter(day):
         return None
     return '%dQ%d' % (y, (m - 1) // 3 + 1)
 
+def to_yearmonth(day):
+    """'YYYYMMDD'류 원자료 날짜 -> 'YYYY-MM' 또는 None(결측/형식오류)."""
+    if not day:
+        return None
+    s = re.sub(r'\D', '', str(day))
+    if len(s) < 6:
+        return None
+    y, m = int(s[:4]), int(s[4:6])
+    if not (1900 < y < 2100 and 1 <= m <= 12):
+        return None
+    return '%04d-%02d' % (y, m)
+
 def dedupe(items, key='mgmHsrgstPk'):
     seen = {}
     for it in items:

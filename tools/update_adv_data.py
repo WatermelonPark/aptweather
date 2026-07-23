@@ -1055,8 +1055,45 @@ def _hub_zone_map(bdong):
         if z: out[cd] = z
     return out
 
+def _zone_units(hp, z_of, complete):
+    """존별 done_q/sched_q와 동일한 완결성 게이트(complete)로, 시군구 raw 단지
+    리스트(hp['sgg'][cd]['units'])를 생활권 단위로 합산한 뒤 상세페이지 렌더용으로
+    다듬는다. 반환: {zone: {'sched':[[단지명,세대,'YYYY-MM'],...], 'done':[...]}}
+    (raw 4번째 원소 stage는 sched/done 키로 이미 나뉘었으니 드롭한다).
+
+    순위(어느 단지를 목록에 남길지)는 세대 큰 순 상위 UCAP개로 자르고,
+    화면 순서(그 안에서 어떻게 나열할지)는 날짜로 다시 정렬한다 — sched는
+    준공예정 연월 오름차순(가까운 미래 먼저), done은 준공 연월 내림차순
+    (최신 먼저). 연월 결측(ym=None)은 항상 리스트 맨 뒤로 보낸다.
+    """
+    import collections
+    UCAP = 20
+    raw_sched = collections.defaultdict(list)
+    raw_done = collections.defaultdict(list)
+    for cd, v in hp.get('sgg', {}).items():
+        z = z_of.get(cd)
+        if not z or z not in complete:
+            continue
+        for u in v.get('units') or []:
+            if len(u) < 4:
+                continue
+            name, hh, ym, stage = u[0], u[1], u[2], u[3]
+            if stage == 'sched':
+                raw_sched[z].append([name, hh, ym])
+            elif stage == 'done':
+                raw_done[z].append([name, hh, ym])
+    out = {}
+    for z in set(raw_sched) | set(raw_done):
+        sched = sorted(raw_sched.get(z, []), key=lambda u: -u[1])[:UCAP]
+        done = sorted(raw_done.get(z, []), key=lambda u: -u[1])[:UCAP]
+        sched.sort(key=lambda u: u[2] or '9999-99')          # 준공예정 오름차순, 결측은 맨 뒤
+        done.sort(key=lambda u: u[2] or '0000-00', reverse=True)  # 준공 내림차순, 결측은 맨 뒤
+        out[z] = {'sched': sched, 'done': done}
+    return out
+
+
 def hub_derive(adv):
-    """hub_permits.json(done_q/sched_q) → adv['permits']['done'|'sched'] 생활권 시계열.
+    """hub_permits.json(done_q/sched_q/units) → adv['permits']['done'|'sched'|'units'] 생활권 시계열.
 
     게이트 두 개(둘 다 통과해야 방출):
     1) meta.activate — false/부재면 아무것도 방출하지 않는다(라이브는 pre-HUB 지표 유지).
@@ -1066,7 +1103,11 @@ def hub_derive(adv):
 
     hub_permits.json은 갱신 중인 시군구가 섞여 있어(구스키마 permit_q/start_q만 있고
     done_q/sched_q가 없는 항목) v.get(..., {})로 방어한다 — 구스키마 항목은 그냥
-    기여분 0으로 취급된다(KeyError 없음).
+    기여분 0으로 취급된다(KeyError 없음). units도 같은 이유로 v.get('units') or []
+    로 방어한다 — 아직 units 필드가 없는 옛 sgg 항목이 섞여 있어도 죽지 않는다.
+
+    permits['units'][zone]은 존 상세페이지의 "앞으로 들어올 물량"/"최근 들어온
+    물량" 2섹션 렌더 전용 소량 리스트다(_zone_units 참고, 존당 상위 20개 캡).
     """
     import collections
     hp = _load_hub_permits()
@@ -1091,6 +1132,7 @@ def hub_derive(adv):
     adv.setdefault('permits', {})
     adv['permits']['done'] = {z: dict(done[z]) for z in complete if z in done}
     adv['permits']['sched'] = {z: dict(sched[z]) for z in complete if z in sched}
+    adv['permits']['units'] = _zone_units(hp, z_of, complete)
     print('hub_derive: active, complete_zones=%d' % len(complete))
 LZ_PSIDO = {'서울권':'수도권','인천권':'수도권','부산권':'부산','김해권':'경남','창원권':'경남','진주권':'경남',
  '울산권':'울산','대구권':'대구','포항권':'경북','구미권':'경북','안동권':'경북','대전세종권':'대전',
