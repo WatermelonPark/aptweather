@@ -1,0 +1,80 @@
+name: update-hub
+
+# Task 8: 건축HUB(HsPmsHubService) 월간 인허가/착공 실측 갱신.
+#
+# CLOUD-VIABLE (Task 2 hub-probe.yml 실측): 건축HUB가 GitHub Actions 러너
+# (Azure IP)를 차단하지 않음을 확인했다 — 오산 세교동 표본 호출에서 <item>
+# 정상 수신. 그래서 이 워크플로는 그 결과를 실제 운영에 배선한다.
+#
+# 이 워크플로가 하는 일은 딱 하나: tools/data/hub_permits.json 갱신·커밋.
+# data.js/data-core.js/data-rest.json 재계산(hub_derive 포함)은 여기서
+# 하지 않는다 — 기존 daily update-cloud.yml(update_adv_data.py --update)이
+# 이미 hub_derive를 통해 hub_permits.json을 읽어 매일 data.js에 접어 넣고
+# 있으므로, 여기서 또 data.js를 만들면 같은 파일을 두 워크플로가 따로
+# 커밋하는 경합이 생긴다. hub_permits.json만 갱신해두면 다음 daily 런이
+# 자동으로 흡수한다(최대 하루 지연, 월간 갱신이라 무해).
+#
+# 쿼터 주의: --full(전량 첫 시딩)은 대상 시군구·법정동을 순차 페이싱(2.5초/호출)
+# 호출하는 방식이라 약 12,000회 호출 · 11~14시간이 걸린다. DATA_GO_KR_KEY에
+# 일일 호출 한도가 있으면 하루 안에 못 끝내고 일부만 수집된 채 끝날 수 있다.
+# 이 경우에도 collector(tools/fetch_hub_permits.py)의 에러 분류
+# (429/한도초과는 재시도하지 않고 unresolved로 기록) + productive_bjdong
+# 스캔 캐시 덕에 다음 실행이 이어받아 자가 치유한다 — 기존 데이터를 덮어
+# 지우지 않는다. 전량 첫 시딩은 이 워크플로를 만들 때 자동 실행되지 않으며,
+# 사람이 workflow_dispatch에서 mode=full로 명시적으로 트리거해야 한다.
+on:
+  schedule:
+    - cron: '0 18 1 * *'   # 매월 1일 03:00 KST — 증분 갱신
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '수집 모드 (full=전국 첫 전량 시딩, ~11~14시간 · incr=증분, 기본)'
+        type: choice
+        default: incr
+        options:
+          - incr
+          - full
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350   # full 첫 시딩(~11~14시간) 대비. incr은 훨씬 짧게 끝난다.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 건축HUB 수집 (${{ inputs.mode || 'incr' }})
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
+        run: |
+          if [ -z "$DATA_GO_KR_KEY" ]; then
+            echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
+          fi
+          if [ "${{ inputs.mode }}" = "full" ]; then
+            echo "전량 첫 시딩 모드 — 약 11~14시간 소요"
+            python tools/fetch_hub_permits.py --full
+          else
+            echo "증분 모드(기본) — productive_bjdong 캐시만 재조회"
+            python tools/fetch_hub_permits.py
+          fi
+
+      - name: 커밋 (hub_permits.json만 · data.js 재계산은 daily 워크플로가 담당)
+        run: |
+          git config user.name  "stats-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet -- tools/data/hub_permits.json; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git add tools/data/hub_permits.json
+          git commit -m "data: HUB 월간 인허가/착공 갱신"
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
+            echo "push 재시도 $i"; sleep 5
+          done
