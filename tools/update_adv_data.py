@@ -1193,6 +1193,14 @@ def main():
         monthly = fetch_monthly()
         mo_cur = adv.get('monthly') or {}
         mo_last = mo_cur['rows'][-1]['p'] if mo_cur.get('rows') else ''
+        # 역행 방지(weekly와 동일 가드). R-ONE 월간이 일시 실패해 KOSIS 폴백(전월)만
+        # 받아졌더라도, 이미 갖고 있던 더 최신 월(R-ONE 6월)을 5월로 덮어쓰지 않는다.
+        # 이 가드가 없어 클라우드 런의 R-ONE 순단 때 6월->5월 역행이 실제로 발생했다.
+        if monthly['rows'] and mo_last and monthly['rows'][-1]['p'] < mo_last:
+            new_last = monthly['rows'][-1]['p']
+            monthly['rows'] += [r for r in mo_cur['rows'] if r['p'] > new_last]
+            if mo_cur.get('seoul'): monthly['seoul'] = mo_cur['seoul']
+            if mo_cur.get('sgg'): monthly['sgg'] = mo_cur['sgg']
         # 주간과 같은 이유 — 월간도 깊이가 줄지 않게 과거를 살려 병합한다.
         if monthly['rows'] and mo_cur.get('rows'):
             m_first = monthly['rows'][0]['p']
