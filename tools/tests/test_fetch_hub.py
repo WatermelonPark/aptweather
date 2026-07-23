@@ -107,7 +107,7 @@ SAMPLE_XML = """<response><header><resultCode>00</resultCode><resultMsg>NORMAL S
 <item><rnum>1</rnum><platPlc>경기도 오산시 세교동 123-4번지</platPlc><sigunguCd>41370</sigunguCd>
 <bjdongCd>11300</bjdongCd><mgmHsrgstPk>PK-A</mgmHsrgstPk><bldNm>오산자이</bldNm>
 <purpsCd>02001</purpsCd><purpsCdNm>공동주택</purpsCdNm><totHhldCnt>832</totHhldCnt>
-<apprvDay>20240115</apprvDay><stcnsDay>20240320</stcnsDay><useInsptDay></useInsptDay></item>
+<apprvDay>20240115</apprvDay><stcnsDay>20240320</stcnsDay><useInsptDay>20240310</useInsptDay></item>
 <item><rnum>2</rnum><platPlc>경기도 오산시 세교동 55번지</platPlc><sigunguCd>41370</sigunguCd>
 <bjdongCd>11300</bjdongCd><mgmHsrgstPk>PK-B</mgmHsrgstPk><bldNm>단독주택</bldNm>
 <purpsCd>01001</purpsCd><purpsCdNm>단독주택</purpsCdNm><totHhldCnt>1</totHhldCnt>
@@ -131,12 +131,25 @@ def test_parse_items_empty_tag_becomes_empty_string():
     assert items[1]['stcnsDay'] == ''
 
 
-def test_aggregate_filters_apt_only_and_sums_by_quarter():
+def test_aggregate_filters_apt_only_and_classifies_by_stage():
     items = F.parse_items(SAMPLE_XML)
-    permit_q, start_q = F._aggregate(items)
+    done_q, sched_q = F._aggregate(items)
     # 단독주택(PK-B)은 apt_records에서 제외되어야 함
-    assert permit_q == {'2024Q1': 832}
-    assert start_q == {'2024Q1': 832}
+    assert done_q == {'2024Q1': 832}
+    assert sched_q == {}
+
+
+def test_aggregate_classifies_latest_stage_once():
+    import fetch_hub_permits as F
+    items = [
+        {'mgmHsrgstPk':'A','purpsCdNm':'공동주택','totHhldCnt':'100','useInsptDay':'20240310','useInsptSchedDay':'20231130','stcnsDay':'20210101','apprvDay':'20200101'},  # 준공됨→done 2024Q1
+        {'mgmHsrgstPk':'B','purpsCdNm':'공동주택','totHhldCnt':'200','useInsptDay':'','useInsptSchedDay':'20291130','stcnsDay':'','apprvDay':'20230101'},                    # 미완공+예정→sched 2029Q4
+        {'mgmHsrgstPk':'C','purpsCdNm':'공동주택','totHhldCnt':'50','useInsptDay':'','useInsptSchedDay':'','stcnsDay':'','apprvDay':'20240101'},                              # 미정→어디에도 안 감
+        {'mgmHsrgstPk':'A','purpsCdNm':'공동주택','totHhldCnt':'100','useInsptDay':'20240310','useInsptSchedDay':'','stcnsDay':'','apprvDay':''},                             # A 중복→dedupe
+    ]
+    done, sched = F._aggregate(items)
+    assert done == {'2024Q1': 100}
+    assert sched == {'2029Q4': 200}
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +296,7 @@ def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_p
     out_path = tmp_path / 'hub_permits.json'
     monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
     seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': []},
-              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
               'productive_bjdong': ['4137011300']}
     io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded))
 
@@ -301,7 +314,7 @@ def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_p
 
     result = json.load(io.open(str(out_path), encoding='utf-8'))
     assert '48120' not in result['sgg']              # 거짓 0으로 찍히지 않음
-    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 5}   # 기존 항목 보존
+    assert result['sgg']['41370']['done_q'] == {'2024Q1': 5}   # 기존 항목 보존
     assert result['meta']['scanned'] == ['41370']     # 깨끗하게 스캔된 그룹만 기록
 
 
@@ -340,7 +353,7 @@ def test_fetch_group_propagates_had_unresolved_error(monkeypatch):
         return [], False
 
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
-    permit_q, start_q, productive, had_unresolved_error = F.fetch_group(group)
+    done_q, sched_q, productive, had_unresolved_error = F.fetch_group(group)
     assert had_unresolved_error is True
 
 
@@ -348,7 +361,7 @@ def test_fetch_group_no_error_when_all_bjdong_clean(monkeypatch):
     group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
              'bjdong': {'41370': ['11300']}, 'legacy': None}
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: ([], False))
-    permit_q, start_q, productive, had_unresolved_error = F.fetch_group(group)
+    done_q, sched_q, productive, had_unresolved_error = F.fetch_group(group)
     assert had_unresolved_error is False
 
 
@@ -364,7 +377,7 @@ def _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
 
 
 def test_run_does_not_clobber_prior_value_on_unresolved_error(tmp_path, monkeypatch):
-    # Important: 41370은 이전에 실측된 진짜 값(permit_q 5)이 있다. 이번 회차에
+    # Important: 41370은 이전에 실측된 진짜 값(done_q 5)이 있다. 이번 회차에
     # 지속 장애로 had_unresolved_error=True가 나면, 그 진짜 값을 절대
     # 덮어쓰면 안 된다(빈 dict로 clobber 금지).
     fake_groups = {
@@ -372,14 +385,14 @@ def test_run_does_not_clobber_prior_value_on_unresolved_error(tmp_path, monkeypa
                    'bjdong': {'41370': ['11300']}, 'legacy': None},
     }
     seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
-              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 999}, 'start_q': {'2024Q1': 999}}},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 999}, 'sched_q': {'2024Q1': 999}}},
               'productive_bjdong': ['4137011300']}
 
     def fetch_group_stub(group, only_bjdong=None):
         return {}, {}, [], True   # 지속 장애: 재시도 소진, 결과 신뢰 불가
 
     result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
-    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 999}   # 이전 실측값 그대로 보존
+    assert result['sgg']['41370']['done_q'] == {'2024Q1': 999}   # 이전 실측값 그대로 보존
     assert result['meta']['scanned'] == ['41370']   # 이번 회차엔 재확인 못 했으니 갱신 안 됨(기존 유지)
 
 
@@ -414,7 +427,7 @@ def test_run_clean_scan_writes_result_and_marks_scanned(tmp_path, monkeypatch):
         return {'2024Q1': 3}, {}, ['4812010100'], False
 
     result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
-    assert result['sgg']['48120']['permit_q'] == {'2024Q1': 3}
+    assert result['sgg']['48120']['done_q'] == {'2024Q1': 3}
     assert result['meta']['scanned'] == ['48120']
 
 
@@ -434,7 +447,7 @@ def test_full_resume_skips_already_scanned_groups(tmp_path, monkeypatch, capsys)
                    'bjdong': {'48120': ['10100']}, 'legacy': None},
     }
     seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
-              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
               'productive_bjdong': ['4137011300']}
 
     called = []
@@ -448,8 +461,8 @@ def test_full_resume_skips_already_scanned_groups(tmp_path, monkeypatch, capsys)
     result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
 
     assert called == ['창원시']                                  # 스캔 안 된 그룹만 실제 호출됨
-    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 5}    # 기존 값 보존(재호출 없이 그대로)
-    assert result['sgg']['48120']['permit_q'] == {'2024Q1': 7}    # 미스캔 그룹은 새로 스캔됨
+    assert result['sgg']['41370']['done_q'] == {'2024Q1': 5}    # 기존 값 보존(재호출 없이 그대로)
+    assert result['sgg']['48120']['done_q'] == {'2024Q1': 7}    # 미스캔 그룹은 새로 스캔됨
     assert set(result['meta']['scanned']) == {'41370', '48120'}   # 이어서 완료됨
     out = capsys.readouterr().out
     assert '[RESUME skip] 41370' in out
@@ -466,7 +479,7 @@ def test_full_resume_rescans_group_killed_mid_scan(tmp_path, monkeypatch):
                    'bjdong': {'48120': ['10100']}, 'legacy': None},
     }
     seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
-              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
               'productive_bjdong': ['4137011300']}
 
     called = []
@@ -478,7 +491,7 @@ def test_full_resume_rescans_group_killed_mid_scan(tmp_path, monkeypatch):
     result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
 
     assert called == ['창원시']   # 킬되어 scanned 못 들어간 그룹만 재스캔
-    assert result['sgg']['48120']['permit_q'] == {'2024Q1': 9}
+    assert result['sgg']['48120']['done_q'] == {'2024Q1': 9}
     assert set(result['meta']['scanned']) == {'41370', '48120'}
 
 
@@ -489,7 +502,7 @@ def test_reseed_forces_rescan_of_already_scanned_groups(tmp_path, monkeypatch):
                    'bjdong': {'41370': ['11300']}, 'legacy': None},
     }
     seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
-              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
               'productive_bjdong': ['4137011300']}
 
     called = []
@@ -501,7 +514,7 @@ def test_reseed_forces_rescan_of_already_scanned_groups(tmp_path, monkeypatch):
     result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub, reseed=True)
 
     assert called == ['오산시']                                    # --reseed는 재호출함
-    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 42}    # 새로 스캔한 값으로 갱신됨
+    assert result['sgg']['41370']['done_q'] == {'2024Q1': 42}    # 새로 스캔한 값으로 갱신됨
     assert result['meta']['scanned'] == ['41370']
 
 
@@ -551,14 +564,14 @@ def test_skip_log_distinguishes_never_scanned_from_scanned_zero(tmp_path, monkey
 def test_load_existing_backward_compat_missing_scanned_key(tmp_path, monkeypatch):
     out_path = tmp_path / 'hub_permits.json'
     legacy_state = {'meta': {'fetched': '2026-01-01', 'mode': 'full', 'unresolved_legacy': ['41190']},
-                     'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+                     'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
                      'productive_bjdong': ['4137011300']}
     io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(legacy_state, ensure_ascii=False))
     monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
 
     loaded = F.load_existing()   # 과거엔 meta에 'scanned' 키가 아예 없었음 — 죽으면 안 됨
     assert loaded['meta']['scanned'] == []
-    assert loaded['sgg']['41370']['permit_q'] == {'2024Q1': 5}   # 기존 데이터는 그대로
+    assert loaded['sgg']['41370']['done_q'] == {'2024Q1': 5}   # 기존 데이터는 그대로
 
 
 # ---------------------------------------------------------------------------

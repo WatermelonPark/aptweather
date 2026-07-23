@@ -2,8 +2,9 @@
 """건축HUB(HsPmsHubService) 주택인허가 시군구 실측 페이싱 수집기.
 
 `data.go.kr`의 건축인허가 기본개요 조회(`getHpBasisOulnInfo`)를 시군구·법정동
-단위로 순차 호출해, 생활권(LIVEZONE) 참조 대상 시군구의 분기별 인허가(permit_q)·
-착공(start_q) 세대수를 집계한다. 첫 실행은 전국 대상이라 ~13시간급이므로
+단위로 순차 호출해, 생활권(LIVEZONE) 참조 대상 시군구의 단지별 최신단계를
+분기별 준공(done_q)·준공예정(sched_q) 세대수로 1회 분류·집계한다(착공/인허가는
+점수에 직접 안 씀). 첫 실행은 전국 대상이라 ~13시간급이므로
 반드시 `--full`(명시)로만 전량 실행하고, 이후에는 `productive_bjdong` 캐시로
 좁힌 증분(기본 모드)만 돈다.
 
@@ -279,7 +280,7 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
     전달). 이 플래그가 하나라도 True인 그룹은 fetch_group이
     had_unresolved_error로 묶어 올려 run()이 그룹 전체 결과를 신뢰하지
     않게 한다 — 그러지 않으면 지속 장애 중 일부만 실패한 그룹도 나머지
-    법정동의 빈약한 부분합으로 permit_q/start_q가 조용히 확정돼버린다.
+    법정동의 빈약한 부분합으로 done_q/sched_q가 조용히 확정돼버린다.
     """
     items = []
     page = 1
@@ -312,26 +313,31 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
 # ---------------------------------------------------------------------------
 
 def _aggregate(items):
-    """apt_records(공동주택·세대>0·PK dedupe) → permit_q/start_q 분기 합산."""
-    recs = H.apt_records(items)
-    permit_q = collections.defaultdict(int)
-    start_q = collections.defaultdict(int)
-    for r in recs:
+    """apt_records(공동주택·세대>0·PK dedupe) → 단지 최신단계 1회 분류.
+    준공(useInsptDay) 있으면 done_q, 없고 준공예정(useInsptSchedDay) 있으면 sched_q,
+    둘 다 없으면 미정(어디에도 안 감). 착공/인허가는 점수에 직접 안 쓴다."""
+    done_q = collections.defaultdict(int)
+    sched_q = collections.defaultdict(int)
+    for r in H.apt_records(items):
         try:
             n = int(float(r.get('totHhldCnt') or 0))
         except (TypeError, ValueError):
-            n = 0
-        pq = H.to_quarter(r.get('apprvDay'))
-        if pq:
-            permit_q[pq] += n
-        sq = H.to_quarter(r.get('stcnsDay'))
+            continue
+        if n <= 0:
+            continue
+        dq = H.to_quarter(r.get('useInsptDay'))
+        if dq:
+            done_q[dq] += n
+            continue
+        sq = H.to_quarter(r.get('useInsptSchedDay'))
         if sq:
-            start_q[sq] += n
-    return dict(permit_q), dict(start_q)
+            sched_q[sq] += n
+        # 둘 다 없으면 미정 — 미반영
+    return dict(done_q), dict(sched_q)
 
 
 def fetch_group(group, only_bjdong=None):
-    """그룹(시/구 분할 포함) 호출해 permit_q/start_q 집계 + productive bjdong 목록.
+    """그룹(시/구 분할 포함) 호출해 done_q/sched_q 집계 + productive bjdong 목록.
 
     only_bjdong이 주어지면(증분 모드) 그 집합(10자리 전체 법정동코드)에 속하는
     법정동만 재조회한다. None이면(--full) 그룹 소속 전체 법정동을 조회한다.
@@ -339,7 +345,7 @@ def fetch_group(group, only_bjdong=None):
     반환에 had_unresolved_error(bool)를 추가(Fix pass 2): 그룹 소속 법정동
     중 하나라도 재시도 소진 후에도 'error'로 남았으면 True. 지속 장애(인증/
     쿼터/레이트리밋) 중에는 이미 처리한 법정동의 실제 카운트와 아직 못 푼
-    법정동의 공백이 뒤섞인 permit_q/start_q가 나오므로, 이 신호를 호출자
+    법정동의 공백이 뒤섞인 done_q/sched_q가 나오므로, 이 신호를 호출자
     (run())에게 넘겨 "이번 회차 결과를 그룹 값으로 확정하면 안 된다"고
     판단하게 한다.
     """
@@ -357,8 +363,8 @@ def fetch_group(group, only_bjdong=None):
             if H.apt_records(items):
                 productive.append(full)
             all_items.extend(items)
-    permit_q, start_q = _aggregate(all_items)
-    return permit_q, start_q, productive, had_unresolved_error
+    done_q, sched_q = _aggregate(all_items)
+    return done_q, sched_q, productive, had_unresolved_error
 
 
 def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
@@ -485,7 +491,7 @@ def run(mode_full, only_codes, list_targets_only, reseed=False):
             print('[%d/%d] %s(%s) %d개 법정동 수집 시작 (경과 %ds)'
                   % (n_done, len(target_keys), key, group['name'],
                      sum(len(b) for b in group['bjdong'].values()), int(elapsed)))
-            permit_q, start_q, productive, had_unresolved_error = fetch_group(
+            done_q, sched_q, productive, had_unresolved_error = fetch_group(
                 group, only_bjdong=None if mode_full else cached_productive)
             if had_unresolved_error:
                 # Important: 지속 장애(인증/쿼터/레이트리밋 등) 중에 그룹의
@@ -498,7 +504,7 @@ def run(mode_full, only_codes, list_targets_only, reseed=False):
                 print('[SKIP error] %s(%s): 재시도 소진된 오류 있음 — 기존 값 보존, 다음 실행에서 재시도'
                       % (key, group['name']))
             else:
-                out['sgg'][key] = {'name': group['name'], 'permit_q': permit_q, 'start_q': start_q}
+                out['sgg'][key] = {'name': group['name'], 'done_q': done_q, 'sched_q': sched_q}
                 cached_productive.update(productive)
                 scanned.add(key)   # 깨끗하게 스캔 완료 — never-scanned/scanned-zero 구분용 기록
         out['productive_bjdong'] = sorted(cached_productive)
