@@ -26,7 +26,7 @@
   "name": "아공맵",
   "alternateName": "aptweather",
   "url": "https://www.agongmap.co.kr/",
-  "description": "아파트 공급 지도·주간 시세 지도, 인허가·입주물량 공급 분석, 아파트 사이클 리포트, 부린이 테스트, 국가기관 부동산 통계",
+  "description": "아파트 공급 지도·주간 시세 지도, 인허가·입주물량 공급 분석, 아파트 사이클 리포트, 부린이·투자자·재건축 테스트, 국가기관 부동산 통계",
   "inLanguage": "ko"
 }
 </script>
@@ -45,8 +45,8 @@
   "keywords": ["아파트 실거래가격지수", "주간 아파트 시세", "전세가율", "인허가", "입주물량", "부동산 통계"]
 }
 </script>
-<meta name="description" content="공급을 보면 집값이 보인다 — 아공맵. 전국 시군구·서울 구별 아파트 주간 시세 지도, 인허가·입주물량 공급 분석, 사이클 리포트, 부린이 테스트까지 국가기관 데이터로 제공.">
-<meta name="keywords" content="부린이 테스트, 부동산 테스트, 내집마련, 집값 전망, 아파트 사이클, 부동산 데이터, 부동산 상식 퀴즈, 부동산 공부">
+<meta name="description" content="공급을 보면 집값이 보인다 — 아공맵. 전국 시군구·서울 구별 아파트 주간 시세 지도, 인허가·입주물량 공급 분석, 사이클 리포트, 부린이·투자자·재건축 테스트까지 국가기관 데이터로 제공.">
+<meta name="keywords" content="부린이 테스트, 투자자 테스트, 재건축 테스트, 부동산 테스트, 내집마련, 집값 전망, 아파트 사이클, 부동산 데이터, 부동산 상식 퀴즈, 부동산 공부">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <link rel="apple-touch-icon" href="/app_icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -57,7 +57,7 @@
 <meta name="apple-mobile-web-app-title" content="아공맵">
 <meta property="og:type" content="website">
 <meta property="og:title" content="아공맵 — 공급을 보면 집값이 보인다">
-<meta property="og:description" content="전국 시군구 아파트 주간 시세 지도와 인허가·입주물량 공급 분석. 사이클 리포트·부린이 테스트 — 국가기관 데이터 기반.">
+<meta property="og:description" content="전국 시군구 아파트 주간 시세 지도와 인허가·입주물량 공급 분석. 사이클 리포트·부린이·투자자·재건축 테스트 — 국가기관 데이터 기반.">
 <meta property="og:url" content="https://www.agongmap.co.kr">
 <meta property="og:image" content="https://www.agongmap.co.kr/og-brand.png">
 <meta property="og:image:width" content="1200">
@@ -66,7 +66,7 @@
 <meta name="twitter:image" content="https://www.agongmap.co.kr/og-brand.png">
 <script defer src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
 <meta name="twitter:title" content="아공맵 — 공급을 보면 집값이 보인다">
-<meta name="twitter:description" content="전국 시군구 아파트 주간 시세 지도 · 공급 분석 · 부린이 테스트">
+<meta name="twitter:description" content="전국 시군구 아파트 주간 시세 지도 · 공급 분석 · 부린이·투자자·재건축 테스트">
 <title>아공맵 — 아파트 공급 지도·주간 시세·부동산 데이터</title>
 <link rel="stylesheet" href="/app.css">
 </head>
@@ -1336,10 +1336,10 @@ function kakaoFeed(title,desc,img,link,btn){
 function shareTest(){
   track('share',{content_type:'quiz_invite',method:kakaoReady()?'kakao':(navigator.share?'os_share':'copy')});
   if(kakaoReady()){
-    try{kakaoFeed('내 부동산 감각, 몇 점일까?','부린이·투자자 테스트 — 10문항 3분, 즉시 채점·해설');return;}
+    try{kakaoFeed('내 부동산 감각, 몇 점일까?','부린이·투자자·재건축 3종 테스트 — 10문항 3분, 즉시 채점·해설');return;}
     catch(e){}
   }
-  const txt='내 부동산 감각, 몇 점일까? 부린이·투자자 테스트 — 10문항 3분\n'+SHARE_URL;
+  const txt='내 부동산 감각, 몇 점일까? 부린이·투자자·재건축 3종 테스트 — 10문항 3분\n'+SHARE_URL;
   if(navigator.share){
     navigator.share({title:'부동산 사이클 테스트',
       text:'내 부동산 감각, 몇 점일까? 10문항 3분 테스트 — 같이 풀어보자!',
