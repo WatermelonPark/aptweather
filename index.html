@@ -1991,11 +1991,16 @@ function scCalc(){
   const qIdx=s=>{const m=/^(\d{4})Q([1-4])$/.exec(s);return m?(+m[1])*4+(+m[2]-1):null;};
   // 전역 미래 분기 집합 — 모든 생활권이 같은 창을 써야 절대량 비교가 성립한다.
   // (물량이 없는 분기는 '창 밖'이 아니라 공급 0으로 센다)
-  const FUTQ=[...new Set(LZ.zones.flatMap(z=>Object.keys(z.byq||{})))]
-    .map(k=>[k,qIdx(k)]).filter(x=>x[1]!=null&&x[1]>curQ)
-    .sort((a,b)=>a[1]-b[1]).slice(0,8).map(x=>x[0]);   // ⚠️ tools/make_zone_pages.py 의 H_MAX와 반드시 같아야 한다 (이중 구현)
-  const H=Math.max(1,FUTQ.length);
-  const futSum=z=>FUTQ.reduce((s,k)=>s+((z.byq||{})[k]||0),0);
+  // ⚠️ NEAR 8 / FAR 16, make_zone_pages.py의 fut_window()/zone_fut_supply()와 반드시 같아야 한다 (이중 구현)
+  const allF=[...new Set(LZ.zones.flatMap(z=>Object.keys(z.byq||{})))]
+    .map(k=>[k,qIdx(k)]).filter(x=>x[1]!=null&&x[1]>curQ).sort((a,b)=>a[1]-b[1]).map(x=>x[0]);
+  const NEARQ=allF.slice(0,8);                                  // ≤2년 odcloud
+  // FARQ: cur 이후 9~16번째 분기 키 (make_zone_pages FARQ와 동일 규칙: 분기인덱스 curQ+9..curQ+16)
+  const mkq=idx=>Math.floor(idx/4)+'Q'+(idx%4+1);
+  const farKeys=[];for(let j=8;j<16;j++){const k=mkq(curQ+1+j);if(!NEARQ.includes(k))farKeys.push(k);}  // near 우선 배타분할(이중집계 방지)
+  const H=16;
+  const futSum=z=>NEARQ.reduce((s,k)=>s+((z.byq||{})[k]||0),0)
+    +farKeys.reduce((s,k)=>s+(((P.fwd_far&&P.fwd_far[z.z])||{})[k]||0),0);
   const lastOf=(sr,r)=>{const s=sr&&sr[r];if(!s)return 0;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return 0;};
   const lat=r=>{const s=J&&J.series&&J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
   const act=O.rows.filter(r=>!r.e), ph=P.rows.slice(-2);
@@ -2011,8 +2016,10 @@ function scCalc(){
     const dA=refq*H*share-futSum(z);
     const n4=act.slice(-12).map(r=>r.v[oi]).filter(v=>v!=null);   // 과거 3년 누적
     const dB=n4.length?(refq*n4.length-(n4.reduce((a,b)=>a+b,0)-dQ*n4.length))*share:0;
-    let dC=0,pv=null; const pi=P.regions.indexOf(ps);
-    if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}
+    let dC=0,pv=null; const mz=P.meas&&P.meas[z.z];
+    if(mz!=null){const plo=refq*4*share; dC=plo-(mz-dY*share);}
+    else{const pi=P.regions.indexOf(ps);
+      if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}}
     const tot=0.55*dA+0.35*dC+0.10*dB;
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
