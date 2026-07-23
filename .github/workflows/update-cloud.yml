@@ -33,14 +33,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: IP 프리플라이트 (나쁜 IP 즉시 탈락)
+      - name: IP 프리플라이트 (나쁜 IP는 이 러너 조용히 스킵)
+        id: pre
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
         run: |
-          if [ -z "$KOSIS_API_KEY" ]; then echo "KOSIS 시크릿 없음 — 프리플라이트 스킵"; exit 0; fi
           # 나쁜 IP면 전체 배치가 KOSIS 호출마다 60s×3 재시도로 수십 분 hang한다.
-          # 여기서 작은 KOSIS 호출 하나로 IP 건강성을 15초 내 판정 — 나쁘면 즉시 탈락.
-          python - << 'PY'
+          # 작은 KOSIS 호출 하나로 IP 건강성을 15초 내 판정. 나쁜 IP는 '실패'가 아니라
+          # 'ok=false'로 표시해 이 러너만 조용히 스킵한다 — 다른 러너가 처리하므로
+          # 잡을 red로 만들지 않는다(3러너 중 일부는 늘 나쁜 IP를 뽑는다).
+          if [ -z "$KOSIS_API_KEY" ]; then echo "ok=false" >> "$GITHUB_OUTPUT"; echo "KOSIS 시크릿 없음"; exit 0; fi
+          if python - << 'PY'
           import os, sys, urllib.parse, urllib.request
           u='https://kosis.kr/openapi/Param/statisticsParameterData.do?'+urllib.parse.urlencode(
             dict(method='getList',apiKey=os.environ['KOSIS_API_KEY'],format='json',jsonVD='Y',
@@ -49,13 +52,18 @@ jobs:
           try:
               req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
               urllib.request.urlopen(req,timeout=15).read()
-              print('프리플라이트 OK — 좋은 IP')
           except Exception as e:
-              print('프리플라이트 실패(나쁜 IP):',type(e).__name__); sys.exit(1)
+              print('나쁜 IP:',type(e).__name__); sys.exit(1)
           PY
+          then
+            echo "ok=true" >> "$GITHUB_OUTPUT"; echo "프리플라이트 OK — 좋은 IP"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "이 러너 나쁜 IP — 배치 스킵(정상, 다른 러너가 처리)"
+          fi
 
       - name: 데이터 갱신 시도 (러너 ${{ matrix.n }})
         id: upd
+        if: steps.pre.outputs.ok == 'true'
         env:
           KOSIS_API_KEY:  ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
           ECOS_API_KEY:   ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
