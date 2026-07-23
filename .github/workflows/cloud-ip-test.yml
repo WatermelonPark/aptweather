@@ -1,4 +1,4 @@
-name: cloud-ip-test (KOSIS 청크 크기 실험)
+name: cloud-ip-test (KOSIS IP 신뢰성 샘플링)
 on:
   push:
     paths: ['.github/workflows/cloud-ip-test.yml']
@@ -6,47 +6,40 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        n: [1,2,3,4,5,6,7,8]
     steps:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: KOSIS 청크 크기별 응답시간 (주간 매매 objL1=ALL)
+      - name: 샘플 ${{ matrix.n }} — egress IP + 52주 KOSIS 조회
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
         run: |
           python - << 'PYEOF'
           import os, json, time, datetime as dt, urllib.parse, urllib.request
-          KEY=os.environ.get('KOSIS_API_KEY','')
-          API='https://kosis.kr/openapi/Param/statisticsParameterData.do'
-          today=dt.date.today()
-          print('KOSIS key len', len(KEY), '| today', today, '\n')
-
-          def fetch(weeks, timeout):
-              start=today-dt.timedelta(weeks=weeks)
-              q=dict(method='getList',apiKey=KEY,format='json',jsonVD='Y',
-                     orgId='408',tblId='DT_304004_WEEK_001_B',
-                     objL1='ALL',itmId='ALL',prdSe='F',
-                     startPrdDe=start.strftime('%Y%m%d'),endPrdDe=today.strftime('%Y%m%d'))
-              url=API+'?'+urllib.parse.urlencode(q)
-              t0=time.time()
+          def get(url,to=15):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req,timeout=to) as r: return r.read().decode('utf-8','replace')
+          try: ip=get('https://api.ipify.org').strip()
+          except Exception as e: ip='?('+type(e).__name__+')'
+          KEY=os.environ.get('KOSIS_API_KEY',''); today=dt.date.today()
+          start=today-dt.timedelta(weeks=52)
+          q=dict(method='getList',apiKey=KEY,format='json',jsonVD='Y',orgId='408',
+                 tblId='DT_304004_WEEK_001_B',objL1='ALL',itmId='ALL',prdSe='F',
+                 startPrdDe=start.strftime('%Y%m%d'),endPrdDe=today.strftime('%Y%m%d'))
+          url='https://kosis.kr/openapi/Param/statisticsParameterData.do?'+urllib.parse.urlencode(q)
+          # 실배치처럼 timeout=60, 3재시도로 최종 성패 판정
+          res='?'; t0=time.time()
+          for i in range(3):
               try:
-                  req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
-                  with urllib.request.urlopen(req,timeout=timeout) as r:
-                      body=r.read().decode('utf-8','replace')
-                  el=time.time()-t0
-                  j=json.loads(body)
-                  if isinstance(j,list):
-                      return el, 'OK rows=%d (~%d셀)'%(len(j),len(j))
-                  return el, 'ERR '+str(j.get('err'))+' '+str(j.get('errMsg'))[:40]
+                  body=get(url,60); j=json.loads(body)
+                  res=('OK rows=%d'%len(j)) if isinstance(j,list) else ('ERR '+str(j.get('err')))
+                  break
               except Exception as e:
-                  return time.time()-t0, 'TIMEOUT/FAIL '+type(e).__name__
-
-          # 2패스로 간헐성 확인. 각 사이즈 단일 시도(재시도 없음), 타임아웃 100s로 실지연 측정
-          for p in (1,2):
-              print('===== PASS %d ====='%p)
-              for wk in (4,13,26,39,52):
-                  el,st=fetch(wk,100)
-                  print('  %2d주 : %6.1fs  %s'%(wk,el,st))
-                  time.sleep(2)
-              print()
+                  res='TIMEOUT/FAIL '+type(e).__name__
+                  time.sleep(3*(i+1))
+          print('IP=%-16s  %6.1fs  %s'%(ip,time.time()-t0,res))
           PYEOF
