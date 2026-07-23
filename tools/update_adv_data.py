@@ -254,6 +254,11 @@ def fetch_permits():
 # ---- weekly: 주간 아파트 매매·전세 변동률 --------------------------------
 # KOSIS 지역 분류코드: 서울 25개 구 = ^a70\d{5}$ (주간 C1, 월간 C2 공통).
 # 이름만으로는 '중'·'강서' 등이 타 도시 구와 겹쳐 코드로 식별한다.
+# KOSIS SGG 코드 → R-ONE 주간표(T244183132827305) CLS_ID. 월간(A_2024_00045)과
+# CLS_ID 체계가 달라 별도. 미포함(전국 a0, 인천 중/동/서=2026 개편으로 R-ONE 신구조)은
+# fetch_weekly가 KOSIS sgg로 폴백. gen_map_wk.py로 재생성.
+SGG_RONE_CLS_WK = {"a0":50001, "a7":50008, "a7010101":50043, "a7010102":50044, "a7010103":50045, "a7010201":50047, "a7010202":50048, "a7010203":50049, "a7010204":50050, "a7010205":50051, "a7010206":50052, "a7010207":50053, "a7010208":50054, "a7010301":50056, "a7010302":50057, "a7010303":50058, "a7020101":50060, "a7020102":50061, "a7020103":50062, "a7020104":50063, "a7020105":50064, "a7020106":50065, "a7020107":50066, "a7020201":50067, "a7020202":50068, "a7020203":50069, "a7020204":50070, "a8":50016, "a80101":50071, "a80102":50072, "a80103":50077, "a80104":50075, "a80105":50076, "a80201":50081, "a80202":50088, "a80203":50083, "a80301":50093, "a80302":50099, "a80303":50103, "a80304":50097, "a80305":50104, "a80306":50102, "a80307":50098, "a80401":50107, "a80402":50106, "a80403":50108, "a80404":50109, "a80501":50111, "a80502":50112, "a80601":50118, "a80602":50114, "a80603":50253, "a80701":50123, "a80702":50121, "a80703":50122, "a80704":50120, "a9":50124, "a903":50254, "a904":50127, "a905":50128, "a906":50129, "a907":50130, "b1":50025, "b10101":50132, "b10102":50133, "b10103":50134, "b10104":50135, "b10105":50137, "b10106":50136, "b10107":50138, "b10108":50139, "b10201":50142, "b10202":50143, "b10203":50141, "b10204":50144, "b10301":50146, "b10302":50148, "b10303":50149, "b10304":50147, "b2":50150, "b201":50151, "b202":50152, "b203":50153, "b204":50154, "b205":50155, "b206":50156, "b207":50157, "b208":50158, "b3":50159, "b301":50160, "b302":50161, "b303":50162, "b304":50163, "b305":50164, "b4":50165, "b401":50166, "b402":50167, "b403":50168, "b404":50169, "b405":50170, "b5":50171, "b501":50172, "b502":50173, "b503":50174, "b504":50175, "b505":50176, "b6":50033, "c1":50177, "c101":50178, "c102":50179, "c103":50180, "c104":50181, "c105":50182, "c106":50183, "c107":50184, "c2":50185, "c201":50186, "c20101":50187, "c20102":50188, "c20103":50189, "c20104":50190, "c203":50191, "c204":50192, "c206":50193, "c3":50194, "c301":50195, "c302":50196, "c303":50197, "c304":50198, "c305":50199, "c306":50200, "c307":50201, "c308":50202, "c309":50203, "c311":50205, "c312":50206, "c313":50204, "c4":50207, "c401":50208, "c402":50209, "c403":50210, "c404":50211, "c405":50212, "c406":50213, "c407":50214, "c408":50215, "c5":50216, "c501":50217, "c502":50218, "c503":50219, "c504":50220, "c505":50221, "c506":50222, "c6":50223, "c601":50227, "c602":50230, "c603":50224, "c60301":50225, "c60302":50226, "c604":50228, "c605":50229, "c606":50231, "c607":50232, "c608":50233, "c609":50234, "c610":50235, "c611":50236, "c7":50237, "c701":50238, "c70101":50239, "c70102":50240, "c70103":50241, "c70104":50242, "c702":50243, "c703":50255, "c704":50244, "c705":50245, "c706":50246, "c707":50247, "c708":50248, "c709":50249, "c8":50250, "c801":50251, "c802":50252}
+
 SEOUL_GU_RE = re.compile(r'^a70\d{5}$')
 
 # 전국 상세 지도(ENJ식 시군구 타일)용 지역코드 — index.html NATION_TILE과 동일 집합
@@ -336,17 +341,20 @@ def _rone_recent_rows(tbl, need_rows, cycle='WK'):
 def fetch_weekly_rone():
     weeks = RECENT_WEEKS            # 최근 구간만 — 3년 히스토리는 main() 병합이 보존
     need = (weeks + 2) * 240        # 주당 ~236행
-    by = {}   # {'maega'|'jeonse': {date: {FULLNM: idx}}}
+    need = max(need, 12000)   # 시군구(236지역)는 최신주 전량이 여러 페이지에 흩어져 있어 넉넉히
+    by, by_cls = {}, {}   # by=이름키(시도/서울구), by_cls=CLS_ID키(시군구 지도용)
     for key, tbl in RONE_TBL.items():
-        m = {}
+        m, mc = {}, {}
         for r in _rone_recent_rows(tbl, need):
             full = (r.get('CLS_FULLNM') or '').strip()
+            cid = r.get('CLS_ID')
             t = (r.get('WRTTIME_DESC') or '').strip()
             try: v = float(r['DTA_VAL'])
             except (TypeError, ValueError, KeyError): continue
             if len(t) == 10:
                 m.setdefault(t, {})[full] = v
-        by[key] = m
+                if cid is not None: mc.setdefault(t, {})[cid] = v
+        by[key] = m; by_cls[key] = mc
         time.sleep(0.2)
     dates = sorted(set(by['maega']) & set(by['jeonse']))[-(weeks + 1):]
     if len(dates) < 2:
@@ -377,8 +385,18 @@ def fetch_weekly_rone():
         se_rows.append({'p': cur,
                         'ma': [chg(ma_p.get(g), ma_c.get(g)) for g in gus],
                         'je': [chg(je_p.get(g), je_c.get(g)) for g in gus]})
+    # 시군구 지도(전국 187) — R-ONE 주간표에서 직접 산출(KOSIS 수일 지연 회피).
+    # 미매핑 코드(인천 중/동/서=2026 개편)는 값이 None → fetch_weekly가 KOSIS로 보충.
+    sg_rows = []
+    for prev, cur in zip(dates, dates[1:]):
+        mp, mc2 = by_cls['maega'].get(prev, {}), by_cls['maega'].get(cur, {})
+        jp, jc2 = by_cls['jeonse'].get(prev, {}), by_cls['jeonse'].get(cur, {})
+        sg_rows.append({'p': cur,
+            'ma': [chg(mp.get(SGG_RONE_CLS_WK.get(c)), mc2.get(SGG_RONE_CLS_WK.get(c))) for c in SGG_CODES],
+            'je': [chg(jp.get(SGG_RONE_CLS_WK.get(c)), jc2.get(SGG_RONE_CLS_WK.get(c))) for c in SGG_CODES]})
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
             'seoul': {'regions': gus, 'rows': se_rows[-CONF['weekly']['weeks']:]},
+            'sgg': {'codes': SGG_CODES, 'rows': sg_rows[-CONF['weekly']['weeks']:]},
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 발표 당일 반영'}
 
 
@@ -390,7 +408,21 @@ def fetch_weekly():
         rone = fetch_weekly_rone()
         k_last = kosis['rows'][-1]['p'] if kosis.get('rows') else ''
         if rone['rows'] and rone['rows'][-1]['p'] >= k_last:
-            rone['sgg'] = kosis.get('sgg')      # 시군구 상세는 KOSIS(자체 주차 라벨 유지)
+            # 시군구: R-ONE로 산출(최신주). 미매핑 코드(인천 개편 3개 등)의 빈칸만
+            # KOSIS 시군구 최신행으로 보충한다. R-ONE sgg가 비면 통째로 KOSIS 폴백.
+            rsg = rone.get('sgg') or {}
+            ksg = kosis.get('sgg') or {}
+            if rsg.get('rows') and ksg.get('rows'):
+                rrow, krow = rsg['rows'][-1], ksg['rows'][-1]
+                filled = 0
+                for i in range(len(SGG_CODES)):
+                    for met in ('ma', 'je'):
+                        if rrow[met][i] is None and i < len(krow[met]) and krow[met][i] is not None:
+                            rrow[met][i] = krow[met][i]; filled += 1
+                if filled:
+                    print('weekly sgg: R-ONE %s + KOSIS 보충 %d칸(%s)' % (rrow['p'], filled, krow['p']))
+            elif not rsg.get('rows'):
+                rone['sgg'] = ksg
             return rone
     except Exception as e:
         print('rone weekly skip:', e)
