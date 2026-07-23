@@ -19,7 +19,7 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 20     # 프리플라이트 통과 후 뒤늦게 hang하는 러너 백스톱
+    timeout-minutes: 40     # 클라우드→한국 지연으로 다건 호출이 느리다. 넉넉히.
     strategy:
       fail-fast: false      # 한 러너가 나쁜 IP로 죽어도 나머지는 계속
       matrix:
@@ -58,6 +58,7 @@ jobs:
           ECOS_API_KEY:   ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
           RONE_API_KEY:   ${{ secrets.RONE_API_KEY || secrets.RONE }}
+          PYTHONUNBUFFERED: '1'   # 진행 로그 실시간 스트리밍(취소돼도 어디까지 갔는지 보이게)
           # BUTTONDOWN(뉴스레터)은 의도적으로 주입 안 함 — 클라우드는 데이터만.
         run: |
           if [ -z "$KOSIS_API_KEY" ]; then
