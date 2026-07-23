@@ -122,3 +122,53 @@ apprvDay, stcnsSchedDay, stcnsDay, useInsptSchedDay, useInsptDay, crtnDay
 - [x] 비고: 시크릿(`DATA_GO_KR_KEY`/`DATAGOKR`)도 정상 해석됨(빈 키였다면 스텝이 exit 2로 즉시 실패했을 것). Azure IP 차단 없음 확인.
 
 **판정: 클라우드 월배치 가능(CLOUD-VIABLE)** — Task 8은 GitHub Actions에서 실행 가능, 로컬 폴백 불필요.
+
+---
+
+## 적정 스케일 검증 (Task 4)
+
+**전제**: '적정'(수요 기준선, `ADV.occupancy.ref[시도]` = `refq`, 신쌤 상수)은 이번 재설계에서
+**손대지 않는다**. 바뀌는 건 공급 측 실측치뿐이다 — 기존 `ADV.occupancy`(KOSIS 준공실적,
+분기·시도 단위)에서 건축HUB `useInsptDay`(준공, `done_q`, 분기·시군구→생활권 집계) 단위로
+갈아탄다. 문제는 두 소스가 **집계 단위가 다르다**(시도 vs 시군구→생활권)는 점이라, `refq`가
+기대하던 스케일과 HUB준공의 분기 스케일이 맞는지 별도 확인이 필요하다.
+
+**도구**: `tools/verify_ref_scale.py` (읽기 전용 진단, 값을 고치지 않음).
+
+1. `tools/data/hub_permits.json`을 직접 읽어 `sgg[시군구코드].done_q`(있는 것만 —
+   `.get('done_q', {})`로 방어, 구스키마 `permit_q`/`start_q`만 있는 항목은 조용히 0 기여)를
+   최근 3년(`calc()`의 LB=12분기 창과 동일) 구간으로 필터링한다.
+2. `update_adv_data._hub_zone_map(update_adv_data._load_bdong_map())`을 **그대로 재사용**해
+   시군구코드→생활권 매핑을 얻는다(Task 3에서 확정한 매핑과 100% 동일 — 별도 매핑 로직을
+   새로 만들지 않음). 같은 생활권으로 매핑된 시군구들의 `done_q`를 분기별로 합산 후, 분기
+   수로 나눠 "HUB준공 분기평균"을 얻는다.
+3. `data.js`를 `make_zone_pages.load()`와 동일한 정규식 패턴(`/*ADV_DATA_START*/const ADV=...`)
+   으로 파싱해 `ADV.livezone.zones`와 `ADV.occupancy`를 얻는다. 생활권마다 `make_zone_pages.calc()`
+   의 지역 결정 규칙을 그대로 복제(`region=='수도권'`이면 무조건 `'수도권'`, 아니면 `psido`,
+   그것도 없으면 `'수도권'` 폴백)해 시도를 정하고, `refq = O['ref'][시도]`(없으면 `O['band'][시도]`
+   중앙값)를 가져온다.
+4. 생활권별로 `HUB준공_분기평균 / refq` 비율 표를 출력하고, 표본이 5개 존 이상이면 비율의
+   평균·표준편차·변동계수(CV)를 계산해 "CV<0.3이면 단일 스케일 계수로 보정 가능, CV>=0.3이면
+   지역별 검토 필요"로 판정한다. done_q가 아예 없으면(현재 상태) 그 사실만 보고하고 exit 0.
+
+**스모크 실행 결과 (2026-07-24, 전량 시드 전)**:
+
+```
+$ python tools/verify_ref_scale.py
+done_q 데이터 없음 — 전량 시드 후 재실행 (hub_permits.json은 현재 부분 스캔 상태: meta.mode='full', sgg항목 3개 중 done_q 보유 0개)
+```
+
+예상대로다 — `hub_permits.json`은 아직 `sgg` 3개 항목뿐이고 전부 `permit_q`/`start_q`만 있는
+구스키마(=Task 3 이전 파일럿 잔재)라 `done_q`가 하나도 없다(Task 7 전량 시드 미실행). 예외 없이
+정상 종료(exit 0)해 브리프의 스모크 통과 조건을 만족한다.
+
+**순수함수 단위 테스트**: `tools/test_verify_ref_scale.py` — `zone_done_avg`(인메모리 픽스처로
+"같은 존 시군구 합산", "구스키마 done_q 없음은 무시", "3년 창 밖 분기 제외", "매핑 없는 코드 무시"
+4가지 케이스)와 `zone_region`/`zone_refq`(calc() 규칙 미러링 — 수도권 강제, psido 폴백, ref 없으면
+band 중앙값)를 검증. `python tools/test_verify_ref_scale.py` → 3개 테스트 모두 통과.
+
+**남은 일 (Task 5로 이월)**: 실제 비율 표와 스케일 계수 판단은 `done_q`가 채워진 뒤에만
+의미가 있다. 전량 시드(Task 7, `--full`, 추정 12~14시간) 완료 → `verify_ref_scale.py`
+재실행 → 비율이 지역 간 일정하면 계수 하나로 `refq`를 보정하거나 HUB준공 쪽에 계수를
+곱해 스케일을 맞추고, 들쭉날쭉하면 단일 계수를 포기하고 지역별 원인(생활권-시도 경계
+불일치, 시군구 커버리지 격차 등)을 따로 조사한다 — 이 판단은 Task 5(순위검토)에서 확정한다.
