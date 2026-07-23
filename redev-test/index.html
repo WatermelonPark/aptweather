@@ -63,7 +63,7 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
     font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-    line-height:1.7;-webkit-font-smoothing:antialiased}
+    line-height:1.7;-webkit-font-smoothing:antialiased;padding-bottom:78px}
   .wrap{max-width:560px;margin:0 auto;padding:0 22px}
   header{padding:56px 0 36px;text-align:center}
   .chip{display:inline-block;font-size:13px;font-weight:600;color:#fff;
@@ -118,6 +118,13 @@ th{text-align:center}
   border:1px solid #16203a;background:#16203a;color:#fff;cursor:pointer}
 .subsbox .consent{font-size:11.5px;line-height:1.55;margin:8px 0 0}
 .subsbox .subs-msg{display:block;font-size:12.5px;color:var(--muted,#5e7b6d);margin-top:8px}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--ink);
+ display:flex;justify-content:center;z-index:100;box-shadow:0 -4px 18px rgba(19,30,36,.28)}
+.nav-btn{flex:1;max-width:220px;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;gap:3px;color:#97a0b8;font-size:11.5px;font-weight:600;text-decoration:none}
+.nav-btn svg{display:block}
+.nav-btn.on,.nav-btn:hover{color:#fff}
+.nav-btn:focus-visible{outline:2px solid #fff;outline-offset:-3px}
 </style>
 </head>
 <body>
@@ -242,5 +249,12 @@ function zsubs(f){
   return false;
 }
 </script>
+
+<nav class="bottomnav">
+  <a class="nav-btn" href="/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>홈</span></a>
+  <a class="nav-btn on" href="/#test"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="7.4" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7.4" cy="12" r="1.7" fill="currentColor"/><circle cx="16.6" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>퀴즈</span></a>
+  <a class="nav-btn" href="/#stats"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>통계</span></a>
+  <a class="nav-btn" href="/cycle/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>리포트</span></a>
+</nav>
 </body>
 </html>
