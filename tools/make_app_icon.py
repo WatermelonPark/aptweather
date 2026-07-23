@@ -1,82 +1,86 @@
 # -*- coding: utf-8 -*-
-"""앱 아이콘·파비콘·PWA 아이콘 생성 — art_raw/raw-1(부화 병아리, FLUX 아트) 기반.
+"""앱 아이콘·파비콘·PWA 아이콘 생성 — 아공맵 시그니처 '발산 막대'(공급 과부족).
 
-(구버전은 PIL로 병아리를 직접 그렸으나, 카드 아트와 톤을 맞추기 위해
- 공유 카드와 같은 원본 그림에서 배경을 제거해 합성하는 방식으로 교체함)
+서비스 정체성 그대로를 아이콘화한다: 생활권별 아파트 공급 과부족을 0선(척추)에서
+좌우로 뻗는 막대로. 부족=빨강·오른쪽(#c0392b), 과잉/충분=파랑·왼쪽(#3a7bd5).
+쿨 토큰·플랫 디자인으로 OG 카드와 톤을 맞춘다. (구 병아리 아이콘 생성기는
+tools/make_app_icon_chick.py.bak 로 백업)
 
 산출물:
-  app_icon.png           512  파비콘 + apple-touch-icon (피사체 크게)
+  app_icon.png           512  파비콘 + apple-touch-icon (차트 크게, iOS가 스퀘어클 마스킹)
   icons/icon-192.png     192  PWA any
   icons/icon-512.png     512  PWA any
-  icons/maskable-192.png 192  PWA maskable (안전영역: 중앙 80% 원 안에 피사체)
+  icons/maskable-192.png 192  PWA maskable (안전영역: 중앙 원 안에 차트)
   icons/maskable-512.png 512  PWA maskable
 
 사용: python tools/make_app_icon.py
 """
-import os, sys
+import os
 from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, 'tools'))
-from make_beginner_cards import cutout, find_art  # noqa: E402
 
-BG = (246, 244, 238, 255)   # 사이트 종이색 #f6f4ee (manifest background_color와 동일)
-RED = (169, 50, 38)         # 시세 지도 상승색 #a93226
-BLUE = (26, 82, 118)        # 시세 지도 하락색 #1a5276
-NEUTRAL = (208, 202, 188)
-# 4x4 그리드에서 색이 들어가는 타일 위치 (행, 열) — 시세 지도 축소판 느낌
-TILE_PAT = {(0, 1): RED, (1, 2): RED, (2, 0): BLUE, (3, 2): BLUE, (1, 0): RED, (2, 3): BLUE}
+PAPER = (244, 246, 245)   # --paper #f4f6f5 (랜딩·OG 카드와 동일 쿨 토큰)
+RED   = (192, 57, 43)     # 부족 #c0392b (오른쪽)
+RED2  = (169, 50, 38)     # 절벽 #a93226 (최심 부족)
+BLUE  = (58, 123, 213)    # 충분/과잉 #3a7bd5 (왼쪽)
+BLUE2 = (26, 82, 118)     # 과잉 심화 #1a5276 (최대 과잉)
+SPINE = (19, 30, 36)      # --ink #131e24 (0선 척추)
 
-
-def blend(col, alpha):
-    """BG 위에 col을 alpha(0~255)만큼 얹은 결과색 — RGBA 캔버스는 PIL이 반투명
-    블렌딩을 안 해주므로(직접 대입됨) 미리 섞은 불투명 색을 쓴다."""
-    a = alpha / 255
-    return tuple(round(b * (1 - a) + c * a) for b, c in zip(BG[:3], col))
-
-
-def tile_bg(size):
-    """아공맵 정체성: 시세 지도풍 타일 그리드를 은은하게 깐 배경 (병아리가 주인공)."""
-    im = Image.new('RGBA', (size, size), BG)
-    d = ImageDraw.Draw(im)
-    n = 4
-    gap = max(2, round(size * 0.02))
-    cell = (size - gap * (n + 1)) // n
-    radius = max(3, round(cell * 0.17))
-    for r in range(n):
-        for c in range(n):
-            x0 = gap + c * (cell + gap)
-            y0 = gap + r * (cell + gap)
-            col = TILE_PAT.get((r, c))
-            fill = blend(col, 70) if col else blend(NEUTRAL, 40)
-            d.rounded_rectangle([x0, y0, x0 + cell, y0 + cell], radius=radius, fill=fill)
-    return im
+# 0선에서 좌우로 뻗는 막대 — 부호(+오른쪽/부족, -왼쪽/과잉)와 길이(half 대비 비율).
+# 위에서 아래로: 최심 부족 → 균형 근처 → 최대 과잉 (사이트 순위 지도와 같은 방향).
+BARS = [
+    ( 0.98, RED2),
+    ( 0.70, RED),
+    ( 0.42, RED),
+    ( 0.16, RED),
+    (-0.36, BLUE),
+    (-0.66, BLUE),
+    (-0.92, BLUE2),
+]
 
 
-def compose(subject, size, fill_ratio):
-    """타일 배경 캔버스 중앙에 피사체를 fill_ratio 크기로 합성."""
-    canvas = tile_bg(size)
-    w, h = subject.size
-    scale = size * fill_ratio / max(w, h)
-    sub = subject.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.LANCZOS)
-    canvas.alpha_composite(sub, ((size - sub.width) // 2, (size - sub.height) // 2))
-    return canvas.convert('RGB')
+def draw_icon(size, fill_ratio):
+    img = Image.new('RGB', (size, size), PAPER)
+    d = ImageDraw.Draw(img)
+
+    A = size * fill_ratio          # 차트가 차지하는 정사각 한 변
+    cx = size / 2                   # 0선(중앙)
+    half = A / 2                    # 막대 최대 길이
+
+    n = len(BARS)
+    bar_h = A / (n + (n - 1) * 0.58)
+    gap = bar_h * 0.58
+    total = n * bar_h + (n - 1) * gap
+    y = (size - total) / 2
+    r = bar_h * 0.42                # 막대 둥근 정도
+
+    # 0선 척추 (막대 아래에 깔려 막대 사이 틈으로 드러난다)
+    sw = max(2, round(size * 0.015))
+    d.rounded_rectangle([cx - sw / 2, y - bar_h * 0.35,
+                         cx + sw / 2, y + total + bar_h * 0.35],
+                        radius=sw / 2, fill=SPINE)
+
+    for frac, col in BARS:
+        length = frac * half
+        x0, x1 = (cx, cx + length) if length >= 0 else (cx + length, cx)
+        d.rounded_rectangle([x0, y, x1, y + bar_h], radius=r, fill=col)
+        y += bar_h + gap
+
+    return img
 
 
 def main():
-    raw = find_art(os.path.join(ROOT, 'art_raw'), 1)
-    assert raw, 'art_raw/raw-1.* 없음'
-    subject = cutout(raw)
     os.makedirs(os.path.join(ROOT, 'icons'), exist_ok=True)
     jobs = [
-        ('app_icon.png', 512, 0.94),
-        (os.path.join('icons', 'icon-192.png'), 192, 0.88),
-        (os.path.join('icons', 'icon-512.png'), 512, 0.88),
-        (os.path.join('icons', 'maskable-192.png'), 192, 0.66),
-        (os.path.join('icons', 'maskable-512.png'), 512, 0.66),
+        ('app_icon.png', 512, 0.80),
+        (os.path.join('icons', 'icon-192.png'), 192, 0.76),
+        (os.path.join('icons', 'icon-512.png'), 512, 0.76),
+        (os.path.join('icons', 'maskable-192.png'), 192, 0.60),
+        (os.path.join('icons', 'maskable-512.png'), 512, 0.60),
     ]
     for rel, size, ratio in jobs:
-        compose(subject, size, ratio).save(os.path.join(ROOT, rel), 'PNG')
+        draw_icon(size, ratio).save(os.path.join(ROOT, rel), 'PNG', optimize=True)
         print('wrote', rel)
 
 

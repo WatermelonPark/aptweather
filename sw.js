@@ -3,8 +3,8 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v10'; // 퀴즈 3종 독립 랜딩 신설(investor-test·redev-test) + qpick 진입점 교체(2026-07-23).
-                       // 옛 캐시는 startQuiz 즉시시작 index.html을 갖고 있어 반드시 버려야 한다.
+const VERSION = 'v11'; // 앱 아이콘 교체: 병아리 → 아공맵 발산 막대(공급 과부족)(2026-07-23).
+                       // 옛 캐시가 병아리 아이콘을 쥐고 있어 반드시 버려야 새 아이콘이 뜬다.
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
