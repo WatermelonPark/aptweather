@@ -293,7 +293,7 @@ def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_p
         # False를 반환해 run()이 아예 이 함수를 부르지 않아야 한다 — 호출되면 실패.
         if group['name'] == '창원시':
             raise AssertionError('never-scanned 그룹(창원시)에 fetch_group이 호출되면 안 됨')
-        return {'2024Q1': 5}, {}, ['4137011300']
+        return {'2024Q1': 5}, {}, ['4137011300'], False
 
     monkeypatch.setattr(F, 'fetch_group', fetch_group_stub)
 
@@ -302,6 +302,165 @@ def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_p
     result = json.load(io.open(str(out_path), encoding='utf-8'))
     assert '48120' not in result['sgg']              # 거짓 0으로 찍히지 않음
     assert result['sgg']['41370']['permit_q'] == {'2024Q1': 5}   # 기존 항목 보존
+    assert result['meta']['scanned'] == ['41370']     # 깨끗하게 스캔된 그룹만 기록
+
+
+# ---------------------------------------------------------------------------
+# Fix pass 2 (Important): 지속 장애로 재시도 소진('error')된 그룹은
+# out['sgg'][key]를 덮어쓰면 안 된다 — 진짜 카운트가 빈 값으로 clobber되는
+# 것 방지. 같은 메커니즘으로 meta['scanned']를 도입해 Minor(never-scanned vs
+# scanned-genuinely-zero 구분)도 함께 해결한다.
+# ---------------------------------------------------------------------------
+
+def test_fetch_bjdong_all_pages_reports_had_error_on_retry_exhaustion(monkeypatch):
+    # fetch_page가 재시도를 다 쓰고도 'error'를 반환하면(=fetch_page가 이미
+    # ERROR를 찍은 상태) had_error=True로 전달돼야 한다.
+    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page: ('', 'error'))
+    items, had_error = F.fetch_bjdong_all_pages('41370', '11300')
+    assert items == []
+    assert had_error is True
+
+
+def test_fetch_bjdong_all_pages_no_error_on_clean_no_data(monkeypatch):
+    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page: ('', 'no_data_xml'))
+    items, had_error = F.fetch_bjdong_all_pages('41370', '11300')
+    assert items == []
+    assert had_error is False
+
+
+def test_fetch_group_propagates_had_unresolved_error(monkeypatch):
+    # 그룹 소속 법정동 중 하나라도 had_error면 그룹 전체가
+    # had_unresolved_error=True로 올라와야 fetch_group 결과를 신뢰 안 함.
+    group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+             'bjdong': {'41370': ['11300', '11400']}, 'legacy': None}
+
+    def fake_fetch_bjdong_all_pages(sigungu, bjdong, log=None):
+        if bjdong == '11400':
+            return [], True   # 이 법정동만 재시도 소진 오류
+        return [], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
+    permit_q, start_q, productive, had_unresolved_error = F.fetch_group(group)
+    assert had_unresolved_error is True
+
+
+def test_fetch_group_no_error_when_all_bjdong_clean(monkeypatch):
+    group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+             'bjdong': {'41370': ['11300']}, 'legacy': None}
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: ([], False))
+    permit_q, start_q, productive, had_unresolved_error = F.fetch_group(group)
+    assert had_unresolved_error is False
+
+
+def _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub):
+    monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
+    monkeypatch.setattr(F, 'KEY', 'dummy-key')
+    out_path = tmp_path / 'hub_permits.json'
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded))
+    monkeypatch.setattr(F, 'fetch_group', fetch_group_stub)
+    F.run(mode_full=False, only_codes=None, list_targets_only=False)
+    return json.load(io.open(str(out_path), encoding='utf-8'))
+
+
+def test_run_does_not_clobber_prior_value_on_unresolved_error(tmp_path, monkeypatch):
+    # Important: 41370은 이전에 실측된 진짜 값(permit_q 5)이 있다. 이번 회차에
+    # 지속 장애로 had_unresolved_error=True가 나면, 그 진짜 값을 절대
+    # 덮어쓰면 안 된다(빈 dict로 clobber 금지).
+    fake_groups = {
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
+              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 999}, 'start_q': {'2024Q1': 999}}},
+              'productive_bjdong': ['4137011300']}
+
+    def fetch_group_stub(group, only_bjdong=None):
+        return {}, {}, [], True   # 지속 장애: 재시도 소진, 결과 신뢰 불가
+
+    result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 999}   # 이전 실측값 그대로 보존
+    assert result['meta']['scanned'] == ['41370']   # 이번 회차엔 재확인 못 했으니 갱신 안 됨(기존 유지)
+
+
+def test_run_does_not_write_empty_placeholder_on_unresolved_error_without_prior_value(tmp_path, monkeypatch):
+    # 이전 값이 아예 없던 그룹이 첫 시도에서 바로 지속 장애를 만나면, 빈
+    # placeholder({}) 조차 쓰지 않아야 한다(거짓 0과 동일한 오염이므로).
+    fake_groups = {
+        '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': []},
+              'sgg': {}, 'productive_bjdong': ['4812010100']}   # 48120은 캐시상 이미 스캔된 것으로 세팅(should_refresh=True 유도)
+
+    def fetch_group_stub(group, only_bjdong=None):
+        return {}, {}, [], True
+
+    result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+    assert '48120' not in result['sgg']
+    assert result['meta']['scanned'] == []
+
+
+def test_run_clean_scan_writes_result_and_marks_scanned(tmp_path, monkeypatch):
+    # 대조군: 깨끗하게(오류 없이) 스캔되면 정상적으로 기록되고 meta['scanned']에 추가된다.
+    fake_groups = {
+        '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': []},
+              'sgg': {}, 'productive_bjdong': ['4812010100']}
+
+    def fetch_group_stub(group, only_bjdong=None):
+        return {'2024Q1': 3}, {}, ['4812010100'], False
+
+    result = _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+    assert result['sgg']['48120']['permit_q'] == {'2024Q1': 3}
+    assert result['meta']['scanned'] == ['48120']
+
+
+# ---------------------------------------------------------------------------
+# Fix pass 2 (Minor): never-scanned vs scanned-genuinely-zero 구분
+# ---------------------------------------------------------------------------
+
+def test_skip_log_distinguishes_never_scanned_from_scanned_zero(tmp_path, monkeypatch, capsys):
+    fake_groups = {
+        '41370': {'name': '오산시(미스캔)', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+        '48120': {'name': '창원시(스캔완료-0건)', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    # 둘 다 cached_productive(productive_bjdong)와 자기 법정동이 하나도 안 겹쳐
+    # should_refresh_group은 둘 다 False를 준다 — 로그로만 구분돼야 한다.
+    # 48120은 meta['scanned']에 이미 들어있어(=이전에 깨끗하게 스캔해서 0건으로
+    # 확정됨) '아직 스캔 안 함'이라고 오해를 부르면 안 된다.
+    seeded = {'meta': {'fetched': '', 'mode': 'incr', 'unresolved_legacy': [], 'scanned': ['48120']},
+              'sgg': {}, 'productive_bjdong': []}
+
+    def fetch_group_stub(group, only_bjdong=None):
+        raise AssertionError('should_refresh_group이 False인 그룹에 fetch_group이 호출되면 안 됨')
+
+    _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+    out = capsys.readouterr().out
+    assert '[SKIP not-yet-scanned] 41370' in out
+    assert '[SKIP scanned-zero] 48120' in out
+    assert '[SKIP not-yet-scanned] 48120' not in out   # 스캔완료-0건을 미스캔으로 오분류하면 안 됨
+
+
+# ---------------------------------------------------------------------------
+# Fix pass 2: load_existing 하위호환 — meta['scanned'] 없는 과거 파일도 로드 가능
+# ---------------------------------------------------------------------------
+
+def test_load_existing_backward_compat_missing_scanned_key(tmp_path, monkeypatch):
+    out_path = tmp_path / 'hub_permits.json'
+    legacy_state = {'meta': {'fetched': '2026-01-01', 'mode': 'full', 'unresolved_legacy': ['41190']},
+                     'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+                     'productive_bjdong': ['4137011300']}
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(legacy_state, ensure_ascii=False))
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+
+    loaded = F.load_existing()   # 과거엔 meta에 'scanned' 키가 아예 없었음 — 죽으면 안 됨
+    assert loaded['meta']['scanned'] == []
+    assert loaded['sgg']['41370']['permit_q'] == {'2024Q1': 5}   # 기존 데이터는 그대로
 
 
 # ---------------------------------------------------------------------------
