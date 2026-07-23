@@ -25,36 +25,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
-<title>부린이 테스트 — 내 부동산 감각, 몇 점일까? (10문항 3분)</title>
-<meta name="description" content="부린이 테스트: 내집마련 전 꼭 알아야 할 부동산 상식 10문항을 3분 만에 확인. LTV·전세·청약 기초부터 집값 전망을 읽는 아파트 사이클 감각까지 즉시 채점·해설.">
-<meta name="keywords" content="부린이 테스트, 부동산 테스트, 부동산 상식 퀴즈, 내집마련, 집값 전망, 아파트 사이클, 부동산 데이터, 부동산 공부">
-<link rel="canonical" href="https://www.agongmap.co.kr/burini-test/">
+<title>재건축·재개발 테스트 — 이 사업, 사업성 있을까? (10문항 3분)</title>
+<meta name="description" content="재건축·재개발 테스트: 매매가·대지지분·용적률로 재건축 사업성, 구역 면적·조합원 수로 재개발 사업성을 읽는 10문항. 쉬운 숫자로 바로 굴려보고 즉시 채점·해설.">
+<meta name="keywords" content="재건축 테스트, 재개발 테스트, 재건축 사업성, 대지지분, 용적률, 조합원 분담금, 정비사업, 부동산 테스트">
+<link rel="canonical" href="https://www.agongmap.co.kr/redev-test/">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <link rel="apple-touch-icon" href="/app_icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#16203a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="부린이 테스트">
+<meta name="apple-mobile-web-app-title" content="재건축·재개발 테스트">
 <meta property="og:type" content="website">
-<meta property="og:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
-<meta property="og:description" content="10문항 2지선다, 3분이면 끝. 내집마련 전 필수 상식부터 아파트 사이클 감각까지 즉시 채점·해설.">
-<meta property="og:url" content="https://www.agongmap.co.kr/burini-test/">
+<meta property="og:title" content="재건축·재개발 테스트 — 이 사업, 사업성 있을까?">
+<meta property="og:description" content="10문항 2지선다, 3분이면 끝. 대지지분·용적률·조합원 수로 정비사업 사업성을 읽어내는 감각을 즉시 채점·해설.">
+<meta property="og:url" content="https://www.agongmap.co.kr/redev-test/">
 <meta property="og:image" content="https://www.agongmap.co.kr/og-test.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="부린이 테스트 — 내 부동산 감각, 몇 점일까?">
+<meta name="twitter:title" content="재건축·재개발 테스트 — 이 사업, 사업성 있을까?">
 <meta name="twitter:image" content="https://www.agongmap.co.kr/og-test.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Quiz",
-  "name": "부린이 테스트",
-  "description": "내집마련 전 꼭 알아야 할 부동산 상식 10문항. LTV·전세·청약 기초부터 아파트 사이클까지 즉시 채점·해설.",
-  "url": "https://www.agongmap.co.kr/burini-test/",
-  "educationalLevel": "beginner",
-  "about": {"@type": "Thing", "name": "부동산 상식"}
+  "name": "재건축·재개발 테스트",
+  "description": "매매가·대지지분·용적률로 재건축 사업성, 구역 면적·조합원 수로 재개발 사업성을 읽는 10문항. 즉시 채점·해설.",
+  "url": "https://www.agongmap.co.kr/redev-test/",
+  "educationalLevel": "advanced",
+  "about": {"@type": "Thing", "name": "재건축·재개발 사업성"}
 }
 </script>
 <style>b,strong{font-weight:600}
@@ -89,6 +89,13 @@ td{text-align:left}
 th{text-align:center}
   th{background:var(--paper2);font-size:13px;color:var(--ink2)}
   td:first-child{font-weight:600;white-space:nowrap}
+  .fold{background:#fff;border:1px solid var(--line);border-radius:0;margin-top:6px}
+  .fold summary{list-style:none;cursor:pointer;padding:14px 18px;font-size:14.5px;font-weight:600;color:var(--ink)}
+  .fold summary::-webkit-details-marker{display:none}
+  .fold summary::after{content:'＋';float:right;color:var(--muted);font-weight:400}
+  .fold[open] summary::after{content:'−'}
+  .fold .fbody{padding:0 18px 16px;font-size:14px;color:var(--ink2)}
+  .fold .fbody b{color:var(--ink)}
   .links{display:flex;flex-direction:column;gap:10px;margin-top:14px}
   .links a{display:block;background:#fff;border:1px solid var(--line);border-radius:0;
     padding:14px 18px;text-decoration:none;color:var(--ink);font-size:14.5px;font-weight:600}
@@ -111,47 +118,56 @@ th{text-align:center}
 <body>
 
 <header><div class="wrap">
-  <div class="chip">🐣 부린이 테스트</div>
-  <h1>내 부동산 감각,<br><em>몇 점일까?</em></h1>
-  <p class="lead">내집마련 전에 꼭 알아야 할 부동산 상식 10문항. 2지선다라 부담 없고, 문항마다 즉시 채점·해설이 달린다. 3분이면 끝.</p>
-  <a class="cta" href="/#test-beginner">🐣 부린이 테스트 시작하기</a>
+  <div class="chip">🏗️ 재건축·재개발 테스트</div>
+  <h1>이 재건축,<br><em>사업성 있을까?</em></h1>
+  <p class="lead">매매가·대지지분·용적률만으로 재건축 사업성이, 구역 면적·조합원 수만으로 재개발 사업성이 보인다. 쉬운 숫자로 바로 굴려보는 10문항, 3분이면 끝.</p>
+  <a class="cta" href="/#test-calc">🏗️ 재건축·재개발 테스트 시작하기</a>
   <a class="cta sub" href="/investor-test/">🦅 투자자 테스트</a>
-  <a class="cta sub" href="/redev-test/">🏗️ 재건축·재개발 테스트</a>
+  <a class="cta sub" href="/burini-test/">🐣 부린이 테스트</a>
   <div class="meta">회원가입 없음 · 무료 · 결과 카카오톡 공유</div>
 </div></header>
 
 <section><div class="wrap">
   <h2>이런 걸 물어본다</h2>
   <div class="q">
-    <div class="qt">Q. 주택을 담보로 대출받을 때, 집값 대비 빌릴 수 있는 최대 비율을 가리키는 말은?</div>
-    <div class="qo">① DSR &nbsp; ② LTV — 정답과 해설은 테스트에서</div>
+    <div class="qt">Q. A단지: 평당 차익 1,000만원 × 지분 20평. B단지: 평당 차익 3,000만원 × 지분 5평. 재건축 추진 동력이 더 큰 쪽은?</div>
+    <div class="qo">① A단지 &nbsp; ② B단지 — 정답과 해설은 테스트에서</div>
   </div>
   <div class="q">
-    <div class="qt">Q. 대단지 아파트는 오늘 착공하면 보통 2년 정도면 입주한다. O일까 X일까?</div>
-    <div class="qo">국토부 데이터로 검증한 진짜 답이 있다</div>
+    <div class="qt">Q. 계산상 사업성은 넉넉한데, 시장 전체가 하락장 초입에 들어섰다. 판단은?</div>
+    <div class="qo">사업성 계산과 시장 사이클, 무엇이 먼저인지 묻는다</div>
   </div>
-  <p>LTV·디딤돌·계약갱신청구권 같은 제도 상식부터, 공급과 집값 전망을 읽는 아파트 사이클 감각까지 — 뉴스 헤드라인만으로는 못 맞히는 문항들로 구성했다.</p>
+  <p>개발 전·후 대지 가치 비교, 공사비 인플레가 마진을 갉아먹는 구조, 조합원 몫과 일반분양분의 비율까지 — 숫자 몇 개만으로 사업성을 가늠하는 감각을 묻는다. 정답마다 근거가 붙는다.</p>
+</div></section>
+
+<section><div class="wrap">
+  <h2>사업성, 한 줄로 굴려본다</h2>
+  <p>복잡한 감정평가 없이도 방향은 잡을 수 있다. 아래를 펼치면 테스트가 다루는 한 줄 골격이 나온다.</p>
+  <details class="fold">
+    <summary>재건축 사업성의 뼈대 보기</summary>
+    <div class="fbody">
+      <p><b>개발 후 평당 가치 = (분양가 − 공사비) × 용적률 배수.</b> 이 값이 <b>개발 전 현재 평당 가치</b>를 충분한 여유를 두고 넘어야 사업성이 있다고 본다.</p>
+      <p>공사비는 전국이 비슷하니 사업성은 결국 <b>분양가가 높은 곳</b>에서 먼저 살아난다. 재개발은 여기에 <b>조합원 몫을 뺀 일반분양분</b>이 얼마나 남느냐가 더해진다. 테스트는 이 골격을 여러 상황에 대입해 본다.</p>
+    </div>
+  </details>
 </div></section>
 
 <section><div class="wrap">
   <h2>점수별 레벨</h2>
   <table>
-    <tr><th>점수</th><th>부동산 여정</th></tr>
-    <tr><td>10</td><td>🐦‍🔥 부동산 봉황 — 만점, 시장을 읽는 경지</td></tr>
-    <tr><td>9</td><td>🏰 부동산 거물</td></tr>
-    <tr><td>8</td><td>🏘️ 다주택자</td></tr>
-    <tr><td>7</td><td>🔑 내 집 마련</td></tr>
-    <tr><td>5~6</td><td>🐔 알 낳는 암탉 · 목청 좋은 장닭</td></tr>
-    <tr><td>3~4</td><td>🐥 솜털 병아리 · 첫 발품 영계</td></tr>
-    <tr><td>1~2</td><td>🐣 부화 임박 · 갓 깬 삐약이</td></tr>
-    <tr><td>0</td><td>🥚 무주택 달걀 — 여기서 시작</td></tr>
+    <tr><th>점수</th><th>사업성 감각</th></tr>
+    <tr><td>9~10</td><td>🏗️ LV5 — 사업성이 한눈에 보이는 선수</td></tr>
+    <tr><td>7~8</td><td>📐 LV4 — 눈대중 견적이 되는 예비 조합원</td></tr>
+    <tr><td>5~6</td><td>✏️ LV3 — 공식은 아는데 손이 느린 단계</td></tr>
+    <tr><td>3~4</td><td>📮 LV2 — 분담금 고지서에 놀랄 단계</td></tr>
+    <tr><td>0~2</td><td>🚧 LV1 — 묻지마 재건축 매수 직전</td></tr>
   </table>
   <p style="margin-top:12px">결과는 점수 카드로 만들어져 카카오톡으로 바로 공유할 수 있다. 친구와 몇 점인지 겨뤄보자.</p>
 </div></section>
 
 <section><div class="wrap">
   <h2>찍어서 만든 문제가 아니다</h2>
-  <p>이 테스트는 KOSIS·한국은행·국토교통부의 부동산 데이터로 <b>아파트 사이클</b>(전세→매매→공급→다시 전세)을 직접 검증한 리포트 <b>「집값은 돌고 돈다」</b>를 바탕으로 만들었다. 테스트가 끝나면 근거가 된 리포트와 원자료 통계도 확인할 수 있다.</p>
+  <p>이 테스트는 KOSIS·한국은행·국토교통부의 부동산 데이터로 <b>아파트 사이클</b>(전세→매매→공급→다시 전세)을 직접 검증한 리포트 <b>「집값은 돌고 돈다」</b>를 바탕으로 만들었다. 사업성 계산이 왜 <b>시장 사이클 판단을 대신하지 못하는지</b>, 그 근거가 된 리포트와 원자료 통계를 함께 확인할 수 있다.</p>
   <div class="links">
     <a href="/weekly/">📊 주간 시세 지도<span>이번 주 전국 아파트값이 어디서 오르고 어디서 빠졌는지</span></a>
     <a href="/zone/">🗺️ 생활권 공급 리포트<span>전국 생활권의 입주·순부족을 순위로</span></a>
@@ -161,7 +177,7 @@ th{text-align:center}
 </div></section>
 
 <section style="border-top:1px solid var(--line);text-align:center"><div class="wrap">
-  <a class="cta" href="/#test-beginner">지금 바로 테스트 시작 →</a>
+  <a class="cta" href="/#test-calc">지금 바로 테스트 시작 →</a>
 </div></section>
 
 <section><div class="wrap">
