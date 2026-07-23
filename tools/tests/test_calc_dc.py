@@ -60,6 +60,75 @@ def test_zone_fut_supply_ignores_fwd_far_when_zone_absent():
 
 
 # ---------------------------------------------------------------------------
+# Fix C(I1): 존별 forward 지평 — fwd_far 있으면 4년(HQ=16), 없으면 2년(HQ=8).
+# need의 지평이 항상 실제 공급이 커버하는 지평과 일치해야 한다(구조적 부족 편향 방지).
+# ---------------------------------------------------------------------------
+
+def test_zone_fut_supply_uses_4yr_horizon_when_fwd_far_present():
+    today = datetime.date.today()
+    cur_q = _cur_q(today)
+    near_q = _qlabel(cur_q + 1)
+    far_q = _qlabel(cur_q + 9)
+    z = {'z': '존C', 'byq': {near_q: 100}}
+    LZ = {'zones': [z]}
+    P = {'fwd_far': {'존C': {far_q: 50}}}
+    NEARQ, FARQ, HQ, cq = M.fut_window(LZ, today)
+    fsup, H = M.zone_fut_supply(z, P, NEARQ, FARQ, HQ)
+    assert H == 16
+    assert fsup == 150
+
+
+def test_zone_fut_supply_uses_2yr_horizon_when_fwd_far_absent():
+    today = datetime.date.today()
+    cur_q = _cur_q(today)
+    # 미래 8개 분기 전량이 실제 byq에 나타나야 NEARQ가 꽉 찬 8개가 된다
+    # (fut_window의 NEARQ는 '실데이터에 나타난 라벨'이라 스텁 데이터가 성기면
+    # 자연히 8보다 짧아진다 — 그건 calc_old()와 동일한 동적 산식이라 맞다).
+    byq = {_qlabel(cur_q + 1 + j): (100 if j == 0 else 0) for j in range(8)}
+    z = {'z': '존D', 'byq': byq}
+    LZ = {'zones': [z]}
+    P = {'fwd_far': {}}   # 이 존은 fwd_far 자체가 없음(미완결 존 또는 기능 비활성)
+    NEARQ, FARQ, HQ, cq = M.fut_window(LZ, today)
+    fsup, H = M.zone_fut_supply(z, P, NEARQ, FARQ, HQ)
+    assert H == len(NEARQ) == 8
+    assert fsup == 100   # far 기여 없음(원분기 데이터가 없으므로)
+
+
+def test_calc_need_uses_16q_horizon_for_zone_with_fwd_far_and_8q_for_zone_without():
+    today = datetime.date.today()
+    cur_q = _cur_q(today)
+    near_q = _qlabel(cur_q + 1)
+    far_q = _qlabel(cur_q + 9)
+
+    def _zone(name, byq, pop=10000):
+        return {'z': name, 'region': '기타', 'psido': '테스트시', 'pop': pop, 'byq': byq}
+
+    zone_a = _zone('존A', {near_q: 100})   # fwd_far 있음 -> 4년(자기 byq는 근분기 1개뿐이어도 무방)
+    # 존B가 미래 8개 분기 전량을 채워야 전역 NEARQ가 8개로 꽉 찬다(fut_window는
+    # 모든 존의 byq 합집합에서 라벨을 뽑는다) — 근분기 실합(fsup)은 첫 분기만 60.
+    zone_b = _zone('존B', {_qlabel(cur_q + 1 + j): (60 if j == 0 else 0) for j in range(8)})
+    adv = {
+        'livezone': {'zones': [zone_a, zone_b], 'sidopop': {'테스트시': 40000}},
+        'occupancy': {'regions': ['테스트시'], 'rows': [], 'band': {}, 'ref': {'테스트시': 1000}},
+        'permits': {'regions': ['테스트시'], 'ref': {'테스트시': [5000, 1]}, 'rows': [],
+                    'meas': {'존A': 900}, 'fwd_far': {'존A': {far_q: 50}}},
+        'bubble': {},
+    }
+    sts = {'전세가율': {'series': {}}, '주택멸실': {'series': {'테스트시': [400]}}}
+    rows = M.calc(adv, sts)
+    by_name = {r['z']['z']: r for r in rows}
+    share_a = zone_a['pop'] / 40000
+    share_b = zone_b['pop'] / 40000
+    assert by_name['존A']['fq'] == 16
+    assert by_name['존A']['need'] == 1000 * 16 * share_a
+    assert by_name['존A']['dcsrc'] == 'meas'
+    assert by_name['존B']['fq'] == 8
+    assert by_name['존B']['need'] == 1000 * 8 * share_b
+    assert by_name['존B']['dcsrc'] == 'fallback'   # 시도 인구배분(P['regions']에 '테스트시' 존재, ph 없음 -> None 아님 확인용 아래
+    assert by_name['존B']['fsup'] == 60   # 근분기만(far 없음)
+
+
+# ---------------------------------------------------------------------------
 # calc_dc: meas(건축HUB 실측) 경로 vs fallback(시도 인구배분) 경로
 # ---------------------------------------------------------------------------
 

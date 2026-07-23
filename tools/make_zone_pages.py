@@ -65,10 +65,18 @@ def fut_window(LZ, today=None):
 
 
 def zone_fut_supply(zz, P, NEARQ, FARQ, HQ):
-    """생활권 하나의 미래 입주(fsup) — 근분기는 byq(odcloud), 원분기는 fwd_far(착공파생)만."""
+    """생활권 하나의 미래 입주(fsup)와 그 창(H, 분기수).
+
+    fwd_far[zone] 항목이 있으면(Fix B: 완결 수집된 존) 4년 창 — 근(byq)+원(fwd_far
+    착공파생), H=HQ(=FUT_FAR=16). 없으면(미완결 존이거나 기능 자체가 비활성)
+    2년 창 — 근분기(byq)만, H=len(NEARQ)(보통 FUT_NEAR=8). need의 지평을 항상
+    실제로 공급이 커버하는 지평과 맞춰야 한다 — 안 그러면 4년치 need를 2년치
+    supply와 비교하는 구조적 부족 편향이 생긴다."""
     b = zz.get('byq') or {}
     near = sum(b.get(k, 0) for k in NEARQ)
-    ff = (P.get('fwd_far') or {}).get(zz['z']) or {}
+    ff = (P.get('fwd_far') or {}).get(zz['z'])
+    if ff is None:
+        return near, max(1, len(NEARQ))
     far = sum(ff.get(k, 0) for k in FARQ)
     return near + far, HQ
 
@@ -81,6 +89,13 @@ def calc_dc(P, ph, ps, z, refq, share, dY):
     dC = 0; plo = None; pv = None; src = None
     perm_z = (P.get('meas') or {}).get(z['z'])
     if perm_z is not None:
+        # Fix E(I2): 이 base(=흡수 기준선, refq*4*share)는 fallback 경로의
+        # plo_sido(=P['ref'][ps][0], 허가 기준선)와 독립적으로 보정된 값이라
+        # 시도별로 서로 다른 비율로 어긋난다(verify_dc_rankdiff.py가 시도별
+        # refq*4 vs P['ref'][ps][0] 비율을 진단 출력한다). 지표 기준선을
+        # 통일하는 건 사용자가 검토할 상품 결정이라 여기서 임의로 맞추지
+        # 않는다 — meas 존이 늘어날수록 fallback 잔존 존과의 이 잔차는
+        # 사용자가 이미 검토·수용한 것으로 취급한다.
         base = refq * 4 * share            # (A) need-유도 연간 기준선(4분기), 생활권 스케일
         dC = base - (perm_z - dY * share)  # perm_z=연평균 실측(생활권), dY=시도 멸실 배분
         plo, pv, src = base, perm_z - dY * share, 'meas'

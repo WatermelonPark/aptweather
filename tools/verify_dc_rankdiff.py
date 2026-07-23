@@ -92,6 +92,26 @@ def rank_map(rows, key='z'):
     return {r[key]: i + 1 for i, r in enumerate(rows)}
 
 
+def print_baseline_heterogeneity(adv):
+    """Fix E(I2) 진단: meas 경로의 흡수 기준선(refq*4)과 fallback 경로의 허가
+    기준선(P['ref'][ps][0])은 독립적으로 보정된 값이라 시도별로 다른 비율로
+    어긋난다. 이 함수는 그 값을 바꾸지 않고 시도별 비율만 찍어, 사용자가
+    meas 존이 늘어날 때 이 잔차 크기를 검토할 수 있게 한다."""
+    O, P = adv['occupancy'], adv['permits']
+    print('\n[Fix E 진단] 시도별 base(=refq*4, meas 흡수 기준선) vs plo_sido(=P.ref[ps][0], fallback 허가 기준선)')
+    print('%-8s %14s %14s %10s' % ('시도', 'refq*4', 'ref[ps][0]', '비율'))
+    print('-' * 50)
+    for ps in O.get('regions', []):
+        band = (O.get('band') or {}).get(ps)
+        refq = (O.get('ref') or {}).get(ps) or (sum(band) / 2 if band else None)
+        plo_sido = (P.get('ref') or {}).get(ps, [None])[0]
+        if refq is None or plo_sido is None:
+            continue
+        base = refq * 4
+        ratio = base / plo_sido if plo_sido else None
+        print('%-8s %14.0f %14.0f %10s' % (ps, base, plo_sido, ('%.2f' % ratio) if ratio is not None else '·'))
+
+
 def main():
     adv, sts = M.load()
     before_meas = json.dumps((adv.get('permits') or {}).get('meas'), sort_keys=True, ensure_ascii=False)
@@ -150,6 +170,8 @@ def main():
           '%d개 존에만 있고(전국 시딩은 Task 8), forward 2→4년 확장은 모든 존의 '
           'need에 영향을 준다(HQ 8→16, need가 대략 2배로 커짐 — dA 스케일 변화가 '
           '순위보다 절대값(tot) 크기에 더 크게 반영된다).' % len(meas_zones))
+
+    print_baseline_heterogeneity(adv)
 
 
 if __name__ == '__main__':
