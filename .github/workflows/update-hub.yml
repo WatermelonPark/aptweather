@@ -22,6 +22,19 @@ name: update-hub
 # 스캔 캐시 덕에 다음 실행이 이어받아 자가 치유한다 — 기존 데이터를 덮어
 # 지우지 않는다. 전량 첫 시딩은 이 워크플로를 만들 때 자동 실행되지 않으며,
 # 사람이 workflow_dispatch에서 mode=full로 명시적으로 트리거해야 한다.
+#
+# GitHub 러너 6시간 캡과 RESUMABLE --full (Fix pass): 전량 첫 시딩(~11~14시간)은
+# GitHub 호스티드 러너의 6시간/잡 하드 캡(360분)을 넘는다 — timeout-minutes: 350은
+# 그 캡 아래 값일 뿐, 실행 자체가 그 시간 안에 못 끝나면 잡이 도중에 KILL된다.
+# 그래서 mode=full은 RESUMABLE하게 만들어뒀다: fetch_hub_permits.py --full은
+# 그룹을 하나 끝낼 때마다 meta['scanned']에 기록하며 즉시 저장하고, 다음 --full
+# 실행은 이미 meta['scanned']에 있는 그룹을 건너뛰고 이어서 스캔한다. 즉 킬된
+# 잡을 그대로 mode=full로 재트리거하면(사람이 수동으로, 약 2~3회) 이전 회차가
+# 남긴 지점부터 이어져 결국 ~12,000회 호출이 전부 끝난다. 자동 재트리거 루프는
+# 의도적으로 넣지 않았다 — 사람이 진행 상황(로그/커밋된 hub_permits.json의
+# meta.scanned 길이)을 보고 다시 트리거한다. 처음부터 완전히 다시 돌리려면(연 1회
+# 재구축 등) collector를 --full --reseed로 로컬/별도 실행해야 한다(이 워크플로의
+# workflow_dispatch에는 reseed 옵션을 노출하지 않음 — 실수로 전량 재시딩을 막기 위해).
 on:
   schedule:
     - cron: '0 18 1 * *'   # 매월 1일 03:00 KST — 증분 갱신
@@ -57,7 +70,7 @@ jobs:
             echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
           fi
           if [ "${{ inputs.mode }}" = "full" ]; then
-            echo "전량 첫 시딩 모드 — 약 11~14시간 소요"
+            echo "전량 시딩 모드(RESUMABLE) — 약 11~14시간/12,000호출, GitHub 6시간 캡 초과로 이 실행은 timeout-minutes(350)에서 끊길 수 있음. meta['scanned']에 이미 스캔된 그룹은 건너뛰고 이어서 스캔하므로, 끊기면 mode=full로 다시 트리거하면 된다(대략 2~3회 재트리거로 전량 완료)."
             python tools/fetch_hub_permits.py --full
           else
             echo "증분 모드(기본) — productive_bjdong 캐시만 재조회"

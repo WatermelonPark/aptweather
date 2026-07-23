@@ -23,6 +23,13 @@
   python tools/fetch_hub_permits.py --full --only 41370,41190,41130   # 표본 실호출
   python tools/fetch_hub_permits.py --full                  # 전국 첫 전량(약 13시간, 로컬에서 돌리지 말 것)
   python tools/fetch_hub_permits.py                         # 증분(productive_bjdong만)
+
+RESUMABLE --full (Fix pass): GitHub 호스티드 러너는 6시간/잡 하드 캡이 있어
+전국 첫 전량(~11~14시간)이 한 번의 워크플로 실행으로 안 끝난다. `--full`은
+meta['scanned']에 이미 깨끗하게 스캔 완료된 그룹은 건너뛰므로, 워크플로가
+중간에 킬되어도 --full을 그대로 재트리거하면 남은 그룹부터 이어서 돈다
+(사람이 ~2~3회 재트리거하면 전량 완료). 처음부터 진짜 다시 돌리려면(연 1회
+재구축 등) `--reseed`를 함께 준다.
 """
 import io, os, sys, re, json, time, math, subprocess, datetime, argparse, collections
 
@@ -394,7 +401,7 @@ def save(out):
         json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True))
 
 
-def run(mode_full, only_codes, list_targets_only):
+def run(mode_full, only_codes, list_targets_only, reseed=False):
     groups, unresolved_names = build_targets()
 
     if list_targets_only:
@@ -446,6 +453,17 @@ def run(mode_full, only_codes, list_targets_only):
         if group['legacy'] and not group['legacy']['enumerable']:
             print('[SKIP legacy] %s(%s): code_bdong.json에 법정동 없음 — unresolved_legacy 기록' % (key, group['name']))
             unresolved_legacy.add(key)
+        elif mode_full and not reseed and key in scanned:
+            # Fix pass(resumability): GitHub 호스티드 러너는 6시간 하드 캡이라
+            # --full 전량(약 11~14시간)이 한 번의 워크플로 실행으로 안 끝난다.
+            # 재트리거된 --full 실행이 처음부터 다시 도는 걸 막기 위해, 이미
+            # 깨끗하게 스캔 완료된(meta['scanned']) 그룹은 건너뛰고 남은
+            # 그룹만 이어서 스캔한다 — 그래야 여러 회 재트리거로 전량이
+            # 언젠가 끝난다. 중간에 죽어 scanned에 못 들어간 그룹은 이
+            # 분기를 안 타므로 다음 실행에서 자동으로 다시 스캔된다(허용:
+            # 그룹 하나 재스캔은 무해). --reseed는 이 스킵을 무시하고 진짜
+            # 처음부터 전량을 다시 돈다(연 1회 등 의도적 재구축용).
+            print('[RESUME skip] %s(%s) 이미 스캔 완료' % (key, group['name']))
         elif not should_refresh_group(key, group['bjdong'], cached_productive, mode_full):
             # Finding 2: 기본(증분) 모드에서 아직 한 번도 스캔된 적 없는 그룹은
             # 건드리지 않는다. 그냥 fetch_group을 불러버리면 only_bjdong으로
@@ -496,11 +514,16 @@ def run(mode_full, only_codes, list_targets_only):
 def main():
     ap = argparse.ArgumentParser(description='건축HUB 시군구 인허가/착공 페이싱 수집기')
     ap.add_argument('--list-targets', action='store_true', help='대상 시군구/법정동만 도출해 개수 출력(호출 없음)')
-    ap.add_argument('--full', action='store_true', help='증분 캐시 무시하고 전량 수집(첫 실행 필수)')
+    ap.add_argument('--full', action='store_true',
+                     help='전량 수집(첫 실행 필수). 이미 meta["scanned"]에 있는 그룹은 건너뛰고 '
+                          '이어서 스캔한다(RESUMABLE) — GitHub 러너 6시간 캡을 넘는 첫 시딩을 '
+                          '여러 번 재트리거해 이어서 완료하기 위함. 처음부터 다시 돌리려면 --reseed.')
+    ap.add_argument('--reseed', action='store_true',
+                     help='--full과 함께: meta["scanned"] 무시하고 전량을 처음부터 다시 스캔(의도적 재구축용, 예: 연 1회)')
     ap.add_argument('--only', default='', help='콤마구분 그룹 코드로 제한(표본 검증용, 예: 41370,41190,41130)')
     args = ap.parse_args()
     only_codes = [c.strip() for c in args.only.split(',') if c.strip()] if args.only else None
-    run(args.full, only_codes, args.list_targets)
+    run(args.full, only_codes, args.list_targets, reseed=args.reseed)
 
 
 if __name__ == '__main__':

@@ -419,6 +419,104 @@ def test_run_clean_scan_writes_result_and_marks_scanned(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Fix pass(resumability): GitHub 호스티드 러너 6시간 캡 때문에 --full 전량이
+# 한 실행으로 안 끝난다 — 재트리거된 --full이 meta['scanned']를 보고 이어서
+# 돌아야 한다(RESUME). --reseed는 이를 무시하고 진짜 처음부터 다시 돈다.
+# ---------------------------------------------------------------------------
+
+def test_full_resume_skips_already_scanned_groups(tmp_path, monkeypatch, capsys):
+    # 41370은 이전 --full 실행에서 이미 깨끗하게 스캔 완료(scanned에 있음).
+    # 48120은 scanned에 없음(이전 실행이 여기서 킬됐거나 아직 시도 안 함).
+    fake_groups = {
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+        '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
+              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'productive_bjdong': ['4137011300']}
+
+    called = []
+
+    def fetch_group_stub(group, only_bjdong=None):
+        called.append(group['name'])
+        if group['name'] == '오산시':
+            raise AssertionError('이미 scanned인 그룹(오산시)은 --full 재트리거에서 재호출되면 안 됨')
+        return {'2024Q1': 7}, {}, ['4812010100'], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+
+    assert called == ['창원시']                                  # 스캔 안 된 그룹만 실제 호출됨
+    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 5}    # 기존 값 보존(재호출 없이 그대로)
+    assert result['sgg']['48120']['permit_q'] == {'2024Q1': 7}    # 미스캔 그룹은 새로 스캔됨
+    assert set(result['meta']['scanned']) == {'41370', '48120'}   # 이어서 완료됨
+    out = capsys.readouterr().out
+    assert '[RESUME skip] 41370' in out
+
+
+def test_full_resume_rescans_group_killed_mid_scan(tmp_path, monkeypatch):
+    # "킬됨" 시뮬레이션: 48120은 scanned에 없다(직전 --full 실행이 이 그룹
+    # 도중 죽어서 clean scan을 못 남겼다는 뜻) — 재트리거된 --full은 이 그룹을
+    # 다시(처음부터) 스캔해야 한다. 41370은 이미 scanned라 재스캔 안 됨.
+    fake_groups = {
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+        '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
+              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'productive_bjdong': ['4137011300']}
+
+    called = []
+
+    def fetch_group_stub(group, only_bjdong=None):
+        called.append(group['name'])
+        return {'2024Q1': 9}, {}, ['4812010100'], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+
+    assert called == ['창원시']   # 킬되어 scanned 못 들어간 그룹만 재스캔
+    assert result['sgg']['48120']['permit_q'] == {'2024Q1': 9}
+    assert set(result['meta']['scanned']) == {'41370', '48120'}
+
+
+def test_reseed_forces_rescan_of_already_scanned_groups(tmp_path, monkeypatch):
+    # --reseed는 meta['scanned']를 무시하고 전량(41370 포함)을 다시 스캔한다.
+    fake_groups = {
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['41370']},
+              'sgg': {'41370': {'name': '오산시', 'permit_q': {'2024Q1': 5}, 'start_q': {}}},
+              'productive_bjdong': ['4137011300']}
+
+    called = []
+
+    def fetch_group_stub(group, only_bjdong=None):
+        called.append(group['name'])
+        return {'2024Q1': 42}, {}, ['4137011300'], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub, reseed=True)
+
+    assert called == ['오산시']                                    # --reseed는 재호출함
+    assert result['sgg']['41370']['permit_q'] == {'2024Q1': 42}    # 새로 스캔한 값으로 갱신됨
+    assert result['meta']['scanned'] == ['41370']
+
+
+def _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub, reseed=False):
+    monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
+    monkeypatch.setattr(F, 'KEY', 'dummy-key')
+    out_path = tmp_path / 'hub_permits.json'
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded))
+    monkeypatch.setattr(F, 'fetch_group', fetch_group_stub)
+    F.run(mode_full=True, only_codes=None, list_targets_only=False, reseed=reseed)
+    return json.load(io.open(str(out_path), encoding='utf-8'))
+
+
+# ---------------------------------------------------------------------------
 # Fix pass 2 (Minor): never-scanned vs scanned-genuinely-zero 구분
 # ---------------------------------------------------------------------------
 
