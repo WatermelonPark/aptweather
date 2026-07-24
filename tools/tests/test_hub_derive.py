@@ -142,6 +142,22 @@ def test_hub_derive_units_missing_date_sorts_last(monkeypatch):
     assert sched[1][0] == '오산미정단지'   # 연월 결측은 맨 뒤
 
 
+def test_hub_derive_all_members_unresolved_zone_emits_nothing(monkeypatch):
+    # 오산권의 유일한 멤버 41370이 통째로 unresolved_legacy면 members[존]가 populate
+    # 자체가 안 되어(defaultdict라 add()가 한 번도 안 불림) complete 집합에 못 들어가야
+    # 한다(hub_derive의 `if ms` 가드 — 빈 멤버 집합인 존은 방출 금지).
+    adv = {'permits': {}}
+    hp = {'meta': {'activate': True, 'scanned': ['41370'], 'unresolved_legacy': ['41370']},
+          'sgg': {'41370': {'name': '오산시', 'done_q': {'2023Q1': 100}, 'sched_q': {'2028Q2': 200},
+                             'units': [['오산자이', 100, '2023-01', 'done']]}}}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
+    U.hub_derive(adv)
+    assert '오산권' not in adv['permits'].get('done', {})
+    assert '오산권' not in adv['permits'].get('sched', {})
+    assert '오산권' not in adv['permits'].get('units', {})
+
+
 def test_hub_derive_units_excludes_incomplete_zone(monkeypatch):
     # done_q/sched_q와 동일한 완결성 게이트 — scanned에 없는 시군구가 섞이면
     # 그 존은 units도 전혀 방출되면 안 된다(부분 리스트가 전체인 척하면 안 됨).

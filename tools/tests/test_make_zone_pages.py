@@ -52,6 +52,22 @@ def test_render_units_2sec_near_future_no_hint():
     assert 'class="far"' not in html
 
 
+def test_render_units_2sec_overdue_sched_gets_delay_marker():
+    # 준공예정일이 이미 지난(months_out<0) 항목은 "지연 가능"보다 강한 확정 신호라
+    # "지연"(가능 없이) 마커 + far와 같은 muted 톤으로 나가야 한다.
+    units = {'sched': [
+        ['오산지연단지', 250, '2026-01'],   # TODAY(2026-07-24)보다 과거 — 지연
+        ['오산더샵', 400, '2027-03'],       # 8개월 뒤 — 정상, 마커 없음
+    ], 'done': []}
+    html = M.render_units_2sec(units, TODAY)
+    assert '오산지연단지' in html
+    assert '2026.01 예정' in html
+    assert '<span class="hint">지연</span>' in html
+    assert '지연 가능' not in html   # overdue는 "가능" 없이 "지연"만
+    assert 'class="far"' in html     # 동일한 muted 톤 재사용
+    assert '오산더샵' in html and '2027.03 예정' in html
+
+
 def test_render_units_2sec_sched_only_omits_done_section():
     units = {'sched': [['오산더샵', 400, '2027-03']], 'done': []}
     html = M.render_units_2sec(units, TODAY)
@@ -141,3 +157,26 @@ def test_build_page_fallback_zone_still_shows_breakdown():
     assert '인허가 — 3~4년 뒤 입주' in html
     assert '인구 비중으로 배분한 추정치' in html
     assert '세 값을 더한 것이 맨 위의' in html
+
+
+# ---------------------------------------------------------------------------
+# M4(deferred minor): 수도권 같은 롤업 존이 자체 permits.units는 없지만 subs(멤버
+# 생활권)가 있을 때, punits를 subs 각각의 생활권 이름으로 조회해 sched/done을
+# 합산하는 분기(build_page의 `if subs and not (zone_units.get('sched') or ...)`)
+# — 지금까지 테스트가 없었다.
+# ---------------------------------------------------------------------------
+
+def test_build_page_rollup_aggregates_subs_units_when_own_missing():
+    sub1 = _fake_row('서울권')
+    sub2 = _fake_row('인천권')
+    rollup = _fake_row('수도권', subs=[sub1, sub2])
+    # punits는 롤업 이름('수도권')이 아니라 서브존 이름으로만 키가 있다.
+    punits = {
+        '서울권': {'sched': [['서울단지', 100, '2027-01']], 'done': []},
+        '인천권': {'sched': [], 'done': [['인천단지', 200, '2024-05']]},
+    }
+    html = M.build_page(rollup, [rollup, sub1, sub2], '2026-07', '2026-07-24', punits)
+    assert '앞으로 들어올 물량' in html
+    assert '최근 들어온 물량' in html
+    assert '서울단지' in html and '2027.01 예정' in html
+    assert '인천단지' in html and '2024.05 준공' in html
