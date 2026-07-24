@@ -606,11 +606,11 @@
   .bb-det{display:none;font-size:12.5px;color:var(--ink2);line-height:1.75;background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;margin:2px 0 10px}
   .bb-lab{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:500;color:var(--ink2)}
   .bb-track{flex:1;height:16px;background:#f1f3f5;border-radius:0;position:relative}
-  .bb-band{position:absolute;top:2px;bottom:2px;background:linear-gradient(90deg,#fdecea,#eaf3fb);border-left:3px solid #a93226;border-right:3px solid #1a5276;border-radius:0}
+  .bb-band{position:absolute;top:2px;bottom:2px;background:linear-gradient(90deg,#eaf3fb,#fdecea);border-left:3px solid #1a5276;border-right:3px solid #a93226;border-radius:0}
   .bb-loan{position:absolute;top:-3px;bottom:-3px;width:3px;background:#1c2733;border-radius:0}
   .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted)}
-  .bb-chip.hi{background:#eaf3fb;color:#1a5276}
-  .bb-chip.lo{background:#fdecea;color:#a93226}
+  .bb-chip.hi{background:#fdecea;color:#a93226}
+  .bb-chip.lo{background:#eaf3fb;color:#1a5276}
   /* 아공맵 스코어 */
   .sc-row{display:flex;align-items:center;gap:7px;margin:1px 0;padding:8px 0;cursor:pointer;text-decoration:none;color:inherit;border-bottom:1px solid #e8ecea;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .sc-row:last-child{border-bottom:0}
