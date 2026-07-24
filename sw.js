@@ -3,10 +3,8 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v15'; // 준공 기반 러닝재고(순부족) 스코어 재설계 롤아웃 배선 — hub_derive가
-                       // data-core.js의 ADV.permits에 done/sched/units를 채워 scCalc()가
-                       // 새 지표를 읽는다(현재 meta.activate=false라 즉시 동작 변화는 없지만,
-                       // go-live 시 클라이언트가 새 캐시를 받도록 미리 버전을 올린다, 2026-07-24).
+const VERSION = 'v16'; // 통계 재분류: 시황 주간/월간 토글 + 투자지표 탭(버블·입주·인허가·3년시계)
+                       // — index.html·app.css 갱신. (v15: 러닝재고 롤아웃 배선, 2026-07-24)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
