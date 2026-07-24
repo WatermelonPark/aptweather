@@ -63,6 +63,10 @@ jobs:
           python-version: '3.12'
 
       - name: 건축HUB 수집 (${{ inputs.mode || 'incr' }})
+        # STEP-level 타임아웃(340<잡 350). 이걸 STEP에 두는 게 핵심:
+        # 잡 타임아웃(350)으로 잡이 통째 취소되면 아래 커밋 스텝이 안 돌아 진행분이 통째 소실된다.
+        # STEP 타임아웃이면 이 스텝만 '실패'하고 다음(커밋, if:always) 스텝이 돌아 진행분을 커밋한다.
+        timeout-minutes: 340
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
         run: |
@@ -70,7 +74,7 @@ jobs:
             echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
           fi
           if [ "${{ inputs.mode }}" = "full" ]; then
-            echo "전량 시딩 모드(RESUMABLE) — 약 11~14시간/12,000호출, GitHub 6시간 캡 초과로 이 실행은 timeout-minutes(350)에서 끊길 수 있음. meta['scanned']에 이미 스캔된 그룹은 건너뛰고 이어서 스캔하므로, 끊기면 mode=full로 다시 트리거하면 된다(대략 2~3회 재트리거로 전량 완료)."
+            echo "전량 시딩 모드(RESUMABLE) — 약 11~14시간/12,000호출, 6시간 캡 초과라 이 실행은 340분 STEP 타임아웃에서 끊긴다. collector가 그룹마다 hub_permits.json을 save()하고, 끊겨도 아래 커밋 스텝(if:always)이 그 진행분을 push하므로 meta['scanned']가 origin에 남는다. mode=full로 2~3회 재트리거하면 이어서 전량 완료."
             python tools/fetch_hub_permits.py --full
           else
             echo "증분 모드(기본) — productive_bjdong 캐시만 재조회"
@@ -78,6 +82,9 @@ jobs:
           fi
 
       - name: 커밋 (hub_permits.json만 · data.js 재계산은 daily 워크플로가 담당)
+        # if:always() — 수집 스텝이 340분 타임아웃으로 실패해도 그때까지의 진행분(scanned 포함)을 반드시 커밋·푸시.
+        # 이게 없으면 재개(meta['scanned'])가 무용지물이 된다(진행분이 origin에 안 남으므로).
+        if: always()
         run: |
           git config user.name  "stats-bot"
           git config user.email "actions@users.noreply.github.com"
