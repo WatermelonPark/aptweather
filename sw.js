@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v18'; // 인허가에 수도권 하위 서울/경기/인천 개별 지역 추가
+const VERSION = 'v19'; // 통계 모드 라벨 시황→시장동향, 순서 시장동향·투자지표·기본통계·더보기
                        // (permits 전량 재구축) — data-core.js·data-trend.json
 const CACHE = `aptweather-${VERSION}`;
 

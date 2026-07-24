@@ -148,9 +148,9 @@
   </div></header>
 
   <div class="smode" role="tablist" aria-label="통계 모드">
-    <button id="smode-market" class="on" onclick="setStatsMode('market')">시황</button>
-    <button id="smode-basic" onclick="setStatsMode('basic')">기본통계</button>
+    <button id="smode-market" class="on" onclick="setStatsMode('market')">시장동향</button>
     <button id="smode-adv" onclick="setStatsMode('adv')">투자지표</button>
+    <button id="smode-basic" onclick="setStatsMode('basic')">기본통계</button>
     <button id="smode-more" onclick="setStatsMode('more')">더보기</button>
   </div>
 
@@ -165,7 +165,7 @@
       <span class="subs-msg" id="subs-msg"></span>
       <p class="subs-consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국). <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a></p>
     </div>
-    <div class="adv-tabs" role="tablist" aria-label="시황 주기">
+    <div class="adv-tabs" role="tablist" aria-label="시장동향 주기">
       <button id="mtab-week" class="on" onclick="setMarketTab('week')">주간</button>
       <button id="mtab-month" onclick="setMarketTab('month')">월간</button>
     </div>
@@ -1887,7 +1887,7 @@ function setAdvTab(t){
   track('adv_tab',{tab:t});
 }
 function renderAdvAll(){ renderAdvPermits(); renderAdvOcc(); setAdvTab('occ'); }
-/* 시황 주간/월간 토글 — 숨김 상태에서 만들어진 차트는 표시 시 리사이즈 필요 */
+/* 시장동향 주간/월간 토글 — 숨김 상태에서 만들어진 차트는 표시 시 리사이즈 필요 */
 function setMarketTab(t){
   ['week','month'].forEach(k=>{
     document.getElementById('sec-'+k).style.display=k===t?'':'none';
