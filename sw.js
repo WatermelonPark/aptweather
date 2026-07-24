@@ -3,8 +3,8 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v17'; // 투자지표 3탭 확정(입주물량·인허가·버블밴드), 3년시계 삭제 +
-                       // 기본통계 세그먼트 순서 고정 — index.html·app.css 갱신
+const VERSION = 'v18'; // 인허가에 수도권 하위 서울/경기/인천 개별 지역 추가
+                       // (permits 전량 재구축) — data-core.js·data-trend.json
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
