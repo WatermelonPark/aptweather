@@ -70,7 +70,6 @@ jobs:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
           RONE_API_KEY:   ${{ secrets.RONE_API_KEY || secrets.RONE }}
           PYTHONUNBUFFERED: '1'   # 진행 로그 실시간 스트리밍(취소돼도 어디까지 갔는지 보이게)
-          # BUTTONDOWN(뉴스레터)은 의도적으로 주입 안 함 — 클라우드는 데이터만.
         run: |
           if [ -z "$KOSIS_API_KEY" ]; then
             echo "::warning::KOSIS 시크릿 없음 — 건너뜀"; exit 0
@@ -149,27 +148,3 @@ jobs:
             echo "push 재시도 $i"; sleep 5
           done
 
-      - name: 뉴스레터 발송 (데이터 갱신 시 · 중복방지 원장)
-        env:
-          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
-        run: |
-          if [ -z "$BUTTONDOWN_API_KEY" ]; then
-            echo "BUTTONDOWN 시크릿 없음 — 발송 스킵(데이터만 갱신됨)"; exit 0
-          fi
-          # 변경 내역(.stats_changed)을 clean 산출물에서 가져온다. 없으면 빈 파일 →
-          # send_newsletter가 트리거 없음으로 스킵(단, .pending_send 재시도분은 살림).
-          SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
-          if [ -n "$SRC" ] && [ -f "$SRC/.stats_changed" ]; then cp "$SRC/.stats_changed" .; fi
-          git config user.name  "stats-bot"
-          git config user.email "actions@users.noreply.github.com"
-          # send_newsletter는 .last_sent 원장으로 같은 기간 중복발송을 막는다(체크아웃본=최신 원장).
-          python tools/send_newsletter.py || echo "::warning::뉴스레터 발송 실패 — .pending_send에 보류(다음 회차 재시도)"
-          # 원장/재시도큐 변화를 커밋해 다음 실행이 이어받게 한다.
-          if ! git diff --quiet -- .last_sent .pending_send 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard .last_sent .pending_send)" ]; then
-            git add -- .last_sent .pending_send 2>/dev/null || true
-            git commit -m "뉴스레터 발송 원장 갱신" || true
-            for i in 1 2 3; do
-              git pull --rebase -X theirs origin main && git push && { echo "원장 푸시 완료"; break; }
-              echo "원장 push 재시도 $i"; sleep 5
-            done
-          fi

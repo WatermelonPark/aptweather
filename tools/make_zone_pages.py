@@ -295,16 +295,6 @@ td:first-child{text-align:left}
 thead th{background:#edf0ee;font-size:12.5px;color:var(--muted);text-align:center}
 tbody tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;font-weight:600}
-.subsbox{background:#fff;border:1.5px solid var(--line);border-radius:0;padding:16px 18px}
-.subsbox b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
-.subsbox p{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.5}
-.subsbox form{display:flex;gap:8px;flex-wrap:wrap}
-.subsbox input{flex:1;min-width:180px;font-family:inherit;font-size:14px;padding:10px 12px;
-  border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink2)}
-.subsbox button{font-family:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:3px;
-  border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
-.subsbox .consent{font-size:11.5px;line-height:1.55;margin:8px 0 0}
-.subsbox .subs-msg{display:block;font-size:12.5px;color:var(--muted);margin-top:8px}
 .cta{display:block;max-width:400px;margin:22px auto 0;text-align:center;text-decoration:none;
  background:var(--ink);color:#fff;font-size:16.5px;font-weight:600;padding:15px 22px;border-radius:3px}
 .cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);font-size:15px;padding:13px 20px}
@@ -700,20 +690,6 @@ def build_page(r, allrows, prd, today, punits=None):
 </div></section>
 
 <section><div class="wrap">
-  <div class="subsbox">
-    <b>📬 %(nm)s 공급 수치가 갱신되면 메일로 받기</b>
-    <p>한국부동산원 주간·월간 통계와 입주물량이 갱신되는 날에만 보냅니다. 광고 메일이 아닙니다.</p>
-    <form onsubmit="return zsubs(this)">
-      <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
-      <button type="submit">알림 받기</button>
-    </form>
-    <span class="subs-msg" id="subs-msg"></span>
-    <p class="consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국).
-      자세한 내용은 <a href="/privacy/">개인정보처리방침</a>을 확인하세요.</p>
-  </div>
-</div></section>
-
-<section><div class="wrap">
   <h2>다른 생활권</h2>
   <div class="zlist">%(nav)s</div>
   <a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>
@@ -732,16 +708,6 @@ def build_page(r, allrows, prd, today, punits=None):
 </nav>
 
 <script>
-function zsubs(f){
-  var email=f.email.value.trim(); if(!email)return false;
-  var m=document.getElementById('subs-msg');
-  var fd=new FormData(); fd.append('email',email);
-  fetch('https://buttondown.com/api/emails/embed-subscribe/aptweather',{method:'POST',mode:'no-cors',body:fd})
-    .then(function(){ m.textContent='확인 메일을 보냈습니다. 메일함에서 구독을 완료해주세요!'; f.reset();
-      try{if(typeof gtag==='function')gtag('event','subscribe',{channel:'email',page:'zone'});}catch(e){} })
-    .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
-  return false;
-}
 (function(){
   var t=document.getElementById('utable'); if(!t) return;
   var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;

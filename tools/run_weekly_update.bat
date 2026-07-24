@@ -7,18 +7,16 @@ rem - Task Scheduler: daily 18:00 + Thu 13/15 + Fri 09:30 (StartWhenAvailable)
 rem
 rem FAIL-FAST POLICY (added 2026-07-18)
 rem   Every step is checked. If data update or git push fails, the script
-rem   ABORTS BEFORE send_newsletter so subscribers are never told about
-rem   stats that did not actually reach the live site.
+rem   ABORTS so the live site is never left partially updated.
 rem   All output goes to logs\weekly-YYYY-MM-DD.log and the exit code is
 rem   propagated so Task Scheduler shows a non-zero "Last Run Result".
 rem   Notification is handled externally by .github/workflows/watchdog.yml
 rem   (a local script cannot report that it never ran).
 rem
 rem   exit codes: 10 keys 11 pull 12 update 20 split 13 share
-rem               14 add 15 commit 16 push 17 zone-pages 18 newsletter
-rem               19 already-running
-rem   Newsletter send failure does NOT abort (stats are already live),
-rem   but it is reported as rc=18 so a silent non-send cannot look like OK.
+rem               14 add 15 commit 16 push 17 zone-pages 19 already-running
+rem   (2026-07-24: 이메일/인스타/네이버 발행 채널 전면 제거 — 데이터 갱신·배포·
+rem    IndexNow 핑만 남음. 이전 rc=18 newsletter 코드는 폐지.)
 rem ============================================================
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
@@ -148,22 +146,8 @@ if errorlevel 1 (
   echo no changes
 )
 
-set SENDRC=0
-
-python tools\make_naver_post.py
-if errorlevel 1 echo WARN: make_naver_post failed
-
-python tools\send_newsletter.py
-if errorlevel 1 (
-  echo ERROR: send_newsletter failed - stats are live but mail did NOT go out
-  set SENDRC=18
-)
-
-python tools\send_instagram.py
-if errorlevel 1 echo WARN: send_instagram failed
-
 python tools\ping_indexnow.py --sitemap
 if errorlevel 1 echo WARN: ping_indexnow failed
 
 echo ===== update end %date% %time% =====
-exit /b %SENDRC%
+exit /b 0

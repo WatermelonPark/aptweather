@@ -3,8 +3,8 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v19'; // 통계 모드 라벨 시황→시장동향, 순서 시장동향·투자지표·기본통계·더보기
-                       // — index.html 라벨/순서 변경
+const VERSION = 'v20'; // 이메일/인스타/네이버 발행 채널 전면 제거 — 구독 폼·Buttondown·
+                       // send_newsletter/send_instagram/make_naver_post 삭제, privacy 정리
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
