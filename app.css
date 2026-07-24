@@ -482,6 +482,7 @@
   .rk-up{color:#c0392b;font-weight:600;font-size:12px}
   .rk-dn{color:#1a5276;font-weight:600;font-size:12px}
   .rk-same{color:var(--muted)}
+  .rk-medal{margin-right:3px;font-size:13px;vertical-align:-1px}
   .rk-new{color:var(--muted);font-weight:600;font-size:11px}
   .map-hint{display:none;text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:8px}
   .map-suplegend{text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:10px}

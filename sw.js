@@ -3,8 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v20'; // 이메일/인스타/네이버 발행 채널 전면 제거 — 구독 폼·Buttondown·
-                       // send_newsletter/send_instagram/make_naver_post 삭제, privacy 정리
+const VERSION = 'v21'; // 주간·월간 TOP10 순위표 1~3위에 메달(🥇🥈🥉) — index.html·app.css
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
