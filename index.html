@@ -1968,7 +1968,9 @@ function scCalc(){
     const tot_fallback=0.55*dA+0.35*dC+0.10*dB;
     const zdone=(P.done&&P.done[z.z])||{}, zsched=(P.sched&&P.sched[z.z])||{};
     const invPath=!!(Object.keys(zdone).length||Object.keys(zsched).length);
-    const tot=invPath?runningShortage(zdone,zsched,refq,curQ):tot_fallback;
+    // zdone/zsched는 ZONE 실적, refq는 REGION 적정 — share를 곱해 zone-level 적정으로 맞춘다
+    // (tools/make_zone_pages.py calc()와 반드시 동치, dA/dB/dC와 동일 원칙).
+    const tot=invPath?runningShortage(zdone,zsched,refq*share,curQ):tot_fallback;
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
     if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}

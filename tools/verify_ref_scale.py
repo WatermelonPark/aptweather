@@ -22,6 +22,12 @@ import json
 import collections
 import datetime
 
+# cp949 콘솔에서도 — 등 출력이 죽지 않도록(다른 verify_* 스크립트와 동일 처리).
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 ROOT = os.path.dirname(os.path.abspath(__file__))          # tools/
 SITE_ROOT = os.path.dirname(ROOT)                            # repo root
 sys.path.insert(0, ROOT)
@@ -93,6 +99,12 @@ def zone_refq(O, region):
     return (sum(band) / 2) if band else None
 
 
+def zone_share(zz, sido_pop):
+    """calc()의 share = min(1, zone_pop/sido_pop) — refq(REGION 적정)를 zone-level로 맞추는 비율."""
+    pop = zz.get('pop') or 1
+    return min(1.0, pop / (sido_pop or pop or 1))
+
+
 def main():
     hp = json.load(io.open(HUB_JSON, encoding='utf-8'))
     z_of = uad._hub_zone_map(uad._load_bdong_map())
@@ -107,6 +119,7 @@ def main():
     adv = load_adv()
     LZ = adv['livezone']['zones']
     O = adv['occupancy']
+    SP = adv['livezone'].get('sidopop') or {}
     zmeta = {z['z']: z for z in LZ}
 
     rows = []
@@ -121,7 +134,10 @@ def main():
         if not refq:
             skipped.append((z, 'refq(적정) 없음: region=%s' % region))
             continue
-        rows.append((z, region, avg, refq, avg / refq, nq))
+        share = zone_share(zz, SP.get(region))
+        # avg는 ZONE 준공실적, refq는 REGION 적정 — share를 곱해 zone-level 적정과 비교한다
+        # (calc()/running_shortage 호출부와 동일 원칙, Issue #5).
+        rows.append((z, region, avg, refq, share, avg / (refq * share) if share else float('inf'), nq))
     rows.sort(key=lambda r: -r[2])
 
     if not rows:
@@ -130,16 +146,16 @@ def main():
             print('  스킵: %s — %s' % (z, why))
         return 0
 
-    print('%-10s %-6s %16s %12s %8s %8s' %
-          ('생활권', '시도', 'HUB준공_분기평균', 'refq(적정)', '비율', '표본분기'))
-    for z, region, avg, refq, ratio, nq in rows:
-        print('%-10s %-6s %16.0f %12.0f %8.2f %8d' % (z, region, avg, refq, ratio, nq))
+    print('%-10s %-6s %16s %12s %8s %8s %8s' %
+          ('생활권', '시도', 'HUB준공_분기평균', 'refq(적정,REGION)', 'share', '비율(zone기준)', '표본분기'))
+    for z, region, avg, refq, share, ratio, nq in rows:
+        print('%-10s %-6s %16.0f %12.0f %8.3f %8.2f %8d' % (z, region, avg, refq, share, ratio, nq))
     if skipped:
         print()
         for z, why in skipped:
             print('스킵: %s — %s' % (z, why))
 
-    ratios = [r[4] for r in rows]
+    ratios = [r[5] for r in rows]
     n = len(ratios)
     mean = sum(ratios) / n
     var = sum((x - mean) ** 2 for x in ratios) / n

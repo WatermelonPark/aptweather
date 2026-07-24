@@ -47,29 +47,42 @@ def _conf(k):
 ANCHOR = 2010 * 4  # 2010Q1
 
 
-def running_shortage(done, sched, refq, cur_q, horizon=20):
+def running_shortage(done, sched, refq, cur_q, horizon=20, weight_demand=True):
     """준공 기반 러닝재고 순부족.
 
     I_now = 2010Q1부터 현재분기까지 매 분기 max(0, 재고+준공-refq)로 굴린 재고(음수 불가).
-    순부족 = Σ_{k=1..horizon} conf(k)*(refq - sched(cur_q+k)) - I_now.
+    weight_demand=True (A안·기본값·현재 라이브): 수요도 conf로 가중 —
+      순부족 = Σ_{k=1..horizon} conf(k)*(refq - sched(cur_q+k)) - I_now.
+    weight_demand=False (B안·스펙 원문): 수요는 비가중, 공급만 conf로 가중 —
+      순부족 = Σ_{k=1..horizon} refq  -  Σ_{k=1..horizon} conf(k)*sched(cur_q+k) - I_now.
+    두 안 모두 refq는 호출측이 이미 zone-level(적정*share)로 넘긴 값이어야 한다.
     양수=부족(발산 막대 오른쪽), 음수=과잉.
     """
     I = 0.0
     for idx in range(ANCHOR, cur_q + 1):
         I = max(0.0, I + done.get(_qkey(idx), 0) - refq)
     I_now = I
-    fut = 0.0
+    fut_weighted = 0.0
+    demand_sum = 0.0
+    supply_weighted = 0.0
     for k in range(1, horizon + 1):
         w = _conf(k)
         if w <= 0:
             break
-        q = _qkey(cur_q + k)
-        fut += w * (refq - sched.get(q, 0))
+        s = sched.get(_qkey(cur_q + k), 0)
+        fut_weighted += w * (refq - s)
+        demand_sum += refq
+        supply_weighted += w * s
+    fut = fut_weighted if weight_demand else (demand_sum - supply_weighted)
     return fut - I_now
 
 
-def calc(adv, sts):
-    """홈 renderScoreSec(scCalc)와 동일한 산식으로 생활권별 누적 순부족을 계산."""
+def calc(adv, sts, weight_demand=True):
+    """홈 renderScoreSec(scCalc)와 동일한 산식으로 생활권별 누적 순부족을 계산.
+
+    weight_demand: running_shortage()로 그대로 전달(A안/B안, Issue #4). 기본값 True가
+    라이브 산식(scCalc와 동치) — 여기서 바꾸지 않는 한 운영 동작은 그대로다.
+    """
     LZ, O, P, B = adv['livezone'], adv['occupancy'], adv['permits'], adv.get('bubble') or {}
     J = (sts.get('전세가율') or {}).get('series') or {}
     DM = (sts.get('주택멸실') or {}).get('series') or {}
@@ -118,7 +131,9 @@ def calc(adv, sts):
         inv_path = bool(zdone) or bool(zsched)
         # done/sched가 있는 존만 러닝재고 산식(신모델)을 쓴다. 없는 존(비완결·inactive)은
         # pre-HUB 산식(dA/dB/dC 가중합)을 그대로 유지 — activate 게이트 전엔 전 존이 이 경로.
-        tot = running_shortage(zdone, zsched, refq, cur_q) if inv_path else tot_fallback
+        # zdone/zsched는 ZONE(생활권) 단위 실적인데 refq는 REGION(시도) 적정이다 —
+        # zone-level 적정으로 맞추려면 share를 곱해야 한다(dA/dB/dC 폴백 경로와 동일 원칙).
+        tot = running_shortage(zdone, zsched, refq * share, cur_q, weight_demand=weight_demand) if inv_path else tot_fallback
         flag = None; lo = hi = None
         cv = (B.get('conv') or {}).get(ps)
         jr = last_of(J, ps) or None
