@@ -3,8 +3,8 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v16'; // 통계 재분류: 시황 주간/월간 토글 + 투자지표 탭(버블·입주·인허가·3년시계)
-                       // — index.html·app.css 갱신. (v15: 러닝재고 롤아웃 배선, 2026-07-24)
+const VERSION = 'v17'; // 투자지표 3탭 확정(입주물량·인허가·버블밴드), 3년시계 삭제 +
+                       // 기본통계 세그먼트 순서 고정 — index.html·app.css 갱신
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
