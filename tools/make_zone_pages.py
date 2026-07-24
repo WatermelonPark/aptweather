@@ -35,11 +35,6 @@ def last_of(series, key):
     return 0
 
 
-def _qidx(q):
-    m = re.match(r'^(\d{4})Q([1-4])$', q)
-    return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else None
-
-
 def _qkey(idx):
     return '%dQ%d' % (idx // 4, idx % 4 + 1)
 
@@ -197,6 +192,9 @@ def render_units_2sec(units, today=None):
     준공예정이 오늘로부터 FAR_MONTHS개월 넘게 남았으면 저신뢰 톤+"지연 가능")과
     "최근 들어온 물량"(done: 단지명·세대·"YYYY.MM 준공")을 만든다.
 
+    준공예정일이 이미 지난(오늘 기준 months_out<0) 항목은 "지연 가능"보다 강한
+    확정적 지연 신호이므로 같은 저신뢰 톤에 "지연"(가능 없이) 마커를 단다.
+
     units에 sched/done이 둘 다 없으면 빈 문자열을 반환 — 호출부가 이걸로
     "이 존은 HUB 커버 안 됨"을 판단해 기존 odcloud 리스트로 폴백한다.
     """
@@ -220,10 +218,12 @@ def render_units_2sec(units, today=None):
         name, hh = u[0], u[1]
         ym = u[2] if len(u) > 2 else None
         mo = months_out(ym) if ym else None
+        overdue = mo is not None and mo < 0
         far = mo is not None and mo > FAR_MONTHS
         label = ('%s 예정' % ym.replace('-', '.')) if ym else '미정'
-        hint = ' <span class="hint">지연 가능</span>' if far else ''
-        cls = ' class="far"' if far else ''
+        hint = (' <span class="hint">지연</span>' if overdue
+                 else ' <span class="hint">지연 가능</span>' if far else '')
+        cls = ' class="far"' if (overdue or far) else ''
         return ('<tr%s><td class="uname" title="%s">%s</td><td class="num">%s</td>'
                 '<td class="num">%s%s</td></tr>' % (cls, esc(name), esc(name), num(hh), label, hint))
 

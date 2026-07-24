@@ -1067,6 +1067,11 @@ def _zone_units(hp, z_of, complete):
     (최신 먼저). 연월 결측(ym=None)은 항상 리스트 맨 뒤로 보낸다.
     """
     import collections
+    # 2단계 캡: tools/fetch_hub_permits.py의 UNITS_CAP=40이 시군구당 상위 40개
+    # (수집기 슈퍼셋)로 이미 잘라놨고, 여기 UCAP=20은 그걸 생활권(존) 단위로 합산한
+    # 뒤 표시용으로 다시 상위 20개(서브셋)로 좁힌다. 존 하나에 시군구가 여럿 묶이면
+    # 40개 초과분이 들어와도 UCAP이 걸러주므로 의도적 여유 — 두 상수를 하나로
+    # 통일하지 말 것.
     UCAP = 20
     raw_sched = collections.defaultdict(list)
     raw_done = collections.defaultdict(list)

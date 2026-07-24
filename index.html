@@ -1995,7 +1995,6 @@ function scTier(v){
        :v>=-3000?['t2','공급 충분','#3a7bd5']:['t1','공급 과잉','#1a5276'];
 }
 /* 러닝재고 순부족 — tools/make_zone_pages.py calc()/running_shortage()와 반드시 동치(미러). 정규화 금지. */
-function _qidx(q){var m=/^(\d{4})Q([1-4])$/.exec(q);return m?(+m[1])*4+(+m[2])-1:null;}
 function _qkey(i){return Math.floor(i/4)+'Q'+(i%4+1);}
 function _conf(k){return Math.max(0,1-((k-1)/4)*0.2);}
 var ANCHOR=2010*4;
