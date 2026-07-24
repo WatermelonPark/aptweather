@@ -465,10 +465,10 @@ function showView(v,updateHash){
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){
     statsInited=true;
-    /* 버블밴드·구독 카드는 fetch를 기다리지 않는다 — 입력(ADV.bubble,
-       STATS 전세가율·주택멸실)이 전부 data-core.js에 있어 부팅 때 이미
-       와 있다. 체인 뒤에 세우면 탭을 눌렀을 때 이유 없이 빈 채로 보인다. */
-    renderBubbleSec();initSubs();renderReleaseInfo();
+    /* 버블밴드는 fetch를 기다리지 않는다 — 입력(ADV.bubble, STATS 전세가율·
+       주택멸실)이 전부 data-core.js에 있어 부팅 때 이미 와 있다. 체인 뒤에
+       세우면 탭을 눌렀을 때 이유 없이 빈 채로 보인다. */
+    renderBubbleSec();renderReleaseInfo();
     loadFullData()
       .then(()=>{ if(typeof renderWeekSec==='function')renderWeekSec();
                   if(typeof renderMonthSec==='function')renderMonthSec(); })
@@ -571,7 +571,7 @@ function initStats(){
   }));
   document.getElementById('reg-sel').addEventListener('change',e=>{ST.reg=e.target.value;drawStat();});
   fillRegions();renderAux();drawStat();
-  // 주간·월간·시계·버블·구독 카드는 탭 진입 시 이미 그렸다 —
+  // 주간·월간·버블밴드는 탭 진입 시 이미 그렸다 —
   // 여기는 STATS 11계열(data-rest.json)이 있어야만 가능한 것만 남긴다.
 }
 function fillRegions(){
@@ -1629,25 +1629,6 @@ function drawNationMap(k){
     '<div class="map-scroll">'+sv.join('')+'</div>'+
     '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>';
 }
-/* --- 이메일 알림 구독 (Buttondown) --- */
-const BD_USER='aptweather';   // Buttondown 사용자명 설정 시 구독 카드 노출
-function initSubs(){
-  if(BD_USER)document.getElementById('subs-card').style.display='';
-}
-function subsSubmit(f){
-  const email=f.email.value.trim();
-  if(!email)return false;
-  const fd=new FormData(); fd.append('email',email);
-  fetch('https://buttondown.com/api/emails/embed-subscribe/'+BD_USER,{method:'POST',mode:'no-cors',body:fd})
-    .then(()=>{
-      document.getElementById('subs-msg').textContent='확인 메일을 보냈습니다. 메일함에서 구독을 완료해주세요!';
-      f.reset(); track('subscribe',{channel:'email'});
-    })
-    .catch(()=>{
-      document.getElementById('subs-msg').textContent='잠시 후 다시 시도해주세요.';
-    });
-  return false;
-}
 /* --- 표 행열전환 --- */
 let TRANSP={};
 const TR_REDRAW={basicmain:()=>drawStat(),week:()=>renderTrendTables('week'),month:()=>renderTrendTables('month'),permit:()=>renderAdvPermits(),occ:()=>renderAdvOcc()};
@@ -2073,12 +2054,18 @@ function renderBubbleSec(){
     else pos='대출금리는 밴드 안이고, 위험선까지 '+(hi-loan).toFixed(1)+'%p 남았습니다.';
     const det='밴드: 전세가율 '+jr+'% × 전월세전환율 '+cv+'% = <b>월세수익률 '+lo.toFixed(1)+'%</b> · 그 2배 = <b>위험선 '+hi.toFixed(1)+'%</b>.<br>'
       +'<b>대출금리 '+loan.toFixed(2)+'%</b> — '+pos;
+    // 숫자 위치 적응: 파랑=밴드 왼쪽(단 대출금리 검은선과 겹치면 그 선 왼쪽으로), 빨강=밴드 오른쪽(단 우측 공간 없거나 겹치면 밴드 안쪽 왼편). NW=숫자 폭 근사(%)
+    const pL=px(lo),pH=px(hi),pN=px(loan),NW=15;
+    const blueAnc=(pN<pL&&pN>pL-NW)?pN:pL;
+    const redIn=(pH+NW>98)||(pN>pH&&pN<pH+NW);
+    const blueSt='left:'+blueAnc+'%;transform:translate(calc(-100% - 3px),-50%);color:#1a5276';
+    const redSt=redIn?'left:'+pH+'%;transform:translate(calc(-100% - 3px),-50%);color:#a93226':'left:'+pH+'%;transform:translate(3px,-50%);color:#a93226';
     h+='<div class="bb-row" role="button" tabindex="0" aria-expanded="false" onclick="bbToggle(this)" onkeydown="rowKey(event,this)"><span class="bb-lab">'+rg+'</span>'
       +'<div class="bb-track" title="월세수익률 '+lo.toFixed(1)+'% ~ 위험선 '+hi.toFixed(1)+'% · 대출금리 '+loan.toFixed(2)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div>'
-      +'<span class="bb-v" style="left:'+px(lo)+'%;transform:translate(calc(-100% - 4px),-50%);color:#1a5276">'+lo.toFixed(1)+'%</span>'
-      +'<span class="bb-v" style="'+(px(hi)<=82?'left:'+px(hi)+'%;transform:translate(4px,-50%)':'right:2px;transform:translateY(-50%)')+';color:#a93226">'+hi.toFixed(1)+'%</span></div>'
+      +'<span class="bb-v" style="'+blueSt+'">'+lo.toFixed(1)+'%</span>'
+      +'<span class="bb-v" style="'+redSt+'">'+hi.toFixed(1)+'%</span></div>'
       +'<span class="bb-chip '+cls+'">'+txt+'</span>'
       +'</div>'
       +'<div class="bb-det">'+det+'</div>';

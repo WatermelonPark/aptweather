@@ -18,7 +18,7 @@
 <meta property="og:url" content="https://www.agongmap.co.kr/zone/%EB%8C%80%EC%A0%84%EC%84%B8%EC%A2%85%EA%B6%8C/">
 <meta property="og:image" content="https://www.agongmap.co.kr/og-brand.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "대전세종권 아파트 공급 분석", "description": "대전세종권의 아파트 공급은 적정물량 대비 +9,267세대(공급 과잉). 입주예정 24,485세대, 구성: 유성구, 서구, 중구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.", "datePublished": "2026-07-22", "dateModified": "2026-07-22", "author": {"@type": "Organization", "name": "아공맵"}, "publisher": {"@type": "Organization", "name": "아공맵"}, "mainEntityOfPage": "https://www.agongmap.co.kr/zone/%EB%8C%80%EC%A0%84%EC%84%B8%EC%A2%85%EA%B6%8C/", "about": {"@type": "Place", "name": "대전세종권"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "대전세종권 아파트 공급 분석", "description": "대전세종권의 아파트 공급은 적정물량 대비 +9,267세대(공급 과잉). 입주예정 24,485세대, 구성: 유성구, 서구, 중구. 한국부동산원·국토교통부 통계로 매주 자동 갱신.", "datePublished": "2026-07-24", "dateModified": "2026-07-24", "author": {"@type": "Organization", "name": "아공맵"}, "publisher": {"@type": "Organization", "name": "아공맵"}, "mainEntityOfPage": "https://www.agongmap.co.kr/zone/%EB%8C%80%EC%A0%84%EC%84%B8%EC%A2%85%EA%B6%8C/", "about": {"@type": "Place", "name": "대전세종권"}}</script>
 <style>b,strong{font-weight:600}
   tr.rollup td{border-top:1.5px solid var(--ink);color:var(--muted)}
   tr.rollup .sub{font-size:11.5px;color:var(--muted)}
@@ -54,16 +54,6 @@ td:first-child{text-align:left}
 thead th{background:#edf0ee;font-size:12.5px;color:var(--muted);text-align:center}
 tbody tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;font-weight:600}
-.subsbox{background:#fff;border:1.5px solid var(--line);border-radius:0;padding:16px 18px}
-.subsbox b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
-.subsbox p{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.5}
-.subsbox form{display:flex;gap:8px;flex-wrap:wrap}
-.subsbox input{flex:1;min-width:180px;font-family:inherit;font-size:14px;padding:10px 12px;
-  border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink2)}
-.subsbox button{font-family:inherit;font-size:14px;font-weight:600;padding:10px 18px;border-radius:3px;
-  border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
-.subsbox .consent{font-size:11.5px;line-height:1.55;margin:8px 0 0}
-.subsbox .subs-msg{display:block;font-size:12.5px;color:var(--muted);margin-top:8px}
 .cta{display:block;max-width:400px;margin:22px auto 0;text-align:center;text-decoration:none;
  background:var(--ink);color:#fff;font-size:16.5px;font-weight:600;padding:15px 22px;border-radius:3px}
 .cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);font-size:15px;padding:13px 20px}
@@ -136,7 +126,21 @@ details.fold .dbody p{font-size:14px}
  .utable td{display:table-cell;border-bottom:1px solid var(--line);text-align:right;padding:8px 6px}
  .utable td:nth-child(1),.utable td:nth-child(2){text-align:left}
  .utable tbody tr:last-child td{border-bottom:0}
-}</style>
+}
+.utable2{border:0;table-layout:fixed;width:100%;font-size:13.5px}
+.utable2 thead th{position:sticky;top:0;z-index:1;white-space:nowrap;background:#edf0ee;
+ font-size:12.5px;color:var(--muted);text-align:center;padding:8px 10px}
+.utable2 th:nth-child(1){width:46%}
+.utable2 th:nth-child(2){width:24%}
+.utable2 th:nth-child(3){width:30%}
+.utable2 td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.utable2 tbody tr:last-child td{border-bottom:0}
+.utable2 td:nth-child(1){text-align:left}
+.utable2 td:nth-child(2),.utable2 td:nth-child(3){text-align:right}
+.utable2 .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utable2 tr.far td{color:var(--muted)}
+.utable2 .hint{font-size:11px;color:#a93226}
+@media(max-width:560px){.utable2{font-size:12.5px}}</style>
 </head>
 <body>
 
@@ -195,20 +199,6 @@ details.fold .dbody p{font-size:14px}
 </div></section>
 
 <section><div class="wrap">
-  <div class="subsbox">
-    <b>📬 대전세종권 공급 수치가 갱신되면 메일로 받기</b>
-    <p>한국부동산원 주간·월간 통계와 입주물량이 갱신되는 날에만 보냅니다. 광고 메일이 아닙니다.</p>
-    <form onsubmit="return zsubs(this)">
-      <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
-      <button type="submit">알림 받기</button>
-    </form>
-    <span class="subs-msg" id="subs-msg"></span>
-    <p class="consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국).
-      자세한 내용은 <a href="/privacy/">개인정보처리방침</a>을 확인하세요.</p>
-  </div>
-</div></section>
-
-<section><div class="wrap">
   <h2>다른 생활권</h2>
   <div class="zlist"><a href="/zone/"><b>전체 생활권</b></a><a href="/zone/수도권/">수도권</a><a href="/zone/서울권/">서울권</a><a href="/zone/대구권/">대구권</a><a href="/zone/수원권/">수원권</a><a href="/zone/창원권/">창원권</a><a href="/zone/인천권/">인천권</a><a href="/zone/남양주권/">남양주권</a><a href="/zone/포항권/">포항권</a><a href="/zone/목포권/">목포권</a><a href="/zone/여순광권/">여순광권</a><a href="/zone/안산권/">안산권</a><a href="/zone/춘천권/">춘천권</a><a href="/zone/원주권/">원주권</a><a href="/zone/용인권/">용인권</a><a href="/zone/화성권/">화성권</a><a href="/zone/김포권/">김포권</a><a href="/zone/울산권/">울산권</a><a href="/zone/김해권/">김해권</a><a href="/zone/구미권/">구미권</a><a href="/zone/강릉권/">강릉권</a><a href="/zone/진주권/">진주권</a><a href="/zone/군산익산권/">군산익산권</a><a href="/zone/고양권/">고양권</a><a href="/zone/부천권/">부천권</a><a href="/zone/안양권/">안양권</a><a href="/zone/경기광주권/">경기광주권</a><a href="/zone/군포권/">군포권</a><a href="/zone/청주권/">청주권</a><a href="/zone/전주권/">전주권</a><a href="/zone/시흥권/">시흥권</a><a href="/zone/의정부권/">의정부권</a><a href="/zone/파주권/">파주권</a><a href="/zone/안동권/">안동권</a><a href="/zone/서산당진권/">서산당진권</a><a href="/zone/제주권/">제주권</a><a href="/zone/양주권/">양주권</a><a href="/zone/성남권/">성남권</a><a href="/zone/광명권/">광명권</a><a href="/zone/이천권/">이천권</a><a href="/zone/광주권/">광주권</a><a href="/zone/오산권/">오산권</a><a href="/zone/천안아산권/">천안아산권</a><a href="/zone/평택권/">평택권</a><a href="/zone/부산권/">부산권</a></div>
   <a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>
@@ -227,16 +217,6 @@ details.fold .dbody p{font-size:14px}
 </nav>
 
 <script>
-function zsubs(f){
-  var email=f.email.value.trim(); if(!email)return false;
-  var m=document.getElementById('subs-msg');
-  var fd=new FormData(); fd.append('email',email);
-  fetch('https://buttondown.com/api/emails/embed-subscribe/aptweather',{method:'POST',mode:'no-cors',body:fd})
-    .then(function(){ m.textContent='확인 메일을 보냈습니다. 메일함에서 구독을 완료해주세요!'; f.reset();
-      try{if(typeof gtag==='function')gtag('event','subscribe',{channel:'email',page:'zone'});}catch(e){} })
-    .catch(function(){ m.textContent='잠시 후 다시 시도해주세요.'; });
-  return false;
-}
 (function(){
   var t=document.getElementById('utable'); if(!t) return;
   var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=3, dir=1;
