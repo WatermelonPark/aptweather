@@ -76,8 +76,9 @@
   <header class="home-hero"><div class="hero-map" id="hero-map" aria-hidden="true"></div><div class="wrap">
     <h1>아공맵</h1>
     <p class="sub">국가 통계로 전국 아파트의 공급과 시세를 추적합니다. 매주 자동 갱신.</p>
-    <div class="hero-cta">
+    <div class="hero-cta" style="display:flex;flex-direction:column;gap:12px;align-items:center">
       <button class="home-cta" onclick="goStats('market');track('home_cta',{to:'market'})">이번 주 시세 지도 보기</button>
+      <button class="home-cta alt" onclick="addKakaoChannel()">📢 카카오톡 채널 추가하고 알림 받기</button>
     </div>
   </div></header>
 
@@ -1319,6 +1320,14 @@ function kakaoReady(){
   if(!window.Kakao)return false;
   try{if(!Kakao.isInitialized())Kakao.init(KAKAO_KEY);return Kakao.isInitialized();}
   catch(e){return false;}
+}
+/* 카카오톡 채널(아공맵, _hRjxnX) 추가 — 인앱 SDK 팝업 우선, 실패 시 채널 홈으로 폴백 */
+function addKakaoChannel(){
+  try{if(typeof track==='function')track('kakao_channel_add',{});}catch(e){}
+  try{
+    if(kakaoReady()&&Kakao.Channel){Kakao.Channel.addChannel({channelPublicId:'_hRjxnX'});return;}
+  }catch(e){}
+  window.open('http://pf.kakao.com/_hRjxnX','_blank','noopener');
 }
 function kakaoFeed(title,desc,img,link,btn){
   const L=link||SHARE_URL;
