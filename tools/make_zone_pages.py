@@ -183,6 +183,8 @@ def signed(v):
 
 
 FAR_MONTHS = 36   # 준공예정이 이보다 더 먼 미래면 저신뢰(회색+"지연 가능")
+UCAP = 20   # 수도권처럼 여러 존 units를 합칠 때의 표시 상한 —
+            # update_adv_data._zone_units의 UCAP(존당 캡)과 같은 값으로 맞춘다.
 
 
 def render_units_2sec(units, today=None):
@@ -545,6 +547,14 @@ def build_page(r, allrows, prd, today, punits=None):
             agg_sched += uu.get('sched') or []
             agg_done += uu.get('done') or []
         if agg_sched or agg_done:
+            # 개별 존은 _zone_units가 세대순 상위 20개로 자르고 날짜순 정렬해 넣지만,
+            # 수도권은 여러 존의 리스트를 이어붙인 것이라 순서가 존별 블록으로 뒤섞이고
+            # 20개를 넘는다. _zone_units와 같은 규칙으로 다시 캡·정렬해 개별 존
+            # 페이지와 형식을 맞춘다(세대순 상위 UCAP → 준공예정 오름/준공 내림).
+            agg_sched = sorted(agg_sched, key=lambda u: -u[1])[:UCAP]
+            agg_done = sorted(agg_done, key=lambda u: -u[1])[:UCAP]
+            agg_sched.sort(key=lambda u: u[2] or '9999-99')
+            agg_done.sort(key=lambda u: u[2] or '0000-00', reverse=True)
             zone_units = {'sched': agg_sched, 'done': agg_done}
     unitsec2 = render_units_2sec(zone_units, _now)
     if unitsec2:

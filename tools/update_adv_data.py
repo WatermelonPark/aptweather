@@ -1150,7 +1150,14 @@ def hub_derive(adv):
     import collections
     hp = _load_hub_permits()
     if not hp.get('meta', {}).get('activate', False):
-        print('hub_derive: inactive — pre-HUB 지표 유지'); return
+        # inactive면 이전에 방출했을 수 있는 done/sched/units를 걷어내 pre-HUB로
+        # 되돌린다(activate를 껐다 켰다 하는 스위치가 실제로 동작하도록). 없으면 no-op.
+        print('hub_derive: inactive — pre-HUB 지표 유지')
+        p = adv.get('permits')
+        if p:
+            for k in ('done', 'sched', 'units'):
+                p.pop(k, None)
+        return
     bdong = _load_bdong_map()
     z_of = _hub_zone_map(bdong)
     reps = _hub_group_reps(bdong)
@@ -1386,10 +1393,9 @@ def main():
         if weekly['rows'] and differs(weekly, cur):
             adv['weekly'] = weekly
             # '바이트가 달라짐'과 '새 주차가 나옴'은 다르다. 부동산원이 과거 주차를
-            # 소급 수정하기만 해도 differs()는 참이 되는데, 그때 'weekly' 토큰을 넣으면
-            # 이미 보낸 주차의 뉴스레터가 한 번 더 나간다(2026-07-16 실제 중복 발송).
-            # 데이터는 갱신하되 발송 트리거는 기간이 실제로 전진했을 때만 세운다.
-            # send_newsletter는 부분문자열로 검사하므로 소급 토큰은 'weekly'를 피해야 한다.
+            # 소급 수정하기만 해도 differs()는 참이 되므로, 실제로 기간이 전진했을 때만
+            # 'weekly(~주차)' 토큰을, 아니면 '주간소급수정' 토큰을 커밋 메시지에 남긴다.
+            # (2026-07-24 발송 채널 제거 전엔 이 구분이 뉴스레터 중복발송 방지에도 쓰였다.)
             new_last = weekly['rows'][-1]['p']
             changed.append(('weekly(~%s)' % new_last) if new_last > cur_last
                            else ('주간소급수정(~%s)' % new_last))
@@ -1429,7 +1435,18 @@ def main():
     except Exception as e:
         failed.append('permits'); print('permits skip:', e)
     try:
+        # hub_derive는 adv['permits']의 done/sched/units를 제자리에서 바꾸므로,
+        # 그 자체로는 '변경'으로 잡히지 않는다. 앞뒤를 비교해 실제로 달라졌을 때만
+        # changed에 넣어야 아래 'if changed: write_adv'가 data.js를 다시 쓴다.
+        # (이게 없으면 activate를 켠 실행에 다른 변경이 없을 때 done/sched가 유실됐다.)
+        _pk = ('done', 'sched', 'units')
+        _before = json.dumps({k: adv.get('permits', {}).get(k) for k in _pk},
+                             sort_keys=True, ensure_ascii=False)
         hub_derive(adv)
+        _after = json.dumps({k: adv.get('permits', {}).get(k) for k in _pk},
+                            sort_keys=True, ensure_ascii=False)
+        if _after != _before:
+            changed.append('hub')
     except Exception as e:
         failed.append('hub_derive'); print('hub_derive skip:', e)
     try:

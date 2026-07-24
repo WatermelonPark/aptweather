@@ -15,6 +15,12 @@
 """
 import io, os, re, sys, json, subprocess, tempfile
 
+# cp949 콘솔에서도 요약 출력(— 등)이 죽지 않도록(split_data.py와 동일 처리).
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import make_zone_pages as M
@@ -32,15 +38,26 @@ def js_side():
             raise SystemExit('index.html에서 %s 를 찾지 못했다 — 구조가 바뀌었는지 확인할 것' % name)
         return m.group(0)
 
+    # scCalc는 외부 헬퍼(runningShortage·_qkey·_conf·ANCHOR)에 의존한다. HUB 러닝재고
+    # 재작성으로 생긴 이 함수들을 함께 떼오지 않으면, activate=true일 때 scCalc가
+    # runningShortage를 부르며 ReferenceError로 죽어 미러 검증 자체가 크래시한다.
     fn = grab(r'function scCalc\(\)\{.*?\n\}', 'scCalc')
+    qkey = grab(r'function _qkey\(i\)\{[^}]*\}', '_qkey')
+    conf = grab(r'function _conf\(k\)\{[^}]*\}', '_conf')
+    anchor = grab(r'var ANCHOR=[^;\n]*;', 'ANCHOR')
+    rsh = grab(r'function runningShortage\([^)]*\)\{.*?\n\}', 'runningShortage')
     data = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()
 
     src = """
 %s
 %s
+%s
+%s
+%s
+%s
 const out = scCalc().map(z => ({z: z.z, dA: z.dA, dB: z.dB, dC: z.dC, tot: z.tot}));
 console.log(JSON.stringify(out));
-""" % (data, fn)
+""" % (data, qkey, conf, anchor, rsh, fn)
     with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False, encoding='utf-8') as f:
         f.write(src)
         path = f.name
