@@ -2067,7 +2067,7 @@ function renderBubbleSec(){
   const latest=r=>{const s=J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
   const MAX=9;
   const px=v=>Math.min(98,Math.max(0,v/MAX*100));
-  let h='<div class="bb-legend">막대 왼쪽 <b style="color:#a93226">월세수익률</b> ~ 오른쪽 <b style="color:#1a5276">위험선(월세수익률 ×2)</b> · 검은 세로선 = <b>대출금리 '+loan.toFixed(2)+'%</b> ('+B.loan.p+' 신규취급 평균)<br>대출금리가 <b style="color:#a93226">왼쪽</b>이면 매수신호, <b style="color:#1a5276">오른쪽</b>이면 위험 · <b>지역을 누르면 상세</b></div>';
+  let h='<style>#bubble-wrap .bb-row{padding-top:15px}#bubble-wrap .bb-track{overflow:visible}#bubble-wrap .bb-v{position:absolute;top:-13px;font-size:9.5px;font-weight:700;white-space:nowrap;line-height:1}</style><div class="bb-legend">막대 왼쪽 <b style="color:#a93226">월세수익률</b> ~ 오른쪽 <b style="color:#1a5276">위험선(월세수익률 ×2)</b> · 검은 세로선 = <b>대출금리 '+loan.toFixed(2)+'%</b> ('+B.loan.p+' 신규취급 평균)<br>대출금리가 <b style="color:#a93226">왼쪽</b>이면 매수신호, <b style="color:#1a5276">오른쪽</b>이면 위험 · <b>지역을 누르면 상세</b></div>';
   let nHi=0,nLo=0,nNear=0;
   (B.regions||Object.keys(B.conv)).forEach(rg=>{
     const cv=B.conv[rg],jr=latest(rg);
@@ -2086,7 +2086,9 @@ function renderBubbleSec(){
     h+='<div class="bb-row" role="button" tabindex="0" aria-expanded="false" onclick="bbToggle(this)" onkeydown="rowKey(event,this)"><span class="bb-lab">'+rg+'</span>'
       +'<div class="bb-track" title="월세수익률 '+lo.toFixed(1)+'% ~ 위험선 '+hi.toFixed(1)+'% · 대출금리 '+loan.toFixed(2)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
-      +'<div class="bb-loan" style="left:'+px(loan)+'%"></div></div>'
+      +'<div class="bb-loan" style="left:'+px(loan)+'%"></div>'
+      +'<span class="bb-v" style="left:'+px(lo)+'%;color:#a93226">'+lo.toFixed(1)+'</span>'
+      +'<span class="bb-v" style="left:'+px(hi)+'%;transform:translateX(-100%);color:#1a5276">'+hi.toFixed(1)+'</span></div>'
       +'<span class="bb-chip '+cls+'">'+txt+'</span>'
       +'</div>'
       +'<div class="bb-det">'+det+'</div>';
