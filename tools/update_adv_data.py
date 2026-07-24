@@ -113,6 +113,10 @@ RECENT_WEEKS = 20     # 주간 fetch 깊이 (서울 12주 + 여유). 3년(156주
 RECENT_MONTHS = 14    # 월간 fetch 깊이 (서울 12월 + 여유). 10년(120월)은 병합이 보존.
 
 REG15 = ['수도권','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주']
+# 아파트 인허가(fetch_permits)용 — 수도권 뒤에 하위 서울/경기/인천을 개별로. KOSIS
+# DT_MLTM_1948이 셋을 개별 + 수도권 소계로 모두 주므로(합=수도권) 필터만 열면 된다.
+# REG15는 규모별표(_region_of)가 계속 쓰므로 건드리지 않는다.
+PERMIT_REGIONS = ['수도권', '서울', '경기', '인천'] + [r for r in REG15 if r != '수도권']
 
 
 def http_json(url, tries=3):
@@ -227,7 +231,7 @@ def _fetch_apt_permits(prd_de):
         if (row.get('C2_NM') or '').strip() != '아파트': continue
         if (row.get('C4_NM') or '').strip() != '아파트': continue
         reg = (row.get('C1_NM') or '').strip()
-        if reg not in REG15: continue
+        if reg not in PERMIT_REGIONS: continue
         try: out[reg] = int(float(row['DT']))
         except (TypeError, ValueError, KeyError): continue
     return out
@@ -240,12 +244,12 @@ def fetch_permits():
     for y in range(2007, now.year + 1):
         h1 = _fetch_apt_permits('%d06' % y)
         time.sleep(0.15)
-        v1 = [h1.get(r) for r in REG15]
+        v1 = [h1.get(r) for r in PERMIT_REGIONS]
         if any(v is not None for v in v1):
             rows_out.append({'p': '%dH1' % y, 'v': v1})
         cum = _fetch_apt_permits('%d12' % y)
         time.sleep(0.15)
-        vc = [cum.get(r) for r in REG15]
+        vc = [cum.get(r) for r in PERMIT_REGIONS]
         if any(v is not None for v in vc):
             v2 = [None if (a is None or b is None) else a - b for a, b in zip(vc, v1)]
             rows_out.append({'p': '%dH2' % y, 'v': v2})
