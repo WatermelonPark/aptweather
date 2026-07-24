@@ -155,16 +155,6 @@
   </div>
 
   <div class="dash" id="stats-market"><div class="wrap">
-    <div class="subs" id="subs-card" style="display:none">
-      <b>📬 집값 브리핑 받기</b>
-      <p>새 통계가 나오면 메일로 알려드립니다.</p>
-      <form onsubmit="return subsSubmit(this)">
-        <input type="email" name="email" required placeholder="이메일 주소" autocomplete="email">
-        <button type="submit">알림 받기</button>
-      </form>
-      <span class="subs-msg" id="subs-msg"></span>
-      <p class="subs-consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국). <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a></p>
-    </div>
     <div class="adv-tabs" role="tablist" aria-label="시장동향 주기">
       <button id="mtab-week" class="on" onclick="setMarketTab('week')">주간</button>
       <button id="mtab-month" onclick="setMarketTab('month')">월간</button>
@@ -2067,7 +2057,7 @@ function renderBubbleSec(){
   const latest=r=>{const s=J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
   const MAX=9;
   const px=v=>Math.min(98,Math.max(0,v/MAX*100));
-  let h='<style>#bubble-wrap .bb-row{padding-top:15px}#bubble-wrap .bb-track{overflow:visible}#bubble-wrap .bb-v{position:absolute;top:-13px;font-size:9.5px;font-weight:700;white-space:nowrap;line-height:1}</style><div class="bb-legend">막대 왼쪽 <b style="color:#1a5276">월세수익률</b> ~ 오른쪽 <b style="color:#a93226">위험선(월세수익률 ×2)</b> · 검은 세로선 = <b>대출금리 '+loan.toFixed(2)+'%</b> ('+B.loan.p+' 신규취급 평균)<br>대출금리가 <b style="color:#1a5276">왼쪽</b>이면 매수신호, <b style="color:#a93226">오른쪽</b>이면 위험 · <b>지역을 누르면 상세</b></div>';
+  let h='<style>#bubble-wrap .bb-track{overflow:visible}#bubble-wrap .bb-v{position:absolute;top:50%;font-size:9.5px;font-weight:700;white-space:nowrap;line-height:1}</style><div class="bb-legend">막대 왼쪽 <b style="color:#1a5276">월세수익률</b> ~ 오른쪽 <b style="color:#a93226">위험선(월세수익률 ×2)</b> · 검은 세로선 = <b>대출금리 '+loan.toFixed(2)+'%</b> ('+B.loan.p+' 신규취급 평균)<br>대출금리가 <b style="color:#1a5276">왼쪽</b>이면 매수신호, <b style="color:#a93226">오른쪽</b>이면 위험 · <b>지역을 누르면 상세</b></div>';
   let nHi=0,nLo=0,nNear=0;
   (B.regions||Object.keys(B.conv)).forEach(rg=>{
     const cv=B.conv[rg],jr=latest(rg);
@@ -2087,8 +2077,8 @@ function renderBubbleSec(){
       +'<div class="bb-track" title="월세수익률 '+lo.toFixed(1)+'% ~ 위험선 '+hi.toFixed(1)+'% · 대출금리 '+loan.toFixed(2)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div>'
-      +'<span class="bb-v" style="left:'+px(lo)+'%;transform:translateX(2px);color:#1a5276">'+lo.toFixed(1)+'%</span>'
-      +'<span class="bb-v" style="left:'+px(hi)+'%;transform:translateX(calc(-100% - 2px));color:#a93226">'+hi.toFixed(1)+'%</span></div>'
+      +'<span class="bb-v" style="left:'+px(lo)+'%;transform:translate(calc(-100% - 4px),-50%);color:#1a5276">'+lo.toFixed(1)+'%</span>'
+      +'<span class="bb-v" style="'+(px(hi)<=82?'left:'+px(hi)+'%;transform:translate(4px,-50%)':'right:2px;transform:translateY(-50%)')+';color:#a93226">'+hi.toFixed(1)+'%</span></div>'
       +'<span class="bb-chip '+cls+'">'+txt+'</span>'
       +'</div>'
       +'<div class="bb-det">'+det+'</div>';
