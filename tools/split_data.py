@@ -45,14 +45,21 @@ def main():
     core_adv = {k: adv[k] for k in CORE_ADV if k in adv}
 
     def strip_units(a):
-        """livezone.zones[].units 제거 — 단지 목록(~40KB)은 zone 정적 페이지
-        전용이다. 홈·통계탭 페이로드가 실어 나를 이유가 없다."""
+        """livezone.zones[].units + permits.units 제거 — 단지 목록은 zone 정적
+        페이지(make_zone_pages가 data.js를 직접 읽어 렌더) 전용이라 브라우저
+        페이로드가 실어 나를 이유가 없다. permits.units는 HUB 러닝재고 재작성으로
+        생긴 존 상세 리스트라 홈 scCalc(done/sched만 사용)도 안 쓴다."""
+        a = dict(a)
         lz = a.get('livezone')
         if lz and lz.get('zones'):
             lz = dict(lz)
             lz['zones'] = [{k: v for k, v in z.items() if k != 'units'} for z in lz['zones']]
-            a = dict(a)
             a['livezone'] = lz
+        p = a.get('permits')
+        if p and 'units' in p:
+            p = dict(p)
+            p.pop('units', None)
+            a['permits'] = p
         return a
 
     core_adv = strip_units(core_adv)
