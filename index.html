@@ -150,7 +150,7 @@
   <div class="smode" role="tablist" aria-label="통계 모드">
     <button id="smode-market" class="on" onclick="setStatsMode('market')">시황</button>
     <button id="smode-basic" onclick="setStatsMode('basic')">기본통계</button>
-    <button id="smode-adv" onclick="setStatsMode('adv')">심화통계</button>
+    <button id="smode-adv" onclick="setStatsMode('adv')">투자지표</button>
     <button id="smode-more" onclick="setStatsMode('more')">더보기</button>
   </div>
 
@@ -165,6 +165,11 @@
       <span class="subs-msg" id="subs-msg"></span>
       <p class="subs-consent">알림 발송에만 쓰고 해지 시 즉시 파기합니다. 발송 Buttondown(미국). <a href="/privacy/" style="color:inherit;text-decoration:underline">개인정보처리방침</a></p>
     </div>
+    <div class="adv-tabs" role="tablist" aria-label="시황 주기">
+      <button id="mtab-week" class="on" onclick="setMarketTab('week')">주간</button>
+      <button id="mtab-month" onclick="setMarketTab('month')">월간</button>
+    </div>
+
     <section class="adv-sec gsec gm-m" id="sec-week">
       <div class="adv-h"><h3>주간 아파트 동향</h3><span class="rel" id="rel-week"></span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
@@ -185,7 +190,7 @@
       <div class="src-note">자료: KOSIS 한국부동산원 「전국주택가격동향조사」 주간 아파트 동향 · 매주 자동 갱신</div>
     </section>
 
-    <section class="adv-sec gsec gm-m" id="sec-month">
+    <section class="adv-sec gsec gm-m" id="sec-month" style="display:none">
       <div class="adv-h"><h3>월간 아파트 동향</h3><span class="rel" id="rel-month"></span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('month','m')">지도</button><button data-v="g" onclick="gtSet('month','g')">그래프</button><button data-v="t" onclick="gtSet('month','t')">표</button></div></div>
       <p class="adv-note">주간의 잔파도를 걷어낸 추세입니다.</p>
@@ -205,20 +210,6 @@
       <div class="src-note">자료: KOSIS 한국부동산원 「전국주택가격동향조사」 월간 아파트 동향 (지수 전월비 환산) · 매주 자동 갱신</div>
     </section>
 
-    <section class="adv-sec gsec" id="sec-clock">
-      <div class="adv-h"><h3>3년 공급시계</h3><span class="adv-badge">인허가→입주 약 3년</span></div>
-      <p class="adv-note">인허가는 약 3년 뒤 입주로 이어집니다. 즉 <b>3년 뒤 공급량은 이미 정해져</b> 있습니다.</p>
-      <div id="clock-lab" style="font-size:12px;color:var(--muted);margin:0 2px 8px"></div>
-      <div class="adv-tblwrap"><table class="adv" id="clock-tbl"></table></div>
-      <div class="src-note">자료: KOSIS 국토교통부 「주택건설실적통계」 인허가 · 한국부동산원 공동주택 입주(예정)물량 · 자동 갱신</div>
-    </section>
-
-    <section class="adv-sec gsec" id="sec-bubble">
-      <div class="adv-h"><h3>버블밴드</h3><span class="adv-badge">월간</span><span class="adv-badge" id="bubble-prd"></span></div>
-      <p class="adv-note">임대수익률과 대출 금리를 견줍니다. 금리가 아래로 내려오면 매수 신호, 위로 넘으면 위험 구간입니다.</p>
-      <div id="bubble-wrap"></div>
-      <div class="src-note">자료: KOSIS 한국부동산원 전월세전환율·전세가율 · 한국은행 예금은행 주택담보대출 금리(신규취급) · 자동 갱신</div>
-    </section>
   </div></div>
 
   <div class="dash" id="stats-basic" style="display:none"><div class="wrap">
@@ -263,12 +254,29 @@
   </div></div>
 
   <div class="dash" id="stats-adv" style="display:none"><div class="wrap">
-    <div class="adv-tabs" role="tablist" aria-label="심화통계 항목">
-      <button id="atab-permit" class="on" onclick="setAdvTab('permit')">인허가 물량</button>
+    <div class="adv-tabs" role="tablist" aria-label="투자지표 항목">
+      <button id="atab-bubble" class="on" onclick="setAdvTab('bubble')">버블밴드</button>
       <button id="atab-occ" onclick="setAdvTab('occ')">입주물량</button>
+      <button id="atab-permit" onclick="setAdvTab('permit')">인허가</button>
+      <button id="atab-clock" onclick="setAdvTab('clock')">3년시계</button>
     </div>
 
-    <section class="adv-sec gsec gm-g" id="sec-permit">
+    <section class="adv-sec gsec" id="sec-bubble">
+      <div class="adv-h"><h3>버블밴드</h3><span class="adv-badge">월간</span><span class="adv-badge" id="bubble-prd"></span></div>
+      <p class="adv-note">임대수익률과 대출 금리를 견줍니다. 금리가 아래로 내려오면 매수 신호, 위로 넘으면 위험 구간입니다.</p>
+      <div id="bubble-wrap"></div>
+      <div class="src-note">자료: KOSIS 한국부동산원 전월세전환율·전세가율 · 한국은행 예금은행 주택담보대출 금리(신규취급) · 자동 갱신</div>
+    </section>
+
+    <section class="adv-sec gsec" id="sec-clock" style="display:none">
+      <div class="adv-h"><h3>3년 공급시계</h3><span class="adv-badge">인허가→입주 약 3년</span></div>
+      <p class="adv-note">인허가는 약 3년 뒤 입주로 이어집니다. 즉 <b>3년 뒤 공급량은 이미 정해져</b> 있습니다.</p>
+      <div id="clock-lab" style="font-size:12px;color:var(--muted);margin:0 2px 8px"></div>
+      <div class="adv-tblwrap"><table class="adv" id="clock-tbl"></table></div>
+      <div class="src-note">자료: KOSIS 국토교통부 「주택건설실적통계」 인허가 · 한국부동산원 공동주택 입주(예정)물량 · 자동 갱신</div>
+    </section>
+
+    <section class="adv-sec gsec gm-g" id="sec-permit" style="display:none">
       <div class="adv-h"><h3>인허가 물량 (반기별)</h3><span class="rel">국토교통부 · 매월 말 발표</span>
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('permit','g')">그래프</button><button data-v="t" onclick="gtSet('permit','t')">표</button></div></div>
 
@@ -478,8 +486,8 @@ function showView(v,updateHash){
     statsInited=true;
     /* 3년시계·버블밴드·구독 카드는 fetch를 기다리지 않는다 — 입력
        (ADV.occupancy·permits·bubble, STATS 전세가율·주택멸실)이 전부
-       data-core.js에 있어 부팅 때 이미 와 있다. 기본 활성 모드(시황)의
-       섹션이라 체인 뒤에 세우면 사용자에게 이유 없이 빈 채로 보인다. */
+       data-core.js에 있어 부팅 때 이미 와 있다. 버블밴드는 투자지표의
+       기본 탭이라 체인 뒤에 세우면 사용자에게 이유 없이 빈 채로 보인다. */
     renderClockSec();renderBubbleSec();initSubs();renderReleaseInfo();
     loadFullData()
       .then(()=>{ if(typeof renderWeekSec==='function')renderWeekSec();
@@ -1023,7 +1031,7 @@ const QUIZSETS={
   {q:'<b>개발 후</b> 용적률 <b>200%</b>로 짓는 재건축 단지에서 평당 공사비가 <b>1,000만원 → 1,500만원</b>으로 올랐다. 개발 후 대지 1평의 수익은 얼마나 줄어들까?',
    opts:['500만원','1,000만원'],
    answer:1,
-   exp:'공사비 인상분 500만원에 <b>용적률 배수(×2)</b>가 곱해져 <b>1,000만원</b>이 줄어든다. 공사비 상승은 용적률이 높을수록 사업성을 빠르게 갉아먹는다 — 요즘 재건축 단지들이 공사비 협상에 사활을 거는 이유다.'},
+   exp:'공사비 인상분 500만원에 <b>용적률 배수(×2)</b>가 곱해져 <b>1,000만원</b>이 줄어든다. 용적률이 높을수록 공사비 변동이 그대로 증폭돼 <b>걸린 금액이 커진다</b> — 요즘 재건축 단지들이 공사비 협상에 사활을 거는 이유다. 다만 마진(분양가 − 공사비)도 같은 배수로 커지므로 <b>"용적률이 높으면 공사비에 더 취약하다"는 뜻은 아니다.</b> 진짜 위험한 쪽은 마진이 얇아 조금만 올라도 개발 후 가치가 개발 전을 밑도는 단지다.'},
 
   {q:'개발 전 평당 <b>4,000만원</b> → 개발 후 평당 <b>6,000만원</b>으로 분명한 흑자인데, 대지지분이 <b>5평</b>뿐인 소형 평형 단지. 사업이 잘 안 굴러가는 이유는?',
    opts:['기대수익 절대액이 작아서','용적률이 낮아서'],
@@ -1214,7 +1222,7 @@ function nextStepHTML(){
       <div class="ns-kicker">다음 단계</div>
       <div class="ns-title">계산보다 먼저 볼 것은 시장이다</div>
       <p class="ns-desc">공식이 손에 익었다면, 이제 그 계산을 통째로 뒤집을 수 있는 변수를 보자. <b>입주물량과 사이클</b> — 사업성 판단의 순서는 언제나 시장이 먼저다.</p>
-      <button class="ns-btn" onclick="track('next_step',{from:'calc',to:'market'});goStats('market')">📈 시황에서 입주물량·3년시계 확인 →</button>
+      <button class="ns-btn" onclick="track('next_step',{from:'calc',to:'adv'});goStats('adv')">📈 투자지표에서 입주물량·3년시계 확인 →</button>
       <button class="ns-btn ghost" onclick="track('next_step',{from:'calc',to:'report'});location.href='/cycle/'">📑 아파트 사이클 리포트 읽기</button>
     </div>`;
   }
@@ -1872,7 +1880,7 @@ function gtSet(sec,v){
   track('stats_gt',{section:sec,view:v});
 }
 function setAdvTab(t){
-  ['permit','occ'].forEach(k=>{
+  ['bubble','occ','permit','clock'].forEach(k=>{
     document.getElementById('sec-'+k).style.display=k===t?'':'none';
     document.getElementById('atab-'+k).classList.toggle('on',k===t);
   });
@@ -1880,7 +1888,17 @@ function setAdvTab(t){
   if(t==='occ')drawOccChart();
   track('adv_tab',{tab:t});
 }
-function renderAdvAll(){ renderAdvPermits(); renderAdvOcc(); setAdvTab('permit'); }
+function renderAdvAll(){ renderAdvPermits(); renderAdvOcc(); setAdvTab('bubble'); }
+/* 시황 주간/월간 토글 — 숨김 상태에서 만들어진 차트는 표시 시 리사이즈 필요 */
+function setMarketTab(t){
+  ['week','month'].forEach(k=>{
+    document.getElementById('sec-'+k).style.display=k===t?'':'none';
+    document.getElementById('mtab-'+k).classList.toggle('on',k===t);
+  });
+  const ch=window.Chart&&Chart.getChart&&Chart.getChart(t+'Chart');
+  if(ch)ch.resize();
+  track('market_tab',{tab:t});
+}
 
 /* ============ 시장 도구: 3년시계 / 버블밴드 ============ */
 function renderClockSec(){
