@@ -79,7 +79,7 @@
     <p class="sub">국가 통계로 전국 아파트의 공급과 시세를 추적합니다. 매주 자동 갱신.</p>
     <div class="hero-cta" style="display:flex;flex-direction:column;gap:12px;align-items:center">
       <button class="home-cta" onclick="goStats('market');track('home_cta',{to:'market'})">이번 주 시세 지도 보기</button>
-      <button class="home-cta alt" style="background:#FEE500;color:#191919;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="addKakaoChannel()"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>통계 업데이트 알림 받기</button>
+      <button class="home-cta alt" style="background:#FEE500;color:#191919;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="addKakaoChannel('hero')"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>통계 업데이트 알림 받기</button>
     </div>
   </div></header>
 
@@ -1254,6 +1254,7 @@ function showResult(){
         <h4>${CHALLENGE&&CHALLENGE.set===curSet?'친구에게 되받아치기 🔥':'친구는 몇 점일까? 🔥'}</h4>
         <div class="qshare-btns">
           <button class="qshare-btn primary" onclick="shareResult()"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>카카오톡으로 공유하기</button>
+          <button class="qshare-btn sub" onclick="addKakaoChannel('quiz_result')"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>채널 추가하고 매주 금요일 시세 알림 받기</button>
         </div>
       </div>
       ${nextStepHTML()}
@@ -1265,6 +1266,9 @@ function showResult(){
 // 공유 링크는 퀴즈 전용 OG(og-test.png)를 가진 /burini-test/로 보낸다.
 // 해시(#test)나 루트(?c=)로 보내면 홈 OG(og-brand.png)로 언펄돼 퀴즈 훅이 사라진다.
 const SHARE_URL='https://www.agongmap.co.kr/burini-test/';
+// GA 어트리뷰션 규약: utm_source는 유입 장치(quiz_invite/quiz_challenge), utm_medium=viral 고정,
+// utm_campaign은 퀴즈 세트. 랜딩의 location.replace('/'+q)가 쿼리를 보존하므로 홈까지 전달된다.
+const SHARE_URL_UTM=SHARE_URL+'?utm_source=quiz_invite&utm_medium=viral&utm_campaign=quiz3set';
 /* ===== 친구 대결 (서버 없이 URL 파라미터로) ===== */
 let CHALLENGE=null;
 function readChallenge(){
@@ -1286,7 +1290,7 @@ function challengeURL(){
   // 세트별 랜딩이 파라미터를 홈으로 넘겨준다(OG는 세트별 퀴즈 카드로 뜨게).
   // 세 랜딩 모두 ?c=&s= 대결 파라미터를 홈으로 리다이렉트하므로 라우팅은 동일하다.
   const slug=curSet==='investor'?'investor-test':curSet==='calc'?'redev-test':'burini-test';
-  return `https://www.agongmap.co.kr/${slug}/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}`;
+  return `https://www.agongmap.co.kr/${slug}/?c=${qScore}&s=${curSet}&q=${curSeed.toString(36)}&utm_source=quiz_challenge&utm_medium=viral&utm_campaign=${curSet}`;
 }
 function renderChalBar(){
   const b=document.getElementById('chal-bar');
@@ -1323,21 +1327,21 @@ function kakaoReady(){
   catch(e){return false;}
 }
 /* 카카오톡 채널(아공맵, _hRjxnX) 추가 — 인앱 SDK 팝업 우선, 실패 시 채널 홈으로 폴백 */
-function addKakaoChannel(){
-  try{if(typeof track==='function')track('kakao_channel_add',{});}catch(e){}
+function addKakaoChannel(from){
+  try{if(typeof track==='function')track('kakao_channel_add',{from:from||'hero'});}catch(e){}
   try{
     if(kakaoReady()&&Kakao.Channel){Kakao.Channel.addChannel({channelPublicId:'_hRjxnX'});return;}
   }catch(e){}
   window.open('http://pf.kakao.com/_hRjxnX','_blank','noopener');
 }
 function kakaoFeed(title,desc,img,link,btn){
-  const L=link||SHARE_URL;
+  const L=link||SHARE_URL_UTM;
   Kakao.Share.sendDefault({objectType:'feed',
     content:{title:title,description:desc,
       imageUrl:img||'https://www.agongmap.co.kr/og-test.png',imageWidth:img?800:1200,imageHeight:img?800:630,
       link:{mobileWebUrl:L,webUrl:L}},
     buttons:[{title:btn||'나도 도전하기',link:{mobileWebUrl:L,webUrl:L}},
-      {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.agongmap.co.kr',webUrl:'https://www.agongmap.co.kr'}}]});
+      {title:'풀 리포트 보기',link:{mobileWebUrl:'https://www.agongmap.co.kr/?utm_source=quiz_share&utm_medium=viral&utm_campaign=full_report',webUrl:'https://www.agongmap.co.kr/?utm_source=quiz_share&utm_medium=viral&utm_campaign=full_report'}}]});
 }
 function shareTest(){
   track('share',{content_type:'quiz_invite',method:kakaoReady()?'kakao':(navigator.share?'os_share':'copy')});
@@ -1345,11 +1349,11 @@ function shareTest(){
     try{kakaoFeed('내 부동산 감각, 몇 점일까?','부린이·투자자·재건축 3종 테스트 — 10문항 3분, 즉시 채점·해설');return;}
     catch(e){}
   }
-  const txt='내 부동산 감각, 몇 점일까? 부린이·투자자·재건축 3종 테스트 — 10문항 3분\n'+SHARE_URL;
+  const txt='내 부동산 감각, 몇 점일까? 부린이·투자자·재건축 3종 테스트 — 10문항 3분\n'+SHARE_URL_UTM;
   if(navigator.share){
     navigator.share({title:'부동산 사이클 테스트',
       text:'내 부동산 감각, 몇 점일까? 10문항 3분 테스트 — 같이 풀어보자!',
-      url:SHARE_URL}).catch(e=>{if(e&&e.name!=='AbortError')copyText(txt);});
+      url:SHARE_URL_UTM}).catch(e=>{if(e&&e.name!=='AbortError')copyText(txt);});
   }else{copyText(txt);}
 }
 function shareTaunt(s){

@@ -646,6 +646,7 @@ def build_page(r, allrows, prd, today, punits=None):
 <head>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
+<script>document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('a[href]'):null;if(!a)return;var h=a.getAttribute('href');if(!h||h.charAt(0)!=='/')return;try{gtag('event','zone_cta',{to:h,zone:'%(nm)s'});}catch(err){}});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -804,6 +805,7 @@ HUB_TPL = u"""<!DOCTYPE html>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
+<script>document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('a[href]'):null;if(!a)return;var h=a.getAttribute('href');if(!h||h.charAt(0)!=='/')return;try{gtag('event','zone_cta',{to:h,zone:'hub'});}catch(err){}});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>전국 생활권 아파트 공급 순위 %(n)d곳 — 입주예정·인허가로 본 부족·과잉 | 아공맵</title>

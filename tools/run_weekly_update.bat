@@ -124,6 +124,11 @@ rem 비치명적 — 불일치가 통계 갱신을 막지는 않게 WARN만 남�
 python tools\check_dual_calc.py
 if errorlevel 1 echo WARN: scCalc vs calc mismatch - home and zone pages differ
 
+rem 네이버 블로그 초안 2건(주간 시세 + 생활권 심층). drafts/는 gitignore라
+rem 커밋 대상이 아니고, 실패해도 통계 갱신을 막지 않는다.
+python tools\make_naver_post.py
+if errorlevel 1 echo WARN: make_naver_post failed - naver draft not generated
+
 git diff --quiet data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
 if errorlevel 1 (
   git add data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
