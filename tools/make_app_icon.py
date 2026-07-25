@@ -121,7 +121,8 @@ def main():
     print('wrote favicon.svg')
     jobs = [
         ('app_icon.png', 512, 0.86),
-        ('app_icon_128.png', 128, 0.86),   # 카카오 채널 프로필 등(권장 128px)
+        ('app_icon_128.png', 128, 0.86),   # 카카오 링크/프로필 소(권장 128px)
+        ('app_icon_640.png', 640, 0.86),   # 카카오 채널 이미지(권장 640x640)
         (os.path.join('icons', 'icon-192.png'), 192, 0.84),
         (os.path.join('icons', 'icon-512.png'), 512, 0.84),
         (os.path.join('icons', 'maskable-192.png'), 192, 0.64),
