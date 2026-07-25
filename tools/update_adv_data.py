@@ -23,6 +23,9 @@ import io, os, re, sys, json, time
 import urllib.request
 import urllib.parse
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hub_common as H
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.js')
 TOOLS_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')   # tools/data (hub_permits.json, code_bdong.json)
@@ -1035,6 +1038,16 @@ def _load_bdong_map():
         nm = d['시군구명'][k]
         if not isinstance(nm, str) or not nm: continue
         out.setdefault(str(d['시군구코드'][k]), (d['시도명'][k], nm))
+    # 강원 원주/춘천/강릉권 51xxx 보정(hub_common.GANGWON_CODE_FIX) — code_bdong.json이
+    # 신 코드 행을 아예 갖고 있지 않아, fetch_hub_permits.apply_gangwon_fix와 동일하게
+    # 42xxx 항목을 51xxx로 옮겨(같은 시도/이름) _hub_zone_map이 새 코드를 존으로 해석할
+    # 수 있게 한다. RENAME(옮김)이지 단순 추가가 아니다 — 옛 코드를 남겨두면
+    # _hub_group_reps가 (시도, 이름) 그룹에서 신/구 코드를 같은 그룹으로 묶어 대표
+    # 코드가 다시 42xxx로 되돌아가고(문자열 정렬상 '42...' < '51...'), 완결성 게이트가
+    # (hub_permits.json엔 51xxx만 scanned로 기록되므로) 영원히 실패한다.
+    for old, new in H.GANGWON_CODE_FIX.items():
+        if old in out:
+            out[new] = out.pop(old)
     return out
 
 def _hub_zone_map(bdong):

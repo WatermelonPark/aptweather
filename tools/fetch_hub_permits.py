@@ -173,6 +173,27 @@ def fold_groups(targets, sido_by_code, bjdong_by_sgg, old_gu_map):
     return out
 
 
+def apply_gangwon_fix(groups, code_fix=None):
+    """강원 원주/춘천/강릉권 rep 코드를 스테일 42xxx -> 실사용 51xxx로 옮긴다
+    (hub_common.GANGWON_CODE_FIX, 배경은 그 상수 주석 참고).
+
+    fold_groups는 code_bdong.json 실측 그대로 42xxx를 대표(rep) 코드로 뽑아내는데,
+    이 코드는 라이브 API에서 죽은 코드다. bjdong(법정동) 목록은 신/구 코드가
+    동일하므로(실측 확인) 그대로 재사용하고, rep 키·members·bjdong dict의 키만
+    51xxx로 다시 쓴다 — RENAME이지 단순 추가가 아니다(42xxx 키를 남겨두면 나중에
+    두 코드가 서로 다른 그룹으로 따로 잡혀 있던 값이 뒤섞일 수 있다)."""
+    code_fix = code_fix or H.GANGWON_CODE_FIX
+    out = dict(groups)
+    for old, new in code_fix.items():
+        if old not in out:
+            continue
+        g = out.pop(old)
+        new_members = [new if m == old else m for m in g['members']]
+        new_bjdong = {(new if k == old else k): v for k, v in g['bjdong'].items()}
+        out[new] = dict(g, members=new_members, bjdong=new_bjdong)
+    return out
+
+
 def build_targets():
     """전체 대상 도출 파이프라인. 반환: (groups, unresolved_names)."""
     from update_adv_data import LIVEZONE, LZ_SIDO_FULL
@@ -182,6 +203,7 @@ def build_targets():
     unresolved_names = []
     targets = expand_livezone(LIVEZONE, sido_codes, name_codes, sgg_name_by_code, unresolved_names)
     groups = fold_groups(targets, sido_by_code, bjdong_by_sgg, H.OLD_GU_MAP)
+    groups = apply_gangwon_fix(groups)
     return groups, unresolved_names
 
 

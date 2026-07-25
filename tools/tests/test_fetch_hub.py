@@ -790,6 +790,74 @@ def test_load_existing_backward_compat_missing_scanned_key(tmp_path, monkeypatch
 # load_bdong_rows: 실제 파일 포맷(컬럼-딕셔너리) 파싱 + NaN 활성행 필터
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# 강원(42xxx->51xxx) 코드 정정: code_bdong.json이 원주/춘천/강릉권의 신 코드
+# (51xxx) 행을 아예 갖고 있지 않고 스테일한 42xxx만 활성행으로 갖고 있는 실측
+# 갭 대응(hub_common.GANGWON_CODE_FIX). apply_gangwon_fix()는 fold_groups가
+# 뽑아낸 42xxx rep을 51xxx로 RENAME(옮김)한다 — bjdong 목록은 신/구 동일이라
+# 그대로 재사용.
+# ---------------------------------------------------------------------------
+
+def test_apply_gangwon_fix_renames_rep_key_and_reuses_bjdong():
+    groups = {
+        '42110': {'name': '춘천시', 'sido': '강원', 'members': ['42110'],
+                   'bjdong': {'42110': ['11200', '11300']}, 'legacy': None},
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},   # 무관 그룹, 영향 없어야 함
+    }
+    out = F.apply_gangwon_fix(groups)
+    assert '42110' not in out
+    assert '51110' in out
+    assert out['51110']['members'] == ['51110']
+    assert out['51110']['bjdong'] == {'51110': ['11200', '11300']}
+    assert out['51110']['name'] == '춘천시'
+    assert out['41370']['members'] == ['41370']   # 무관 그룹은 그대로
+
+
+def test_apply_gangwon_fix_noop_when_old_codes_absent():
+    groups = {'51110': {'name': '춘천시', 'sido': '강원', 'members': ['51110'],
+                          'bjdong': {'51110': ['11200']}, 'legacy': None}}
+    out = F.apply_gangwon_fix(groups)
+    assert out == groups
+
+
+def test_apply_gangwon_fix_renames_donghae_sokcho_independently_of_gangneung():
+    # 강릉권은 LIVEZONE상 강릉시 외에 동해시(42170)·속초시(42210)도 멤버인데,
+    # fold_groups는 (시도,이름) 단위로 그룹을 접기 때문에 이 둘은 강릉시와
+    # 별개 그룹(각자가 자기 rep)이다 — 강릉시(42150)만 고치고 이 둘을 빠뜨리면
+    # 계속 스테일 상태로 남는다(실측으로 확인한 갭). code_fix 표에 42170/42210이
+    # 있으면 강릉시 항목 유무와 무관하게 독립적으로 51170/51210으로 옮겨져야 한다.
+    groups = {
+        '42170': {'name': '동해시', 'sido': '강원', 'members': ['42170'],
+                   'bjdong': {'42170': ['10100', '10200']}, 'legacy': None},
+        '42210': {'name': '속초시', 'sido': '강원', 'members': ['42210'],
+                   'bjdong': {'42210': ['10100']}, 'legacy': None},
+    }
+    out = F.apply_gangwon_fix(groups)
+    assert '42170' not in out and '42210' not in out
+    assert out['51170']['bjdong'] == {'51170': ['10100', '10200']}
+    assert out['51170']['name'] == '동해시'
+    assert out['51210']['bjdong'] == {'51210': ['10100']}
+    assert out['51210']['name'] == '속초시'
+
+
+def test_build_targets_real_data_produces_gangwon_51xxx_reps_not_42xxx():
+    # 실제 code_bdong.json(네트워크 없음)으로 전체 파이프라인을 돌려, 확인된
+    # 데이터 갭(42xxx만 활성으로 남아있음)이 build_targets() 출력에서 51xxx로
+    # 정정돼 나오는지 검증한다. 강릉권의 동해시/속초시(42170/42210->51170/51210)도
+    # 강릉시(42150->51150)와 동일 패턴이라 함께 검증한다.
+    groups, unresolved_names = F.build_targets()
+    for stale in ('42110', '42130', '42150', '42170', '42210'):
+        assert stale not in groups
+    for rep, expect_name_substr in (('51110', '춘천'), ('51130', '원주'), ('51150', '강릉'),
+                                     ('51170', '동해'), ('51210', '속초')):
+        assert rep in groups, '%s(%s) 그룹이 build_targets() 출력에 없음' % (rep, expect_name_substr)
+        g = groups[rep]
+        assert rep in g['members']
+        bjdong_list = g['bjdong'].get(rep, [])
+        assert len(bjdong_list) > 0, '%s의 bjdong 목록이 비어 있음' % rep
+
+
 def test_load_bdong_rows_filters_active_and_parses_columnar_json(tmp_path):
     nan = float('nan')
     payload = {

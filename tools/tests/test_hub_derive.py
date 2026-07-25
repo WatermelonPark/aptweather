@@ -203,6 +203,108 @@ def test_hub_derive_inactive_emits_no_demol(monkeypatch):
     assert 'demol' not in adv['permits']
 
 
+# ---------------------------------------------------------------------------
+# 강원(42xxx->51xxx) 코드 정정: code_bdong.json이 원주/춘천/강릉권의 신 코드를
+# 아예 갖고 있지 않은 실측 갭에 대한 _load_bdong_map()의 GANGWON_CODE_FIX
+# RENAME 보정. 옛 코드를 남겨두면 _hub_group_reps가 신/구를 같은 (시도,이름)
+# 그룹으로 묶어 rep이 다시 42xxx로 돌아가버리므로(문자열 정렬상 42<51),
+# 그 회귀를 함께 방지한다.
+#
+# 강릉권은 LIVEZONE상 강릉시 외에 동해시(42170->51170)·속초시(42210->51210)도
+# 멤버다. 이 둘은 fold_groups가 (시도,이름) 단위로 묶기 때문에 강릉시와 별개
+# 그룹(각자가 자기 rep)이라, 애초 GANGWON_CODE_FIX(42110/42130/42150)가
+# 강릉시만 고치고 이 둘은 놓쳤었다 — 동일 패턴(sigunguCd=51170/51210 실호출
+# -> resultCode=00·item 존재; 42170/42210은 resultCode=00·item 0개)을 실측
+# 확인(2026-07-25)해 GANGWON_CODE_FIX에 추가했다. 지금은 다섯 코드 전부가
+# 정정 범위이므로, 강릉권의 완결성 게이트는 강릉시/동해시/속초시 3개 rep
+# (51150/51170/51210) 전원이 scanned일 때만 통과한다.
+# ---------------------------------------------------------------------------
+
+def test_hub_zone_map_resolves_real_gangwon_51xxx_codes():
+    # 실제 code_bdong.json(네트워크 없음) 기준 — 신 코드가 파일에 아예 없다는
+    # 확인된 갭을 _load_bdong_map()의 정정이 메꾸는지 검증.
+    bdong = U._load_bdong_map()
+    z = U._hub_zone_map(bdong)
+    assert z['51110'] == '춘천권'
+    assert z['51130'] == '원주권'
+    assert z['51150'] == '강릉권'
+    assert z['51170'] == '강릉권'
+    assert z['51210'] == '강릉권'
+    for stale in ('42110', '42130', '42150', '42170', '42210'):
+        assert stale not in bdong
+
+
+def test_hub_group_reps_gangwon_51xxx_maps_to_itself_not_stale_42xxx():
+    # rep이 42xxx로 되돌아가면(신/구가 같은 그룹으로 묶이는 회귀) 완결성 게이트가
+    # hub_permits.json에 실제로 기록되는 51xxx scanned와 영영 안 맞아 미완결로 남는다.
+    bdong = U._load_bdong_map()
+    reps = U._hub_group_reps(bdong)
+    assert reps['51110'] == '51110'
+    assert reps['51130'] == '51130'
+    assert reps['51150'] == '51150'
+    assert reps['51170'] == '51170'
+    assert reps['51210'] == '51210'
+
+
+def test_hub_derive_gangwon_zones_populate_when_51xxx_scanned(monkeypatch):
+    # 51xxx로 재시딩된 hub_permits.json을 가정하고, 춘천/원주/강릉권이 실제로
+    # 방출되는지 end-to-end로 확인. 강릉권은 강릉시/동해시/속초시 3개 rep이
+    # 모두 scanned여야 완결이라, done/sched/demol은 세 시군구 합계여야 한다.
+    adv = {'permits': {}}
+    bdong = {
+        '51110': ('강원특별자치도', '춘천시'),
+        '51130': ('강원특별자치도', '원주시'),
+        '51150': ('강원특별자치도', '강릉시'),
+        '51170': ('강원특별자치도', '동해시'),
+        '51210': ('강원특별자치도', '속초시'),
+    }
+    hp = {'meta': {'activate': True,
+                   'scanned': ['51110', '51130', '51150', '51170', '51210'],
+                   'scanned_demol': ['51110', '51130', '51150', '51170', '51210'],
+                   'unresolved_legacy': []},
+          'sgg': {
+              '51110': {'name': '춘천시', 'done_q': {'2024Q1': 100}, 'sched_q': {'2028Q2': 50},
+                         'demol_q': {'2020Q1': 10}},
+              '51130': {'name': '원주시', 'done_q': {'2024Q1': 200}, 'sched_q': {'2028Q2': 60},
+                         'demol_q': {'2020Q1': 20}},
+              '51150': {'name': '강릉시', 'done_q': {'2024Q1': 300}, 'sched_q': {'2028Q2': 70},
+                         'demol_q': {'2020Q1': 30}},
+              '51170': {'name': '동해시', 'done_q': {'2024Q1': 30}, 'sched_q': {'2028Q2': 7},
+                         'demol_q': {'2020Q1': 3}},
+              '51210': {'name': '속초시', 'done_q': {'2024Q1': 20}, 'sched_q': {'2028Q2': 5},
+                         'demol_q': {'2020Q1': 2}},
+          }}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: bdong)
+    U.hub_derive(adv)
+    assert adv['permits']['done']['춘천권'] == {'2024Q1': 100}
+    assert adv['permits']['done']['원주권'] == {'2024Q1': 200}
+    assert adv['permits']['done']['강릉권'] == {'2024Q1': 350}   # 강릉+동해+속초 합계
+    assert adv['permits']['sched']['춘천권'] == {'2028Q2': 50}
+    assert adv['permits']['sched']['강릉권'] == {'2028Q2': 82}
+    assert adv['permits']['demol']['춘천권'] == {'2020Q1': 10}
+    assert adv['permits']['demol']['원주권'] == {'2020Q1': 20}
+    assert adv['permits']['demol']['강릉권'] == {'2020Q1': 35}
+
+
+def test_hub_derive_gangneung_zone_incomplete_when_donghae_sokcho_not_scanned(monkeypatch):
+    # 강릉시(51150)만 scanned고 동해/속초(51170/51210)가 아직이면, 강릉권 전체가
+    # 미완결로 방출되면 안 된다(부분합이 전체인 척하면 안 됨 — 완결성 게이트).
+    adv = {'permits': {}}
+    bdong = {
+        '51150': ('강원특별자치도', '강릉시'),
+        '51170': ('강원특별자치도', '동해시'),
+        '51210': ('강원특별자치도', '속초시'),
+    }
+    hp = {'meta': {'activate': True, 'scanned': ['51150'], 'unresolved_legacy': []},
+          'sgg': {'51150': {'name': '강릉시', 'done_q': {'2024Q1': 300}, 'sched_q': {'2028Q2': 70}}}}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: bdong)
+    U.hub_derive(adv)
+    assert '강릉권' not in adv['permits'].get('done', {})
+    assert '강릉권' not in adv['permits'].get('sched', {})
+
+
 def test_hub_derive_units_excludes_incomplete_zone(monkeypatch):
     # done_q/sched_q와 동일한 완결성 게이트 — scanned에 없는 시군구가 섞이면
     # 그 존은 units도 전혀 방출되면 안 된다(부분 리스트가 전체인 척하면 안 됨).
