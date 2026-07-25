@@ -135,7 +135,7 @@
   <div class="home-foot">
 <nav class="foot-links" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a><a href="/burini-test/">부린이 테스트</a><a href="/faq/">부동산 FAQ</a><a href="/cycle/">아파트 사이클</a></nav>
     만든이: shpark1132@gmail.com
-    <div class="zone-links" style="margin-bottom:10px"><a href="/zone/" style="color:inherit">전국 생활권 공급 순위 37곳</a> · <a href="/cycle/" style="color:inherit">사이클 리포트</a></div>
+    <div class="zone-links" style="margin-bottom:10px"><a href="/zone/" style="color:inherit">전국 생활권 공급 순위</a> · <a href="/cycle/" style="color:inherit">사이클 리포트</a></div>
     <div class="legal-disc"><a href="/privacy/" style="color:inherit">개인정보처리방침</a> · <b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div></div>
 </div>
 
@@ -403,7 +403,7 @@ const LEADTIME={"lags": [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
 
 const FONT="'Pretendard Variable','Pretendard',-apple-system,'Malgun Gothic',sans-serif";
 const INK="#131e24",INK2="#4c5f66",GRID="#dde4e1",MUTED="#5e6f74";
-const MAEMAE="#c0392b",JEONSE="#6c4ab6",STOCK="#1f8a70",FLOW="#d99a00",GOLD="#b8862f";
+const MAEMAE="#c0392b",JEONSE="#6c4ab6",STOCK="#1f8a70",FLOW="#d99a00";
 Chart.defaults.font.family=FONT;Chart.defaults.font.size=12;Chart.defaults.color=INK2;
 Chart.defaults.plugins.legend.display=false;
 /* Chart.js는 생성 시점에 텍스트를 한 번 래스터화하고 폰트 로드로 다시 그리지 않는다.
@@ -649,7 +649,7 @@ function drawStat(){
     `※ ${D.source}. ${D.note?D.note+'. ':''}가공 없는 원자료다.`;
 }
 function fmtN(v,dec){return (v==null||isNaN(v))?'-':Number(v).toLocaleString('ko-KR',{maximumFractionDigits:dec==null?2:dec});}
-/* PC 표 모드: 전 지역(광역시도) 매트릭스 — 심화통계 인허가 표와 같은 형식 */
+/* PC 표 모드: 전 지역(광역시도) 매트릭스 — 투자지표 인허가 표와 같은 형식 */
 const MATRIX_REGIONS=['전국','수도권','지방','지방권','서울','경기','인천','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];
 function buildMatrix(D,idx,parsed){
   const box=document.getElementById('stat-matrix');
@@ -1404,7 +1404,7 @@ function toast(msg){
 }
 
 
-/* ============ 심화통계 ============ */
+/* ============ 투자지표(구 심화통계) ============ */
 let advRendered=false, statsMode='market';
 const SMODES=['market','basic','adv','more'];
 function setStatsMode(m){
@@ -1792,7 +1792,7 @@ function drawTrendChart(k){
 }
 function renderWeekSec(){ renderTrendTables('week'); drawTrendChart('week'); drawTrendMap('week'); }
 function renderMonthSec(){ renderTrendTables('month'); drawTrendChart('month'); drawTrendMap('month'); }
-/* --- 심화통계 차트 --- */
+/* --- 투자지표 차트 --- */
 function drawPermitChart(){
   const P=ADV.permits, regs=P.regions;
   const reg=advSel('adv-permit-reg',regs), ri=regs.indexOf(reg), ref=P.ref[reg];
@@ -1849,7 +1849,7 @@ function drawOccChart(){
 }
 function renderPermitSec(){ renderAdvPermits(); drawPermitChart(); }
 function renderOccSec(){ renderAdvOcc(); drawOccChart(); }
-/* --- 그래프/표 토글 & 심화 탭 --- */
+/* --- 그래프/표 토글 & 투자지표 탭 --- */
 function gtSet(sec,v){
   const el=document.getElementById('sec-'+sec);
   el.classList.toggle('gm-g',v==='g');
