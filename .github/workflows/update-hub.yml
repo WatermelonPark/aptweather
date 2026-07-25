@@ -41,12 +41,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: '수집 모드 (full=전국 첫 전량 시딩, ~11~14시간 · incr=증분, 기본)'
+        description: '수집 모드 (full=준공 전량 시딩 · demol=멸실 전량 시딩(재개가능, scanned_demol 별도) · incr=증분, 기본)'
         type: choice
         default: incr
         options:
           - incr
           - full
+          - demol
 
 permissions:
   contents: write
@@ -73,7 +74,10 @@ jobs:
           if [ -z "$DATA_GO_KR_KEY" ]; then
             echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
           fi
-          if [ "${{ inputs.mode }}" = "full" ]; then
+          if [ "${{ inputs.mode }}" = "demol" ]; then
+            echo "멸실 전량 시딩(RESUMABLE, scanned_demol 별도) — 준공과 동일 인프라, 340분 STEP 타임아웃+커밋 if:always로 재개. mode=demol로 2~3회 재트리거하면 전량 완료. 준공(scanned)은 안 건드림."
+            python tools/fetch_hub_permits.py --demol --full
+          elif [ "${{ inputs.mode }}" = "full" ]; then
             echo "전량 시딩 모드(RESUMABLE) — 약 11~14시간/12,000호출, 6시간 캡 초과라 이 실행은 340분 STEP 타임아웃에서 끊긴다. collector가 그룹마다 hub_permits.json을 save()하고, 끊겨도 아래 커밋 스텝(if:always)이 그 진행분을 push하므로 meta['scanned']가 origin에 남는다. mode=full로 2~3회 재트리거하면 이어서 전량 완료."
             python tools/fetch_hub_permits.py --full
           else
