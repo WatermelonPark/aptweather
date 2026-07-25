@@ -47,3 +47,16 @@ def apt_records(items):
         except (TypeError, ValueError):
             return False
     return dedupe([it for it in items if ok(it)])
+
+def demol_records(items):
+    """철거멸실관리대장(ArchPmsHubService/getApDemolExtngMgmRgstInfo) 원시
+    item -> 공동주택·세대>0·PK dedupe. 준공(apt_records)과 필드명이 다르다
+    (purpsCdNm/totHhldCnt/mgmHsrgstPk 대신 mainPurpsCdNm/hhldCnt/mgmPmsrgstPk)."""
+    def ok(it):
+        if (it.get('mainPurpsCdNm') or '').strip() != '공동주택':
+            return False
+        try:
+            return int(float(it.get('hhldCnt') or 0)) > 0
+        except (TypeError, ValueError):
+            return False
+    return dedupe([it for it in items if ok(it)], key='mgmPmsrgstPk')

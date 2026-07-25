@@ -1,6 +1,7 @@
 import sys, os, io, json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import fetch_hub_permits as F
+import hub_common as H
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +86,7 @@ def test_fetch_page_retries_on_error_and_logs(monkeypatch, capsys):
                '<returnReasonCode>30</returnReasonCode>'
                '</cmmMsgHeader></OpenAPI_ServiceResponse>')
 
-    def fake_curl_get(sigungu, bjdong, page):
+    def fake_curl_get(sigungu, bjdong, page, endpoint=F.EP):
         calls['n'] += 1
         return err_xml
 
@@ -165,6 +166,191 @@ def test_aggregate_caps_units_at_top_40_by_household():
     assert len(units) == F.UNITS_CAP
     assert units[0][1] == 149   # 세대 최댓값(100+49)이 먼저
     assert all(units[i][1] >= units[i + 1][1] for i in range(len(units) - 1))
+
+
+# ---------------------------------------------------------------------------
+# --demol (멸실/철거멸실관리대장): 준공과 필드명이 다른 별도 집계 경로.
+# mainPurpsCdNm(주용도)/hhldCnt(세대수)/mgmPmsrgstPk(PK) — apt_records의
+# purpsCdNm/totHhldCnt/mgmHsrgstPk와 완전히 다른 이름이므로 hub_common에
+# demol_records()를 따로 두었다. 분기화는 demolEndDay -> demolExtngDay ->
+# demolStrtDay 순 fallback(hub_common.to_quarter 재사용).
+# ---------------------------------------------------------------------------
+
+def test_demol_records_filters_gongdong_and_positive_hhldcnt():
+    items = [
+        {'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '30'},
+        {'mgmPmsrgstPk': 'B', 'mainPurpsCdNm': '단독주택', 'hhldCnt': '1'},   # 유형 제외
+        {'mgmPmsrgstPk': 'C', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '0'},   # 0세대 제외
+    ]
+    out = H.demol_records(items)
+    assert [r['mgmPmsrgstPk'] for r in out] == ['A']
+
+
+def test_demol_records_dedupes_by_mgmpmsrgstpk():
+    items = [
+        {'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '30'},
+        {'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '30'},  # 중복 PK
+    ]
+    out = H.demol_records(items)
+    assert len(out) == 1
+
+
+def test_aggregate_demol_buckets_by_demol_end_day():
+    items = [{'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '100',
+              'demolEndDay': '20240315', 'demolExtngDay': '20240301', 'demolStrtDay': '20240101'}]
+    demol_q = F._aggregate_demol(items)
+    assert demol_q == {'2024Q1': 100}   # demolEndDay 우선
+
+
+def test_aggregate_demol_falls_back_to_extng_day_then_strt_day():
+    items_extng = [{'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '50',
+                     'demolEndDay': '', 'demolExtngDay': '20230610', 'demolStrtDay': '20230101'}]
+    assert F._aggregate_demol(items_extng) == {'2023Q2': 50}   # demolEndDay 없음 -> demolExtngDay
+
+    items_strt = [{'mgmPmsrgstPk': 'B', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '20',
+                   'demolEndDay': '', 'demolExtngDay': '', 'demolStrtDay': '20220905'}]
+    assert F._aggregate_demol(items_strt) == {'2022Q3': 20}   # 둘 다 없음 -> demolStrtDay
+
+
+def test_aggregate_demol_excludes_non_apt_and_dedupes():
+    items = [
+        {'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '100', 'demolEndDay': '20240315'},
+        {'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '100', 'demolEndDay': '20240315'},  # 중복
+        {'mgmPmsrgstPk': 'B', 'mainPurpsCdNm': '단독주택', 'hhldCnt': '5', 'demolEndDay': '20240315'},     # 유형 제외
+    ]
+    demol_q = F._aggregate_demol(items)
+    assert demol_q == {'2024Q1': 100}
+
+
+def test_aggregate_demol_sums_multiple_quarters():
+    items = [
+        {'mgmPmsrgstPk': 'A', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '100', 'demolEndDay': '20240315'},
+        {'mgmPmsrgstPk': 'B', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '40', 'demolEndDay': '20240320'},
+        {'mgmPmsrgstPk': 'C', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '10', 'demolEndDay': '20230715'},
+    ]
+    demol_q = F._aggregate_demol(items)
+    assert demol_q == {'2024Q1': 140, '2023Q3': 10}
+
+
+def test_fetch_group_demol_uses_demol_endpoint_and_aggregates(monkeypatch):
+    group = {'name': '부산중구', 'sido': '부산', 'members': ['26110'],
+              'bjdong': {'26110': ['10100']}, 'legacy': None}
+    seen_endpoints = []
+
+    def fake_fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=F.EP):
+        seen_endpoints.append(endpoint)
+        return [{'mgmPmsrgstPk': 'X', 'mainPurpsCdNm': '공동주택', 'hhldCnt': '80',
+                  'demolEndDay': '20240315'}], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
+    demol_q, productive, had_unresolved_error = F.fetch_group_demol(group)
+    assert seen_endpoints == [F.EP_DEMOL]   # 준공 EP가 아니라 멸실 EP로 호출됨
+    assert demol_q == {'2024Q1': 80}
+    assert productive == ['2611010100']
+    assert had_unresolved_error is False
+
+
+def test_fetch_group_demol_propagates_had_unresolved_error(monkeypatch):
+    group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+              'bjdong': {'41370': ['11300', '11400']}, 'legacy': None}
+
+    def fake_fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=F.EP):
+        if bjdong == '11400':
+            return [], True
+        return [], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
+    demol_q, productive, had_unresolved_error = F.fetch_group_demol(group)
+    assert had_unresolved_error is True
+
+
+def test_run_demol_writes_demol_q_without_touching_permit_scanned(tmp_path, monkeypatch):
+    # --demol이 별도 meta['scanned_demol']을 쓰고, 준공 meta['scanned']/
+    # done_q/sched_q/units는 절대 건드리지 않아야 한다(Task 지시 핵심 제약).
+    fake_groups = {
+        '26110': {'name': '중구', 'sido': '부산', 'members': ['26110'],
+                   'bjdong': {'26110': ['10100']}, 'legacy': None},
+    }
+    monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
+    monkeypatch.setattr(F, 'KEY', 'dummy-key')
+    out_path = tmp_path / 'hub_permits.json'
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+    seeded = {
+        'meta': {'fetched': '2026-07-01', 'mode': 'full', 'unresolved_legacy': [], 'scanned': ['26110']},
+        'sgg': {'26110': {'name': '중구', 'done_q': {'2020Q1': 40}, 'sched_q': {}, 'units': []}},
+        'productive_bjdong': ['2611010100'],
+    }
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded, ensure_ascii=False))
+
+    def fetch_group_demol_stub(group, only_bjdong=None):
+        return {'2024Q1': 60}, ['2611010100'], False
+
+    monkeypatch.setattr(F, 'fetch_group_demol', fetch_group_demol_stub)
+    F.run_demol(mode_full=True, only_codes=None, reseed=False)
+
+    result = json.load(io.open(str(out_path), encoding='utf-8'))
+    # 멸실만 추가됨
+    assert result['sgg']['26110']['demol_q'] == {'2024Q1': 60}
+    assert result['meta']['scanned_demol'] == ['26110']
+    # 준공 쪽은 완전히 그대로
+    assert result['sgg']['26110']['done_q'] == {'2020Q1': 40}
+    assert result['meta']['scanned'] == ['26110']
+    assert result['productive_bjdong'] == ['2611010100']
+
+
+def test_run_demol_does_not_clobber_prior_demol_q_on_unresolved_error(tmp_path, monkeypatch):
+    fake_groups = {
+        '26110': {'name': '중구', 'sido': '부산', 'members': ['26110'],
+                   'bjdong': {'26110': ['10100']}, 'legacy': None},
+    }
+    monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
+    monkeypatch.setattr(F, 'KEY', 'dummy-key')
+    out_path = tmp_path / 'hub_permits.json'
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+    seeded = {
+        'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': [], 'scanned_demol': ['26110']},
+        'sgg': {'26110': {'name': '중구', 'demol_q': {'2024Q1': 999}}},
+        'productive_bjdong': [], 'productive_bjdong_demol': ['2611010100'],
+    }
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded, ensure_ascii=False))
+
+    def fetch_group_demol_stub(group, only_bjdong=None):
+        return {}, [], True   # 지속 장애
+
+    monkeypatch.setattr(F, 'fetch_group_demol', fetch_group_demol_stub)
+    F.run_demol(mode_full=True, only_codes=None, reseed=False)
+
+    result = json.load(io.open(str(out_path), encoding='utf-8'))
+    assert result['sgg']['26110']['demol_q'] == {'2024Q1': 999}   # 보존됨
+
+
+def test_run_permit_scan_preserves_prior_demol_q(tmp_path, monkeypatch):
+    # 반대 방향: --demol이 먼저 demol_q를 써놓은 뒤 준공(run())이 그 그룹을
+    # 재스캔해도 demol_q가 지워지면 안 된다(두 수집기 상호 clobber 방지).
+    fake_groups = {
+        '26110': {'name': '중구', 'sido': '부산', 'members': ['26110'],
+                   'bjdong': {'26110': ['10100']}, 'legacy': None},
+    }
+    monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
+    monkeypatch.setattr(F, 'KEY', 'dummy-key')
+    out_path = tmp_path / 'hub_permits.json'
+    monkeypatch.setattr(F, 'OUT_PATH', str(out_path))
+    seeded = {
+        'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': [], 'scanned_demol': ['26110']},
+        'sgg': {'26110': {'name': '중구', 'demol_q': {'2024Q1': 60}}},
+        'productive_bjdong': ['2611010100'], 'productive_bjdong_demol': ['2611010100'],
+    }
+    io.open(str(out_path), 'w', encoding='utf-8').write(json.dumps(seeded, ensure_ascii=False))
+
+    def fetch_group_stub(group, only_bjdong=None):
+        return {'2020Q1': 40}, {}, [], ['2611010100'], False
+
+    monkeypatch.setattr(F, 'fetch_group', fetch_group_stub)
+    F.run(mode_full=True, only_codes=None, list_targets_only=False)
+
+    result = json.load(io.open(str(out_path), encoding='utf-8'))
+    assert result['sgg']['26110']['done_q'] == {'2020Q1': 40}
+    assert result['sgg']['26110']['demol_q'] == {'2024Q1': 60}   # 준공 재스캔에도 보존됨
 
 
 # ---------------------------------------------------------------------------
@@ -343,14 +529,14 @@ def test_run_default_mode_does_not_stamp_false_zero_on_never_scanned_group(tmp_p
 def test_fetch_bjdong_all_pages_reports_had_error_on_retry_exhaustion(monkeypatch):
     # fetch_page가 재시도를 다 쓰고도 'error'를 반환하면(=fetch_page가 이미
     # ERROR를 찍은 상태) had_error=True로 전달돼야 한다.
-    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page: ('', 'error'))
+    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page, endpoint=F.EP: ('', 'error'))
     items, had_error = F.fetch_bjdong_all_pages('41370', '11300')
     assert items == []
     assert had_error is True
 
 
 def test_fetch_bjdong_all_pages_no_error_on_clean_no_data(monkeypatch):
-    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page: ('', 'no_data_xml'))
+    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page, endpoint=F.EP: ('', 'no_data_xml'))
     items, had_error = F.fetch_bjdong_all_pages('41370', '11300')
     assert items == []
     assert had_error is False

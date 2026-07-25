@@ -25,6 +25,16 @@
   python tools/fetch_hub_permits.py --full                  # 전국 첫 전량(약 13시간, 로컬에서 돌리지 말 것)
   python tools/fetch_hub_permits.py                         # 증분(productive_bjdong만)
 
+  python tools/fetch_hub_permits.py --demol --full --only 26110,41370  # 멸실 표본 실호출
+  python tools/fetch_hub_permits.py --demol --full           # 멸실 전량(준공과 별도 meta['scanned_demol'])
+
+멸실(--demol, 순공급=준공−멸실 보정용): ArchPmsHubService/getApDemolExtngMgmRgstInfo
+(철거멸실관리대장)를 같은 대상 시군구/법정동에 대해 순회해 sgg[key]['demol_q']를
+채운다. 준공(HsPmsHubService)과는 완전히 다른 서비스/필드명(mainPurpsCdNm·hhldCnt·
+demolEndDay 등)이라 별도 집계 경로(_aggregate_demol)를 쓰고, resume 추적도
+meta['scanned_demol']/productive_bjdong_demol로 준공(meta['scanned'])과 독립시켜
+--demol 실행이 이미 ~90% 끝난 준공 시딩을 절대 재스캔·오염시키지 않는다.
+
 RESUMABLE --full (Fix pass): GitHub 호스티드 러너는 6시간/잡 하드 캡이 있어
 전국 첫 전량(~11~14시간)이 한 번의 워크플로 실행으로 안 끝난다. `--full`은
 meta['scanned']에 이미 깨끗하게 스캔 완료된 그룹은 건너뛰므로, 워크플로가
@@ -44,6 +54,10 @@ OUT_PATH = os.path.join(DATA, 'hub_permits.json')
 
 KEY = os.environ.get('DATA_GO_KR_KEY', '')
 EP = 'https://apis.data.go.kr/1613000/HsPmsHubService/getHpBasisOulnInfo'
+# 멸실(철거멸실관리대장) — 준공과 다른 서비스/엔드포인트지만 파라미터 형태
+# (serviceKey·sigunguCd·bjdongCd·numOfRows·pageNo)와 페이싱·재시도·에러분류는
+# 동일해 같은 fetch_page/fetch_bjdong_all_pages를 endpoint 인자만 바꿔 재사용한다.
+EP_DEMOL = 'https://apis.data.go.kr/1613000/ArchPmsHubService/getApDemolExtngMgmRgstInfo'
 PACE = 2.5          # 초당 페이싱(호출 사이 최소 대기)
 NUM_ROWS = 1000
 MAX_RETRY = 4
@@ -217,8 +231,8 @@ def _extract_error_info(body):
             msg.group(1).strip() if msg else b[:120].strip())
 
 
-def _curl_get(sigungu, bjdong, page):
-    cmd = ['curl', '-sS', '-G', EP,
+def _curl_get(sigungu, bjdong, page, endpoint=EP):
+    cmd = ['curl', '-sS', '-G', endpoint,
            '--data-urlencode', 'serviceKey=%s' % KEY,
            '--data-urlencode', 'sigunguCd=%s' % sigungu,
            '--data-urlencode', 'bjdongCd=%s' % bjdong,
@@ -235,7 +249,7 @@ def _curl_get(sigungu, bjdong, page):
         return ''
 
 
-def fetch_page(sigungu, bjdong, page):
+def fetch_page(sigungu, bjdong, page, endpoint=EP):
     """재시도 포함 1페이지 호출. 반환 (body, cls).
 
     'error'(Finding 1: 인증/쿼터 오류 등 <item> 없는 오류 XML)는 'empty'와
@@ -243,10 +257,14 @@ def fetch_page(sigungu, bjdong, page):
     진짜 0건과 구별 없이 그대로 통과해버린다. 매 시도마다 WARN을 찍어
     무인 클라우드 실행 로그에서 바로 보이게 하고, 재시도를 다 써도 풀리지
     않으면 ERROR로 명확히 남긴다(어느 시군구/법정동이 실패했는지 추적 가능).
+
+    endpoint 인자(기본 EP=준공)로 멸실(EP_DEMOL) 등 다른 서비스도 동일
+    페이싱/재시도/에러분류 경로를 재사용한다 — --demol을 안 주면 항상 EP라
+    준공 경로는 byte-identical.
     """
     body, cls = '', 'empty'
     for attempt in range(MAX_RETRY):
-        body = _curl_get(sigungu, bjdong, page)
+        body = _curl_get(sigungu, bjdong, page, endpoint=endpoint)
         cls = classify_response(body)
         if cls == 'error':
             code, msg = _extract_error_info(body)
@@ -271,7 +289,7 @@ def parse_items(xml):
     return items
 
 
-def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
+def fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=EP):
     """법정동 하나의 전 페이지를 모아 (아이템 리스트, had_error) 반환.
 
     Fix pass 2: had_error=True는 이 법정동의 마지막 페이지 호출이 재시도
@@ -286,7 +304,7 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None):
     page = 1
     had_error = False
     while True:
-        body, cls = fetch_page(sigungu, bjdong, page)
+        body, cls = fetch_page(sigungu, bjdong, page, endpoint=endpoint)
         if cls == 'data':
             page_items = parse_items(body)
             items.extend(page_items)
@@ -353,6 +371,30 @@ def _aggregate(items):
     return dict(done_q), dict(sched_q), units[:UNITS_CAP]
 
 
+def _aggregate_demol(items):
+    """demol_records(공동주택·세대>0·mgmPmsrgstPk dedupe) -> 분기별 멸실 세대수.
+
+    순공급 = 준공 − 멸실 보정(기준표 근거)을 위해 "시장에서 실제로 빠진 시점"을
+    기준으로 분기화한다: demolEndDay(철거완료일)을 최우선으로 쓰고, 없으면
+    demolExtngDay(멸실일), 그마저 없으면 demolStrtDay(철거시작일) 순으로
+    fallback한다. 준공의 useInsptDay/useInsptSchedDay와 필드명이 완전히
+    달라(mainPurpsCdNm/hhldCnt/철거일 3종) _aggregate()와 별개 경로로 둔다."""
+    demol_q = collections.defaultdict(int)
+    for r in H.demol_records(items):
+        try:
+            n = int(float(r.get('hhldCnt') or 0))
+        except (TypeError, ValueError):
+            continue
+        if n <= 0:
+            continue
+        day = r.get('demolEndDay') or r.get('demolExtngDay') or r.get('demolStrtDay')
+        q = H.to_quarter(day)
+        if q:
+            demol_q[q] += n
+        # 철거일 3종 모두 없으면 미정 — 미반영(준공의 "둘 다 없으면 미반영"과 동일 정책)
+    return dict(demol_q)
+
+
 def fetch_group(group, only_bjdong=None):
     """그룹(시/구 분할 포함) 호출해 done_q/sched_q/units 집계 + productive bjdong 목록.
 
@@ -386,6 +428,33 @@ def fetch_group(group, only_bjdong=None):
     return done_q, sched_q, units, productive, had_unresolved_error
 
 
+def fetch_group_demol(group, only_bjdong=None):
+    """fetch_group의 멸실 버전 — 같은 그룹/법정동 순회·페이싱·에러분류
+    기계를 EP_DEMOL과 _aggregate_demol로 재사용한다. 준공용 fetch_group은
+    건드리지 않고 별도 함수로 둬 준공 경로가 byte-identical하게 남는다.
+
+    반환 튜플 순서: (demol_q, productive, had_unresolved_error). 준공과
+    달리 sched_q/units 개념이 없어(철거는 '예정'을 점수화 대상으로 안 씀)
+    3-튜플로 단순화했다.
+    """
+    all_items = []
+    productive = []
+    had_unresolved_error = False
+    for member_cd, bjdongs in group['bjdong'].items():
+        for bjdong in bjdongs:
+            full = member_cd + bjdong
+            if only_bjdong is not None and full not in only_bjdong:
+                continue
+            items, had_error = fetch_bjdong_all_pages(member_cd, bjdong, endpoint=EP_DEMOL)
+            if had_error:
+                had_unresolved_error = True
+            if H.demol_records(items):
+                productive.append(full)
+            all_items.extend(items)
+    demol_q = _aggregate_demol(all_items)
+    return demol_q, productive, had_unresolved_error
+
+
 def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
     """기본(증분) 모드에서 이 그룹을 갱신해도 되는지 판정(순수, 네트워크 없음).
 
@@ -416,9 +485,15 @@ def load_existing():
         # meta['scanned']가 아예 없다 — 없으면 빈 목록으로 취급해 로드가
         # 죽지 않게 한다(누락 = 아직 아무것도 '깨끗하게 스캔됨'으로 기록 안 됨).
         d.setdefault('meta', {}).setdefault('scanned', [])
+        # 멸실(demol) 추가 시점 이전 파일에는 아래 키가 없다 — 준공 스캔
+        # 진행상황(scanned/productive_bjdong)과 완전히 독립된 별도 자원이라
+        # 없으면 빈 목록으로 채워 로드가 죽지 않게 하고, 준공 쪽 값은 절대
+        # 건드리지 않는다.
+        d['meta'].setdefault('scanned_demol', [])
+        d.setdefault('productive_bjdong_demol', [])
         return d
-    return {'meta': {'fetched': '', 'mode': '', 'unresolved_legacy': [], 'scanned': []},
-            'sgg': {}, 'productive_bjdong': []}
+    return {'meta': {'fetched': '', 'mode': '', 'unresolved_legacy': [], 'scanned': [], 'scanned_demol': []},
+            'sgg': {}, 'productive_bjdong': [], 'productive_bjdong_demol': []}
 
 
 def save(out):
@@ -523,7 +598,16 @@ def run(mode_full, only_codes, list_targets_only, reseed=False):
                 print('[SKIP error] %s(%s): 재시도 소진된 오류 있음 — 기존 값 보존, 다음 실행에서 재시도'
                       % (key, group['name']))
             else:
-                out['sgg'][key] = {'name': group['name'], 'done_q': done_q, 'sched_q': sched_q, 'units': units}
+                new_entry = {'name': group['name'], 'done_q': done_q, 'sched_q': sched_q, 'units': units}
+                # 멸실(--demol)이 먼저 이 시군구에 demol_q를 써놨을 수 있다 —
+                # 준공 재스캔이 dict를 통째로 새로 만들며 그 값을 조용히
+                # 지우면 두 수집기가 서로의 결과를 clobber한다. demol_q가
+                # 있으면 그대로 이어붙인다(준공 쪽 출력 필드/값 자체는 이전과
+                # byte-identical, demol_q가 없던 기존 상태에선 동작 변화 없음).
+                prior_demol_q = out['sgg'].get(key, {}).get('demol_q')
+                if prior_demol_q is not None:
+                    new_entry['demol_q'] = prior_demol_q
+                out['sgg'][key] = new_entry
                 cached_productive.update(productive)
                 scanned.add(key)   # 깨끗하게 스캔 완료 — never-scanned/scanned-zero 구분용 기록
         out['productive_bjdong'] = sorted(cached_productive)
@@ -536,6 +620,87 @@ def run(mode_full, only_codes, list_targets_only, reseed=False):
     print('완료: %d개 그룹, 총 %ds' % (n_done, int(time.time() - t0)))
 
 
+def run_demol(mode_full, only_codes, reseed=False):
+    """멸실(--demol) 수집 실행. run()과 그룹 순회·resume·pacing 뼈대는 동일하되:
+
+    - meta['scanned']/productive_bjdong(준공)은 절대 건드리지 않는다. 대신
+      완전히 독립된 meta['scanned_demol']/productive_bjdong_demol을 쓴다 —
+      준공 시딩이 ~90% 끝난 상태라 재스캔/오염되면 안 되기 때문(Task 지시).
+    - out['sgg'][key]에 demol_q만 추가/갱신한다(name은 유지, done_q/sched_q/
+      units는 절대 안 건드림 — 그 그룹이 아직 준공 스캔 전이면 name만 있는
+      부분 항목이 생기고, 이후 준공이 스캔되면 위 new_entry의 prior_demol_q
+      보존 로직이 합쳐준다).
+    - 대상 시군구/법정동 도출(build_targets)은 준공과 완전히 동일한 규칙을
+      그대로 재사용한다(Task 지시: "대상 집합은 준공과 동일").
+    """
+    groups, unresolved_names = build_targets()
+
+    if not KEY:
+        print('ERROR: DATA_GO_KR_KEY 환경변수가 비었다. 실호출 불가.')
+        sys.exit(2)
+
+    out = load_existing()
+    cached_productive_demol = set(out.get('productive_bjdong_demol', []))
+    scanned_demol = set(out['meta'].get('scanned_demol', []))
+
+    target_keys = list(groups.keys())
+    if only_codes:
+        wanted = set(only_codes)
+        missing = wanted - set(target_keys)
+        if missing:
+            print('WARN: --only 코드가 대상 집합에 없음:', missing)
+        target_keys = [k for k in target_keys if k in wanted]
+
+    if not mode_full and not cached_productive_demol:
+        print('WARN: productive_bjdong_demol 캐시가 비어 있다. --full로 최초 1회 전량 수집이 필요하다.')
+
+    t0 = time.time()
+    n_done = 0
+    for key in target_keys:
+        group = groups[key]
+        n_done += 1
+        if group['legacy'] and not group['legacy']['enumerable']:
+            print('[SKIP legacy][demol] %s(%s): code_bdong.json에 법정동 없음 — unresolved_legacy는 준공 쪽에서 관리'
+                  % (key, group['name']))
+        elif mode_full and not reseed and key in scanned_demol:
+            print('[RESUME skip][demol] %s(%s) 이미 스캔 완료' % (key, group['name']))
+        elif not should_refresh_group(key, group['bjdong'], cached_productive_demol, mode_full):
+            if key in scanned_demol:
+                print('[SKIP scanned-zero][demol] %s(%s): 이전에 깨끗하게 스캔 완료 — 생산적 법정동 없음'
+                      % (key, group['name']))
+            else:
+                print('[SKIP not-yet-scanned][demol] %s(%s): productive_bjdong_demol 캐시에 자기 법정동 없음 — --full/--only로 먼저 수집 필요'
+                      % (key, group['name']))
+        else:
+            elapsed = time.time() - t0
+            print('[%d/%d][demol] %s(%s) %d개 법정동 수집 시작 (경과 %ds)'
+                  % (n_done, len(target_keys), key, group['name'],
+                     sum(len(b) for b in group['bjdong'].values()), int(elapsed)))
+            demol_q, productive, had_unresolved_error = fetch_group_demol(
+                group, only_bjdong=None if mode_full else cached_productive_demol)
+            if had_unresolved_error:
+                # 준공 쪽과 동일한 clobber 방지 정책: 지속 장애로 부분합만
+                # 나온 회차는 기존 demol_q를 덮어쓰지 않는다.
+                print('[SKIP error][demol] %s(%s): 재시도 소진된 오류 있음 — 기존 값 보존, 다음 실행에서 재시도'
+                      % (key, group['name']))
+            else:
+                # 준공(done_q/sched_q/units)이 있으면 그대로 보존하고 demol_q만
+                # 추가/갱신한다. 아직 준공 스캔 전인 그룹은 name만 있는 부분
+                # 항목이 생긴다 — 준공이 나중에 스캔되면 run()의 prior_demol_q
+                # 보존 로직이 합쳐 완전한 항목이 된다.
+                sgg_entry = out['sgg'].setdefault(key, {})
+                sgg_entry['name'] = group['name']
+                sgg_entry['demol_q'] = demol_q
+                cached_productive_demol.update(productive)
+                scanned_demol.add(key)
+        out['productive_bjdong_demol'] = sorted(cached_productive_demol)
+        out['meta']['scanned_demol'] = sorted(scanned_demol)
+        out['meta']['fetched_demol'] = str(datetime.date.today())
+        save(out)   # 체크포인트: 그룹 하나 끝날 때마다 저장(스킵 포함)
+
+    print('완료(멸실): %d개 그룹, 총 %ds' % (n_done, int(time.time() - t0)))
+
+
 def main():
     ap = argparse.ArgumentParser(description='건축HUB 시군구 인허가/착공 페이싱 수집기')
     ap.add_argument('--list-targets', action='store_true', help='대상 시군구/법정동만 도출해 개수 출력(호출 없음)')
@@ -546,9 +711,16 @@ def main():
     ap.add_argument('--reseed', action='store_true',
                      help='--full과 함께: meta["scanned"] 무시하고 전량을 처음부터 다시 스캔(의도적 재구축용, 예: 연 1회)')
     ap.add_argument('--only', default='', help='콤마구분 그룹 코드로 제한(표본 검증용, 예: 41370,41190,41130)')
+    ap.add_argument('--demol', action='store_true',
+                     help='멸실(철거) 수집 모드 — ArchPmsHubService 철거멸실관리대장 엔드포인트. '
+                          'meta["scanned_demol"]/productive_bjdong_demol로 준공(meta["scanned"])과 '
+                          '완전히 독립적으로 추적하므로 준공 시딩 진행상황을 건드리지 않는다.')
     args = ap.parse_args()
     only_codes = [c.strip() for c in args.only.split(',') if c.strip()] if args.only else None
-    run(args.full, only_codes, args.list_targets, reseed=args.reseed)
+    if args.demol and not args.list_targets:
+        run_demol(args.full, only_codes, reseed=args.reseed)
+    else:
+        run(args.full, only_codes, args.list_targets, reseed=args.reseed)
 
 
 if __name__ == '__main__':
