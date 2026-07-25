@@ -73,9 +73,18 @@
   section{padding:34px 0;border-top:1px solid var(--line)}
   h2{font-size:21px;font-weight:800;letter-spacing:-.01em;margin-bottom:14px}
   p{font-size:15px;color:var(--ink2);margin-bottom:12px}
-  .feat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+  .feat{display:block;text-decoration:none;position:relative;background:#fff;border:1px solid var(--line);
+    border-radius:14px;padding:18px 44px 18px 20px;margin-bottom:12px}
+  .feat:active{transform:scale(.99);background:#fbfaf7}
   .feat b{display:block;font-size:15px;color:var(--ink);margin-bottom:6px}
   .feat span{font-size:13.5px;color:var(--muted)}
+  .feat::after{content:'›';position:absolute;right:18px;top:50%;transform:translateY(-50%);
+    font-size:22px;font-weight:700;color:var(--muted)}
+  .mapshot{display:block;max-width:400px;margin:26px auto 0;border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(22,32,58,.10)}
+  .mapshot img{display:block;width:100%;height:auto}
+  .mapshot figcaption{font-size:12.5px;color:var(--muted);text-align:center;padding:10px 12px;background:#fff;
+    border-top:1px solid var(--line)}
   .lg{display:flex;gap:14px;justify-content:center;font-size:13.5px;font-weight:700;margin:6px 0 0}
   .lg i{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:5px;vertical-align:-1.5px}
   .links{display:flex;flex-direction:column;gap:10px;margin-top:14px}
@@ -95,13 +104,17 @@
   <a class="cta" href="/#stats-market">🗺️ 이번 주 시세 지도 보기</a>
   <div class="lg"><span><i style="background:#e0564a"></i>빨강 = 상승</span><span><i style="background:#3a7bd5"></i>파랑 = 하락</span></div>
   <div class="meta">회원가입 없음 · 무료 · 진할수록 변동 큼</div>
+  <a class="mapshot" href="/#stats-market" aria-label="이번 주 시세 지도 크게 보기">
+    <img src="/share/weekly-map.png" alt="이번 주 전국 아파트 시세 지도 — 17개 시도 매매·전세 변동률 타일" width="900" height="1130">
+    <figcaption>실제 이번 주 지도입니다 · 눌러서 시군구 상세까지 보기 →</figcaption>
+  </a>
 </div></header>
 
 <section><div class="wrap">
   <h2>지도와 순위표로 본다</h2>
-  <div class="feat"><b>요약 (전국·시도)</b><span>전국·수도권·지방과 17개 시도를 4×5 타일로. 이번 주 전국 흐름을 10초 만에 파악한다.</span></div>
-  <div class="feat"><b>상세 (시군구)</b><span>187개 시군구 타일을 지리 배치 그대로. 수원 영통·안양 동안처럼 구 단위 흐름까지 보인다.</span></div>
-  <div class="feat"><b>상승·하락 TOP 10</b><span>이번 주 가장 많이 오르고 내린 시군구 순위와 전주 대비 순위 변동(▲▼)까지.</span></div>
+  <a class="feat" href="/#stats-market"><b>요약 (전국·시도)</b><span>전국·수도권·지방과 17개 시도를 4×5 타일로. 이번 주 전국 흐름을 10초 만에 파악한다.</span></a>
+  <a class="feat" href="/#stats-market"><b>상세 (시군구)</b><span>187개 시군구 타일을 지리 배치 그대로. 수원 영통·안양 동안처럼 구 단위 흐름까지 보인다.</span></a>
+  <a class="feat" href="/#stats-market"><b>상승·하락 TOP 10</b><span>이번 주 가장 많이 오르고 내린 시군구 순위와 전주 대비 순위 변동(▲▼)까지.</span></a>
   <p>매매↔전세 전환, 지도↔그래프↔표 전환을 지원하고, 주간뿐 아니라 <b>월간 변동률</b>도 같은 방식으로 볼 수 있다.</p>
 </div></section>
 
@@ -113,10 +126,6 @@
     <a href="/cycle/">📑 아파트 사이클 리포트<span>집값은 돌고 돈다 — 데이터로 검증한 6개 고리</span></a>
     <a href="/burini-test/">🐣 부린이 테스트<span>내 부동산 감각 3분 점검, 10문항</span></a>
   </div>
-</div></section>
-
-<section style="border-top:1px solid var(--line);text-align:center"><div class="wrap">
-  <a class="cta" href="/#stats-market">지금 이번 주 지도 확인 →</a>
 </div></section>
 
 <footer><div class="wrap">
