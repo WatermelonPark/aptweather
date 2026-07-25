@@ -45,6 +45,7 @@ def _conf(k):
 
 
 ANCHOR = 2010 * 4  # 2010Q1
+FUT_HORIZON = 16  # 4년(기준표 3년룰 + 준공예정 실측 ~4년); conf가 3~4년차를 낮게 가중
 
 
 def running_shortage(done, sched, refq, cur_q, horizon=20, weight_demand=True):
@@ -77,11 +78,14 @@ def running_shortage(done, sched, refq, cur_q, horizon=20, weight_demand=True):
     return fut - I_now
 
 
-def calc(adv, sts, weight_demand=True):
+def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
     """홈 renderScoreSec(scCalc)와 동일한 산식으로 생활권별 누적 순부족을 계산.
 
-    weight_demand: running_shortage()로 그대로 전달(A안/B안, Issue #4). 기본값 True가
-    라이브 산식(scCalc와 동치) — 여기서 바꾸지 않는 한 운영 동작은 그대로다.
+    weight_demand, horizon: running_shortage()로 그대로 전달(A안/B안, Issue #4).
+    기본값 weight_demand=False(B안) + horizon=FUT_HORIZON(4년)이 라이브 산식(scCalc와
+    동치) — 기준표 「기본의 기본 3」 근거(2026-07-25 확정). 여기서 바꾸지 않는 한 운영
+    동작은 그대로다. verify_rankdiff.py는 이 파라미터를 명시적으로 오버라이드해
+    A(True)/B(False)를 나란히 비교한다.
     """
     LZ, O, P, B = adv['livezone'], adv['occupancy'], adv['permits'], adv.get('bubble') or {}
     J = (sts.get('전세가율') or {}).get('series') or {}
@@ -133,7 +137,7 @@ def calc(adv, sts, weight_demand=True):
         # pre-HUB 산식(dA/dB/dC 가중합)을 그대로 유지 — activate 게이트 전엔 전 존이 이 경로.
         # zdone/zsched는 ZONE(생활권) 단위 실적인데 refq는 REGION(시도) 적정이다 —
         # zone-level 적정으로 맞추려면 share를 곱해야 한다(dA/dB/dC 폴백 경로와 동일 원칙).
-        tot = running_shortage(zdone, zsched, refq * share, cur_q, weight_demand=weight_demand) if inv_path else tot_fallback
+        tot = running_shortage(zdone, zsched, refq * share, cur_q, horizon=horizon, weight_demand=weight_demand) if inv_path else tot_fallback
         flag = None; lo = hi = None
         cv = (B.get('conv') or {}).get(ps)
         jr = last_of(J, ps) or None

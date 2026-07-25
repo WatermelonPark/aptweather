@@ -29,7 +29,9 @@ def _new_rows(adv, sts, weight_demand=True):
     """adv 사본에 hub_derive를 activate=True로 강제 주입해 신모델 rows를 만든다.
 
     weight_demand는 그대로 M.calc()/running_shortage()로 전달된다 — Issue #4의
-    A안(True, 라이브 기본값)/B안(False, 스펙 원문) 둘 다 같은 refq*share 픽스 위에서 계산.
+    A안(True, 수요도 conf 가중)/B안(False, 스펙 원문·2026-07-25부터 라이브 기본값)
+    둘 다 같은 refq*share 픽스 위에서, 그리고 M.calc()의 기본 horizon(=M.FUT_HORIZON,
+    4년)으로 계산한다.
     """
     adv2 = copy.deepcopy(adv)
     hp = copy.deepcopy(U._load_hub_permits())
@@ -46,8 +48,8 @@ def _new_rows(adv, sts, weight_demand=True):
 def main():
     adv, sts = M.load()
     old_rows = M.calc(adv, sts)
-    new_rows_a = _new_rows(adv, sts, weight_demand=True)    # A안: 수요도 conf 가중(라이브 기본값)
-    new_rows_b = _new_rows(adv, sts, weight_demand=False)   # B안: 수요 비가중(스펙 원문)
+    new_rows_a = _new_rows(adv, sts, weight_demand=True)    # A안: 수요도 conf 가중
+    new_rows_b = _new_rows(adv, sts, weight_demand=False)   # B안: 수요 비가중(스펙 원문·라이브 기본값)
 
     old_by_z = {r['z']['z']: r for r in old_rows}
     a_by_z = {r['z']['z']: r for r in new_rows_a}
