@@ -653,6 +653,7 @@ def build_page(r, allrows, prd, today, punits=None):
 <title>%(title)s</title>
 <meta name="description" content="%(desc)s">
 <link rel="canonical" href="%(site)s/zone/%(enc)s/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <meta name="theme-color" content="#16203a">
 <meta property="og:type" content="article">
@@ -808,6 +809,7 @@ gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
 <title>전국 생활권 아파트 공급 순위 %(n)d곳 — 입주예정·인허가로 본 부족·과잉 | 아공맵</title>
 <meta name="description" content="전국 %(n)d개 생활권의 아파트 공급을 적정물량과 비교해 누적 순부족 순으로 정렬했습니다. 공급 절벽부터 공급 과잉까지 한눈에. 기준 %(prd)s.">
 <link rel="canonical" href="%(site)s/zone/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" href="/app_icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#16203a">

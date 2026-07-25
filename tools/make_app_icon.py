@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
-"""앱 아이콘·파비콘·PWA 아이콘 생성 — 아공맵 시그니처 '발산 막대'(공급 과부족).
+"""앱 아이콘·파비콘·PWA 아이콘 생성 — 아공맵 '사이클 모래시계'.
 
-서비스 정체성 그대로를 아이콘화한다: 생활권별 아파트 공급 과부족을 0선(척추)에서
-좌우로 뻗는 막대로. 부족=빨강·오른쪽(#c0392b), 과잉/충분=파랑·왼쪽(#3a7bd5).
-쿨 토큰·플랫 디자인으로 OG 카드와 톤을 맞춘다. (구 병아리 아이콘 생성기는
-tools/make_app_icon_chick.py.bak 로 백업)
+빨강/파랑 막대 그래프 모티프를 모래시계 실루엣으로: 가로 막대를 중앙 0축에
+대칭으로 쌓되 위·아래는 넓고 가운데(목)에서 좁아진다. 위=빨강(과열/상승),
+아래=파랑(침체/하락), 잘록한 목 = 사이클 전환점. '집값은 돌고 돈다'.
+
+**파비콘은 SVG(벡터)가 정본** — 어떤 크기서도 선명. PNG는 PWA/apple-touch
+폴백용으로 같은 도형을 고해상 래스터로 생성. 작은 크기 가독성 위해 막대는
+반쪽당 4개로 굵게.
 
 산출물:
-  app_icon.png           512  파비콘 + apple-touch-icon (차트 크게, iOS가 스퀘어클 마스킹)
+  favicon.svg            벡터 파비콘(정본, index.html이 우선 참조)
+  app_icon.png           512  apple-touch-icon + PNG 폴백
   icons/icon-192.png     192  PWA any
   icons/icon-512.png     512  PWA any
-  icons/maskable-192.png 192  PWA maskable (안전영역: 중앙 원 안에 차트)
+  icons/maskable-192.png 192  PWA maskable
   icons/maskable-512.png 512  PWA maskable
 
 사용: python tools/make_app_icon.py
@@ -20,64 +24,107 @@ from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-PAPER = (244, 246, 245)   # --paper #f4f6f5 (랜딩·OG 카드와 동일 쿨 토큰)
-RED   = (192, 57, 43)     # 부족 #c0392b (오른쪽)
-RED2  = (169, 50, 38)     # 절벽 #a93226 (최심 부족)
-BLUE  = (58, 123, 213)    # 충분/과잉 #3a7bd5 (왼쪽)
-BLUE2 = (26, 82, 118)     # 과잉 심화 #1a5276 (최대 과잉)
-SPINE = (19, 30, 36)      # --ink #131e24 (0선 척추)
+PAPER = (244, 246, 245)   # --paper #f4f6f5
+RED_BASE = (166, 47, 35)  # 위 판쪽 최고조
+RED_NECK = (202, 72, 56)  # 목쪽 선명 빨강
+BLU_NECK = (66, 133, 220) # 목쪽 선명 파랑
+BLU_BASE = (23, 76, 110)  # 아래 판쪽 바닥
+FRAME    = (26, 38, 45)   # 모래시계 위·아래 판
 
-# 0선에서 좌우로 뻗는 막대 — 부호(+오른쪽/부족, -왼쪽/과잉)와 길이(half 대비 비율).
-# 위에서 아래로: 최심 부족 → 균형 근처 → 최대 과잉 (사이트 순위 지도와 같은 방향).
-BARS = [
-    ( 0.98, RED2),
-    ( 0.70, RED),
-    ( 0.42, RED),
-    ( 0.16, RED),
-    (-0.36, BLUE),
-    (-0.66, BLUE),
-    (-0.92, BLUE2),
-]
+N_HALF = 4                # 반쪽당 막대 수(굵게 → 작은 크기서도 또렷)
+NECK   = 0.18             # 목 최소 폭(half 대비)
+BASE   = 1.0             # 판쪽 최대 폭
+WIDTH_RATIO = 0.80        # 최대폭/높이
+CAP_RATIO = 0.052         # 판 두께 / 높이
+GAP_RATIO = 0.20          # 막대 간격 / 막대 높이
+
+
+def _lerp(a, b, t):
+    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def _hex(c):
+    return '#%02x%02x%02x' % c
+
+
+def _bars():
+    """(중심대비 폭비율 half, RGB) 리스트, 위(빨강)→아래(파랑)."""
+    out = []
+    for i in range(N_HALF):                     # 위: 판→목
+        t = i / (N_HALF - 1)
+        out.append((BASE + (NECK - BASE) * t, _lerp(RED_BASE, RED_NECK, t)))
+    for i in range(N_HALF):                     # 아래: 목→판
+        t = i / (N_HALF - 1)
+        out.append((NECK + (BASE - NECK) * t, _lerp(BLU_NECK, BLU_BASE, t)))
+    return out
+
+
+def _geometry(size, fill_ratio):
+    H = size * fill_ratio
+    halfW = size * fill_ratio * WIDTH_RATIO / 2
+    cx = cy = size / 2
+    top, bot = cy - H / 2, cy + H / 2
+    cap = max(2, size * CAP_RATIO * fill_ratio)
+    inner_top, inner_bot = top + cap, bot - cap
+    n = N_HALF * 2
+    bar_h = (inner_bot - inner_top) / (n + (n - 1) * GAP_RATIO)
+    gap = bar_h * GAP_RATIO
+    return dict(cx=cx, halfW=halfW, top=top, bot=bot, cap=cap,
+                inner_top=inner_top, bar_h=bar_h, gap=gap, r=bar_h * 0.4)
 
 
 def draw_icon(size, fill_ratio):
     img = Image.new('RGB', (size, size), PAPER)
     d = ImageDraw.Draw(img)
-
-    A = size * fill_ratio          # 차트가 차지하는 정사각 한 변
-    cx = size / 2                   # 0선(중앙)
-    half = A / 2                    # 막대 최대 길이
-
-    n = len(BARS)
-    bar_h = A / (n + (n - 1) * 0.58)
-    gap = bar_h * 0.58
-    total = n * bar_h + (n - 1) * gap
-    y = (size - total) / 2
-    r = bar_h * 0.42                # 막대 둥근 정도
-
-    # 0선 척추 (막대 아래에 깔려 막대 사이 틈으로 드러난다)
-    sw = max(2, round(size * 0.015))
-    d.rounded_rectangle([cx - sw / 2, y - bar_h * 0.35,
-                         cx + sw / 2, y + total + bar_h * 0.35],
-                        radius=sw / 2, fill=SPINE)
-
-    for frac, col in BARS:
-        length = frac * half
-        x0, x1 = (cx, cx + length) if length >= 0 else (cx + length, cx)
-        d.rounded_rectangle([x0, y, x1, y + bar_h], radius=r, fill=col)
-        y += bar_h + gap
-
+    g = _geometry(size, fill_ratio)
+    cx, halfW, cap = g['cx'], g['halfW'], g['cap']
+    d.rounded_rectangle([cx - halfW, g['top'], cx + halfW, g['top'] + cap],
+                        radius=cap / 2, fill=FRAME)
+    d.rounded_rectangle([cx - halfW, g['bot'] - cap, cx + halfW, g['bot']],
+                        radius=cap / 2, fill=FRAME)
+    y = g['inner_top']
+    for frac, col in _bars():
+        w = max(frac * halfW, g['bar_h'] * 0.55)
+        rr = min(g['r'], w)
+        d.rounded_rectangle([cx - w, y, cx + w, y + g['bar_h']], radius=rr, fill=col)
+        y += g['bar_h'] + g['gap']
     return img
 
 
+def build_svg(size=64, fill_ratio=0.86, rounded_bg=True):
+    g = _geometry(size, fill_ratio)
+    cx, halfW, cap = g['cx'], g['halfW'], g['cap']
+    el = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d">' % (size, size)]
+    if rounded_bg:
+        el.append('<rect width="%d" height="%d" rx="%.1f" fill="%s"/>'
+                  % (size, size, size * 0.16, _hex(PAPER)))
+    def rr(x0, y0, x1, y1, rad, col):
+        el.append('<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f" rx="%.2f" fill="%s"/>'
+                  % (x0, y0, x1 - x0, y1 - y0, rad, _hex(col)))
+    rr(cx - halfW, g['top'], cx + halfW, g['top'] + cap, cap / 2, FRAME)
+    rr(cx - halfW, g['bot'] - cap, cx + halfW, g['bot'], cap / 2, FRAME)
+    y = g['inner_top']
+    for frac, col in _bars():
+        w = max(frac * halfW, g['bar_h'] * 0.55)
+        rad = min(g['r'], w)
+        rr(cx - w, y, cx + w, y + g['bar_h'], rad, col)
+        y += g['bar_h'] + g['gap']
+    el.append('</svg>')
+    return '\n'.join(el)
+
+
 def main():
+    import io
     os.makedirs(os.path.join(ROOT, 'icons'), exist_ok=True)
+    with io.open(os.path.join(ROOT, 'favicon.svg'), 'w', encoding='utf-8', newline='\n') as f:
+        f.write(build_svg())
+    print('wrote favicon.svg')
     jobs = [
-        ('app_icon.png', 512, 0.80),
-        (os.path.join('icons', 'icon-192.png'), 192, 0.76),
-        (os.path.join('icons', 'icon-512.png'), 512, 0.76),
-        (os.path.join('icons', 'maskable-192.png'), 192, 0.60),
-        (os.path.join('icons', 'maskable-512.png'), 512, 0.60),
+        ('app_icon.png', 512, 0.86),
+        (os.path.join('icons', 'icon-192.png'), 192, 0.84),
+        (os.path.join('icons', 'icon-512.png'), 512, 0.84),
+        (os.path.join('icons', 'maskable-192.png'), 192, 0.64),
+        (os.path.join('icons', 'maskable-512.png'), 512, 0.64),
     ]
     for rel, size, ratio in jobs:
         draw_icon(size, ratio).save(os.path.join(ROOT, rel), 'PNG', optimize=True)
