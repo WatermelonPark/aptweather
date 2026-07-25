@@ -1934,9 +1934,9 @@ function scTier(v){
 function _qkey(i){return Math.floor(i/4)+'Q'+(i%4+1);}
 function _conf(k){return Math.max(0,1-((k-1)/4)*0.2);}
 var ANCHOR=2010*4;
-function runningShortage(done,sched,refq,curQ,horizon){
+function runningShortage(done,sched,demol,refq,curQ,horizon){
   horizon=horizon||16; var I=0;
-  for(var i=ANCHOR;i<=curQ;i++){ I=Math.max(0, I+((done[_qkey(i)])||0)-refq); }
+  for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.max(0, I+((done[qk])||0)-((demol[qk])||0)-refq); }
   var demandSum=0, supplyWeighted=0;
   for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
   return (demandSum-supplyWeighted)-I;
@@ -1975,10 +1975,12 @@ function scCalc(){
     if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}
     const tot_fallback=0.55*dA+0.35*dC+0.10*dB;
     const zdone=(P.done&&P.done[z.z])||{}, zsched=(P.sched&&P.sched[z.z])||{};
+    const zdemol=(P.demol&&P.demol[z.z])||{};
     const invPath=!!(Object.keys(zdone).length||Object.keys(zsched).length);
     // zdone/zsched는 ZONE 실적, refq는 REGION 적정 — share를 곱해 zone-level 적정으로 맞춘다
     // (tools/make_zone_pages.py calc()와 반드시 동치, dA/dB/dC와 동일 원칙).
-    const tot=invPath?runningShortage(zdone,zsched,refq*share,curQ):tot_fallback;
+    // zdemol도 zdone과 동일하게 이미 zone-level 절대값(멸실 세대)이라 share를 곱하지 않는다.
+    const tot=invPath?runningShortage(zdone,zsched,zdemol,refq*share,curQ):tot_fallback;
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
     if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}
