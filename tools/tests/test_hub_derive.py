@@ -158,6 +158,51 @@ def test_hub_derive_all_members_unresolved_zone_emits_nothing(monkeypatch):
     assert '오산권' not in adv['permits'].get('units', {})
 
 
+# ---------------------------------------------------------------------------
+# Task B: permits['demol'][zone] — 멸실(demolition) 시계열, scanned_demol 게이트
+# (done/sched의 scanned와 독립적인 별도 완결성 게이트)
+# ---------------------------------------------------------------------------
+
+def test_hub_derive_demol_emitted_when_zone_complete_in_scanned_demol(monkeypatch):
+    adv = {'permits': {}}
+    hp = {'meta': {'activate': True, 'scanned': ['41370'], 'scanned_demol': ['41370'],
+                   'unresolved_legacy': []},
+          'sgg': {'41370': {'name': '오산시', 'done_q': {'2023Q1': 100},
+                             'sched_q': {'2028Q2': 200},
+                             'demol_q': {'2014Q1': 50, '2015Q2': 30}}}}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
+    U.hub_derive(adv)
+    assert adv['permits']['demol']['오산권'] == {'2014Q1': 50, '2015Q2': 30}
+
+
+def test_hub_derive_demol_not_emitted_when_zone_incomplete_in_scanned_demol(monkeypatch):
+    # done/sched는 완결(scanned에 있음)이어도 scanned_demol에 없으면 demol은 방출 안 함.
+    adv = {'permits': {}}
+    hp = {'meta': {'activate': True, 'scanned': ['41370'], 'scanned_demol': [],
+                   'unresolved_legacy': []},
+          'sgg': {'41370': {'name': '오산시', 'done_q': {'2023Q1': 100},
+                             'sched_q': {'2028Q2': 200},
+                             'demol_q': {'2014Q1': 50}}}}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
+    U.hub_derive(adv)
+    assert '오산권' not in adv['permits'].get('demol', {})
+    # done/sched는 영향받지 않아야 함
+    assert adv['permits']['done']['오산권'] == {'2023Q1': 100}
+    assert adv['permits']['sched']['오산권'] == {'2028Q2': 200}
+
+
+def test_hub_derive_inactive_emits_no_demol(monkeypatch):
+    adv = {'permits': {}}
+    hp = {'meta': {'activate': False, 'scanned': [], 'scanned_demol': [],
+                   'unresolved_legacy': []}, 'sgg': {}}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
+    U.hub_derive(adv)
+    assert 'demol' not in adv['permits']
+
+
 def test_hub_derive_units_excludes_incomplete_zone(monkeypatch):
     # done_q/sched_q와 동일한 완결성 게이트 — scanned에 없는 시군구가 섞이면
     # 그 존은 units도 전혀 방출되면 안 된다(부분 리스트가 전체인 척하면 안 됨).

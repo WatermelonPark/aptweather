@@ -1130,7 +1130,8 @@ def _hub_group_reps(bdong):
 
 
 def hub_derive(adv):
-    """hub_permits.json(done_q/sched_q/units) → adv['permits']['done'|'sched'|'units'] 생활권 시계열.
+    """hub_permits.json(done_q/sched_q/units/demol_q) → adv['permits']['done'|'sched'|
+    'units'|'demol'] 생활권 시계열.
 
     게이트 두 개(둘 다 통과해야 방출):
     1) meta.activate — false/부재면 아무것도 방출하지 않는다(라이브는 pre-HUB 지표 유지).
@@ -1139,10 +1140,16 @@ def hub_derive(adv):
        — _hub_group_reps 참고). 부분 스캔 존을 섞으면 존 합계가 실제보다 작게 보여
        "재고가 준다"는 착시를 만든다.
 
+    demol(멸실)은 done/sched와 별도 시딩 진행분이라 별도 게이트 meta.scanned_demol을
+    쓴다 — 같은 rep 환산·members 로직이되, scanned 대신 scanned_demol과 대조한다.
+    준공 시딩은 끝났는데 멸실 시딩이 덜 끝난 존은 done/sched만 나오고 demol은 아직
+    비어 있을 수 있다(정상 — activate가 둘 다 끝나기 전엔 켜지지 않으므로 라이브
+    영향 없음).
+
     hub_permits.json은 갱신 중인 시군구가 섞여 있어(구스키마 permit_q/start_q만 있고
     done_q/sched_q가 없는 항목) v.get(..., {})로 방어한다 — 구스키마 항목은 그냥
-    기여분 0으로 취급된다(KeyError 없음). units도 같은 이유로 v.get('units') or []
-    로 방어한다 — 아직 units 필드가 없는 옛 sgg 항목이 섞여 있어도 죽지 않는다.
+    기여분 0으로 취급된다(KeyError 없음). units/demol_q도 같은 이유로 v.get(...) or {}
+    로 방어한다 — 아직 그 필드가 없는 옛 sgg 항목이 섞여 있어도 죽지 않는다.
 
     permits['units'][zone]은 존 상세페이지의 "앞으로 들어올 물량"/"최근 들어온
     물량" 2섹션 렌더 전용 소량 리스트다(_zone_units 참고, 존당 상위 20개 캡).
@@ -1150,18 +1157,19 @@ def hub_derive(adv):
     import collections
     hp = _load_hub_permits()
     if not hp.get('meta', {}).get('activate', False):
-        # inactive면 이전에 방출했을 수 있는 done/sched/units를 걷어내 pre-HUB로
+        # inactive면 이전에 방출했을 수 있는 done/sched/units/demol을 걷어내 pre-HUB로
         # 되돌린다(activate를 껐다 켰다 하는 스위치가 실제로 동작하도록). 없으면 no-op.
         print('hub_derive: inactive — pre-HUB 지표 유지')
         p = adv.get('permits')
         if p:
-            for k in ('done', 'sched', 'units'):
+            for k in ('done', 'sched', 'units', 'demol'):
                 p.pop(k, None)
         return
     bdong = _load_bdong_map()
     z_of = _hub_zone_map(bdong)
     reps = _hub_group_reps(bdong)
     scanned = set(hp.get('meta', {}).get('scanned', []))
+    scanned_demol = set(hp.get('meta', {}).get('scanned_demol', []))
     unresolved = set(hp.get('meta', {}).get('unresolved_legacy', []))
     # 존별 멤버 시군구(완결성 판정용)
     members = collections.defaultdict(set)
@@ -1169,11 +1177,13 @@ def hub_derive(adv):
         if cd not in unresolved: members[z].add(cd)
     done = collections.defaultdict(lambda: collections.defaultdict(int))
     sched = collections.defaultdict(lambda: collections.defaultdict(int))
+    demol = collections.defaultdict(lambda: collections.defaultdict(int))
     for cd, v in hp.get('sgg', {}).items():
         z = z_of.get(cd)
         if not z: continue
         for q, n in v.get('done_q', {}).items(): done[z][q] += n
         for q, n in v.get('sched_q', {}).items(): sched[z][q] += n
+        for q, n in v.get('demol_q', {}).items(): demol[z][q] += n
     # 완결성 게이트(Fix C1): 존의 모든 멤버를 각자의 fold 대표(rep) 코드로 환산한
     # 뒤, 그 rep 전원이 scanned일 때만 방출. hp['sgg']/scanned 키는 원시 구 코드가
     # 아니라 항상 rep이므로(수집기가 그렇게 저장), rep 환산 없이 원시 코드로
@@ -1181,11 +1191,16 @@ def hub_derive(adv):
     # scanned에 결코 안 나타나 영원히 미완결로 남는다.
     complete = {z for z, ms in members.items()
                 if ms and {reps.get(c, c) for c in ms} <= scanned}
+    # demol 전용 완결성 게이트 — done/sched의 scanned와 독립적인 scanned_demol로 대조.
+    complete_demol = {z for z, ms in members.items()
+                       if ms and {reps.get(c, c) for c in ms} <= scanned_demol}
     adv.setdefault('permits', {})
     adv['permits']['done'] = {z: dict(done[z]) for z in complete if z in done}
     adv['permits']['sched'] = {z: dict(sched[z]) for z in complete if z in sched}
     adv['permits']['units'] = _zone_units(hp, z_of, complete)
-    print('hub_derive: active, complete_zones=%d' % len(complete))
+    adv['permits']['demol'] = {z: dict(demol[z]) for z in complete_demol if z in demol}
+    print('hub_derive: active, complete_zones=%d, complete_demol_zones=%d'
+          % (len(complete), len(complete_demol)))
 LZ_PSIDO = {'서울권':'수도권','인천권':'수도권','부산권':'부산','김해권':'경남','창원권':'경남','진주권':'경남',
  '울산권':'울산','대구권':'대구','포항권':'경북','구미권':'경북','안동권':'경북','대전세종권':'대전',
  '청주권':'충북','천안아산권':'충남','서산당진권':'충남','광주권':'광주','전주권':'전북','군산익산권':'전북',
