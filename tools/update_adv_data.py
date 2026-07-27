@@ -41,7 +41,10 @@ RONE_API = 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
 HOLIDAY_API = 'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo'
 RONE_TBL = {'maega': 'T244183132827305', 'jeonse': 'T247713133046872'}
 # 월간 아파트 매매/전세 가격지수 (R-ONE, KOSIS보다 한 달 빠름). 시작 2003.
-RONE_MONTHLY_TBL = {'maega': 'A_2024_00045', 'jeonse': 'A_2024_00050'}
+# 월세는 '월세통합가격지수'(순수월세+준월세+준전세 통합)를 쓴다. 순수 월세가격지수
+# (A_2024_00055)는 보증금이 적은 계약만 담아 시장 전체를 대표하지 못한다.
+# 2026-07-25 실측: 매매표와 CLS_ID 234개·최신월이 완전히 같아 기존 매핑을 그대로 재사용한다.
+RONE_MONTHLY_TBL = {'maega': 'A_2024_00045', 'jeonse': 'A_2024_00050', 'wolse': 'A_2024_00054'}
 # 한국부동산원 주택공급정보 입주예정물량정보 (data.go.kr/data/15111714) — 반기 갱신, 30세대 이상 단지별
 OCC_API = 'https://api.odcloud.kr/api/15111714/v1/uddi:0b257760-ac19-4841-adb4-b38b4d153397'
 # 청약홈 APT 분양정보 — 입주예정월이 2031년까지 있어 odcloud(2027-12까지)보다 멀리 본다.
@@ -698,6 +701,7 @@ def fetch_monthly_rone():
                 if cid is not None: mc.setdefault(d, {})[cid] = v
         by[key] = m; by_cls[key] = mc
         time.sleep(0.2)
+    # 월세는 나중에 붙은 계열이라 결측/지연 가능 — 교집합에 넣지 않고 없는 달은 None으로 둔다
     dates = sorted(set(by['maega']) & set(by['jeonse']))[-(months + 1):]
     if len(dates) < 2:
         raise RuntimeError('R-ONE 월간 데이터 부족')
@@ -715,29 +719,36 @@ def fetch_monthly_rone():
     def chg(a, b):
         return None if (a in (None, 0) or b is None) else round((b / a - 1) * 100, 4)
 
+    wo = by.get('wolse', {})
     rows, se_rows = [], []
     gus = sorted(seoul_gu(by['maega'][dates[-1]]))
     for prev, cur in zip(dates, dates[1:]):
+        wo_p, wo_c = wo.get(prev, {}), wo.get(cur, {})
         rows.append({'p': cur,
                      'ma': [chg(sido(by['maega'][prev], r), sido(by['maega'][cur], r)) for r in WEEKLY_REGIONS],
-                     'je': [chg(sido(by['jeonse'][prev], r), sido(by['jeonse'][cur], r)) for r in WEEKLY_REGIONS]})
+                     'je': [chg(sido(by['jeonse'][prev], r), sido(by['jeonse'][cur], r)) for r in WEEKLY_REGIONS],
+                     'wo': [chg(sido(wo_p, r), sido(wo_c, r)) for r in WEEKLY_REGIONS]})
         ma_p, ma_c = seoul_gu(by['maega'][prev]), seoul_gu(by['maega'][cur])
         je_p, je_c = seoul_gu(by['jeonse'][prev]), seoul_gu(by['jeonse'][cur])
+        wg_p, wg_c = seoul_gu(wo_p), seoul_gu(wo_c)
         se_rows.append({'p': cur,
                         'ma': [chg(ma_p.get(g), ma_c.get(g)) for g in gus],
-                        'je': [chg(je_p.get(g), je_c.get(g)) for g in gus]})
+                        'je': [chg(je_p.get(g), je_c.get(g)) for g in gus],
+                        'wo': [chg(wg_p.get(g), wg_c.get(g)) for g in gus]})
     # 시군구 지도(전국 187) — KOSIS(수일 지연) 대신 R-ONE에서 직접 산출해 최신월로.
     sg_rows = []
     for prev, cur in zip(dates, dates[1:]):
         mp, mc2 = by_cls['maega'].get(prev, {}), by_cls['maega'].get(cur, {})
         jp, jc2 = by_cls['jeonse'].get(prev, {}), by_cls['jeonse'].get(cur, {})
+        wp, wc2 = by_cls.get('wolse', {}).get(prev, {}), by_cls.get('wolse', {}).get(cur, {})
         sg_rows.append({'p': cur,
             'ma': [chg(mp.get(SGG_RONE_CLS.get(c)), mc2.get(SGG_RONE_CLS.get(c))) for c in SGG_CODES],
-            'je': [chg(jp.get(SGG_RONE_CLS.get(c)), jc2.get(SGG_RONE_CLS.get(c))) for c in SGG_CODES]})
+            'je': [chg(jp.get(SGG_RONE_CLS.get(c)), jc2.get(SGG_RONE_CLS.get(c))) for c in SGG_CODES],
+            'wo': [chg(wp.get(SGG_RONE_CLS.get(c)), wc2.get(SGG_RONE_CLS.get(c))) for c in SGG_CODES]})
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
             'seoul': {'regions': gus, 'rows': se_rows[-CONF['monthly']['months']:]},
             'sgg': {'codes': SGG_CODES, 'rows': sg_rows[-CONF['monthly']['months']:]},
-            'note': '월간 아파트 매매·전세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
+            'note': '월간 아파트 매매·전세·월세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
 
 
 def fetch_monthly():

@@ -3,7 +3,8 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v22'; // 파비콘 SVG(벡터) 전환 — 사이클 모래시계(빨강/파랑 막대). favicon.svg 정본, PNG 폴백
+const VERSION = 'v23'; // 월간 시장동향에 월세(월세통합가격지수) 추가 — 표·그래프 3계열
+                       // (R-ONE A_2024_00054, 10년 백필)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
