@@ -632,6 +632,7 @@ function renderAux(){
 }
 function drawStat(){
   if(ST.ds==='규모별'){drawSizePivot();return;}
+  document.getElementById('stat-tbl').classList.remove('szpivot');
   const D=STATS[ST.ds], raw=D.series[ST.reg]||[];
   const parsed=D.dates.map(parseDate);
   // 기간 필터
@@ -741,6 +742,7 @@ function buildTable(D,labels,vals,idx,parsed){
 /* 착공→준공 리드타임 시차곡선 (시기별 비교) */
 function drawLeadtime(){
   const L=LEADTIME;
+  document.getElementById('stat-tbl').classList.remove('szpivot');
   document.getElementById('sec-basicmain').classList.add('single');
   document.getElementById('stat-matrix').innerHTML='';
   if(statChartObj)statChartObj.destroy();
@@ -853,14 +855,15 @@ function drawSizePivot(){
     const t=c.pct?((v>0?'+':'')+v.toFixed(2)):v.toFixed(2);
     return `<td${c.first?' class="szgrp"':''} style="white-space:nowrap${col}">${t}</td>`;
   };
-  const thead=document.querySelector('#stat-tbl thead'),tbody=document.querySelector('#stat-tbl tbody');
+  const tbl=document.getElementById('stat-tbl');tbl.classList.add('szpivot');
+  const thead=tbl.querySelector('thead'),tbody=tbl.querySelector('tbody');
   const ord=SZ.desc?[...idx].reverse():idx;   // 정렬 토글: 최신순↓ / 과거순↑
   let h='';
   if(SZ.tr){
     thead.innerHTML='<tr><th style="text-align:center">지표 · 규모</th>'+
-      ord.map(i=>`<th>${D.dates[i]}</th>`).join('')+'</tr>';
-    cols.forEach(c=>{
-      h+=`<tr><td style="white-space:nowrap">${c.m} ${c.lab}${c.pct?'':' <span class="szu">%</span>'}</td>`+
+      ord.map(i=>`<th>${D.dates[i].replace(/^20/,'')}</th>`).join('')+'</tr>';
+    cols.forEach((c,ci)=>{
+      h+=`<tr${c.first&&ci>0?' class="szgrp-r"':''}><td>${c.m} ${c.lab}${c.pct?'':' <span class="szu">%</span>'}</td>`+
         ord.map(i=>cell(c,val(c)(i))).join('')+'</tr>';
     });
   }else{
