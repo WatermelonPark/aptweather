@@ -1536,19 +1536,29 @@ function mapDateChip(p,unit,sggOnly){
 }
 function sggRanks(S,row,met){
   const arr=[];
+  const src=row[met]||[];
   S.codes.forEach((c,i)=>{
-    if(SGG_QNAME[c]&&row[met][i]!=null)arr.push([c,row[met][i]]);
+    if(SGG_QNAME[c]&&src[i]!=null)arr.push([c,src[i]]);
   });
   arr.sort((a,b)=>b[1]-a[1]);
   const rk={};
   arr.forEach(([c],i)=>rk[c]=i+1);
   return {order:arr,rk};
 }
-function rankTables(S,unit){
+/* TOP10 정렬 기준 — 지도별로 매매/전세/월세 중 하나. 방향은 박스가 정한다
+   (상승 박스=내림차순, 하락 박스=오름차순). 헤더를 누르면 기준만 바뀐다. */
+const RANKMET={week:'ma',month:'ma'};
+function setRankMet(k,met){ RANKMET[k]=met; drawNationMap(k); }
+function rankTables(S,unit,k){
   const rows=S.rows, cur=rows[rows.length-1];
   const prev=rows.length>1?rows[rows.length-2]:null;
-  const cr=sggRanks(S,cur,'ma'), pr=prev?sggRanks(S,prev,'ma').rk:null;
-  const je={}; S.codes.forEach((c,i)=>{je[c]=cur.je[i];});
+  const hasWo=Array.isArray(cur.wo);
+  let met=RANKMET[k]||'ma';
+  if(met==='wo'&&!hasWo)met='ma';        // 주간엔 월세가 없다
+  const MLAB={ma:'매매',je:'전세',wo:'월세'};
+  const cr=sggRanks(S,cur,met), pr=prev?sggRanks(S,prev,met).rk:null;
+  const val={};
+  ['ma','je','wo'].forEach(m=>{ val[m]={}; S.codes.forEach((c,i)=>{ val[m][c]=(cur[m]||[])[i]; }); });
   function dcell(c){
     if(!pr||!(c in pr))return '<span class="rk-new">NEW</span>';
     const d=pr[c]-cr.rk[c];
@@ -1556,20 +1566,29 @@ function rankTables(S,unit){
     if(d<0)return '<span class="rk-dn">▼'+(-d)+'위</span>';
     return '<span class="rk-same">–</span>';
   }
+  function vcell(c,m){
+    const v=val[m][c];
+    const cls=(v>0?'up':(v<0?'dn':''))+(m===met?' sortcol':'');
+    return '<td class="'+cls.trim()+'">'+(v==null?'·':(v>0?'+':'')+v.toFixed(2)+'%')+'</td>';
+  }
+  const cols=hasWo?['ma','je','wo']:['ma','je'];
   function tbl(title,items,base){
-    const h=['<div class="rank-box"><div class="rank-h">'+title+'</div><div class="rank-wrap"><table class="rank-tbl">',
-      '<thead><tr><th>순위</th><th>지역</th><th>매매</th><th>전세</th><th>'+unit+'</th></tr></thead><tbody>'];
+    const th=cols.map(m=>'<th class="rk-sort'+(m===met?' on':'')+'" role="button" tabindex="0" data-k="'+k+'" data-met="'+m+'" title="'+MLAB[m]+' 기준으로 정렬">'+MLAB[m]+'</th>').join('');
+    const h=['<div class="rank-box"><div class="rank-h">'+title+'</div><div class="rank-wrap"><table class="rank-tbl'+(hasWo?' wide':'')+'">',
+      '<thead><tr><th>순위</th><th>지역</th>'+th+'<th>'+unit+'</th></tr></thead><tbody>'];
     items.forEach(([c,v],i)=>{
-      const jv=je[c], rank=base+i;
+      const rank=base+i;
       const medal=rank<=3?'<span class="rk-medal">'+['🥇','🥈','🥉'][rank-1]+'</span>':'';
-      h.push('<tr><td>'+medal+rank+'</td><td>'+SGG_QNAME[c]+'</td><td class="'+(v>0?'up':(v<0?'dn':''))+'">'+(v>0?'+':'')+v.toFixed(2)+'%</td><td class="'+(jv>0?'up':(jv<0?'dn':''))+'">'+(jv==null?'·':(jv>0?'+':'')+jv.toFixed(2)+'%')+'</td><td>'+dcell(c)+'</td></tr>');
+      h.push('<tr><td>'+medal+rank+'</td><td>'+SGG_QNAME[c]+'</td>'+
+        cols.map(m=>vcell(c,m)).join('')+'<td>'+dcell(c)+'</td></tr>');
     });
     h.push('</tbody></table></div></div>');
     return h.join('');
   }
+  const basis='<span style="font-weight:600;color:#799185;font-size:11px">'+MLAB[met]+' 기준</span>';
   return '<div class="map-rank">'+
-    tbl('<span style="color:#e0564a">▲</span> 상승 TOP 10 <span style="font-weight:600;color:#799185;font-size:11px">매매 기준</span>',cr.order.slice(0,10),1)+
-    tbl('<span style="color:#3a7bd5">▼</span> 하락 TOP 10 <span style="font-weight:600;color:#799185;font-size:11px">매매 기준</span>',cr.order.slice(-10).reverse(),1)+
+    tbl('<span style="color:#e0564a">▲</span> 상승 TOP 10 '+basis,cr.order.slice(0,10),1)+
+    tbl('<span style="color:#3a7bd5">▼</span> 하락 TOP 10 '+basis,cr.order.slice(-10).reverse(),1)+
     '</div>';
 }
 function drawNationMap(k){
@@ -1652,9 +1671,15 @@ function drawNationMap(k){
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=
     mapDateChip(row.p,SER+' · '+T.unit,gap)+
-    rankTables(S,T.unit)+
+    rankTables(S,T.unit,k)+
     '<div class="map-scroll">'+sv.join('')+'</div>'+
     (hasWo?'<div class="map-suplegend">타일 값: 위 = 매매 · 가운데 = 전세 · 아래 = 월세</div>':'<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>');
+  /* TOP10 헤더 정렬 — innerHTML 이후에 붙인다(인라인 onclick은 따옴표 중첩이 깨진다) */
+  document.getElementById(T.map).querySelectorAll('.rk-sort').forEach(th=>{
+    const go=()=>setRankMet(th.dataset.k,th.dataset.met);
+    th.addEventListener('click',go);
+    th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
 }
 /* --- 표 행열전환 --- */
 let TRANSP={};

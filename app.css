@@ -478,6 +478,22 @@
   .rank-tbl thead th{background:var(--paper2);font-weight:600;color:var(--ink2);font-size:12px}
   .rank-tbl td:nth-child(2){text-align:left;font-weight:600}
   .rank-tbl td:first-child{color:var(--muted);font-weight:600}
+  /* 정렬 가능한 헤더 — 현재 기준 열은 잉크로 눌러 강조하고 본문 열도 짙게 */
+  .rank-tbl thead th.rk-sort{cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06);white-space:nowrap}
+  .rank-tbl thead th.rk-sort::after{content:'';display:inline-block;width:0;height:0;margin-left:3px;
+    vertical-align:middle;border-left:3px solid transparent;border-right:3px solid transparent;
+    border-top:4px solid var(--line)}
+  .rank-tbl thead th.rk-sort.on{background:var(--ink);color:#fff}
+  .rank-tbl thead th.rk-sort.on::after{border-top-color:#fff}
+  .rank-tbl thead th.rk-sort:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+  .rank-tbl td.sortcol{background:#f7f9f8}
+  /* 월세까지 6열이면 모바일 최소폭이 화면을 넘는다 — 그 표에만 여백·글자를 줄인다 */
+  @media(max-width:720px){
+    .rank-tbl.wide{font-size:11.5px}
+    .rank-tbl.wide th,.rank-tbl.wide td{padding:4px 3px}
+    .rank-tbl.wide thead th{font-size:10.5px}
+    .rank-tbl.wide .rk-medal{margin-right:1px;font-size:11px}
+  }
   .rank-tbl td.up{color:#c0392b;font-weight:600}
   .rank-tbl td.dn{color:#1a5276;font-weight:600}
   .rk-up{color:#c0392b;font-weight:600;font-size:12px}
