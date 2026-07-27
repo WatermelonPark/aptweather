@@ -431,12 +431,15 @@
   table.adv td.dn{color:#1a5276}
   .adv-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
   .adv-legend i{display:inline-block;width:12px;height:12px;border-radius:0;margin-right:4px;vertical-align:-1px}
-  .adv-regsel{margin:0 0 10px;display:none}
-  .adv-regsel select{width:100%;font-family:inherit;font-size:15px;padding:11px 12px;
+  /* 시도 + 시군구 2단. 시군구가 없는 지역(전국·수도권 등)은 두 번째가 hidden이라
+     첫 select가 자동으로 전폭을 쓴다(gap도 사라짐). */
+  .adv-regsel{margin:0 0 10px;display:none;gap:8px}
+  .adv-regsel select{flex:1;min-width:0;width:100%;font-family:inherit;font-size:15px;padding:11px 12px;
     border-radius:var(--r-touch);border:1.5px solid var(--line);background:#fff}
+  .adv-regsel select[hidden]{display:none}
   /* 모바일: 매트릭스 숨기고 요약만 */
   @media(max-width:720px){
-    .adv-regsel{display:block}
+    .adv-regsel{display:flex}
     .adv-tblwrap.matrix{display:none}
     .adv-tblwrap.compact{display:block}
   }
@@ -457,7 +460,7 @@
   .gsec.gm-t .gt-g{display:none}
   .gsec.gm-m .gt-g,.gsec.gm-m .gt-t{display:none}
   .gsec.gm-g .gt-m,.gsec.gm-t .gt-m{display:none}
-  .gsec.gm-g .adv-regsel{display:block}
+  .gsec.gm-g .adv-regsel{display:flex}
   /* 지도 모드에선 지역 드롭다운 불필요(지도가 전 지역을 보여줌). 그래프·표에서만 노출.
      모바일은 .adv-regsel을 기본 display:block으로 켜므로 지도 모드에서 명시적으로 끈다. */
   .gsec.gm-m .adv-regsel{display:none}

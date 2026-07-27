@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v26'; // TOP10에 월세 열(월간) + 헤더 클릭 정렬(매매·전세·월세)
+const VERSION = 'v27'; // 시장동향 표·그래프에 시도→시군구 2단 선택(서울 25구·경기 구 포함)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

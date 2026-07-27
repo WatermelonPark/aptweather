@@ -166,7 +166,7 @@
       <div class="adv-h"><h3>주간 아파트 동향</h3><span class="rel" id="rel-week"></span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('week','m')">지도</button><button data-v="g" onclick="gtSet('week','g')">그래프</button><button data-v="t" onclick="gtSet('week','t')">표</button></div></div>
       <p class="adv-note">매주 나오는 가장 빠른 시세 지표입니다.</p>
-      <div class="adv-regsel"><select id="adv-week-reg" onchange="renderWeekSec()"></select></div>
+      <div class="adv-regsel"><select id="adv-week-reg" onchange="onTrendReg('week')" aria-label="시도 선택"></select><select id="adv-week-sgg" onchange="renderWeekSec()" aria-label="시군구 선택" hidden></select></div>
       <div class="gt-m">
         <div class="map-head"><span class="map-lab" id="week-maplab"></span>
           <div style="display:flex;gap:8px">
@@ -186,7 +186,7 @@
       <div class="adv-h"><h3>월간 아파트 동향</h3><span class="rel" id="rel-month"></span>
         <div class="gt"><button class="on" data-v="m" onclick="gtSet('month','m')">지도</button><button data-v="g" onclick="gtSet('month','g')">그래프</button><button data-v="t" onclick="gtSet('month','t')">표</button></div></div>
       <p class="adv-note">주간의 잔파도를 걷어낸 추세입니다.</p>
-      <div class="adv-regsel"><select id="adv-month-reg" onchange="renderMonthSec()"></select></div>
+      <div class="adv-regsel"><select id="adv-month-reg" onchange="onTrendReg('month')" aria-label="시도 선택"></select><select id="adv-month-sgg" onchange="renderMonthSec()" aria-label="시군구 선택" hidden></select></div>
       <div class="gt-m">
         <div class="map-head"><span class="map-lab" id="month-maplab"></span>
           <div style="display:flex;gap:8px">
@@ -1525,8 +1525,8 @@ function wkCell(v){
 }
 /* --- 주간·월간 동향 (기본통계) — 표 + 막대 차트 공용 --- */
 const TREND={
-  week:{sel:'adv-week-reg',matrix:'adv-week-matrix',compact:'adv-week-compact',chart:'weekChart',col:'주간',lab:p=>p.slice(2),tick:l=>l.slice(3),periods:[['3개월',13],['1년',52],['3년',156],['전체',0]],map:'week-map',maplab:'week-maplab',unit:'전주 대비'},
-  month:{sel:'adv-month-reg',matrix:'adv-month-matrix',compact:'adv-month-compact',chart:'monthChart',col:'월간',lab:p=>p,tick:l=>l.slice(2),periods:[['3개월',3],['1년',12],['3년',36],['전체',0]],map:'month-map',maplab:'month-maplab',unit:'전월 대비'}
+  week:{sel:'adv-week-reg',sel2:'adv-week-sgg',matrix:'adv-week-matrix',compact:'adv-week-compact',chart:'weekChart',col:'주간',lab:p=>p.slice(2),tick:l=>l.slice(3),periods:[['3개월',13],['1년',52],['3년',156],['전체',0]],map:'week-map',maplab:'week-maplab',unit:'전주 대비'},
+  month:{sel:'adv-month-reg',sel2:'adv-month-sgg',matrix:'adv-month-matrix',compact:'adv-month-compact',chart:'monthChart',col:'월간',lab:p=>p,tick:l=>l.slice(2),periods:[['3개월',3],['1년',12],['3년',36],['전체',0]],map:'month-map',maplab:'month-maplab',unit:'전월 대비'}
 };
 /* --- 시도 타일 지도 (빨강=상승 · 파랑=하락, 진할수록 변동 큼) --- */
 const NATION_TILE={cols:12,rows:20,t:[["c3","충남",0,9,1],["c313","당진",1,9,0],["c306","아산",2,9,0],["c301","천안",3,9,1],["c302","동남",4,9,0],["c303","서북",5,9,0],["c2","충북",6,9,1],["c206","음성",7,9,0],["c203","충주",8,9,0],["c204","제천",9,9,0],["c307","서산",0,10,0],["c311","홍성",1,10,0],["c312","예산",2,10,0],["c304","공주",3,10,0],["c309","계룡",4,10,0],["b6","세종",5,10,1],["c201","청주",6,10,1],["c20103","흥덕",7,10,0],["c20104","청원",8,10,0],["c20101","상당",9,10,0],["c20102","서원",10,10,0],["c305","보령",0,11,0],["c308","논산",1,11,0],["b4","대전",3,11,1],["b404","유성",4,11,0],["b405","대덕",5,11,0],["b403","서",6,11,0],["b402","중",7,11,0],["b401","동",8,11,0],["c4","전북",0,12,1],["c404","군산",1,12,0],["c405","익산",2,12,0],["c401","전주",3,12,1],["c402","완산",4,12,0],["c403","덕진",5,12,0],["c6","경북",6,12,1],["c606","영주",7,12,0],["c609","문경",8,12,0],["c605","안동",9,12,0],["c603","포항",10,12,1],["c60302","북",11,12,0],["c408","김제",0,13,0],["c406","정읍",1,13,0],["c407","남원",2,13,0],["c608","상주",6,13,0],["c602","구미",7,13,0],["c611","칠곡",8,13,0],["c604","김천",9,13,0],["c610","경산",10,13,0],["c60301","남",11,13,0],["b3","광주",0,14,1],["b304","북",1,14,0],["b305","광산",2,14,0],["b302","서",3,14,0],["b301","동",4,14,0],["b303","남",5,14,0],["b2","대구",6,14,1],["b205","북",7,14,0],["b202","동",8,14,0],["b206","수성",9,14,0],["c607","영천",10,14,0],["c601","경주",11,14,0],["c5","전남",0,15,1],["c504","나주",1,15,0],["c503","순천",2,15,0],["c505","광양",3,15,0],["c506","무안",4,15,0],["c501","목포",5,15,0],["c502","여수",6,15,0],["b203","서",7,15,0],["b201","중",8,15,0],["b207","달서",9,15,0],["b208","달성",10,15,0],["b204","남",11,15,0],["c7","경남",0,16,1],["c703","진주",1,16,0],["c705","사천",2,16,0],["c704","통영",3,16,0],["c708","거제",4,16,0],["c707","밀양",5,16,0],["b5","울산",6,16,1],["b501","중",7,16,0],["b503","동",8,16,0],["b504","북",9,16,0],["b505","울주",10,16,0],["b502","남",11,16,0],["c701","창원",1,17,1],["c70101","의창",2,17,0],["c70102","성산",3,17,0],["c70104","마산회원",4,17,0],["c70103","마산합포",5,17,0],["c702","진해",6,17,0],["c706","김해",7,17,0],["c709","양산",8,17,0],["b1","부산",9,17,1],["b10202","금정",10,17,0],["b10204","기장",11,17,0],["b10302","강서",4,18,0],["b10303","사상",5,18,0],["b10301","북",6,18,0],["b10203","동래",7,18,0],["b10201","해운대",8,18,0],["b10105","부산진",9,18,0],["b10107","연제",10,18,0],["b10108","수영",11,18,0],["b10304","사하",5,19,0],["b10102","서",6,19,0],["b10101","중",7,19,0],["b10106","남",8,19,0],["b10103","동",9,19,0],["b10104","영도",10,19,0],["c8","제주",0,19,1],["c801","제주",1,19,0],["c802","서귀포",2,19,0],["a0","전국",0,0,1],["a8","경기",1,0,1],["c1","강원",9,0,1],["a7","서울",3,1,1],["a9","인천",0,3,1],["a80603","파주",2,0,0],["a80704","의정부",6,0,0],["a80703","양주",3,0,0],["a80702","동두천",4,0,0],["a80701","포천",5,0,0],["a80402","구리",7,0,0],["a80401","남양주",8,0,0],["c106","속초",10,0,0],["c101","춘천",8,1,0],["c103","강릉",10,1,0],["c102","원주",9,1,0],["c104","동해",9,2,0],["c105","태백",8,2,0],["c107","삼척",8,3,0],["a806023","일산서",1,1,0],["a80602","고양",2,2,0],["a806022","일산동",1,2,0],["a806021","덕양",2,1,0],["a80601","김포",0,2,0],["a7010301","은평",4,1,0],["a7010206","강북",5,1,0],["a7010207","도봉",6,1,0],["a7010208","노원",7,1,0],["a7010302","서대문",3,2,0],["a7010101","종로",4,2,0],["a7010205","성북",5,2,0],["a7010203","동대문",6,2,0],["a7010204","중랑",7,2,0],["a7010303","마포",3,3,0],["a7010102","중",4,3,0],["a7010103","용산",5,3,0],["a7010201","성동",6,3,0],["a7010202","광진",7,3,0],["a7020102","강서",3,4,0],["a7020101","양천",4,4,0],["a7020105","영등포",5,4,0],["a7020106","동작",6,4,0],["a7020202","강남",7,4,0],["a7020203","송파",8,4,0],["a7020204","강동",9,4,0],["a7020103","구로",3,5,0],["a7020104","금천",4,5,0],["a7020107","관악",5,5,0],["a7020201","서초",6,5,0],["a80403","하남",10,4,0],["a908","검단",1,3,0],["a902","영종",2,3,0],["a901","제물포",0,4,0],["a903","미추홀",1,4,0],["a906","부평",2,4,0],["a904","연수",0,5,0],["a909","서해",1,5,0],["a907","계양",2,5,0],["a905","남동",0,6,0],["a80301","부천",1,6,0],["a803011","원미",2,6,0],["a803012","소사",3,6,0],["a803013","오정",4,6,0],["a80304","광명",5,6,0],["a80303","시흥",0,7,0],["a80302","안산",1,8,0],["a803021","상록",2,8,0],["a803022","단원",3,8,0],["a80101","과천",6,6,0],["a80102","안양",1,7,0],["a801021","만안",2,7,0],["a801022","동안",3,7,0],["a80104","군포",5,7,0],["a80105","의왕",4,7,0],["a80203","수원",6,7,0],["a802031","장안",7,7,0],["a802032","권선",8,7,0],["a802033","팔달",9,7,0],["a802034","영통",10,7,0],["a80103","성남",7,5,0],["a801031","수정",8,5,0],["a801032","중원",9,5,0],["a801033","분당",10,5,0],["a80202","용인",7,6,0],["a802021","처인",8,6,0],["a802022","기흥",9,6,0],["a802023","수지",10,6,0],["a80404","광주",11,6,0],["a80501","이천",11,7,0],["a80502","여주",11,8,0],["a80305","화성",4,8,0],["a803051","동탄",5,8,0],["a803052","만세",6,8,0],["a803053","병점",7,8,0],["a803054","효행",8,8,0],["a80306","오산",9,8,0],["a80201","안성",10,8,0],["a80307","평택",0,8,0]]};
@@ -1701,6 +1701,53 @@ function drawTrendMap(k){
   document.getElementById(T.map).innerHTML='<div class="src-note" style="padding:14px">지도 데이터 수집 대기중</div>';
 }
 function trendData(k){ return k==='week'?ADV.weekly:ADV.monthly; }
+/* ── 시도 → 시군구 2단 선택 ─────────────────────────────────────────
+   부동산원 앱처럼 시도를 고르면 그 아래 '전체 + 시군구'가 뜬다.
+   시군구 시계열은 12구간만 저장하므로(용량) 그래프는 그만큼만 그리고
+   기간 탭을 숨긴다 — 표(최근 12개 표시)는 영향 없다. */
+const SIDO_PREFIX={a7:'서울',a8:'경기',a9:'인천',b1:'부산',b2:'대구',b3:'광주',b4:'대전',
+  b5:'울산',b6:'세종',c1:'강원',c2:'충북',c3:'충남',c4:'전북',c5:'전남',c6:'경북',c7:'경남',c8:'제주'};
+function sidoOf(code){
+  if(code[0]==='a'){
+    if(code==='a0')return null;
+    if(code.indexOf('a7')===0)return '서울';
+    if(code.indexOf('a8')===0)return '경기';
+    return '인천';
+  }
+  return SIDO_PREFIX[code.slice(0,2)]||null;
+}
+function sggOfSido(W,sido){
+  const S=W.sgg; if(!S)return [];
+  return S.codes.filter(c=>SGG_QNAME[c]&&sidoOf(c)===sido);
+}
+/* 시도 select가 바뀌면 하위 목록을 다시 채우고 '전체'로 되돌린다 */
+function onTrendReg(k){
+  const T=TREND[k], W=trendData(k); if(!W)return;
+  fillSggSel(k,'');
+  (k==='week'?renderWeekSec:renderMonthSec)();
+}
+function fillSggSel(k,keep){
+  const T=TREND[k], W=trendData(k);
+  const sub=document.getElementById(T.sel2); if(!sub||!W)return;
+  const sido=document.getElementById(T.sel).value;
+  const list=sggOfSido(W,sido);
+  if(!list.length){ sub.hidden=true; sub.innerHTML=''; return; }
+  sub.hidden=false;
+  sub.innerHTML='<option value="">'+sido+' 전체</option>'+
+    list.map(c=>'<option value="'+c+'">'+SGG_QNAME[c]+'</option>').join('');
+  if(keep&&list.indexOf(keep)>=0)sub.value=keep;
+}
+/* 표·그래프가 함께 쓰는 '현재 선택' — 시도면 W.rows, 시군구면 W.sgg.rows */
+function trendPick(k){
+  const T=TREND[k], W=trendData(k);
+  const reg=advSel(T.sel,W.regions);
+  const sub=document.getElementById(T.sel2);
+  if(sub&&!sub.hidden&&sub.value&&W.sgg){
+    const ci=W.sgg.codes.indexOf(sub.value);
+    if(ci>=0)return {name:SGG_QNAME[sub.value]||sub.value,rows:W.sgg.rows,idx:ci,isSgg:true};
+  }
+  return {name:reg,rows:W.rows,idx:W.regions.indexOf(reg),isSgg:false};
+}
 function renderTrendTables(k){
   const T=TREND[k], W=trendData(k);
   if(!W){document.getElementById(T.matrix).innerHTML='<div class="src-note" style="padding:14px">데이터 수집 대기중</div>';return;}
@@ -1728,10 +1775,13 @@ function renderTrendTables(k){
   }
   mx.push('</tbody></table>');
   document.getElementById(T.matrix).innerHTML=mx.join('');
-  const reg=advSel(T.sel,regs), ri=regs.indexOf(reg);
+  advSel(T.sel,regs);
+  fillSggSel(k,(document.getElementById(T.sel2)||{}).value);
+  const P=trendPick(k), ri=P.idx;
+  const CR=P.rows.slice(-12);
   const cp=['<table class="adv"><thead><tr><th>'+T.col+'</th><th>매매</th><th>전세</th>'+(hasWo?'<th>월세</th>':'')+'</tr></thead><tbody>'];
-  for(let i=R.length-1;i>=0;i--){
-    const row=R[i];
+  for(let i=CR.length-1;i>=0;i--){
+    const row=CR[i];
     cp.push(`<tr><td>${T.lab(row.p)}</td>`+wkCell(row.ma[ri])+wkCell(row.je[ri])+(hasWo?wkCell((row.wo||[])[ri]):'')+'</tr>');
   }
   cp.push('</tbody></table>');
@@ -1808,10 +1858,15 @@ function trSetPeriod(k,i){
 }
 function drawTrendChart(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
-  const reg=advSel(T.sel,W.regions), ri=W.regions.indexOf(reg);
+  advSel(T.sel,W.regions);
+  fillSggSel(k,(document.getElementById(T.sel2)||{}).value);
+  const P=trendPick(k), ri=P.idx;
   renderTrPeriods(k);
+  /* 시군구는 저장 구간이 짧아 기간 선택이 의미 없다 — 탭을 감추고 있는 만큼만 그린다 */
+  const pel=document.getElementById(k+'-period');
+  if(pel)pel.style.display=P.isSgg?'none':'';
   const cnt=(T.periods&&T.periods[TRP[k]])?T.periods[TRP[k]][1]:0;
-  const rows=cnt>0?W.rows.slice(-cnt):W.rows;   // 탭이 고른 만큼만 — 가로 스크롤 없이 한 화면에
+  const rows=P.isSgg?P.rows:(cnt>0?P.rows.slice(-cnt):P.rows);
   const n=rows.length;
   /* '전체'가 실제로 어디부터인지 밝힌다 — 라벨만으로는 알 수 없다 */
   const uel=document.getElementById(k+'-unit');
