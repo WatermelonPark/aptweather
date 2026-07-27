@@ -26,6 +26,13 @@ SRC = os.path.join(ROOT, 'data.js')
 OUT = os.path.join(ROOT, 'data-core.js')
 REST = os.path.join(ROOT, 'data-rest.json')
 TREND = os.path.join(ROOT, 'data-trend.json')
+SGG = os.path.join(ROOT, 'data-sgg.json')
+
+# 시군구·서울구 전체 시계열은 '구를 실제로 고른 사람'만 필요하다. trend에 통째로
+# 실으면 통계 탭을 여는 모든 방문자가 4배 큰 파일을 받는다(실측 91→418KB gzip).
+# 그래서 최근 TREND_SGG_KEEP개만 trend에 남기고 전체는 data-sgg.json으로 뺀다.
+TREND_SGG_KEEP = 12
+NL = chr(10)
 
 # 홈이 쓰는 STATS 계열 — 아공맵 스코어가 순공급을 계산할 때 참조한다.
 # 나머지 9계열(매매지수·인허가·준공·착공·전세지수·금리·보급률·노후주택30년·
@@ -90,8 +97,25 @@ def main():
     # 선언 형태가 조금만 바뀌어도 조용히 깨지므로 쓰지 않는다.
     # 통계 탭에서 먼저 보이는 건 그래프(주간·월간)다. 기본통계 11계열(rest)도
     # 탭 진입 시 이어서 받지만, 그래프가 rest 크기를 기다리지 않도록 둘로 쪼갠다.
-    io.open(TREND, 'w', encoding='utf-8', newline='\n').write(
-        dump({'ADV': strip_units(adv)}))
+    trend_adv = strip_units(adv)
+    sgg_full = {}
+    for k in ('weekly', 'monthly'):
+        w = trend_adv.get(k)
+        if not w:
+            continue
+        w = dict(w)
+        keep = {}
+        for part in ('sgg', 'seoul'):
+            sec = w.get(part)
+            if sec and sec.get('rows') and len(sec['rows']) > TREND_SGG_KEEP:
+                keep[part] = sec                      # 전체는 지연 로드 파일로
+                w[part] = dict(sec, rows=sec['rows'][-TREND_SGG_KEEP:])
+        if keep:
+            sgg_full[k] = keep
+        trend_adv[k] = w
+    io.open(TREND, 'w', encoding='utf-8', newline=NL).write(
+        dump({'ADV': trend_adv}))
+    io.open(SGG, 'w', encoding='utf-8', newline=NL).write(dump({'ADV': sgg_full}))
     # rest에 ADV를 또 담으면 trend와 중복돼 총 전송량이 오히려 는다(399→629KB).
     # rest는 기본통계 계열만 담는다 — ADV는 trend가 이미 실어 보냈다.
     io.open(REST, 'w', encoding='utf-8', newline='\n').write(dump({'STATS': stats}))
@@ -103,6 +127,7 @@ def main():
           % (len(body) / 1024, 100 * (1 - len(body) / full)))
     print('data-trend.json%7.1f KB  (그래프 — 통계 탭 진입 시)' % (os.path.getsize(TREND) / 1024))
     print('data-rest.json %7.1f KB  (기본통계 — 세그먼트 누를 때)' % (rest / 1024))
+    print('data-sgg.json  %7.1f KB  (시군구 시계열 — 구를 고를 때만)' % (os.path.getsize(SGG) / 1024))
     print('  core ADV   :', ', '.join(core_adv))
     print('  core STATS :', ', '.join(core_stats))
 

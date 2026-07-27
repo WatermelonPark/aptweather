@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v28'; // PWA 스플래시(icon-512)에 AGONGMAP 워드마크+태그라인, 매니페스트 배경색 쿨톤 교정
+const VERSION = 'v29'; // 시군구 시계열 지연 로드(data-sgg.json) — 구 선택 시 전 구간·기간탭 복귀
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
@@ -57,7 +57,7 @@ self.addEventListener('fetch', (e) => {
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
   if (url.pathname === '/data.js' || url.pathname === '/app.css'
       || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json'
-      || url.pathname === '/data-trend.json') {
+      || url.pathname === '/data-trend.json' || url.pathname === '/data-sgg.json') {
     e.respondWith(
       fetch(req)
         .then((res) => {

@@ -64,7 +64,10 @@ CONF = {
     'weekly': {                # 주간 아파트 가격지수 변동률 (부동산원, 매주 발표)
         'maega':  {'orgId': '408', 'tblId': 'DT_304004_WEEK_001_B'},
         'jeonse': {'orgId': '408', 'tblId': 'DT_304004_WEEK_003_B'},
-        'weeks': 12,           # 서울 구·시군구 상세 유지 주수
+        'weeks': 12,           # (구값) 최소 보장 — 실제 보관은 sgg_hist
+        'sgg_hist': 156,       # 서울 구·시군구 시계열 유지 주수. 표는 최근 12개만 쓰지만
+                               # 그래프에서 구 단위 3년을 보려면 쌓아둬야 한다.
+                               # 이 분량은 data-sgg.json으로 분리돼 구를 고를 때만 전송된다.
         # 3년. 주간은 objL1=ALL이라 주당 ~240행이고 156주면 약 37,400셀 —
         # KOSIS 4만 제한에 여유가 6%뿐이라 아래 _fetch_weekly_kosis가 실패 시
         # 짧은 기간으로 자동 재시도한다. 지역이 늘면 이 값을 먼저 의심할 것.
@@ -73,7 +76,8 @@ CONF = {
     'monthly': {               # 월간 아파트 가격지수 (부동산원 월간동향) — 전월비 변동률 계산
         'maega':  {'orgId': '408', 'tblId': 'DT_30404_B012'},   # 유형별 매매가격지수 (C1=유형, C2=지역)
         'jeonse': {'orgId': '408', 'tblId': 'DT_30404_B013'},   # 유형별 전세가격지수
-        'months': 12,          # 서울 구·시군구 상세 유지 개월수
+        'months': 12,          # (구값) 최소 보장 — 실제 보관은 sgg_hist
+        'sgg_hist': 120,       # 시군구 시계열 유지 개월수(그래프 '전체'용, 지연 로드 파일로 분리)
         # ⚠️ 이 두 표(DT_30404_B012/B013)는 2021.06부터라 아무리 크게 잡아도
         # 그 이전은 없다(2026-07 실측: 59개월). 값은 원천이 늘어날 때를 대비한 상한일 뿐.
         # 더 긴 월간이 필요하면 표를 바꿔야 하는데, 실거래지수(DT_KAB_11672_S1, 2006~)는
@@ -406,9 +410,26 @@ def fetch_weekly_rone():
             'ma': [chg(mp.get(SGG_RONE_CLS_WK.get(c)), mc2.get(SGG_RONE_CLS_WK.get(c))) for c in SGG_CODES],
             'je': [chg(jp.get(SGG_RONE_CLS_WK.get(c)), jc2.get(SGG_RONE_CLS_WK.get(c))) for c in SGG_CODES]})
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
-            'seoul': {'regions': gus, 'rows': se_rows[-CONF['weekly']['weeks']:]},
-            'sgg': {'codes': SGG_CODES, 'rows': sg_rows[-CONF['weekly']['weeks']:]},
+            'seoul': {'regions': gus, 'rows': se_rows[-CONF['weekly']['sgg_hist']:]},
+            'sgg': {'codes': SGG_CODES, 'rows': sg_rows[-CONF['weekly']['sgg_hist']:]},
             'note': '주간 아파트 매매·전세가격지수 변동률(%) · 발표 당일 반영'}
+
+
+
+def _merge_hist(new, cur, keep):
+    """시군구·서울구 시계열도 시도처럼 과거를 살린다.
+    매 실행은 최근 구간만 받아오므로, 이게 없으면 통째 교체돼 히스토리가 12개에서
+    영영 늘지 않는다(구 단위 그래프가 '최근 12개'에 갇히던 원인)."""
+    if not (new and new.get('rows')):
+        return cur if (cur and cur.get('rows')) else new
+    if not (cur and cur.get('rows')):
+        return new
+    first = new['rows'][0]['p']
+    older = [r for r in cur['rows'] if r['p'] < first]
+    if older:
+        new = dict(new)
+        new['rows'] = (older + new['rows'])[-keep:]
+    return new
 
 
 def fetch_weekly():
@@ -746,8 +767,8 @@ def fetch_monthly_rone():
             'je': [chg(jp.get(SGG_RONE_CLS.get(c)), jc2.get(SGG_RONE_CLS.get(c))) for c in SGG_CODES],
             'wo': [chg(wp.get(SGG_RONE_CLS.get(c)), wc2.get(SGG_RONE_CLS.get(c))) for c in SGG_CODES]})
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
-            'seoul': {'regions': gus, 'rows': se_rows[-CONF['monthly']['months']:]},
-            'sgg': {'codes': SGG_CODES, 'rows': sg_rows[-CONF['monthly']['months']:]},
+            'seoul': {'regions': gus, 'rows': se_rows[-CONF['monthly']['sgg_hist']:]},
+            'sgg': {'codes': SGG_CODES, 'rows': sg_rows[-CONF['monthly']['sgg_hist']:]},
             'note': '월간 아파트 매매·전세·월세가격지수 변동률(%) · 매월 발표 (지수 전월비 환산)'}
 
 
@@ -777,8 +798,8 @@ def _fetch_monthly_kosis():
     je, je_se, je_sg = _fetch_monthly_one(m['jeonse'], depth)
     rows = _idx_to_chg(ma, je, WEEKLY_REGIONS)[-depth:]
     gus = _gu_regions(ma_se, je_se)
-    se_rows = _idx_to_chg(ma_se, je_se, gus)[-m['months']:]
-    sg_rows = _idx_to_chg(ma_sg, je_sg, SGG_CODES)[-m['months']:]
+    se_rows = _idx_to_chg(ma_se, je_se, gus)[-m['sgg_hist']:]
+    sg_rows = _idx_to_chg(ma_sg, je_sg, SGG_CODES)[-m['sgg_hist']:]
     return {'regions': WEEKLY_REGIONS, 'rows': rows,
             'seoul': {'regions': gus, 'rows': se_rows},
             'sgg': {'codes': SGG_CODES, 'rows': sg_rows},
@@ -1429,6 +1450,9 @@ def main():
             older = [r for r in cur['rows'] if r['p'] < first]
             if older:
                 weekly['rows'] = (older + weekly['rows'])[-CONF['weekly'].get('weeks_hist', len(weekly['rows'])):]
+        kw = CONF['weekly']['sgg_hist']
+        weekly['sgg'] = _merge_hist(weekly.get('sgg'), cur.get('sgg'), kw)
+        weekly['seoul'] = _merge_hist(weekly.get('seoul'), cur.get('seoul'), kw)
         if weekly['rows'] and differs(weekly, cur):
             adv['weekly'] = weekly
             # '바이트가 달라짐'과 '새 주차가 나옴'은 다르다. 부동산원이 과거 주차를
@@ -1458,6 +1482,9 @@ def main():
             m_older = [r for r in mo_cur['rows'] if r['p'] < m_first]
             if m_older:
                 monthly['rows'] = (m_older + monthly['rows'])[-CONF['monthly'].get('months_hist', len(monthly['rows'])):]
+        km = CONF['monthly']['sgg_hist']
+        monthly['sgg'] = _merge_hist(monthly.get('sgg'), mo_cur.get('sgg'), km)
+        monthly['seoul'] = _merge_hist(monthly.get('seoul'), mo_cur.get('seoul'), km)
         if monthly['rows'] and differs(monthly, adv.get('monthly')):
             adv['monthly'] = monthly
             # weekly와 같은 이유 — 소급 수정은 커밋만 하고 발송은 하지 않는다.
