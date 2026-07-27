@@ -1575,14 +1575,20 @@ function rankTables(S,unit){
 function drawNationMap(k){
   const T=TREND[k], D=trendData(k), S=D.sgg; if(!S||!S.rows.length)return;
   const row=S.rows[S.rows.length-1];
-  const vma={},vje={}; S.codes.forEach((c,i)=>{vma[c]=row.ma[i];vje[c]=row.je[i];});
+  const vma={},vje={},vwo={};
+  S.codes.forEach((c,i)=>{vma[c]=row.ma[i];vje[c]=row.je[i];vwo[c]=(row.wo||[])[i];});
+  /* 월세는 월간 원천에만 있다 — 부동산원 주간조사는 매매·전세만(R-ONE 주간표 8종 전부).
+     그래서 주간 지도는 2단, 월간 지도는 3단으로 자동 분기한다. */
+  const hasWo=Array.isArray(row.wo);
   // 시군구 지도(KOSIS 등)의 기준일이 시도·서울 지표(R-ONE 최신)보다 뒤처질 때가 있어
   // (예: 주간 시군구는 시도보다 수일 늦음) 오해 없게 두 날짜를 함께 표기한다.
   const natP=(D.rows&&D.rows.length)?D.rows[D.rows.length-1].p:row.p;
   const gap=natP!==row.p;
-  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 전국 시군구 매매·전세 변동률(%) · '+T.unit+(gap?' · 시도·서울 지표는 '+T.lab(natP):'');
+  const SER=hasWo?'매매·전세·월세':'매매·전세';
+  document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 전국 시군구 '+SER+' 변동률(%) · '+T.unit+(gap?' · 시도·서울 지표는 '+T.lab(natP):'');
   const ref=k==='week'?0.4:1.0, TW=30, NH=15, VH=13, G=2;
-  const N=NATION_TILE, W=N.cols*(TW+G)-G, H=N.rows*(NH+VH*2+2+G)-G;
+  const rowH=NH+(hasWo?3:2)*(VH+1);   // 이름칸 + 값칸(각 VH, 사이 1px)
+  const N=NATION_TILE, W=N.cols*(TW+G)-G, H=N.rows*(rowH+G)-G;
   const sv=['<svg viewBox="-2 -2 '+(W+4)+' '+(H+4)+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:640px;margin:0 auto;display:block" role="img" aria-label="전국 시군구 변동률 지도">'];
   const GRP_TINT={a7:'#e2e7e5',c1:'#e2e7e5',c3:'#e2e7e5',b2:'#e2e7e5',b1:'#e2e7e5',
     a9:'#e1e6e3',b3:'#e1e6e3',c7:'#e1e6e3',c6:'#e1e6e3',c8:'#e1e6e3',b4:'#e1e6e3'};
@@ -1600,19 +1606,19 @@ function drawNationMap(k){
   const fmtV=v=>v==null?'·':(v>0?'+':'')+v.toFixed(2);
   const tcol=v=>v>0?'#8f2318':(v<0?'#123c5c':'#5e6f74');
   N.t.forEach(([c,nm,x,y,h])=>{
-    const ma=vma[c], je=vje[c];
-    const px=x*(TW+G), py=y*(NH+VH*2+2+G);
+    const ma=vma[c], je=vje[c], wo=vwo[c];
+    const px=x*(TW+G), py=y*(rowH+G);
+    const cells=[[ma,NH+1,NH+VH-3],[je,NH+VH+2,NH+2*VH]];
+    if(hasWo)cells.push([wo,NH+2*VH+3,NH+3*VH+1]);
     sv.push(`<g transform="translate(${px},${py})">`+
       `<rect width="${TW}" height="${NH}" rx="4" fill="${h?'#1e2846':(SI_PARENT.has(c)?'#34456b':'#eef1f8')}" stroke="${h?'#1e2846':'#d6dced'}"/>`+
       `<text x="${TW/2}" y="${NH-4}" text-anchor="middle" font-size="${nm.length>=4?7:(nm.length===3?8:9)}" font-weight="600" fill="${(h||SI_PARENT.has(c))?'#fff':'#1b2426'}">${nm}</text>`+
-      `<rect y="${NH+1}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(ma,ref)}" stroke="#d8dfdc"/>`+
-      `<text x="${TW/2}" y="${NH+VH-3}" text-anchor="middle" font-size="9" font-weight="600" fill="${tcol(ma)}">${fmtV(ma)}</text>`+
-      `<rect y="${NH+VH+2}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(je,ref)}" stroke="#d8dfdc"/>`+
-      `<text x="${TW/2}" y="${NH+2*VH}" text-anchor="middle" font-size="9" font-weight="600" fill="${tcol(je)}">${fmtV(je)}</text>`+
-      `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%</title></g>`);
+      cells.map(([v,ry,ty])=>
+        `<rect y="${ry}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(v,ref)}" stroke="#d8dfdc"/>`+
+        `<text x="${TW/2}" y="${ty}" text-anchor="middle" font-size="9" font-weight="600" fill="${tcol(v)}">${fmtV(v)}</text>`).join('')+
+      `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%${hasWo?' · 월세 '+fmtV(wo)+'%':''}</title></g>`);
   });
   // 시도(광역) 경계선 — 같은 시도가 아닌 이웃과 접한 변만 그린다
-  const rowH=NH+VH*2+2;
   const posGrp={};
   N.t.forEach(([c,,x,y])=>{posGrp[x+','+y]=grpOf(c);});
   const bl=[];
@@ -1639,10 +1645,10 @@ function drawNationMap(k){
   sv.push('<path d="'+dl.join('')+'" stroke="#34456b" stroke-width="0.8" stroke-dasharray="0.6 1" stroke-linecap="round" fill="none" opacity=".85"/>');
   sv.push('</svg>');
   document.getElementById(T.map).innerHTML=
-    mapDateChip(row.p,'매매·전세 · '+T.unit,gap)+
+    mapDateChip(row.p,SER+' · '+T.unit,gap)+
     rankTables(S,T.unit)+
     '<div class="map-scroll">'+sv.join('')+'</div>'+
-    '<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>';
+    (hasWo?'<div class="map-suplegend">타일 값: 위 = 매매 · 가운데 = 전세 · 아래 = 월세</div>':'<div class="map-suplegend">타일 값: 위 = 매매 · 아래 = 전세</div>');
 }
 /* --- 표 행열전환 --- */
 let TRANSP={};
