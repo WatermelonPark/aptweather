@@ -331,6 +331,13 @@
   .period button{flex:1;min-width:54px;border:1px solid var(--line);background:#fff;
     border-radius:var(--r-touch);padding:9px 0;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
   .period button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  /* 규모별 동향 피벗 — 지표/규모 멀티토글 두 줄 + 2계층 열머리 */
+  .szrow{align-items:center;margin:8px 0 0}
+  .szrow button{flex:0 1 auto;min-width:46px}
+  .szlab{flex:none;font-size:12px;color:var(--muted);width:30px}
+  #stat-tbl th .szsub{display:block;font-weight:400;font-size:11px;color:var(--muted);letter-spacing:0}
+  #stat-tbl .szgrp{border-left:2px solid var(--line)}
+  .szu{font-size:10.5px;color:var(--muted);font-weight:400}
   .aux{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 4px;min-height:4px}
   .aux button{border:1px dashed var(--line);background:#fff;border-radius:var(--r-touch);
     padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer}
@@ -531,6 +538,11 @@
   .adv-tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #stats-adv .adv-sec,#stats-more .adv-sec{margin-top:8px}
   #stats-market .adv-sec:first-child{margin-top:8px}
+  /* 표 아래 '더보기' — 표와 한 몸으로 보이게 폭 전체를 쓰고 위 테두리만 잇는다 */
+  .tr-more{display:block;width:100%;font-family:inherit;font-size:13px;font-weight:600;
+    padding:10px;border:0;border-top:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer}
+  .tr-more:hover{background:var(--paper2);color:var(--ink)}
+  .tr-more:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
   .tr-row{display:flex;justify-content:flex-end;margin:0 0 8px}
   .trbtn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:var(--r-touch);
     border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}

@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v30'; // 시도 월세 전 구간 복구(KOSIS 폴백이 지우던 문제) + 월세 실선
+const VERSION = 'v31'; // 시장동향 표에 '더보기'(12개씩 확장, 시군구는 지연 로드 연동)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

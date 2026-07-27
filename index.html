@@ -227,6 +227,7 @@
     </div>
 
     <div class="aux" id="aux-seg"></div>
+    <div id="size-ctl" style="display:none"></div>
 
     <div id="sec-basicmain" class="gsec gm-g">
       <div class="gt-head"><div class="gt"><button class="on" data-v="g" onclick="gtSet('basicmain','g')">그래프</button><button data-v="t" onclick="gtSet('basicmain','t')">표</button></div></div>
@@ -478,6 +479,7 @@ function ensureSggHist(){
 /* 시군구를 고르면 먼저 있는 만큼(12구간) 즉시 그리고, 전체가 도착하면 다시 그린다 */
 function onTrendSgg(k){
   const T=TREND[k], sub=document.getElementById(T.sel2);
+  TRSHOW[k]=12;
   const render=k==='week'?renderWeekSec:renderMonthSec;
   render();
   if(sub&&sub.value&&!SGG_HIST_READY)ensureSggHist().then(render).catch(()=>{});
@@ -560,6 +562,7 @@ const AUXLINES={
   '아파트건설':[{y:1988,m:12,t:'88올림픽~ 급증 시작',c:'#e0564a'},{y:1995,m:12,t:'공급 정점',c:'#9a7000'}],
 };
 const DS_LABEL={매매지수:'매매 실거래지수',전세지수:'전세 실거래지수',전세가율:'전세가율',
+  규모별:'규모별 동향',
   인허가:'인허가',착공:'착공',준공:'준공',금리:'CD금리',보급률:'주택보급률',
   아파트건설:'아파트 건설(연도별)',주택멸실:'주택 멸실',노후주택30년:'30년이상 노후아파트',
   리드타임:'착공·준공 리드타임'};
@@ -570,7 +573,7 @@ const DS_COLOR={매매지수:'#e0564a',전세지수:'#a98be0',전세가율:'#2c7
 /* 세그먼트 표시 순서. Object.keys(STATS)를 그대로 쓰면 data-core.js에 먼저
    담긴 전세가율·주택멸실이 앞으로 튀어나와, 기본 선택인 매매지수가 3번째에
    놓인다(모바일에서 선택 칩이 화면 밖). 가격→공급→주거여건→금리 순으로 고정. */
-const DS_ORDER=['매매지수','전세지수','전세가율','인허가','착공','준공',
+const DS_ORDER=['매매지수','전세지수','전세가율','규모별','인허가','착공','준공',
   '아파트건설','노후주택30년','주택멸실','보급률','금리','리드타임'];
 let ST={ds:'매매지수',reg:null,years:0,aux:new Set()};
 let statChartObj=null;
@@ -588,10 +591,15 @@ function initStats(){
     ST.ds=b.dataset.ds;ST.aux.clear();ST.reg=null;
     track('stats_dataset',{dataset:ST.ds});
     seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
-    const isLead=ST.ds==='리드타임';
+    const isLead=ST.ds==='리드타임', isSize=ST.ds==='규모별';
     document.getElementById('reg-sel').parentElement.style.display=isLead?'none':'';
     document.getElementById('period-seg').style.display=isLead?'none':'';
-    document.getElementById('aux-seg').style.display=isLead?'none':'';
+    document.getElementById('aux-seg').style.display=(isLead||isSize)?'none':'';
+    document.getElementById('size-ctl').style.display=isSize?'':'none';
+    // 규모별은 표 전용(피벗) — 그래프/표 토글을 숨기고 표 모드로 고정
+    const gth=document.querySelector('#sec-basicmain .gt-head');
+    if(gth)gth.style.display=isSize?'none':'';
+    if(isSize)gtSet('basicmain','t');
     if(isLead){drawLeadtime();}else{fillRegions();renderAux();drawStat();}
   }));
   // 기간 프리셋
@@ -607,9 +615,10 @@ function initStats(){
 }
 function fillRegions(){
   const sel=document.getElementById('reg-sel');
-  const regs=Object.keys(STATS[ST.ds].series);
-  // 기본 지역: 서울 있으면 서울, 없으면 첫번째
-  if(!regs.includes(ST.reg)) ST.reg = regs.includes('서울')?'서울':regs[0];
+  const D=STATS[ST.ds];
+  // 규모별은 series가 지표 키라 regions 목록을 따로 싣는다. 기본 지역도 전국.
+  const regs=ST.ds==='규모별'?(D.regions||[]):Object.keys(D.series);
+  if(!regs.includes(ST.reg)) ST.reg = ST.ds==='규모별'?regs[0]:(regs.includes('서울')?'서울':regs[0]);
   sel.innerHTML=regs.map(r=>`<option${r===ST.reg?' selected':''}>${r}</option>`).join('');
 }
 function renderAux(){
@@ -622,6 +631,7 @@ function renderAux(){
   }));
 }
 function drawStat(){
+  if(ST.ds==='규모별'){drawSizePivot();return;}
   const D=STATS[ST.ds], raw=D.series[ST.reg]||[];
   const parsed=D.dates.map(parseDate);
   // 기간 필터
@@ -774,6 +784,89 @@ function drawLeadtime(){
   tbody.innerHTML=h;
   document.getElementById('src-note').innerHTML=
     `※ 착공량과 준공량의 12개월 이동평균을 시차를 두고 비교한 것. 곡선의 봉우리가 평균 공사기간을 뜻한다. 과거 약 27개월(2년 남짓)에서 최근 약 37개월(3년~3년 반)로 길어졌다 — 공사비·인력·안전기준 변화 등이 원인으로 추정된다.`;
+}
+
+/* ── 규모별 동향 피벗 (기준표식: 지표×규모 멀티선택, 전월비% 표) ──
+   series[지표][지역] = 월별 [규모6 값] (지수 3종=전월비%, 전환율=수준%).
+   지표를 바깥 그룹으로 묶는다 — 전환율(단위 %)이 블록으로 격리되고,
+   바깥 그룹 수(지표≤4)가 규모(≤6)보다 적어 헤더가 안정적이다. */
+let SZ={met:new Set(['매매','전세']),siz:new Set([2])};
+function renderSizeCtl(){
+  const D=STATS['규모별'];if(!D)return;
+  const box=document.getElementById('size-ctl');
+  const short=s=>s.replace(/㎡/g,'');
+  box.innerHTML=
+    '<div class="period szrow"><span class="szlab">지표</span>'+D.metrics.map(m=>
+      `<button data-m="${m}"${SZ.met.has(m)?' class="on"':''}>${m}</button>`).join('')+'</div>'+
+    '<div class="period szrow"><span class="szlab">규모</span>'+D.sizes.map((s,i)=>
+      `<button data-s="${i}"${SZ.siz.has(i)?' class="on"':''}>${short(s)}</button>`).join('')+'</div>';
+  box.querySelectorAll('button[data-m]').forEach(b=>b.addEventListener('click',()=>{
+    const m=b.dataset.m;
+    if(SZ.met.has(m)){if(SZ.met.size<=1)return;SZ.met.delete(m);b.classList.remove('on');}
+    else{SZ.met.add(m);b.classList.add('on');}
+    track('stats_size',{met:[...SZ.met].join('/')});drawSizePivot();
+  }));
+  box.querySelectorAll('button[data-s]').forEach(b=>b.addEventListener('click',()=>{
+    const s=+b.dataset.s;
+    if(SZ.siz.has(s)){if(SZ.siz.size<=1)return;SZ.siz.delete(s);b.classList.remove('on');}
+    else{SZ.siz.add(s);b.classList.add('on');}
+    track('stats_size',{siz:[...SZ.siz].sort().join(',')});drawSizePivot();
+  }));
+}
+function drawSizePivot(){
+  const D=STATS['규모별'];if(!D)return;
+  if(!document.getElementById('size-ctl').innerHTML)renderSizeCtl();
+  document.getElementById('sec-basicmain').classList.add('single');
+  document.getElementById('stat-matrix').innerHTML='';
+  if(statChartObj){statChartObj.destroy();statChartObj=null;}
+  const reg=ST.reg||D.regions[0];
+  let idx=D.dates.map((_,i)=>i);
+  if(ST.years>0)idx=idx.filter(i=>i>=D.dates.length-ST.years*12);
+  const mets=D.metrics.filter(m=>SZ.met.has(m));
+  const sizes=[...SZ.siz].sort((a,b)=>a-b);
+  const short=s=>s.replace(/㎡/g,'');
+  // 열 구성 — 전환율은 자체 3구간(0→40↓,1→40-60,2+→60↑)으로 매핑·중복 제거
+  const cols=[];
+  mets.forEach(m=>{
+    if(m==='전환율'){
+      const tiers=[...new Set(sizes.map(si=>si>=2?2:si))];
+      tiers.forEach((t,j)=>cols.push({m,si:t,lab:short(D.conv_sizes[t]),first:j===0,pct:false}));
+    }else{
+      sizes.forEach((si,j)=>cols.push({m,si,lab:short(D.sizes[si]),first:j===0,pct:true}));
+    }
+  });
+  const val=c=>i=>{const a=(D.series[c.m][reg]||[])[i];return a?a[c.si]:null;};
+  const cell=(c,v)=>{
+    if(v==null)return '<td'+(c.first?' class="szgrp"':'')+'>·</td>';
+    const col=c.pct?(v>0?';color:#c0392b':(v<0?';color:#1a5276':'')):'';
+    const t=c.pct?((v>0?'+':'')+v.toFixed(2)):v.toFixed(2);
+    return `<td${c.first?' class="szgrp"':''} style="white-space:nowrap${col}">${t}</td>`;
+  };
+  const thead=document.querySelector('#stat-tbl thead'),tbody=document.querySelector('#stat-tbl tbody');
+  let h='';
+  if(TRANSP.basicmain){
+    const rc=[...idx].reverse();   // 최신이 왼쪽
+    thead.innerHTML='<tr><th style="text-align:center">지표 · 규모</th>'+
+      rc.map(i=>`<th>${D.dates[i]}</th>`).join('')+'</tr>';
+    cols.forEach(c=>{
+      h+=`<tr><td style="white-space:nowrap">${c.m} ${c.lab}${c.pct?'':' <span class="szu">%</span>'}</td>`+
+        rc.map(i=>cell(c,val(c)(i))).join('')+'</tr>';
+    });
+  }else{
+    thead.innerHTML='<tr><th>연월</th>'+cols.map(c=>
+      `<th${c.first?' class="szgrp"':''}>${c.m}<span class="szsub">${c.lab}${c.pct?'':' %'}</span></th>`).join('')+'</tr>';
+    for(let k=idx.length-1;k>=0;k--){
+      const i=idx[k];
+      h+=`<tr><td>${D.dates[i]}</td>`+cols.map(c=>cell(c,val(c)(i))).join('')+'</tr>';
+    }
+  }
+  tbody.innerHTML=h;
+  document.getElementById('prange').innerHTML=idx.length?
+    `<b>${D.dates[idx[0]]}</b> ~ <b>${D.dates[idx[idx.length-1]]}</b> · ${idx.length}개월`:'';
+  document.getElementById('meta-bar').innerHTML=
+    `<span>단위 <b>${D.unit}</b></span><span>지역 <b>${reg}</b></span><span>출처 <b>${D.source}</b></span>`;
+  document.getElementById('src-note').innerHTML=
+    `※ ${D.source}. ${D.note}. 총계 대신 규모별로 보면 초소형(오피스텔성) 물량의 왜곡 없이 시장을 읽을 수 있다.`;
 }
 
 /* ============ 부동산 테스트 (부린이 / 투자자) ============ */
@@ -1752,6 +1845,7 @@ function sggOfSido(W,sido){
 /* 시도 select가 바뀌면 하위 목록을 다시 채우고 '전체'로 되돌린다 */
 function onTrendReg(k){
   const T=TREND[k], W=trendData(k); if(!W)return;
+  TRSHOW[k]=12;                     // 지역이 바뀌면 표는 기본 개수로
   fillSggSel(k,'');
   (k==='week'?renderWeekSec:renderMonthSec)();
 }
@@ -1777,11 +1871,21 @@ function trendPick(k){
   }
   return {name:reg,rows:W.rows,idx:W.regions.indexOf(reg),isSgg:false};
 }
+/* 표 표시 개수 — 기본 12개, '더보기'로 12씩 늘린다. 시군구를 고른 상태면
+   전체 시계열(data-sgg.json)이 필요하므로 먼저 받아온 뒤 늘린다. */
+const TRSHOW={week:12,month:12};
+function trMore(k){
+  const P=trendPick(k);
+  const grow=()=>{ TRSHOW[k]+=12; (k==='week'?renderWeekSec:renderMonthSec)(); };
+  if(P.isSgg&&!SGG_HIST_READY){ ensureSggHist().then(grow).catch(grow); return; }
+  grow();
+}
 function renderTrendTables(k){
   const T=TREND[k], W=trendData(k);
   if(!W){document.getElementById(T.matrix).innerHTML='<div class="src-note" style="padding:14px">데이터 수집 대기중</div>';return;}
   const regs=W.regions;
-  const R=W.rows.slice(-12);   // 표는 최근 12개만 — 긴 시계열은 그래프에서 탐색
+  const LIM=TRSHOW[k]||12;
+  const R=W.rows.slice(-LIM);   // 기본 12개, '더보기'로 확장
   // 월세는 월간에만 있다(주간 원천엔 없음). 행이 wo를 가질 때만 3행 구성.
   const hasWo=R.length>0&&Array.isArray(R[R.length-1].wo);
   const nSub=hasWo?3:2;
@@ -1803,18 +1907,31 @@ function renderTrendTables(k){
     }
   }
   mx.push('</tbody></table>');
+  if(W.rows.length>R.length)mx.push('<button type="button" class="tr-more" data-more="'+k+'">'+
+    '이전 '+Math.min(12,W.rows.length-R.length)+'개 더보기</button>');
   document.getElementById(T.matrix).innerHTML=mx.join('');
   advSel(T.sel,regs);
   fillSggSel(k,(document.getElementById(T.sel2)||{}).value);
   const P=trendPick(k), ri=P.idx;
-  const CR=P.rows.slice(-12);
+  const CR=P.rows.slice(-LIM);
   const cp=['<table class="adv"><thead><tr><th>'+T.col+'</th><th>매매</th><th>전세</th>'+(hasWo?'<th>월세</th>':'')+'</tr></thead><tbody>'];
   for(let i=CR.length-1;i>=0;i--){
     const row=CR[i];
     cp.push(`<tr><td>${T.lab(row.p)}</td>`+wkCell(row.ma[ri])+wkCell(row.je[ri])+(hasWo?wkCell((row.wo||[])[ri]):'')+'</tr>');
   }
   cp.push('</tbody></table>');
+  /* 더 볼 게 남았을 때만 버튼을 낸다. 시군구는 아직 12구간뿐이어도 눌러서
+     전체를 받아올 수 있으므로(지연 로드) 버튼을 함께 보여준다. */
+  const totalAvail=P.isSgg&&!SGG_HIST_READY?Infinity:P.rows.length;
+  const rest=totalAvail-CR.length;
+  if(rest>0)cp.push('<button type="button" class="tr-more" data-more="'+k+'">'+
+    '이전 '+(isFinite(rest)?Math.min(12,rest):12)+'개 더보기</button>');
   document.getElementById(T.compact).innerHTML=cp.join('');
+  /* 더보기 바인딩 — 인라인 onclick은 문자열 안 따옴표가 깨져 data 속성으로 위임 */
+  [T.matrix,T.compact].forEach(id=>{
+    const b=document.getElementById(id).querySelector('.tr-more');
+    if(b)b.addEventListener('click',()=>trMore(b.dataset.more));
+  });
 }
 let GCH={};
 function areaGrad(color,topHex){
