@@ -59,10 +59,12 @@ def _bars():
     return out
 
 
-def _geometry(size, fill_ratio):
+def _geometry(size, fill_ratio, cy=None):
     H = size * fill_ratio
     halfW = size * fill_ratio * WIDTH_RATIO / 2
-    cx = cy = size / 2
+    cx = size / 2
+    if cy is None:
+        cy = size / 2
     top, bot = cy - H / 2, cy + H / 2
     cap = max(2, size * CAP_RATIO * fill_ratio)
     inner_top, inner_bot = top + cap, bot - cap
@@ -73,10 +75,11 @@ def _geometry(size, fill_ratio):
                 inner_top=inner_top, bar_h=bar_h, gap=gap, r=bar_h * 0.4)
 
 
-def draw_icon(size, fill_ratio):
-    img = Image.new('RGB', (size, size), PAPER)
+def draw_icon(size, fill_ratio, cy=None, img=None):
+    if img is None:
+        img = Image.new('RGB', (size, size), PAPER)
     d = ImageDraw.Draw(img)
-    g = _geometry(size, fill_ratio)
+    g = _geometry(size, fill_ratio, cy=cy)
     cx, halfW, cap = g['cx'], g['halfW'], g['cap']
     d.rounded_rectangle([cx - halfW, g['top'], cx + halfW, g['top'] + cap],
                         radius=cap / 2, fill=FRAME)
@@ -88,6 +91,47 @@ def draw_icon(size, fill_ratio):
         rr = min(g['r'], w)
         d.rounded_rectangle([cx - w, y, cx + w, y + g['bar_h']], radius=rr, fill=col)
         y += g['bar_h'] + g['gap']
+    return img
+
+
+WORDMARK = 'AGONGMAP'
+TAGLINE = '아파트 · 공급량 · 투자지도'
+MUTED = (94, 111, 116)    # --muted #5e6f74
+_FDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts')
+FONT_BOLD = os.path.join(_FDIR, 'Pretendard-Bold.subset.ttf')
+FONT_MED = os.path.join(_FDIR, 'Pretendard-Medium.subset.ttf')
+
+
+def draw_icon_wordmark(size, glass_ratio=0.54, text_ratio=0.080, track_em=0.30,
+                       tag_ratio=0.047):
+    """스플래시용(icon-512): 모래시계 + AGONGMAP 워드마크 + 한글 태그라인.
+
+    PWA 스플래시는 가장 큰 'any' 아이콘 하나로 그려지므로, 여기에만 워드마크를
+    넣으면 앱 실행 화면에 로고+이름+설명이 함께 뜬다. 런처(maskable)·파비콘은 깔끔 유지.
+    track_em: 라틴 워드마크 자간(넉넉히). 한글 태그라인은 자간 0(디자인 규칙),
+    가운뎃점(·)으로 리듬만 준다."""
+    from PIL import ImageFont
+    img = Image.new('RGB', (size, size), PAPER)
+    d = ImageDraw.Draw(img)
+    fs = round(size * text_ratio)
+    font = ImageFont.truetype(FONT_BOLD, fs)
+    track = fs * track_em
+    tfs = round(size * tag_ratio)
+    tfont = ImageFont.truetype(FONT_MED, tfs)
+    # 세로 배치: 모래시계 중심을 위로, 아래에 워드마크·태그라인 — 덩어리가 광학 중앙
+    glass_cy = size * 0.408
+    draw_icon(size, glass_ratio, cy=glass_cy, img=img)
+    # 워드마크 (글자별 자간 수동 트래킹)
+    ws = [d.textlength(ch, font=font) for ch in WORDMARK]
+    total = sum(ws) + track * (len(WORDMARK) - 1)
+    ty = glass_cy + size * glass_ratio / 2 + size * 0.066
+    x = (size - total) / 2
+    for ch, w in zip(WORDMARK, ws):
+        d.text((x, ty), ch, font=font, fill=FRAME)
+        x += w + track
+    # 태그라인 (자간 없음, muted)
+    tw = d.textlength(TAGLINE, font=tfont)
+    d.text(((size - tw) / 2, ty + fs * 1.52), TAGLINE, font=tfont, fill=MUTED)
     return img
 
 
@@ -124,13 +168,16 @@ def main():
         ('app_icon_128.png', 128, 0.86),   # 카카오 링크/프로필 소(권장 128px)
         ('app_icon_640.png', 640, 0.86),   # 카카오 채널 이미지(권장 640x640)
         (os.path.join('icons', 'icon-192.png'), 192, 0.84),
-        (os.path.join('icons', 'icon-512.png'), 512, 0.84),
         (os.path.join('icons', 'maskable-192.png'), 192, 0.64),
         (os.path.join('icons', 'maskable-512.png'), 512, 0.64),
     ]
     for rel, size, ratio in jobs:
         draw_icon(size, ratio).save(os.path.join(ROOT, rel), 'PNG', optimize=True)
         print('wrote', rel)
+    # icon-512(any)만 워드마크판 — PWA 스플래시가 이 이미지를 쓴다
+    draw_icon_wordmark(512).save(os.path.join(ROOT, 'icons', 'icon-512.png'),
+                                 'PNG', optimize=True)
+    print('wrote icons/icon-512.png (wordmark)')
 
 
 if __name__ == '__main__':

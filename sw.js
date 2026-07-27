@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v27'; // 시장동향 표·그래프에 시도→시군구 2단 선택(서울 25구·경기 구 포함)
+const VERSION = 'v28'; // PWA 스플래시(icon-512)에 AGONGMAP 워드마크+태그라인, 매니페스트 배경색 쿨톤 교정
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
