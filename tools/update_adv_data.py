@@ -1027,9 +1027,87 @@ def update_basic():
                 changed.append('%s(%d)' % (name, n))
         except Exception as e:
             print('basic %s skip: %s' % (name, e))
+    try:
+        changed += update_size(stats)
+    except Exception as e:
+        print('size skip:', e)
     if changed:
         write_stats(stats)
     return changed
+
+
+# ---- 규모별 동향 (기본통계 '규모별' 피벗) ---------------------------------
+# 기준표 습관(2026-01 월간부동산 강의): 가격지수는 총계·유형별이 아니라 규모별로
+# 본다 — 총계는 초소형(오피스텔성)이 섞여 왜곡되기 때문. 월간 4표를 아파트만
+# 걸러 시도급 20지역 × 규모 6구간으로 담는다. 지수 3종은 전월비 %를 사전 계산,
+# 전월세전환율은 수준(%) 그대로(단위가 달라 UI가 지표 블록으로 격리 표기).
+# 매 실행 전량 재조회(62개월×4호출, 표당 ~15k셀<40k)라 증분 병합이 필요 없다.
+SIZE_TBLS = [('매매', 'DT_30404_B014', True), ('전세', 'DT_30404_B015', True),
+             ('월세', 'DT_30404_B005', True), ('전환율', 'DT_30404_N0009', False)]
+SIZE_LABELS = ['40㎡↓', '40~60㎡', '60~85㎡', '85~102㎡', '102~135㎡', '135㎡↑']
+SIZE_MONTHS = 62
+
+
+def update_size(stats):
+    metrics, dates = {}, set()
+    for name, tbl, is_idx in SIZE_TBLS:
+        rows = kosis({'orgId': '408', 'tblId': tbl, 'objL1': '01', 'objL2': 'ALL',
+                      'objL3': 'ALL', 'itmId': 'ALL', 'prdSe': 'M',
+                      'newEstPrdCnt': str(SIZE_MONTHS)})
+        time.sleep(0.2)
+        by = {}
+        for r in rows:
+            reg = (r.get('C2_NM') or '').strip()
+            if reg not in WEEKLY_REGIONS:
+                continue
+            try:
+                si = int(r.get('C3') or 0) - 1
+                v = float(r['DT'])
+            except (TypeError, ValueError, KeyError):
+                continue
+            p = r.get('PRD_DE') or ''
+            if not (0 <= si < 6) or len(p) != 6:
+                continue
+            by.setdefault(reg, {}).setdefault(p, [None] * 6)[si] = v
+        out = {}
+        for reg, mp in by.items():
+            ps = sorted(mp)
+            ser = {}
+            for i, p in enumerate(ps):
+                if is_idx:
+                    if i == 0:
+                        continue
+                    prev = mp[ps[i - 1]]
+                    ser[p] = [round((mp[p][k] / prev[k] - 1) * 100, 2)
+                              if (mp[p][k] is not None and prev[k]) else None
+                              for k in range(6)]
+                else:
+                    ser[p] = [round(mp[p][k], 2) if mp[p][k] is not None else None
+                              for k in range(6)]
+            out[reg] = ser
+            dates.update(ser)
+        metrics[name] = out
+    # 공통 시간축: 지수 변동률이 시작되는 달부터 (전환율의 2011~ 과거는 싣지 않음)
+    base = min(min(s) for s in metrics['매매'].values())
+    ds = sorted(d for d in dates if d >= base)
+    series = {}
+    for name, _, _ in SIZE_TBLS:
+        series[name] = {reg: [metrics[name].get(reg, {}).get(d) for d in ds]
+                        for reg in WEEKLY_REGIONS if reg in metrics[name]}
+    stats['규모별'] = {
+        'dates': ['%s.%s' % (d[:4], d[4:6]) for d in ds],
+        'sizes': SIZE_LABELS,
+        # 아파트 전월세전환율(N0009)은 자체 3구간(값은 배열 0~2번 슬롯에만) —
+        # 가격표 6구간과 경계가 달라 UI가 이 라벨로 매핑해 표기한다.
+        'conv_sizes': ['40㎡↓', '40~60㎡', '60㎡↑'],
+        'metrics': [n for n, _, _ in SIZE_TBLS],
+        'regions': [r for r in WEEKLY_REGIONS if r in series['매매']],
+        'unit': '전월 대비 % (전환율은 %)',
+        'source': '한국부동산원 전국주택가격동향조사(월간) · 아파트',
+        'note': '지수 3종은 전월 대비 변동률, 전월세전환율은 수준(%)',
+        'series': series}
+    return ['규모별(%d)' % len(ds)]
+
 
 def read_current_adv():
     c = io.open(DATA, encoding='utf-8').read()
