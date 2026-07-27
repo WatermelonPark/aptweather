@@ -331,10 +331,14 @@
   .period button{flex:1;min-width:54px;border:1px solid var(--line);background:#fff;
     border-radius:var(--r-touch);padding:9px 0;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
   .period button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-  /* 규모별 동향 피벗 — 지표/규모 멀티토글 두 줄 + 2계층 열머리 */
-  .szrow{align-items:center;margin:8px 0 0}
-  .szrow button{flex:0 1 auto;min-width:46px}
-  .szlab{flex:none;font-size:12px;color:var(--muted);width:30px}
+  /* 규모별 동향 피벗 — 지표/규모 멀티토글 + 정렬·행렬전환. 균등 그리드라
+     줄바꿈이 안 생기고, 모바일은 규모를 3열×2줄로 의도적으로 나눈다. */
+  .szrow{display:grid;gap:6px;margin:8px 0 0}
+  .szrow button{min-width:0;padding:8px 2px;font-size:12.5px;white-space:nowrap}
+  .szmet{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .szsiz{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .szops{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media(max-width:560px){.szsiz{grid-template-columns:repeat(3,minmax(0,1fr))}}
   #stat-tbl th .szsub{display:block;font-weight:400;font-size:11px;color:var(--muted);letter-spacing:0}
   #stat-tbl .szgrp{border-left:2px solid var(--line)}
   .szu{font-size:10.5px;color:var(--muted);font-weight:400}

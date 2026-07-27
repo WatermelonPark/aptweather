@@ -790,16 +790,19 @@ function drawLeadtime(){
    series[지표][지역] = 월별 [규모6 값] (지수 3종=전월비%, 전환율=수준%).
    지표를 바깥 그룹으로 묶는다 — 전환율(단위 %)이 블록으로 격리되고,
    바깥 그룹 수(지표≤4)가 규모(≤6)보다 적어 헤더가 안정적이다. */
-let SZ={met:new Set(['매매','전세']),siz:new Set([2])};
+let SZ={met:new Set(['매매','전세']),siz:new Set([2]),desc:true,tr:false};
 function renderSizeCtl(){
   const D=STATS['규모별'];if(!D)return;
   const box=document.getElementById('size-ctl');
   const short=s=>s.replace(/㎡/g,'');
   box.innerHTML=
-    '<div class="period szrow"><span class="szlab">지표</span>'+D.metrics.map(m=>
+    '<div class="period szrow szmet">'+D.metrics.map(m=>
       `<button data-m="${m}"${SZ.met.has(m)?' class="on"':''}>${m}</button>`).join('')+'</div>'+
-    '<div class="period szrow"><span class="szlab">규모</span>'+D.sizes.map((s,i)=>
-      `<button data-s="${i}"${SZ.siz.has(i)?' class="on"':''}>${short(s)}</button>`).join('')+'</div>';
+    '<div class="period szrow szsiz">'+D.sizes.map((s,i)=>
+      `<button data-s="${i}"${SZ.siz.has(i)?' class="on"':''}>${short(s)}</button>`).join('')+'</div>'+
+    '<div class="period szrow szops">'+
+      `<button data-o="sort">${SZ.desc?'최신순 ↓':'과거순 ↑'}</button>`+
+      `<button data-o="tr"${SZ.tr?' class="on"':''}>⇄ 행열 전환</button></div>`;
   box.querySelectorAll('button[data-m]').forEach(b=>b.addEventListener('click',()=>{
     const m=b.dataset.m;
     if(SZ.met.has(m)){if(SZ.met.size<=1)return;SZ.met.delete(m);b.classList.remove('on');}
@@ -812,6 +815,14 @@ function renderSizeCtl(){
     else{SZ.siz.add(s);b.classList.add('on');}
     track('stats_size',{siz:[...SZ.siz].sort().join(',')});drawSizePivot();
   }));
+  box.querySelector('button[data-o="sort"]').addEventListener('click',e=>{
+    SZ.desc=!SZ.desc;e.target.textContent=SZ.desc?'최신순 ↓':'과거순 ↑';
+    track('stats_size',{sort:SZ.desc?'desc':'asc'});drawSizePivot();
+  });
+  box.querySelector('button[data-o="tr"]').addEventListener('click',e=>{
+    SZ.tr=!SZ.tr;e.target.classList.toggle('on',SZ.tr);
+    track('stats_size',{tr:SZ.tr?1:0});drawSizePivot();
+  });
 }
 function drawSizePivot(){
   const D=STATS['규모별'];if(!D)return;
@@ -843,22 +854,21 @@ function drawSizePivot(){
     return `<td${c.first?' class="szgrp"':''} style="white-space:nowrap${col}">${t}</td>`;
   };
   const thead=document.querySelector('#stat-tbl thead'),tbody=document.querySelector('#stat-tbl tbody');
+  const ord=SZ.desc?[...idx].reverse():idx;   // 정렬 토글: 최신순↓ / 과거순↑
   let h='';
-  if(TRANSP.basicmain){
-    const rc=[...idx].reverse();   // 최신이 왼쪽
+  if(SZ.tr){
     thead.innerHTML='<tr><th style="text-align:center">지표 · 규모</th>'+
-      rc.map(i=>`<th>${D.dates[i]}</th>`).join('')+'</tr>';
+      ord.map(i=>`<th>${D.dates[i]}</th>`).join('')+'</tr>';
     cols.forEach(c=>{
       h+=`<tr><td style="white-space:nowrap">${c.m} ${c.lab}${c.pct?'':' <span class="szu">%</span>'}</td>`+
-        rc.map(i=>cell(c,val(c)(i))).join('')+'</tr>';
+        ord.map(i=>cell(c,val(c)(i))).join('')+'</tr>';
     });
   }else{
     thead.innerHTML='<tr><th>연월</th>'+cols.map(c=>
       `<th${c.first?' class="szgrp"':''}>${c.m}<span class="szsub">${c.lab}${c.pct?'':' %'}</span></th>`).join('')+'</tr>';
-    for(let k=idx.length-1;k>=0;k--){
-      const i=idx[k];
+    ord.forEach(i=>{
       h+=`<tr><td>${D.dates[i]}</td>`+cols.map(c=>cell(c,val(c)(i))).join('')+'</tr>';
-    }
+    });
   }
   tbody.innerHTML=h;
   document.getElementById('prange').innerHTML=idx.length?
