@@ -5,9 +5,9 @@
   A. 공급이 부족한 생활권일수록 가격이 더 오른다 (공급이 알파이자 오메가)
   B. 전세가 매매를 선행한다 (공급 부족 → 전세 ↑ → 매매 ↑)
 
-왜 새로 받아야 하나: data.js의 시군구 주간 가격은 그래프용이라 최근 12주만
-남긴다. 생활권 단위 검증에는 턱없이 짧아 KOSIS에서 3년치를 직접 받는다.
-(주간 조회 분할은 update_adv_data가 이미 갖고 있으므로 재사용한다.)
+데이터: data.js의 ADV.weekly.sgg(R-ONE, 156주 = 3년)를 그대로 읽는다.
+과거엔 12주뿐이라 KOSIS 3년치를 따로 받았지만, 2026-07-28 시군구 시계열
+확장으로 재조회가 필요 없어졌다.
 
 ⚠️ 이 표의 DT는 지수가 아니라 **이미 주간 변동률(%)**이다(UNIT_NM='%').
    지수로 착각해 b/a−1을 하면 −1000% 같은 값이 나온다. 누적은 복리로 합치고,
@@ -46,19 +46,27 @@ def load_zones():
     return adv['livezone']['zones']
 
 
-def fetch_sgg(cfg):
-    """시군구 주간 지수 → {시군구명: {주차: 지수}}"""
-    by = {}
-    data_by, seoul, sgg = U._fetch_weekly_one(cfg, WEEKS)
-    return sgg          # {주차: {코드: 값}}
+def fetch_sgg(metric):
+    """시군구 주간 변동률(%) → {주차: {코드: 값}}.
+    KOSIS 재조회를 버리고 data.js의 ADV.weekly.sgg를 읽는다(2026-07-28) —
+    시군구 시계열이 156주로 확장돼("최근 12주만" 전제가 낡음) 원천 재조회가
+    불필요해졌고, KOSIS 주간 폴백 헬퍼도 같은 날 제거됐다. R-ONE 값도 KOSIS와
+    동일하게 '이미 주간 변동률(%)'이다."""
+    src = io.open('data.js', encoding='utf-8').read()
+    adv = json.loads(re.search(
+        r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/', src, re.S).group(1))
+    sgg = adv['weekly']['sgg']
+    return {r['p']: {c: v for c, v in zip(sgg['codes'], r[metric]) if v is not None}
+            for r in sgg['rows']}
 
 
 def code_name_map():
-    """KOSIS 한 번 호출로 코드→이름 사전을 만든다."""
-    raw = U.kosis({'orgId': U.CONF['weekly']['maega']['orgId'],
-                   'tblId': U.CONF['weekly']['maega']['tblId'],
-                   'objL1': 'ALL', 'itmId': 'ALL', 'prdSe': 'F', 'newEstPrdCnt': '1'})
-    return {(r.get('C1') or '').strip(): (r.get('C1_NM') or '').strip() for r in raw}
+    """코드→시군구명. index.html의 SGG_QNAME('서울 강남구'·'성남 분당구')에서
+    마지막 토큰만 취하면 KOSIS C1_NM('강남구'·'분당구')과 같은 꼴이 된다.
+    (SGG_QNAME은 프론트 상수라 백엔드 모듈엔 없다 — data.js처럼 정규식으로 읽는다.)"""
+    src = io.open('index.html', encoding='utf-8').read()
+    qn = json.loads(re.search(r'const SGG_QNAME=(\{.*?\});', src, re.S).group(1))
+    return {c: n.split()[-1] for c, n in qn.items()}
 
 
 def norm(n):
@@ -112,10 +120,10 @@ def corr(xs, ys):
 
 def main():
     zones = load_zones()
-    print('생활권 %d곳 · KOSIS에서 시군구 주간 지수 %d주 수집 중…' % (len(zones), WEEKS))
+    print('생활권 %d곳 · data.js에서 시군구 주간 변동률(R-ONE) 로드 중...' % (len(zones), WEEKS))
     c2n = code_name_map()
-    ma = fetch_sgg(U.CONF['weekly']['maega'])
-    je = fetch_sgg(U.CONF['weekly']['jeonse'])
+    ma = fetch_sgg('ma')
+    je = fetch_sgg('je')
     print('  수집 완료: 매매 %d주 · 전세 %d주 · 시군구 코드 %d개'
           % (len(ma), len(je), len(c2n)))
 
