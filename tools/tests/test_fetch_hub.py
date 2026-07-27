@@ -437,22 +437,51 @@ def test_fold_groups_folds_multi_gu_city_under_parent_code():
     assert groups['41370']['members'] == ['41370']
 
 
-def test_fold_groups_marks_unresolvable_legacy():
+def test_fold_groups_marks_unresolvable_legacy_when_rep_itself_has_no_bjdong():
+    # 실측(2026-07-27, 부천 팬아웃 배경): enumerable은 옛구코드 자신이 아니라
+    # 대표(rep) 자신의 법정동 보유 여부로 판정한다 — 옛구코드는
+    # code_bdong.json에 자기 행이 아예 없어(2016 구 폐지로 삭제) 예전 판정
+    # (legacy code 자신의 bjdong 확인)은 항상 False였다. 이제는 대표가 없는
+    # 극단적인 경우(픽스처에 아예 없는 코드)만 False다.
+    sido_codes, name_codes, sgg_name_by_code, sido_by_code, bjdong_by_sgg = \
+        F.build_target_index(FIXTURE_ROWS, LZ_SIDO_FULL_FIXTURE)
+    targets = {'99999': '없는시'}   # 픽스처에 전혀 없는 코드 -> 대표 자신도 법정동 없음
+    old_gu_map = {'99999': ['41135']}   # 옛코드 자체가 실 bjdong을 가져도 이제 무관
+    groups = F.fold_groups(targets, sido_by_code, bjdong_by_sgg, old_gu_map)
+    assert groups['99999']['legacy']['enumerable'] is False
+
+
+def test_fold_groups_marks_resolvable_legacy_based_on_rep_own_bjdong():
     sido_codes, name_codes, sgg_name_by_code, sido_by_code, bjdong_by_sgg = \
         F.build_target_index(FIXTURE_ROWS, LZ_SIDO_FULL_FIXTURE)
     targets = {'41370': '오산시'}
-    old_gu_map = {'41370': ['99999']}   # 존재하지 않는 옛코드
+    old_gu_map = {'41370': ['99999']}   # 옛코드 자체는 존재하지 않아도(법정동 없어도) 무관해짐
     groups = F.fold_groups(targets, sido_by_code, bjdong_by_sgg, old_gu_map)
-    assert groups['41370']['legacy']['enumerable'] is False
+    assert groups['41370']['legacy']['enumerable'] is True   # 대표(41370=오산시) 자신에 법정동(세교동) 있음
 
 
-def test_fold_groups_marks_resolvable_legacy():
+def test_apply_legacy_gu_fix_fans_out_rep_bjdong_across_legacy_codes():
+    # 부천 실측(2026-07-27): 대표(41190) 자신의 법정동 목록을 옛구코드 여러개에
+    # 그대로 재사용해 조회해야 한다(옛구마다 독립 번호체계라 하나만 물으면 누락).
     sido_codes, name_codes, sgg_name_by_code, sido_by_code, bjdong_by_sgg = \
         F.build_target_index(FIXTURE_ROWS, LZ_SIDO_FULL_FIXTURE)
     targets = {'41370': '오산시'}
-    old_gu_map = {'41370': ['41135']}   # 실제 bjdong(정자동)이 있는 코드를 옛코드로 가정
+    old_gu_map = {'41370': ['41192', '41194']}
     groups = F.fold_groups(targets, sido_by_code, bjdong_by_sgg, old_gu_map)
-    assert groups['41370']['legacy']['enumerable'] is True
+    fixed = F.apply_legacy_gu_fix(groups)
+    assert '41370' in fixed                                    # 대표 키는 안 바뀜(GANGWON_CODE_FIX와 차이점)
+    assert set(fixed['41370']['bjdong'].keys()) == {'41192', '41194'}
+    assert fixed['41370']['bjdong']['41192'] == ['11300']       # 대표의 법정동(세교동) 그대로 재사용
+    assert fixed['41370']['bjdong']['41194'] == ['11300']
+
+
+def test_apply_legacy_gu_fix_noop_when_no_legacy():
+    sido_codes, name_codes, sgg_name_by_code, sido_by_code, bjdong_by_sgg = \
+        F.build_target_index(FIXTURE_ROWS, LZ_SIDO_FULL_FIXTURE)
+    targets = {'41370': '오산시'}
+    groups = F.fold_groups(targets, sido_by_code, bjdong_by_sgg, {})
+    fixed = F.apply_legacy_gu_fix(groups)
+    assert fixed['41370']['bjdong'] == groups['41370']['bjdong']
 
 
 # ---------------------------------------------------------------------------
@@ -542,6 +571,55 @@ def test_fetch_bjdong_all_pages_no_error_on_clean_no_data(monkeypatch):
     assert had_error is False
 
 
+def _fake_page_xml(n_items, total_count):
+    items = ''.join('<item><mgmHsrgstPk>%d</mgmHsrgstPk></item>' % i for i in range(n_items))
+    return ('<response><header><resultCode>00</resultCode></header><body><items>%s</items>'
+            '<numOfRows>%d</numOfRows><pageNo>1</pageNo><totalCount>%d</totalCount>'
+            '</body></response>') % (items, n_items, total_count)
+
+
+def test_parse_total_count_reads_totalcount_tag():
+    assert F.parse_total_count(_fake_page_xml(100, 1072)) == 1072
+    assert F.parse_total_count('<response></response>') is None
+
+
+def test_fetch_bjdong_all_pages_continues_past_server_page_cap(monkeypatch):
+    # 회귀 테스트(2026-07-27 실측 버그): 서버가 요청한 numOfRows(1000)를
+    # 무시하고 페이지당 100건만 돌려준다 — totalCount=1072인 법정동이면
+    # 100건씩 10페이지 + 마지막 72건, 총 11페이지가 필요하다. 예전 로직
+    # (이번 페이지 건수 < 요청한 NUM_ROWS)은 "100 < 1000"이 항상 참이라
+    # 첫 페이지에서 멈췄다(강남 삼성동 실측: 1072건 중 100건만 수집됨).
+    # 지금은 누적 items가 totalCount에 도달할 때까지 계속 페이징해야 한다.
+    calls = []
+
+    def fake_fetch_page(sigungu, bjdong, page, endpoint=F.EP):
+        calls.append(page)
+        if page <= 10:
+            return _fake_page_xml(100, 1072), 'data'
+        return _fake_page_xml(72, 1072), 'data'   # 마지막 페이지(11번째): 72건
+
+    monkeypatch.setattr(F, 'fetch_page', fake_fetch_page)
+    items, had_error = F.fetch_bjdong_all_pages('11680', '10500')
+    assert had_error is False
+    assert len(items) == 1072                  # 100*10 + 72, 총계와 정확히 일치
+    assert calls == list(range(1, 12))          # 11페이지 전부 호출됨
+
+
+def test_fetch_bjdong_all_pages_single_page_under_cap_stops_correctly(monkeypatch):
+    # totalCount가 서버 페이지 상한(관측 100) 이하인 흔한 경우 — 1페이지에서
+    # 정상 종료해야 한다(불필요한 추가 호출 없이).
+    calls = []
+
+    def fake_fetch_page(sigungu, bjdong, page, endpoint=F.EP):
+        calls.append(page)
+        return _fake_page_xml(7, 7), 'data'
+
+    monkeypatch.setattr(F, 'fetch_page', fake_fetch_page)
+    items, had_error = F.fetch_bjdong_all_pages('41370', '11300')
+    assert len(items) == 7
+    assert calls == [1]
+
+
 def test_fetch_group_propagates_had_unresolved_error(monkeypatch):
     # 그룹 소속 법정동 중 하나라도 had_error면 그룹 전체가
     # had_unresolved_error=True로 올라와야 fetch_group 결과를 신뢰 안 함.
@@ -564,6 +642,47 @@ def test_fetch_group_no_error_when_all_bjdong_clean(monkeypatch):
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: ([], False))
     done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
     assert had_unresolved_error is False
+
+
+def test_fetch_group_fans_out_legacy_codes_for_bucheon_style_group(monkeypatch):
+    # 준공(HsPmsHubService) 전용 팬아웃: legacy 그룹은 대표코드(41190) 자체가
+    # 아니라 옛구코드(41192/41194) 각각으로, 대표 자신의 법정동 목록을 그대로
+    # 재사용해 조회해야 한다(실측 2026-07-27).
+    group = {'name': '부천시', 'sido': '경기', 'members': ['41190'],
+             'bjdong': {'41190': ['10100', '10200']},
+             'legacy': {'legacy_codes': ['41192', '41194'], 'enumerable': True}}
+    calls = []
+
+    def fake_fetch_bjdong_all_pages(sigungu, bjdong, log=None):
+        calls.append((sigungu, bjdong))
+        return [], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
+    F.fetch_group(group)
+    # 대표코드(41190) 자체로는 한 번도 호출되지 않고, 옛구코드 2개 x 법정동 2개
+    # = 4콜이 나가야 한다(대표 자신의 법정동 목록이 옛구코드마다 재사용됨).
+    assert ('41190', '10100') not in calls and ('41190', '10200') not in calls
+    assert set(calls) == {('41192', '10100'), ('41192', '10200'),
+                           ('41194', '10100'), ('41194', '10200')}
+
+
+def test_fetch_group_demol_does_not_fan_out_legacy_codes(monkeypatch):
+    # 멸실(ArchPmsHubService)은 대표코드 자체로 실데이터가 나온다(실측
+    # 2026-07-27, 41190/10100->521건 등) — fetch_group_demol은 준공과 달리
+    # legacy 팬아웃을 적용하지 않고 group['bjdong']를 원본(대표코드 키) 그대로
+    # 써야 한다.
+    group = {'name': '부천시', 'sido': '경기', 'members': ['41190'],
+             'bjdong': {'41190': ['10100', '10200']},
+             'legacy': {'legacy_codes': ['41192', '41194'], 'enumerable': True}}
+    calls = []
+
+    def fake_fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=None):
+        calls.append((sigungu, bjdong))
+        return [], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch_bjdong_all_pages)
+    F.fetch_group_demol(group)
+    assert set(calls) == {('41190', '10100'), ('41190', '10200')}   # 대표코드 그대로, 팬아웃 없음
 
 
 def test_fetch_group_collects_units_across_bjdong(monkeypatch):

@@ -164,7 +164,14 @@ def fold_groups(targets, sido_by_code, bjdong_by_sgg, old_gu_map):
         legacy = None
         if rep in old_gu_map:
             legacy_codes = old_gu_map[rep]
-            enumerable = any(bjdong_by_sgg.get(lc) for lc in legacy_codes)
+            # 옛 구코드(41192/94/96 등) 자신은 code_bdong.json에 법정동 행이
+            # 전혀 없다(2016 구 폐지로 통째 삭제) — 그래서 예전엔 이 조건이
+            # 항상 False였다. 실측(2026-07-27)으로 뒤집혔다: 대표(rep, 여기선
+            # 통합 부천시 41190) 자신의 법정동 목록을 "옛 구코드로" 조회하면
+            # 실데이터가 나온다. 그래서 enumerable은 옛 구코드가 아니라 대표
+            # 자신의 법정동 보유 여부로 판정한다(항상 참에 가까움 — 대표는
+            # targets에 있던 코드라 법정동이 있을 수밖에 없다).
+            enumerable = bool(member_bjdong.get(rep))
             legacy = {'legacy_codes': legacy_codes, 'enumerable': enumerable}
         out[rep] = {
             'name': base, 'sido': sido, 'members': codes_sorted,
@@ -194,8 +201,51 @@ def apply_gangwon_fix(groups, code_fix=None):
     return out
 
 
+def apply_legacy_gu_fix(groups):
+    """옛 구코드(OLD_GU_MAP)를 가진 그룹의 조회를 legacy 코드로 팬아웃한다.
+
+    실측(2026-07-27, 부천 24개 법정동 x 옛 원미/소사/오정구 72콤보 프로브):
+    부천시(41190) 자신으로 조회하면 0건이지만, 부천시 "자신의" 법정동 코드를
+    옛 3구(41192/41194/41196) 각각으로 조회하면 실데이터가 나온다 — 예:
+    bjdong=10100(부천시 기준)을 41192/41194/41196에 각각 물으면 68/208/85건
+    (셋 다 겹치지 않는 서로 다른 값). 2016 구 폐지 통합 이전 옛 3구가 각자
+    독립된 법정동 번호체계를 썼던 흔적으로 보인다 — 같은 숫자 코드가 옛구마다
+    다른 실제 동을 가리킨다. 그래서 하나의 법정동 코드를 옛구 전부에 물어야
+    누락이 없다(24개 동 중 9개만 실제로 히트, 15개는 셋 다 0건 — 무해한
+    빈호출, 기존 무데이터 처리로 안전하게 스킵됨).
+
+    group['bjdong']를 {대표코드: [법정동...]}에서 {옛구코드: 대표의 법정동
+    목록} × N개 옛구로 재구성한다 — fetch_group/fetch_group_demol은 이미
+    (sigunguCd, bjdong) 쌍을 순회하므로 이 재구성만으로 팬아웃이 자동
+    적용된다(fetch 로직 자체는 무변경). 대표 키(hub_permits.json의 sgg
+    엔트리 키) 자체는 그대로 41190 — GANGWON_CODE_FIX(대표 자체를 rekey)와
+    달리 이건 대표 아래 "무엇을 조회하느냐"만 바꾸는 팬아웃이다.
+    """
+    out = dict(groups)
+    for rep, g in groups.items():
+        legacy = g.get('legacy')
+        if not legacy or not legacy.get('enumerable'):
+            continue
+        rep_bjdong = g['bjdong'].get(rep)
+        if not rep_bjdong:
+            continue
+        new_bjdong = {lc: rep_bjdong for lc in legacy['legacy_codes']}
+        out[rep] = dict(g, bjdong=new_bjdong)
+    return out
+
+
 def build_targets():
-    """전체 대상 도출 파이프라인. 반환: (groups, unresolved_names)."""
+    """전체 대상 도출 파이프라인. 반환: (groups, unresolved_names).
+
+    apply_legacy_gu_fix는 여기서 전역 적용하지 않는다 — 두 API(준공
+    HsPmsHubService·멸실 ArchPmsHubService)가 옛 구코드 요구가 다르다는 게
+    실측으로 확인됐다(부천, 2026-07-27): 준공은 대표코드(41190) 자체가
+    빈응답이라 옛구코드(41192/94/96) 팬아웃이 필요하지만, 멸실은 대표코드
+    자체로 실데이터가 나온다(41190/10100→521건 등, 벌크파일과도 정합: 부천
+    멸실 46,580세대가 전부 41190 키로 잡혀 있음). 그래서 팬아웃은 준공 전용
+    fetch_group()이 필요할 때만 그때그때 적용하고, group['bjdong']의
+    "정본"(멸실 fetch_group_demol·hub_derive 등 다른 소비자가 보는 형태)은
+    항상 대표코드 기준 그대로 둔다."""
     from update_adv_data import LIVEZONE, LZ_SIDO_FULL
     rows = load_bdong_rows()
     sido_codes, name_codes, sgg_name_by_code, sido_by_code, bjdong_by_sgg = \
@@ -311,6 +361,11 @@ def parse_items(xml):
     return items
 
 
+def parse_total_count(xml):
+    m = re.search(r'<totalCount>(\d+)</totalCount>', xml)
+    return int(m.group(1)) if m else None
+
+
 def fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=EP):
     """법정동 하나의 전 페이지를 모아 (아이템 리스트, had_error) 반환.
 
@@ -325,12 +380,27 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=EP):
     items = []
     page = 1
     had_error = False
+    total_count = None
     while True:
         body, cls = fetch_page(sigungu, bjdong, page, endpoint=endpoint)
         if cls == 'data':
             page_items = parse_items(body)
             items.extend(page_items)
-            if len(page_items) < NUM_ROWS:
+            if total_count is None:
+                total_count = parse_total_count(body)
+            # ⚠️ 실측(2026-07-27): 서버가 요청한 numOfRows(=NUM_ROWS=1000)를
+            # 무시하고 페이지당 자체 상한(관측값 100)만 돌려준다 — 응답의
+            # <numOfRows> 에코도 100이다. 예전엔 "이번 페이지 건수 <
+            # 요청한 NUM_ROWS"를 "마지막 페이지"로 오판해, totalCount가
+            # 100을 넘는 법정동은 뒤 페이지를 통째로 놓쳤다(강남 삼성동
+            # totalCount=1072인데 100건만 수집되는 등 — 준공·멸실 둘 다
+            # 영향, 이 실측으로 프로젝트 전체 재시딩 필요 확정). 그래서
+            # "요청값 대비 이번 페이지 크기"가 아니라 "누적 items가
+            # totalCount에 도달했는가"로 종료를 판단한다 — 서버의 페이지당
+            # 실제 상한이 얼마든(100이든 다른 값이든) 안전하다.
+            if total_count is not None and len(items) >= total_count:
+                break
+            if not page_items:   # 안전판: totalCount 파싱 실패 등으로 무한루프 방지
                 break
             page += 1
             continue
@@ -431,11 +501,22 @@ def fetch_group(group, only_bjdong=None):
     판단하게 한다.
 
     반환 튜플 순서: (done_q, sched_q, units, productive, had_unresolved_error).
+
+    준공(HsPmsHubService) 전용 옛구코드 팬아웃: legacy 그룹(부천 등)은 대표
+    코드 자체로 조회하면 빈응답이라(실측), 여기서만 그때그때
+    apply_legacy_gu_fix를 적용해 옛구코드들로 팬아웃한다. group 자체(다른
+    호출자가 보는 원본)는 건드리지 않는다 — fetch_group_demol은 이 팬아웃이
+    필요 없다(멸실 API는 대표코드 자체로 응답, 실측 확인).
     """
+    bjdong_map = group['bjdong']
+    if group.get('legacy') and group['legacy'].get('enumerable'):
+        rep_key = next(iter(group['bjdong']), None)   # legacy 그룹은 현재 항상 단일 멤버(부천)
+        if rep_key is not None:
+            bjdong_map = apply_legacy_gu_fix({rep_key: group})[rep_key]['bjdong']
     all_items = []
     productive = []
     had_unresolved_error = False
-    for member_cd, bjdongs in group['bjdong'].items():
+    for member_cd, bjdongs in bjdong_map.items():
         for bjdong in bjdongs:
             full = member_cd + bjdong   # 10자리 전체 법정동코드
             if only_bjdong is not None and full not in only_bjdong:
@@ -632,6 +713,12 @@ def run(mode_full, only_codes, list_targets_only, reseed=False):
                 out['sgg'][key] = new_entry
                 cached_productive.update(productive)
                 scanned.add(key)   # 깨끗하게 스캔 완료 — never-scanned/scanned-zero 구분용 기록
+                # apply_legacy_gu_fix로 enumerable=True가 된 legacy 그룹(부천 등)이
+                # 실제로 스캔에 성공하면, 예전 실행이 남긴 unresolved_legacy 잔존
+                # 마킹을 지운다 — 안 지우면 hub_derive가 이 시군구를 계속 존
+                # 멤버에서 제외해(그 필터가 unresolved_legacy 기준) 실데이터를
+                # 모아놓고도 영영 방출 안 되는 상태가 된다.
+                unresolved_legacy.discard(key)
         out['productive_bjdong'] = sorted(cached_productive)
         out['meta']['unresolved_legacy'] = sorted(unresolved_legacy)
         out['meta']['scanned'] = sorted(scanned)
