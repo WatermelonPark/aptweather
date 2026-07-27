@@ -1910,7 +1910,7 @@ function drawTrendChart(k){
       borderWidth:2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true}];
   if(n&&Array.isArray(rows[n-1].wo))dsets.push(
     {label:'월세',data:rows.map(r=>(r.wo||[])[ri]),borderColor:'#1f8a70',fill:false,
-      borderWidth:2,borderDash:[4,3],pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true});
+      borderWidth:2,pointRadius:n>40?0:3,pointHoverRadius:5,tension:.18,spanGaps:true});
   const chart=mkChart(T.chart,{type:'line',
     data:{labels:rows.map(r=>T.lab(r.p)),datasets:dsets},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},

@@ -416,6 +416,18 @@ def fetch_weekly_rone():
 
 
 
+def _keep_wolse(new_rows, cur_rows):
+    """월세(wo)는 R-ONE에만 있다. KOSIS 폴백이 쓰이면 그 구간 rows에 wo가 없어
+    이미 갖고 있던 월세가 통째로 지워진다(2026-07 실측: 최근 12개월이 비었다).
+    같은 기간에 기존 wo가 있으면 살려 준다."""
+    if not (new_rows and cur_rows):
+        return
+    old = {r['p']: r.get('wo') for r in cur_rows if isinstance(r.get('wo'), list)}
+    for r in new_rows:
+        if not isinstance(r.get('wo'), list) and r['p'] in old:
+            r['wo'] = old[r['p']]
+
+
 def _merge_hist(new, cur, keep):
     """시군구·서울구 시계열도 시도처럼 과거를 살린다.
     매 실행은 최근 구간만 받아오므로, 이게 없으면 통째 교체돼 히스토리가 12개에서
@@ -1482,6 +1494,10 @@ def main():
             m_older = [r for r in mo_cur['rows'] if r['p'] < m_first]
             if m_older:
                 monthly['rows'] = (m_older + monthly['rows'])[-CONF['monthly'].get('months_hist', len(monthly['rows'])):]
+        _keep_wolse(monthly.get('rows'), mo_cur.get('rows'))
+        for _p in ('sgg', 'seoul'):
+            if monthly.get(_p) and mo_cur.get(_p):
+                _keep_wolse(monthly[_p].get('rows'), mo_cur[_p].get('rows'))
         km = CONF['monthly']['sgg_hist']
         monthly['sgg'] = _merge_hist(monthly.get('sgg'), mo_cur.get('sgg'), km)
         monthly['seoul'] = _merge_hist(monthly.get('seoul'), mo_cur.get('seoul'), km)
