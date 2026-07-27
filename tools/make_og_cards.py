@@ -135,6 +135,40 @@ def make(out, chip, h1a, h1b, sub, foot, emoji):
     return out
 
 
+def make_brand():
+    """og-brand.png(홈 공유 카드) — 옛 병아리·웜톤 카드를 현 브랜드로 교체.
+    모래시계 아이콘(make_app_icon.draw_icon 재사용) + 훅 + 아공맵 + 슬로건."""
+    from make_app_icon import draw_icon
+    img = Image.new('RGBA', (W, H), PAPER + (255,))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, W, 13], fill=INK)          # 상단 바: 브랜드는 먹색(퀴즈=그린과 구분)
+    MX = 64
+
+    # 우측: 사이클 모래시계 (배경색 동일해 그대로 붙는다)
+    glass = draw_icon(380, 0.94)
+    img.paste(glass, (770, 130))
+
+    # 훅 (빨강) → 아공맵 (거대 먹색) → 슬로건 (뮤트)
+    d.text((MX, 104), '공급을 보면 집값이 보인다', font=font(40, 'Bold'), fill=RED)
+    nf = font(150, 'Bold')
+    d.text((MX, 180), '아공맵', font=nf, fill=INK)
+    d.text((MX, 400), '아파트 · 공급량 · 투자지도', font=font(42, 'Medium'), fill=MUTED)
+
+    # 하단 구분선 + 푸터
+    fy = 548
+    d.line([MX, fy, W - MX, fy], fill=LINE, width=2)
+    d.text((MX, fy + 24), '주간 시세 지도 · 생활권 공급 순위 · 부동산 테스트 · 국가기관 데이터 기반',
+           font=font(24, 'Medium'), fill=MUTED)
+    dom = 'agongmap.co.kr'
+    df = font(26, 'Bold')
+    dbb = d.textbbox((0, 0), dom, font=df)
+    d.text((W - MX - (dbb[2] - dbb[0]), fy + 22), dom, font=df, fill=RED)
+
+    img.convert('RGB').save(os.path.join(ROOT, 'og-brand.png'), 'PNG', optimize=True)
+    return 'og-brand.png'
+
+
 if __name__ == '__main__':
     for c in CARDS:
         print('written ->', make(*c))
+    print('written ->', make_brand())
