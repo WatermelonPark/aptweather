@@ -343,9 +343,9 @@
   #stat-tbl .szgrp{border-left:2px solid var(--line)}
   /* 피벗 모드: 첫 열(연월/지표·규모) 고정 — 가로 스크롤에도 라벨 유지.
      지브라 짝수행 배경을 그대로 이어받아야 스크롤 시 이질감이 없다. */
-  #stat-tbl.szpivot td:first-child{position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap}
+  #stat-tbl.szpivot td:first-child{position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap;border-right:1px solid var(--line)}
   #stat-tbl.szpivot tr:nth-child(even) td:first-child{background:#f9fafa}
-  #stat-tbl.szpivot th:first-child{position:sticky;left:0;z-index:3}
+  #stat-tbl.szpivot th:first-child{position:sticky;left:0;z-index:3;border-right:1px solid var(--line)}
   #stat-tbl.szpivot tr.szgrp-r td{border-top:2px solid var(--line)}
   #stat-tbl.szpivot td{font-variant-numeric:tabular-nums}
   .szu{font-size:10.5px;color:var(--muted);font-weight:400}

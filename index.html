@@ -849,11 +849,13 @@ function drawSizePivot(){
     }
   });
   const val=c=>i=>{const a=(D.series[c.m][reg]||[])[i];return a?a[c.si]:null;};
-  const cell=(c,v)=>{
-    if(v==null)return '<td'+(c.first?' class="szgrp"':'')+'>·</td>';
+  // grp: 세로 블록 경계(szgrp)를 붙일지 — 세로 모드에서만 참. 전치 모드는 행이
+  // 한 조합이라 c.first를 그대로 쓰면 그 행 전체에 세로선이 그려진다(실사고).
+  const cell=(c,v,grp)=>{
+    if(v==null)return '<td'+(grp?' class="szgrp"':'')+'>·</td>';
     const col=c.pct?(v>0?';color:#c0392b':(v<0?';color:#1a5276':'')):'';
     const t=c.pct?((v>0?'+':'')+v.toFixed(2)):v.toFixed(2);
-    return `<td${c.first?' class="szgrp"':''} style="white-space:nowrap${col}">${t}</td>`;
+    return `<td${grp?' class="szgrp"':''} style="white-space:nowrap${col}">${t}</td>`;
   };
   const tbl=document.getElementById('stat-tbl');tbl.classList.add('szpivot');
   const thead=tbl.querySelector('thead'),tbody=tbl.querySelector('tbody');
@@ -864,13 +866,13 @@ function drawSizePivot(){
       ord.map(i=>`<th>${D.dates[i].replace(/^20/,'')}</th>`).join('')+'</tr>';
     cols.forEach((c,ci)=>{
       h+=`<tr${c.first&&ci>0?' class="szgrp-r"':''}><td>${c.m} ${c.lab}${c.pct?'':' <span class="szu">%</span>'}</td>`+
-        ord.map(i=>cell(c,val(c)(i))).join('')+'</tr>';
+        ord.map(i=>cell(c,val(c)(i),false)).join('')+'</tr>';
     });
   }else{
     thead.innerHTML='<tr><th>연월</th>'+cols.map(c=>
       `<th${c.first?' class="szgrp"':''}>${c.m}<span class="szsub">${c.lab}${c.pct?'':' %'}</span></th>`).join('')+'</tr>';
     ord.forEach(i=>{
-      h+=`<tr><td>${D.dates[i]}</td>`+cols.map(c=>cell(c,val(c)(i))).join('')+'</tr>';
+      h+=`<tr><td>${D.dates[i]}</td>`+cols.map(c=>cell(c,val(c)(i),c.first)).join('')+'</tr>';
     });
   }
   tbody.innerHTML=h;
