@@ -1586,7 +1586,10 @@ function drawNationMap(k){
   const gap=natP!==row.p;
   const SER=hasWo?'매매·전세·월세':'매매·전세';
   document.getElementById(T.maplab).textContent=T.lab(row.p)+' 기준 · 전국 시군구 '+SER+' 변동률(%) · '+T.unit+(gap?' · 시도·서울 지표는 '+T.lab(natP):'');
-  const ref=k==='week'?0.4:1.0, TW=30, NH=15, VH=13, G=2;
+  const ref=k==='week'?0.4:1.0, TW=30, NH=15, G=2;
+  /* 3단(월간)은 값 칸을 1px 낮춰 세로가 길어지는 걸 억제한다.
+     9px 숫자에 12px 칸이면 충분하고, 2단(주간)은 기존 13px 그대로 둔다. */
+  const VH=hasWo?12:13;
   const rowH=NH+(hasWo?3:2)*(VH+1);   // 이름칸 + 값칸(각 VH, 사이 1px)
   const N=NATION_TILE, W=N.cols*(TW+G)-G, H=N.rows*(rowH+G)-G;
   const sv=['<svg viewBox="-2 -2 '+(W+4)+' '+(H+4)+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:640px;margin:0 auto;display:block" role="img" aria-label="전국 시군구 변동률 지도">'];
@@ -1608,14 +1611,17 @@ function drawNationMap(k){
   N.t.forEach(([c,nm,x,y,h])=>{
     const ma=vma[c], je=vje[c], wo=vwo[c];
     const px=x*(TW+G), py=y*(rowH+G);
-    const cells=[[ma,NH+1,NH+VH-3],[je,NH+VH+2,NH+2*VH]];
-    if(hasWo)cells.push([wo,NH+2*VH+3,NH+3*VH+1]);
+    /* 값칸 y는 칸 높이에서 계산 — 베이스라인도 칸 중앙 기준이라 VH를 바꿔도 숫자가
+       위로 치우치지 않는다(예전엔 상수라 칸을 줄이면 글자가 천장에 붙었다). */
+    const cells=[[ma,NH+1],[je,NH+VH+2]];
+    if(hasWo)cells.push([wo,NH+2*VH+3]);
+    const tb=Math.round(VH/2)+3;
     sv.push(`<g transform="translate(${px},${py})">`+
       `<rect width="${TW}" height="${NH}" rx="4" fill="${h?'#1e2846':(SI_PARENT.has(c)?'#34456b':'#eef1f8')}" stroke="${h?'#1e2846':'#d6dced'}"/>`+
       `<text x="${TW/2}" y="${NH-4}" text-anchor="middle" font-size="${nm.length>=4?7:(nm.length===3?8:9)}" font-weight="600" fill="${(h||SI_PARENT.has(c))?'#fff':'#1b2426'}">${nm}</text>`+
-      cells.map(([v,ry,ty])=>
+      cells.map(([v,ry])=>
         `<rect y="${ry}" width="${TW}" height="${VH}" rx="3" fill="${mapColor(v,ref)}" stroke="#d8dfdc"/>`+
-        `<text x="${TW/2}" y="${ty}" text-anchor="middle" font-size="9" font-weight="600" fill="${tcol(v)}">${fmtV(v)}</text>`).join('')+
+        `<text x="${TW/2}" y="${ry+tb}" text-anchor="middle" font-size="9" font-weight="600" fill="${tcol(v)}">${fmtV(v)}</text>`).join('')+
       `<title>${nm} 매매 ${fmtV(ma)}% · 전세 ${fmtV(je)}%${hasWo?' · 월세 '+fmtV(wo)+'%':''}</title></g>`);
   });
   // 시도(광역) 경계선 — 같은 시도가 아닌 이웃과 접한 변만 그린다

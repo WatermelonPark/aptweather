@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v24'; // 월간 시군구 지도 타일 3단(매매·전세·월세) — 주간은 2단 유지
+const VERSION = 'v25'; // 월간 지도 값칸 12px로 축소(세로 -5%) + 숫자 세로 중앙정렬
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
