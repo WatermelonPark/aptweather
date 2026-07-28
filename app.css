@@ -327,9 +327,9 @@
     font-size:14px;font-weight:600;color:var(--ink);background:#fff;font-family:inherit}
   .meta-bar{display:flex;flex-wrap:wrap;gap:8px 18px;margin:16px 2px 4px;font-size:12.5px;color:var(--muted)}
   .meta-bar b{color:var(--ink2)}
-  .period{display:flex;gap:6px;margin:14px 0 6px;flex-wrap:wrap}
-  .period button{flex:1;min-width:54px;border:1px solid var(--line);background:#fff;
-    border-radius:var(--r-touch);padding:9px 0;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
+  .period{display:flex;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
+  .period button{flex:1;min-width:54px;border:1px solid var(--line);background:#fff;line-height:1.3;
+    border-radius:var(--r-touch);padding:6px 0;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer}
   .period button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   /* 규모별 동향 피벗 — 지표/규모 멀티토글 + 정렬·행렬전환. 균등 그리드라
      줄바꿈이 안 생기고, 모바일은 규모를 3열×2줄로 의도적으로 나눈다. */
@@ -558,7 +558,7 @@
   .tr-more:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
   .tr-row{display:flex;justify-content:flex-end;margin:0 0 8px}
   .trbtn{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:var(--r-touch);
-    border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer}
+    border:1.5px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;line-height:1.3}
   .trbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #sec-basicmain.single .tr-row{display:none}
   table.adv td.fut{background:#f6f8f7}
