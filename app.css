@@ -333,11 +333,13 @@
   .period button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   /* 규모별 동향 피벗 — 지표/규모 멀티토글 + 정렬·행렬전환. 균등 그리드라
      줄바꿈이 안 생기고, 모바일은 규모를 3열×2줄로 의도적으로 나눈다. */
-  .szrow{display:grid;gap:6px;margin:8px 0 0}
-  .szrow button{min-width:0;padding:8px 2px;font-size:12.5px;white-space:nowrap}
+  .szrow{display:grid;gap:5px;margin:6px 0 0}
+  .szrow button{min-width:0;padding:6px 2px;font-size:12px;white-space:nowrap}
   .szmet{grid-template-columns:repeat(4,minmax(0,1fr))}
   .szsiz{grid-template-columns:repeat(6,minmax(0,1fr))}
-  .szops{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* 정렬·행렬전환은 선택 토글이 아니라 유틸 — trbtn 크기로 우측에 붙이고,
+     아래 표와 14px 띄운다(컨트롤 덩어리가 표를 누르는 인상 방지) */
+  .szops{display:flex;justify-content:flex-end;gap:6px;margin:8px 0 14px}
   @media(max-width:560px){.szsiz{grid-template-columns:repeat(3,minmax(0,1fr))}}
   #stat-tbl th .szsub{display:block;font-weight:400;font-size:11px;color:var(--muted);letter-spacing:0}
   #stat-tbl .szgrp{border-left:2px solid var(--line)}

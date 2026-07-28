@@ -802,9 +802,9 @@ function renderSizeCtl(){
       `<button data-m="${m}"${SZ.met.has(m)?' class="on"':''}>${m}</button>`).join('')+'</div>'+
     '<div class="period szrow szsiz">'+D.sizes.map((s,i)=>
       `<button data-s="${i}"${SZ.siz.has(i)?' class="on"':''}>${short(s)}</button>`).join('')+'</div>'+
-    '<div class="period szrow szops">'+
-      `<button data-o="sort">${SZ.desc?'최신순 ↓':'과거순 ↑'}</button>`+
-      `<button data-o="tr"${SZ.tr?' class="on"':''}>⇄ 행열 전환</button></div>`;
+    '<div class="szops">'+
+      `<button class="trbtn" data-o="sort">${SZ.desc?'최신순 ↓':'과거순 ↑'}</button>`+
+      `<button class="trbtn${SZ.tr?' on':''}" data-o="tr">⇄ 행열 전환</button></div>`;
   box.querySelectorAll('button[data-m]').forEach(b=>b.addEventListener('click',()=>{
     const m=b.dataset.m;
     if(SZ.met.has(m)){if(SZ.met.size<=1)return;SZ.met.delete(m);b.classList.remove('on');}
