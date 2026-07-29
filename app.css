@@ -326,7 +326,7 @@
   .dash{padding:0 0 18px}
   .dash .wrap{max-width:860px;margin:0 auto;padding:0 18px}
   .ctrl{background:#fff;border:1px solid var(--line);border-radius:var(--r-touch);
-    padding:14px 16px;margin-top:-20px;position:relative;z-index:2;}
+    padding:14px 16px;margin-top:-6px;position:relative;z-index:2;}
   .ctrl-row{display:flex;align-items:center;gap:12px;padding:6px 0}
   .ctrl-row+.ctrl-row{border-top:1px solid var(--paper2)}
   .ctrl-row label{font-size:13px;font-weight:500;color:var(--ink2);width:40px;flex:none}
