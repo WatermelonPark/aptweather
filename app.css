@@ -300,11 +300,13 @@
     background:var(--ink);color:#fff;padding:12px 22px;border-radius:var(--r-touch);font-size:14px;
     font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
   .qtoast.show{opacity:1}
-.legal-disc{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:18px;padding-top:14px;
-  border-top:1px solid var(--line);text-align:left;max-width:720px;margin-left:auto;margin-right:auto}
+.legal-disc{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:12px;padding-top:10px;
+  border-top:1px solid var(--line);text-align:center;max-width:720px;margin-left:auto;margin-right:auto}
 .legal-disc b{color:var(--ink);font-weight:600}
 .minifooter{text-align:center;font-size:12px;color:var(--muted);
-    padding:24px 0 12px;border-top:1px solid var(--line);margin-top:30px}
+    padding:18px 16px 14px;border-top:1px solid var(--line);margin-top:16px}
+.minifooter .mf-brand{color:var(--ink2);margin-bottom:5px}
+.minifooter .mf-links{margin-bottom:5px}
 
   /* ===== 통계 대시보드 ===== */
   .shero{background:var(--paper);color:var(--ink);padding:30px 0 12px}
@@ -312,7 +314,7 @@
   .shero h1{font-size:30px;font-weight:700;margin:0 0 12px}
   .shero p{font-size:14.5px;line-height:1.7;color:var(--ink2);margin:0;max-width:620px}
   .shero b{color:var(--ink)}
-  .dash{padding:0 0 40px}
+  .dash{padding:0 0 18px}
   .dash .wrap{max-width:860px;margin:0 auto;padding:0 18px}
   .ctrl{background:#fff;border:1px solid var(--line);border-radius:var(--r-touch);
     padding:14px 16px;margin-top:-20px;position:relative;z-index:2;}
