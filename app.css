@@ -69,7 +69,7 @@
 
   .chartbox{background:#fff;border-radius:0;
     padding:22px 18px 16px;margin:22px 0;border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
-  .chartbox h4{font-size:14px;font-weight:600;margin-bottom:4px}
+  .chartbox h3{font-size:14px;font-weight:600;margin-bottom:4px}
   .chartbox .cap{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
   .cwrap{position:relative;height:340px}.cwrap.tall{height:420px}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin:8px 0}

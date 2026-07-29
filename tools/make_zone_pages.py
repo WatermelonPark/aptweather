@@ -652,6 +652,17 @@ def build_page(r, allrows, prd, today, punits=None):
         "mainEntityOfPage": '%s/zone/%s/' % (SITE, quote(nm)),
         "about": {"@type": "Place", "name": nm},
     }
+    # 한 script 안에 [Article, BreadcrumbList] 배열 — Google이 배열 표기를 지원한다.
+    ld = [ld, {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "아공맵",
+             "item": '%s/' % SITE},
+            {"@type": "ListItem", "position": 2, "name": "생활권 공급 분석",
+             "item": '%s/zone/' % SITE},
+            {"@type": "ListItem", "position": 3, "name": nm},
+        ],
+    }]
 
     return """<!DOCTYPE html>
 <html lang="ko">
@@ -946,7 +957,7 @@ def build_hub(pages, prd, today):
             '<td><a class="z" href="/zone/%s/">%s</a> <span class="sub">%d개 생활권 합계</span></td>'
             '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
             % (ROLLUP, ROLLUP, sub, tcol, signed(roll['tot']), tname))
-    ld = json.dumps({
+    ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",
         "description": "전국 %d개 생활권의 아파트 공급을 적정물량과 비교해 누적 순부족 순으로 정렬." % len(live),
@@ -954,7 +965,14 @@ def build_hub(pages, prd, today):
         "author": {"@type": "Organization", "name": "아공맵"},
         "publisher": {"@type": "Organization", "name": "아공맵"},
         "mainEntityOfPage": '%s/zone/' % SITE,
-    }, ensure_ascii=False, indent=2)
+    }, {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "아공맵",
+             "item": '%s/' % SITE},
+            {"@type": "ListItem", "position": 2, "name": "생활권 공급 분석"},
+        ],
+    }], ensure_ascii=False, indent=2)
     return HUB_TPL % dict(n=len(live), prd=prd, site=SITE, ld=ld,
                           rows='\n'.join(rows))
 

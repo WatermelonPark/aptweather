@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v32'; // SEO: H1 단일화(h1→h2 강등)·주간→생활권 내부링크
+const VERSION = 'v33'; // SEO 2차: cycle h4→h3 계층 정리·zone BreadcrumbList
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
