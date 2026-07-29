@@ -305,8 +305,17 @@
 .legal-disc b{color:var(--ink);font-weight:600}
 .minifooter{text-align:center;font-size:12px;color:var(--muted);
     padding:18px 16px 14px;border-top:1px solid var(--line);margin-top:16px}
-.mf-brand{color:var(--ink2);margin-bottom:5px}
-.mf-links{margin-bottom:5px}
+/* 푸터 = 원부의 판권·각주란. 3단 위계(발행처>색인>메타)+각주. 링크는 밑줄 없이
+   가운뎃점 구분 — 낱개는 nowrap이라 구분점에서만 줄바꿈(고아 방지). */
+.ft-brand{color:var(--ink2);margin-bottom:7px}
+.ft-brand b{color:var(--ink);font-weight:600}
+.ft-nav{font-size:13px;color:var(--ink2);line-height:2;margin-bottom:7px}
+@media(max-width:560px){.ft-nav{max-width:340px;margin-left:auto;margin-right:auto}}
+.ft-nav a{color:inherit;text-decoration:none;white-space:nowrap}
+.ft-nav a:hover{text-decoration:underline}
+.ft-meta{font-size:12px;color:var(--muted)}
+.ft-meta a{color:inherit;text-decoration:none;white-space:nowrap}
+.ft-meta a:hover{text-decoration:underline}
 
   /* ===== 통계 대시보드 ===== */
   .shero{background:var(--paper);color:var(--ink);padding:30px 0 12px}
@@ -609,10 +618,6 @@
   .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:600;
     letter-spacing:.03em;color:#fff;background:var(--ink);padding:3px 10px;border-radius:0}
   .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7;padding-bottom:20px}
-  .foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 0;margin-bottom:12px}
-  .foot-links a{font-size:13px;color:var(--ink2);text-decoration:none;padding:6px 11px;border-right:1px solid var(--line)}
-  .foot-links a:last-child{border-right:0}
-  .foot-links a:hover{color:var(--ink2);text-decoration:underline}
   .home-sec{padding:38px 0;text-align:center}
   .home-sec.hs-alt{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .hs-kicker{font-size:12px;font-weight:500;color:var(--ink);margin-bottom:10px}
