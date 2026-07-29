@@ -171,7 +171,7 @@
   .quiz-hero{padding:56px 4px 0;text-align:center}
   .qeyebrow{font-size:13px;font-weight:500;
     color:var(--ink);margin-bottom:14px}
-  .quiz-hero h1{font-size:32px;font-weight:700;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em}
+  .quiz-hero h2{font-size:32px;font-weight:700;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em}
   .quiz-hero p{font-size:15.5px;line-height:1.7;color:var(--ink2);margin:0 auto 28px;max-width:420px}
   .qmeta{margin-top:16px;font-size:13px;color:var(--muted)}
   /* 테스트 선택 카드 */
@@ -311,7 +311,7 @@
   /* ===== 통계 대시보드 ===== */
   .shero{background:var(--paper);color:var(--ink);padding:30px 0 12px}
   .shero .eyebrow{color:var(--ink);font-size:13px;font-weight:500;margin-bottom:14px}
-  .shero h1{font-size:30px;font-weight:700;margin:0 0 12px}
+  .shero h2{font-size:30px;font-weight:700;margin:0 0 12px}
   .shero p{font-size:14.5px;line-height:1.7;color:var(--ink2);margin:0;max-width:620px}
   .shero b{color:var(--ink)}
   .dash{padding:0 0 18px}
@@ -376,7 +376,7 @@
   .src-note{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.6}
   @media(max-width:560px){
     .ctrl-row{flex-wrap:wrap}
-    .shero h1{font-size:25px}
+    .shero h2{font-size:25px}
     .chartwrap{height:290px}
   }
   /* 30초 요약 */

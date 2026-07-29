@@ -965,6 +965,13 @@ def update_sitemap(names, lastmods):
     x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/[^<]*</loc>.*?</url>', '', x, flags=re.S)
     x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/</loc>.*?</url>', '', x, flags=re.S)
     newest = max(lastmods.values()) if lastmods else ''
+    # 홈·주간 페이지도 같은 주간 데이터로 움직이므로 lastmod를 함께 민다.
+    # (zone이 안 바뀐 주엔 newest도 그대로라 불필요한 갱신이 없다)
+    if newest:
+        for loc in ('%s/' % SITE, '%s/weekly/' % SITE):
+            x = re.sub(
+                r'(<loc>%s</loc>\s*<lastmod>)[^<]*(</lastmod>)' % re.escape(loc),
+                r'\g<1>%s\g<2>' % newest, x)
     block = ('\n  <url>\n    <loc>%s/zone/</loc>\n    <lastmod>%s</lastmod>\n'
              '    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>'
              % (SITE, newest))
