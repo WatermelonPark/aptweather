@@ -117,6 +117,12 @@ if errorlevel 1 (
   exit /b 17
 )
 
+python tools\make_indicator_pages.py
+if errorlevel 1 (
+  echo ERROR: make_indicator_pages failed
+  exit /b 18
+)
+
 rem 이중 구현 정합성 검사. 아공맵 스코어는 index.html scCalc()와
 rem make_zone_pages.py calc() 양쪽에 있어서, 한쪽만 고치면 같은 지표가
 rem 홈과 zone 페이지에 다르게 나온다(2026-07-20 실제 발생, 홈이 2.4배).
