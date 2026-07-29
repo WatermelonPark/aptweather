@@ -507,7 +507,9 @@ function showView(v,updateHash){
       .catch(()=>{statsInited=false;});
   }
   if(updateHash!==false){
-    const tgtHash=v==='home'?'':'#'+v, tgtUrl=v==='home'?location.pathname:'#'+v;
+    // 통계는 모드·하위탭까지 정규화한 해시로 — 뒤로가기 복원이 화면과 일치하게
+    const full=v==='stats'?statsHashOf(statsMode):'#'+v;
+    const tgtHash=v==='home'?'':full, tgtUrl=v==='home'?location.pathname:full;
     if(v===curView)history.replaceState(null,'',tgtUrl);
     else if(location.hash!==tgtHash)history.pushState(null,'',tgtUrl);
   }
@@ -519,7 +521,8 @@ function showView(v,updateHash){
 document.querySelectorAll('.nav-btn').forEach(b=>{if(b.dataset.view)
   b.addEventListener('click',()=>showView(b.dataset.view));});
 function goQuiz(k){showView('test');startQuiz(k);}
-function goStats(m){showView('stats');setStatsMode(m);}
+// 해시는 setStatsMode가 한 번만 쌓는다(showView까지 쌓으면 한 클릭에 두 칸)
+function goStats(m){showView('stats',false);setStatsMode(m);}
 // 리포트가 /cycle/로 가져간 앵커들. score는 일부러 뺐다 — zone 37장이
 // /#score로 홈의 sec-score를 가리키고 있어서, 여기 넣으면 그 링크가
 // /cycle/로 튕긴다(위 score 분기가 먼저 잡지만 순서에 기대지 않는다).
@@ -528,7 +531,14 @@ function applyHash(){
   const h=location.hash.replace('#','');
   if(!h){showView('home',false);return;}
   if(h==='test-beginner'||h==='test-investor'||h==='test-calc'){showView('test',false);startQuiz(h.slice(5),undefined,true);return;}
-  if(h==='stats-adv'||h==='stats-market'||h==='stats-basic'||h==='stats-more'){showView('stats',false);setStatsMode(h.slice(6));return;}
+  const sm=h.match(/^stats-(market|adv|basic|more)(?:-(week|month|occ|permit|bubble))?$/);
+  if(sm){
+    showView('stats',false);setStatsMode(sm[1],false);
+    // 하위탭 미지정 해시는 기본탭으로 — 뒤로가기가 항상 같은 화면을 재현하도록
+    if(sm[1]==='market')setMarketTab(sm[2]||'week',false);
+    else if(sm[1]==='adv')setAdvTab(sm[2]||'occ',false);
+    return;
+  }
   if(h==='score'){showView('home',false);requestAnimationFrame(()=>{const el=document.getElementById('sec-score');if(el)el.scrollIntoView();});return;}
   if(h==='test'){showView('test',false);backToPick(true);return;}
   if(h==='home'||h==='stats'||h==='test'){showView(h,false);return;}
@@ -1541,7 +1551,23 @@ function toast(msg){
 /* ============ 투자지표(구 심화통계) ============ */
 let advRendered=false, statsMode='market';
 const SMODES=['market','basic','adv','more'];
-function setStatsMode(m){
+/* 통계 백버튼: 사용자 클릭 1회 = 히스토리 1칸. 화면이 실제로 바뀐 클릭만
+   push하고, 이미 보이던 상태의 해시 정규화(#stats-adv → #stats-adv-occ)는
+   replace로 접는다. 복원은 applyHash가 해시만 보고 전체 화면을 재현한다. */
+function statsNav(hh,replace){
+  if(location.hash===hh)return;
+  if(replace)history.replaceState(null,'',hh);
+  else history.pushState(null,'',hh);
+}
+/* 모드의 정규 해시 — market/adv는 지금 켜져 있는 하위탭까지 포함한다.
+   모드 진입 해시가 하위탭을 생략하면 뒤로가기 복원이 기본탭으로 튀어,
+   화면에 남아 있던 하위탭과 어긋난다. */
+function statsHashOf(m){
+  if(m==='market')return '#stats-market-'+(document.getElementById('mtab-month').classList.contains('on')?'month':'week');
+  if(m==='adv'){const t=['occ','permit','bubble'].find(k=>document.getElementById('atab-'+k).classList.contains('on'))||'occ';return '#stats-adv-'+t;}
+  return '#stats-'+m;
+}
+function setStatsMode(m,push){
   if(!SMODES.includes(m))m='market';
   statsMode=m;
   SMODES.forEach(k=>{
@@ -1551,6 +1577,7 @@ function setStatsMode(m){
   if(m==='adv' && !advRendered){ renderAdvAll(); advRendered=true; }
   if(m==='basic'||m==='market'){ requestAnimationFrame(()=>window.dispatchEvent(new Event('resize'))); }
   track('stats_mode',{mode:m});
+  if(push!==false)statsNav(statsHashOf(m));
 }
 function advFmt(v){ return v==null ? '·' : Number(v).toLocaleString('ko-KR'); }
 function advSel(id, regions){
@@ -2126,7 +2153,9 @@ function gtSet(sec,v){
   }
   track('stats_gt',{section:sec,view:v});
 }
-function setAdvTab(t){
+function setAdvTab(t,push){
+  if(!['occ','permit','bubble'].includes(t))t='occ';
+  const changed=!document.getElementById('atab-'+t).classList.contains('on');
   ['occ','permit','bubble'].forEach(k=>{
     document.getElementById('sec-'+k).style.display=k===t?'':'none';
     document.getElementById('atab-'+k).classList.toggle('on',k===t);
@@ -2134,10 +2163,13 @@ function setAdvTab(t){
   if(t==='permit')drawPermitChart();
   if(t==='occ')drawOccChart();
   track('adv_tab',{tab:t});
+  if(push!==false)statsNav('#stats-adv-'+t,!changed);
 }
-function renderAdvAll(){ renderAdvPermits(); renderAdvOcc(); setAdvTab('occ'); }
+function renderAdvAll(){ renderAdvPermits(); renderAdvOcc(); setAdvTab('occ',false); }
 /* 시장동향 주간/월간 토글 — 숨김 상태에서 만들어진 차트는 표시 시 리사이즈 필요 */
-function setMarketTab(t){
+function setMarketTab(t,push){
+  if(!['week','month'].includes(t))t='week';
+  const changed=!document.getElementById('mtab-'+t).classList.contains('on');
   ['week','month'].forEach(k=>{
     document.getElementById('sec-'+k).style.display=k===t?'':'none';
     document.getElementById('mtab-'+k).classList.toggle('on',k===t);
@@ -2145,6 +2177,7 @@ function setMarketTab(t){
   const ch=window.Chart&&Chart.getChart&&Chart.getChart(t+'Chart');
   if(ch)ch.resize();
   track('market_tab',{tab:t});
+  if(push!==false)statsNav('#stats-market-'+t,!changed);
 }
 
 /* ============ 시장 도구: 버블밴드 ============ */
