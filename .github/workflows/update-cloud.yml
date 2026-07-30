@@ -130,23 +130,20 @@ jobs:
           # 올라온다. 예전엔 head -1로 아무거나 골라서, 7/27을 받아온 러너 2·3을
           # 두고 타임아웃 난 러너 1(7/20)을 채택해 한 주 묵은 데이터를 커밋했다
           # (2026-07-30 실사고). 그래서 '가장 최신 주간/월간을 가진 산출물'을 고른다.
-          SRC=$(python3 - <<'PY'
-import glob, re, os
-best, bkey = '', ()
-for d in sorted(glob.glob('_art/data-*')):
-    f = os.path.join(d, 'data-core.js')
-    if not os.path.exists(f):
-        continue
-    s = open(f, encoding='utf-8').read()
-    wk = max(re.findall(r'"p":"(\d{4}-\d{2}-\d{2})"', s) or [''])
-    mo = max(re.findall(r'"p":"(\d{4}-\d{2})"', s) or [''])
-    key = (wk, mo)
-    print('후보 %s: weekly=%s monthly=%s' % (d, wk or '-', mo or '-'), file=__import__('sys').stderr)
-    if key > bkey:
-        best, bkey = d, key
-print(best)
-PY
-)
+          # 산출물별 최신 weekly(YYYY-MM-DD)를 뽑아 가장 신선한 것을 고른다.
+          # 파이썬 heredoc은 YAML 블록 들여쓰기를 깨므로 순수 셸로 짠다.
+          SRC=""; BEST=""
+          for d in _art/data-*; do
+            [ -f "$d/data-core.js" ] || continue
+            wk=$(grep -oE '"p":"[0-9]{4}-[0-9]{2}-[0-9]{2}"' "$d/data-core.js" \
+                 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | tail -1)
+            echo "후보 $d: weekly=${wk:--}"
+            if [ -n "$wk" ] && { [ -z "$BEST" ] || [ "$wk" \> "$BEST" ]; }; then
+              BEST="$wk"; SRC="$d"
+            fi
+          done
+          # weekly를 하나도 못 읽었으면(구조 변경 등) 예전처럼 아무거나
+          [ -z "$SRC" ] && SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
           if [ -z "$SRC" ]; then
             echo "::warning::clean 러너 0개 — 이번 회차 갱신 실패(다음 회차 새 IP가 흡수)"
             exit 0
