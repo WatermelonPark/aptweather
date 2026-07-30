@@ -1,5 +1,6 @@
 {
  "meta": {
+  "activate": true,
   "fetched": "2026-07-31",
   "fetched_demol": "2026-07-30",
   "mode": "full",
