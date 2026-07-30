@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v35'; // 앱 스플래시(워드마크+슬로건, 발산 모션) — standalone 한정
+const VERSION = 'v36'; // 스플래시: OS 스플래시와 마크 위치·모양 일치(따닥 제거)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
