@@ -195,8 +195,12 @@ def apply_gangwon_fix(groups, code_fix=None):
         if old not in out:
             continue
         g = out.pop(old)
-        new_members = [new if m == old else m for m in g['members']]
-        new_bjdong = {(new if k == old else k): v for k, v in g['bjdong'].items()}
+        # 구 분할 도시(전주=본체+완산구+덕진구)는 rep뿐 아니라 멤버 코드도 전부
+        # 스테일이다. 예전엔 `m == old`로 rep만 갈아끼워 45111/45113이 그대로 남았고,
+        # 그 구들이 라이브 API에서 0건이라 전주 준공이 통째로 비었다(2026-07-31 실측).
+        # 그래서 rep만이 아니라 members/bjdong의 모든 코드에 매핑을 적용한다.
+        new_members = [code_fix.get(m, m) for m in g['members']]
+        new_bjdong = {code_fix.get(k, k): v for k, v in g['bjdong'].items()}
         out[new] = dict(g, members=new_members, bjdong=new_bjdong)
     return out
 

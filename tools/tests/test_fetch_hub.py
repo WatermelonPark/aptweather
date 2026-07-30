@@ -933,6 +933,41 @@ def test_apply_gangwon_fix_renames_rep_key_and_reuses_bjdong():
     assert out['41370']['members'] == ['41370']   # 무관 그룹은 그대로
 
 
+def test_apply_gangwon_fix_renames_all_member_codes_not_just_rep():
+    # 회귀(2026-07-31 실측 버그): 전주는 구 분할 도시(본체 45110 + 완산구 45111 +
+    # 덕진구 45113)라 rep뿐 아니라 멤버 코드도 전부 스테일이다. 예전 로직은
+    # `m == old`로 rep만 갈아끼워 45111/45113이 남았고, 그 구들이 라이브 API에서
+    # 0건이라 전주 준공이 통째로 비었다(전량 재시딩 "148/148 완료"인데도 done=0).
+    # 이제 members/bjdong의 모든 코드에 매핑이 적용돼야 한다.
+    groups = {
+        '45110': {'name': '전주시', 'sido': '전북', 'members': ['45110', '45111', '45113'],
+                   'bjdong': {'45110': ['10100'], '45111': ['10200'], '45113': ['10300']},
+                   'legacy': None},
+    }
+    out = F.apply_gangwon_fix(groups)
+    assert '45110' not in out
+    assert out['52110']['members'] == ['52110', '52111', '52113']      # 구까지 전부 신코드
+    assert set(out['52110']['bjdong'].keys()) == {'52110', '52111', '52113'}
+    assert out['52110']['bjdong']['52111'] == ['10200']                 # bjdong 목록은 그대로 재사용
+    assert out['52110']['name'] == '전주시'
+
+
+def test_apply_gangwon_fix_covers_jeonbuk_single_code_cities():
+    # 군산·익산·완주는 구 분할이 없는 단일 코드 — 45xxx -> 52xxx 치환만 되면 된다.
+    groups = {
+        '45130': {'name': '군산시', 'sido': '전북', 'members': ['45130'],
+                   'bjdong': {'45130': ['10100']}, 'legacy': None},
+        '45140': {'name': '익산시', 'sido': '전북', 'members': ['45140'],
+                   'bjdong': {'45140': ['10100']}, 'legacy': None},
+        '45710': {'name': '완주군', 'sido': '전북', 'members': ['45710'],
+                   'bjdong': {'45710': ['10100']}, 'legacy': None},
+    }
+    out = F.apply_gangwon_fix(groups)
+    assert set(out.keys()) == {'52130', '52140', '52710'}
+    assert out['52130']['members'] == ['52130']
+    assert out['52140']['bjdong'] == {'52140': ['10100']}
+
+
 def test_apply_gangwon_fix_noop_when_old_codes_absent():
     groups = {'51110': {'name': '춘천시', 'sido': '강원', 'members': ['51110'],
                           'bjdong': {'51110': ['11200']}, 'legacy': None}}
