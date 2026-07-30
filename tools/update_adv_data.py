@@ -103,6 +103,27 @@ BASIC_CONF = {
 BASIC_REGMAP = {'지방소계': '지방', '총계': '전국', '수도권소계': '수도권'}   # KOSIS 지역명 → STATS 지역명
 BASIC_MONTHS = 8                      # 최근 8개월 조회(잠정치 소급 정정 커버)
 
+# ---- 연간 계열 자동 갱신 --------------------------------------------------
+# 연 1회 발표라 수동 시딩으로 두었더니 아무도 새 연도를 가져오지 않아 뒤처졌다
+# (2026-07-30 감사에서 노후주택30년이 2025 미반영으로 발견). 배치에 편입한다.
+# 표는 각 계열의 기존 값과 대조해 특정했다(전국 2024: 보급률 102.9·멸실 85,069·
+# 아파트건설 333,452·노후 2,517,244가 아래 표에서 그대로 재현됨).
+#   only: 그 컬럼이 해당 값인 행만 사용. region: 지역축이 없는 표의 고정 지역명.
+#   shortmap: 원천이 '서울특별시' 같은 전체명이라 BUBBLE_SHORT로 축약해 맞춘다.
+ANNUAL_CONF = {
+    '보급률':      {'org': '116', 'tbl': 'DT_MLTM_2100', 'objn': 1, 'dec': 1,
+                    'itm': '보급률(다가구 구분거처 반영)'},
+    '주택멸실':    {'org': '116', 'tbl': 'DT_MLTM_5416', 'objn': 1, 'dec': 0,
+                    'itm': '계'},
+    '아파트건설':  {'org': '116', 'tbl': 'DT_MLTM_692', 'objn': 2, 'dec': 0,
+                    'itm': '계', 'only': {'C1_NM': '총합계', 'C2_NM': '계'},
+                    'region': '전국'},
+    '노후주택30년': {'org': '101', 'tbl': 'DT_1JU1521', 'objn': 2, 'dec': 0,
+                    'itm': '아파트', 'only': {'C2_NM': '30년 이상'},
+                    'shortmap': True},
+}
+ANNUAL_YEARS = 3                      # 최근 3개년 조회(소급 정정 흡수)
+
 # 시세(주간·월간)는 3년 히스토리를 매번 전량 재조회하면 R-ONE 페이징이 수십 회라
 # 배치가 느리다(클라우드 40분의 83%). 과거 주/월은 소급수정 외엔 안 바뀌고 저장돼
 # 있으며 main()의 병합이 저장분을 보존하므로, 실제 fetch는 최근 구간만 받는다.
@@ -812,6 +833,72 @@ def update_rate(stats):
     return ['금리(%d)' % n] if n else []
 
 
+def _fetch_annual_one(name):
+    """{연도(str): {지역: 값}} 반환."""
+    cfg = ANNUAL_CONF[name]
+    p = {'orgId': cfg['org'], 'tblId': cfg['tbl'], 'itmId': 'ALL', 'prdSe': 'Y',
+         'newEstPrdCnt': str(ANNUAL_YEARS)}
+    for i in range(1, cfg['objn'] + 1):
+        p['objL%d' % i] = 'ALL'
+    out = {}
+    for row in kosis(p):
+        if (row.get('ITM_NM') or '').strip() != cfg['itm']:
+            continue
+        if any((row.get(k) or '').strip() != v for k, v in (cfg.get('only') or {}).items()):
+            continue
+        reg = cfg.get('region') or (row.get('C1_NM') or '').strip()
+        if cfg.get('shortmap'):
+            reg = BUBBLE_SHORT.get(reg, reg)
+        reg = BASIC_REGMAP.get(reg, reg)
+        y = (row.get('PRD_DE') or '').strip()
+        try:
+            v = float(row['DT'])
+        except (TypeError, ValueError, KeyError):
+            continue
+        if len(y) == 4 and y.isdigit():
+            out.setdefault(y, {})[reg] = v
+    return out
+
+
+def merge_annual(D, fetched, dec):
+    """연도 문자열('2025') 축의 병합. 새 연도는 뒤에 붙이고, 기존 연도는 값만 고친다."""
+    changed = 0
+    for y in sorted(fetched):
+        vals = {r: v for r, v in fetched[y].items() if r in D['series']}
+        if not vals:
+            continue
+        if y in D['dates']:
+            i = D['dates'].index(y)
+        else:
+            D['dates'].append(y)
+            for s_ in D['series'].values():
+                s_.append(None)
+            i = len(D['dates']) - 1
+        for r, v in vals.items():
+            nv = round(v, dec) if dec else round(v)
+            if D['series'][r][i] != nv:
+                D['series'][r][i] = nv
+                changed += 1
+    return changed
+
+
+def update_annual(stats):
+    changed = []
+    for name in ANNUAL_CONF:
+        if name not in stats:
+            print('annual %s skip: STATS에 없음' % name)
+            continue
+        try:
+            fetched = _fetch_annual_one(name)
+            time.sleep(0.2)
+            n = merge_annual(stats[name], fetched, ANNUAL_CONF[name]['dec'])
+            if n:
+                changed.append('%s(%d)' % (name, n))
+        except Exception as e:
+            print('annual %s skip: %s' % (name, e))
+    return changed
+
+
 def update_basic():
     stats = read_current_stats()
     changed = []
@@ -833,6 +920,10 @@ def update_basic():
         changed += update_size(stats)
     except Exception as e:
         print('size skip:', e)
+    try:
+        changed += update_annual(stats)
+    except Exception as e:
+        print('annual skip:', e)
     if changed:
         write_stats(stats)
     return changed
