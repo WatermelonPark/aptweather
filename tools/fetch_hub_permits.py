@@ -543,16 +543,23 @@ def fetch_group_demol(group, only_bjdong=None):
     반환 튜플 순서: (demol_q, productive, had_unresolved_error). 준공과
     달리 sched_q/units 개념이 없어(철거는 '예정'을 점수화 대상으로 안 씀)
     3-튜플로 단순화했다.
+
+    ⚠️ 전북 예외(H.DEMOL_CODE_REVERSE, 상세는 그 상수 주석): 멸실 API는 전북을
+    아직 구 코드(45xxx)로만 응답한다. build_targets가 준공 기준으로 신 코드
+    (52xxx)를 물려주므로, 여기서만 조회 코드를 구 코드로 되돌린다. 저장 키
+    (productive의 full 코드)는 그룹 기준(신 코드) 그대로 유지해 준공 쪽
+    productive_bjdong과 체계가 어긋나지 않게 한다.
     """
     all_items = []
     productive = []
     had_unresolved_error = False
     for member_cd, bjdongs in group['bjdong'].items():
+        query_cd = H.DEMOL_CODE_REVERSE.get(member_cd, member_cd)
         for bjdong in bjdongs:
             full = member_cd + bjdong
             if only_bjdong is not None and full not in only_bjdong:
                 continue
-            items, had_error = fetch_bjdong_all_pages(member_cd, bjdong, endpoint=EP_DEMOL)
+            items, had_error = fetch_bjdong_all_pages(query_cd, bjdong, endpoint=EP_DEMOL)
             if had_error:
                 had_unresolved_error = True
             if H.demol_records(items):

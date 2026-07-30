@@ -666,6 +666,43 @@ def test_fetch_group_fans_out_legacy_codes_for_bucheon_style_group(monkeypatch):
                            ('41194', '10100'), ('41194', '10200')}
 
 
+def test_fetch_group_demol_reverses_jeonbuk_code_for_query_only(monkeypatch):
+    # 회귀(2026-07-31 실측): 멸실 API는 전북을 아직 구 코드(45xxx)로만 응답한다
+    # (군산 45130 3개동 15건 vs 52130 0건). build_targets는 준공 기준 신 코드
+    # (52130)를 주므로 멸실 조회 때만 구 코드로 되돌려야 한다. 단 저장 키
+    # (productive)는 신 코드 그대로여야 준공 쪽과 체계가 맞는다.
+    group = {'name': '군산시', 'sido': '전북', 'members': ['52130'],
+             'bjdong': {'52130': ['10100', '10200']}, 'legacy': None}
+    calls = []
+
+    def fake_fetch(sigungu, bjdong, log=None, endpoint=None):
+        calls.append((sigungu, bjdong))
+        return [{'mainPurpsCdNm': '공동주택', 'hhldCnt': '10', 'demolEndDay': '20200315',
+                 'mgmPmsrgstPk': 'PK' + bjdong}], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch)
+    demol_q, productive, had_err = F.fetch_group_demol(group)
+    assert set(calls) == {('45130', '10100'), ('45130', '10200')}   # 조회는 구 코드로
+    assert set(productive) == {'5213010100', '5213010200'}          # 저장은 신 코드로
+    assert demol_q == {'2020Q1': 20}
+
+
+def test_fetch_group_demol_does_not_reverse_gangwon(monkeypatch):
+    # 강원은 멸실도 신 코드가 정상이다(원주 51130 68건 vs 42130 0건) — 역매핑을
+    # 강원까지 적용하면 멀쩡한 데이터가 죽는다.
+    group = {'name': '원주시', 'sido': '강원', 'members': ['51130'],
+             'bjdong': {'51130': ['10100']}, 'legacy': None}
+    calls = []
+
+    def fake_fetch(sigungu, bjdong, log=None, endpoint=None):
+        calls.append((sigungu, bjdong))
+        return [], False
+
+    monkeypatch.setattr(F, 'fetch_bjdong_all_pages', fake_fetch)
+    F.fetch_group_demol(group)
+    assert calls == [('51130', '10100')]   # 신 코드 그대로
+
+
 def test_fetch_group_demol_does_not_fan_out_legacy_codes(monkeypatch):
     # 멸실(ArchPmsHubService)은 대표코드 자체로 실데이터가 나온다(실측
     # 2026-07-27, 41190/10100->521건 등) — fetch_group_demol은 준공과 달리
