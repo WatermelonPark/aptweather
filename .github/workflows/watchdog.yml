@@ -19,14 +19,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 라이브 주간 데이터 신선도 확인
+        env:
+          RONE_API_KEY: ${{ secrets.RONE_API_KEY }}
         run: |
           python3 - <<'PY'
-          import json, re, sys, urllib.request, datetime
+          import json, os, re, sys, urllib.request, datetime
 
           URL = 'https://www.agongmap.co.kr/data.js'
           # 주간 데이터는 매주 목요일 발표 → 배치가 목 오후/금 오전에 반영한다.
-          # 정상 상태의 최대 경과일은 약 10일(다음 발표 직전). 3일 여유를 둬 13일로 잡는다.
-          MAX_AGE = 13
+          # 정상 상태의 최대 경과일은 10일(다음 발표 직전). 예전엔 13일이라
+          # '한 회차 통째 누락'(경과 10일)을 사흘 뒤에야 잡았다 — 2026-07-30 사고.
+          # 11일로 조이고, 아래 원천 대조로 하루 만에 잡는다.
+          MAX_AGE = 11
 
           req = urllib.request.Request(URL, headers={'User-Agent': 'agongmap-watchdog'})
           try:
@@ -58,6 +62,46 @@ jobs:
               print('  확인: PC 전원/작업 스케줄러 이력, aptweather\\logs\\weekly-*.log,')
               print('        GitHub 토큰 만료 여부, KOSIS/R-ONE API 표 변경 여부')
               sys.exit(1)
+
+          # ── 원천 대조: R-ONE에 더 최신 주차가 있는데 우리가 못 받았는가 ──
+          # 나이 임계만으로는 회차 누락을 늦게 잡는다(위 주석 참고). 다만 발표 당일
+          # (목)은 '원천에 있고 배치는 아직'이 정상이라 대조를 건너뛴다.
+          RK = os.environ.get('RONE_API_KEY', '')
+          if RK and datetime.date.today().weekday() != 3:
+              try:
+                  api = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
+                         '?KEY=%s&Type=json&STATBL_ID=T244183132827305'
+                         '&DTACYCLE_CD=WK&pIndex=1&pSize=1' % RK)
+                  head = json.loads(urllib.request.urlopen(
+                      urllib.request.Request(api, headers={'User-Agent': 'agongmap-watchdog'}),
+                      timeout=60).read().decode('utf-8', 'replace'))
+                  total = None
+                  for blk in head.get('SttsApiTblData', []):
+                      for h in blk.get('head', []) or []:
+                          if 'list_total_count' in h:
+                              total = h['list_total_count']
+                  # R-ONE은 과거부터 페이징된다 — 마지막 페이지가 최신 주차다.
+                  page = (total // 1000) + 1
+                  last_pg = json.loads(urllib.request.urlopen(
+                      urllib.request.Request(api.replace('pIndex=1&pSize=1',
+                                                         'pIndex=%d&pSize=1000' % page),
+                                             headers={'User-Agent': 'agongmap-watchdog'}),
+                      timeout=60).read().decode('utf-8', 'replace'))
+                  rows = []
+                  for blk in last_pg.get('SttsApiTblData', []):
+                      if 'row' in blk:
+                          rows = blk['row']
+                  src = max((r.get('WRTTIME_DESC') or '').strip() for r in rows) if rows else ''
+                  print('원천(R-ONE) 최신 주차: %s' % (src or '?'))
+                  if src and src > last:
+                      print('')
+                      print('FAIL: 원천에 %s가 있는데 라이브는 %s입니다 — 회차를 놓쳤습니다.' % (src, last))
+                      print('  → update-cloud 산출물 채택/수집 실패 여부 확인')
+                      sys.exit(1)
+              except SystemExit:
+                  raise
+              except Exception as e:
+                  print('원천 대조 건너뜀: %s' % str(e)[:80])
 
           print('OK: 데이터가 최신입니다.')
           PY
