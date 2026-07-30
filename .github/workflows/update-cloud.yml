@@ -125,13 +125,33 @@ jobs:
 
       - name: 변경 있으면 커밋·푸시
         run: |
-          # clean 산출물은 결정적이라 모두 동일 — 아무거나 하나 고른다.
-          SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
+          # ⚠️ clean 산출물이 서로 다를 수 있다 — weekly/monthly는 실패해도 rc=0
+          # (직전 값 유지 후 부분 갱신)이라, R-ONE 타임아웃을 맞은 러너도 clean으로
+          # 올라온다. 예전엔 head -1로 아무거나 골라서, 7/27을 받아온 러너 2·3을
+          # 두고 타임아웃 난 러너 1(7/20)을 채택해 한 주 묵은 데이터를 커밋했다
+          # (2026-07-30 실사고). 그래서 '가장 최신 주간/월간을 가진 산출물'을 고른다.
+          SRC=$(python3 - <<'PY'
+import glob, re, os
+best, bkey = '', ()
+for d in sorted(glob.glob('_art/data-*')):
+    f = os.path.join(d, 'data-core.js')
+    if not os.path.exists(f):
+        continue
+    s = open(f, encoding='utf-8').read()
+    wk = max(re.findall(r'"p":"(\d{4}-\d{2}-\d{2})"', s) or [''])
+    mo = max(re.findall(r'"p":"(\d{4}-\d{2})"', s) or [''])
+    key = (wk, mo)
+    print('후보 %s: weekly=%s monthly=%s' % (d, wk or '-', mo or '-'), file=__import__('sys').stderr)
+    if key > bkey:
+        best, bkey = d, key
+print(best)
+PY
+)
           if [ -z "$SRC" ]; then
             echo "::warning::clean 러너 0개 — 이번 회차 갱신 실패(다음 회차 새 IP가 흡수)"
             exit 0
           fi
-          echo "채택: $SRC"
+          echo "채택: $SRC (최신 주간/월간 보유 산출물)"
           cp "$SRC/data.js" "$SRC/data-core.js" "$SRC/data-rest.json" "$SRC/data-trend.json" .
           # 정적 페이지(zone·지표)는 data.js를 구워 만들므로 새 데이터로 재생성해
           # 함께 커밋한다. 로컬 스케줄러가 꺼진 PC-less 체제에선 여기가 유일한
