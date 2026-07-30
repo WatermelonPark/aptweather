@@ -76,35 +76,30 @@
      웹 방문자에겐 표시하지 않는다(LCP·색인에 영향 없게). -->
 <script>try{if(matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone)document.documentElement.className+=' pwa';}catch(e){}</script>
 <style>
+/* OS 스플래시는 끌 수 없다. 그래서 없애는 대신 '이어받는다' — 배경색·마크 모양·
+   마크 위치(화면 정중앙)를 OS 스플래시와 똑같이 두고, 워드마크만 아래에서 떠오른다.
+   마크를 0에서 그리거나 위로 밀어 올리면 그 순간 두 장으로 갈라져 보인다(따닥).
+   그래서 마크는 절대 움직이지도, 다시 그려지지도 않는다. */
 #splash{display:none}
-.pwa #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:26px;
-  /* manifest background_color와 같은 색 — OS 스플래시에서 이어질 때 색이 튀지 않는다 */
-  background:#f4f6f5;
+.pwa #splash{position:fixed;inset:0;z-index:9999;display:block;
+  background:#f4f6f5;   /* = manifest background_color */
   font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
   animation:splashFail 0s linear 3s forwards}   /* JS가 죽어도 앱을 막지 않게 하는 backstop */
 @keyframes splashFail{to{opacity:0;visibility:hidden;pointer-events:none}}
 #splash.gone{opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .28s ease,visibility 0s .28s}
-#splash svg{width:96px;height:96px;display:block}
-/* 0선에서 바깥으로 벌어지는 것이 이 서비스의 명제 자체다 — 안쪽 막대부터 차례로 편다 */
-#splash .bar{transform:scaleX(0);transform-box:fill-box;transform-origin:center;
-  animation:barOut .34s cubic-bezier(.2,.7,.3,1) forwards}
-#splash .d1{animation-delay:0s}
-#splash .d2{animation-delay:.06s}
-#splash .d3{animation-delay:.12s}
-#splash .d4{animation-delay:.18s}
-#splash .cap{opacity:0;animation:capIn .24s ease-out .26s forwards}
-@keyframes barOut{to{transform:scaleX(1)}}
-@keyframes capIn{to{opacity:1}}
-#splash .mark-txt{opacity:0;transform:translateY(8px);
-  animation:txtIn .38s cubic-bezier(.2,.7,.3,1) .38s forwards;text-align:center}
+  transition:opacity .3s ease,visibility 0s .3s}
+/* 정중앙 고정 — OS 스플래시의 아이콘 자리를 그대로 물려받는 지점 */
+#splash svg{position:absolute;left:50%;top:50%;width:120px;height:120px;
+  margin:-60px 0 0 -60px;display:block}
+/* 마크를 밀지 않도록 글자는 마크 아래에 따로 띄운다(정중앙 + 마크 절반 + 여백) */
+#splash .mark-txt{position:absolute;left:0;right:0;top:50%;margin-top:82px;text-align:center;
+  opacity:0;transform:translateY(7px);
+  animation:txtIn .42s cubic-bezier(.2,.7,.3,1) .18s forwards}
 @keyframes txtIn{to{opacity:1;transform:none}}
 #splash .nm{font-size:27px;font-weight:700;letter-spacing:-.02em;color:#131e24;line-height:1.2}
 #splash .sl{margin-top:7px;font-size:13.5px;font-weight:500;color:#5e6f74;letter-spacing:.01em}
 @media (prefers-reduced-motion:reduce){
-  #splash .bar{transform:none;animation:none}
-  #splash .cap,#splash .mark-txt{opacity:1;transform:none;animation:none}
+  #splash .mark-txt{opacity:1;transform:none;animation:none}
 }
 </style>
 </head>
@@ -112,16 +107,16 @@
 
 <div id="splash" aria-hidden="true">
   <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-    <rect class="cap" x="9.98" y="4.48" width="44.03" height="2.86" rx="1.43" fill="#1a262d"/>
-    <rect class="bar d4" x="9.98" y="7.34" width="44.03" height="5.25" rx="2.10" fill="#a62f23"/>
-    <rect class="bar d3" x="16.00" y="13.64" width="32.00" height="5.25" rx="2.10" fill="#b2372a"/>
-    <rect class="bar d2" x="22.02" y="19.93" width="19.96" height="5.25" rx="2.10" fill="#be4031"/>
-    <rect class="bar d1" x="28.04" y="26.23" width="7.93" height="5.25" rx="2.10" fill="#ca4838"/>
-    <rect class="bar d1" x="28.04" y="32.52" width="7.93" height="5.25" rx="2.10" fill="#4285dc"/>
-    <rect class="bar d2" x="22.02" y="38.82" width="19.96" height="5.25" rx="2.10" fill="#3472b7"/>
-    <rect class="bar d3" x="16.00" y="45.12" width="32.00" height="5.25" rx="2.10" fill="#255f93"/>
-    <rect class="bar d4" x="9.98" y="51.41" width="44.03" height="5.25" rx="2.10" fill="#174c6e"/>
-    <rect class="cap" x="9.98" y="56.66" width="44.03" height="2.86" rx="1.43" fill="#1a262d"/>
+    <rect x="9.98" y="4.48" width="44.03" height="2.86" rx="1.43" fill="#1a262d"/>
+    <rect x="9.98" y="7.34" width="44.03" height="5.25" rx="2.10" fill="#a62f23"/>
+    <rect x="16.00" y="13.64" width="32.00" height="5.25" rx="2.10" fill="#b2372a"/>
+    <rect x="22.02" y="19.93" width="19.96" height="5.25" rx="2.10" fill="#be4031"/>
+    <rect x="28.04" y="26.23" width="7.93" height="5.25" rx="2.10" fill="#ca4838"/>
+    <rect x="28.04" y="32.52" width="7.93" height="5.25" rx="2.10" fill="#4285dc"/>
+    <rect x="22.02" y="38.82" width="19.96" height="5.25" rx="2.10" fill="#3472b7"/>
+    <rect x="16.00" y="45.12" width="32.00" height="5.25" rx="2.10" fill="#255f93"/>
+    <rect x="9.98" y="51.41" width="44.03" height="5.25" rx="2.10" fill="#174c6e"/>
+    <rect x="9.98" y="56.66" width="44.03" height="2.86" rx="1.43" fill="#1a262d"/>
   </svg>
   <div class="mark-txt">
     <div class="nm">아공맵</div>
@@ -136,7 +131,7 @@
   var s=document.getElementById('splash');
   if(!s||!document.documentElement.classList.contains('pwa'))return;
   var t0=Date.now(),
-      MIN=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?360:820;
+      MIN=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?340:700;
   function go(){
     setTimeout(function(){
       s.classList.add('gone');

@@ -1,197 +1,39 @@
 name: 데이터 신선도 감시 (배치 실패 알림)
 
-# 로컬 배치(tools/run_weekly_update.bat)는 "자기가 실행되지 않았다"는 사실을 알릴 수 없다.
-# PC가 꺼져 있거나 작업 스케줄러가 뜨지 않으면 배치 안의 어떤 알림 코드도 실행되지 않기 때문.
-# 그래서 감시자는 반드시 외부에 둔다. 이 워크플로는 라이브 사이트의 주간 데이터가
-# 낡았는지만 확인하고, 낡았으면 실패시킨다 → GitHub이 실패 알림 메일을 보낸다.
+# 배치는 "자기가 실행되지 않았다"는 사실을 알릴 수 없다. PC가 꺼져 있거나 클라우드 런이
+# 뜨지 않으면 배치 안의 어떤 알림 코드도 실행되지 않는다. 그래서 감시자는 외부에 둔다.
+# 이 워크플로가 실패하면 GitHub이 실패 알림 메일을 보낸다.
 #
-# 주간은 가장 잦은 계열이라 '배치 자체가 멈춤'을 가장 먼저 잡는다:
-#   PC 꺼짐 / 배치 크래시 / git push 실패(토큰 만료) / Pages 배포 실패
-# 하지만 그것만으론 '한 소스만 조용히 끊긴 경우'(표 ID 변경 등)를 몇 달 놓친다.
-# 그래서 월간은 원천(R-ONE) 대조까지, 기본통계·연간 계열은 주기별 나이 임계로 함께 본다.
+# 검사 로직은 tools/check_freshness.py — 나이가 아니라 **원천과 직접 대조**한다.
+# 나이만 보면 '정상 최대 나이'와 '한 회차 통째로 놓침'이 같은 값이라 구분되지 않는다
+# (2026-07-30 실사고: 주간이 원천보다 한 주 뒤처졌는데 경과 10일이라 임계를 통과했다).
+# 표 ID·주기 설정은 배치(update_adv_data.py)에서 import해 단일 출처를 유지한다.
+#
+# 이 한 번의 실행으로 다음이 전부 걸린다:
+#   PC 꺼짐 / 배치 크래시 / git push 실패(토큰 만료) / Pages 배포 실패 /
+#   산출물 채택 오류 / 특정 소스만 조용히 끊김(KOSIS 표 ID 변경·폐지)
 
 on:
   schedule:
-    - cron: '0 1 * * *'      # 매일 10:00 KST
+    # 22:00 KST — 20:00 배치가 끝난 뒤에 본다. 배치 앞에서 돌리면 '발표됐지만
+    # 아직 안 받은' 정상 구간을 실패로 읽어 매주 오탐이 난다.
+    # 시각을 옮길 땐 check_freshness.py의 GRACE_WEEKLY도 함께 봐야 한다.
+    - cron: '0 13 * * *'
   workflow_dispatch: {}
 
 jobs:
   freshness:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: 라이브 주간 데이터 신선도 확인
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 라이브 데이터와 원천 대조
         env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
           RONE_API_KEY: ${{ secrets.RONE_API_KEY }}
-        run: |
-          python3 - <<'PY'
-          import json, os, re, sys, urllib.request, datetime
-
-          URL = 'https://www.agongmap.co.kr/data.js'
-          # 주간 데이터는 매주 목요일 발표 → 배치가 목 오후/금 오전에 반영한다.
-          # 정상 상태의 최대 경과일은 10일(다음 발표 직전). 예전엔 13일이라
-          # '한 회차 통째 누락'(경과 10일)을 사흘 뒤에야 잡았다 — 2026-07-30 사고.
-          # 11일로 조이고, 아래 원천 대조로 하루 만에 잡는다.
-          MAX_AGE = 11
-
-          req = urllib.request.Request(URL, headers={'User-Agent': 'agongmap-watchdog'})
-          try:
-              html = urllib.request.urlopen(req, timeout=60).read().decode('utf-8', 'replace')
-          except Exception as e:
-              print('FAIL: data.js에 접근할 수 없습니다 - %s' % e)
-              sys.exit(1)
-
-          m = re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});', html, re.S)
-          if not m:
-              print('FAIL: data.js에서 ADV 데이터 블록을 찾지 못했습니다 (배포가 깨졌을 수 있음)')
-              sys.exit(1)
-          try:
-              adv = json.loads(m.group(1))
-              last = adv['weekly']['rows'][-1]['p']
-              d = datetime.date.fromisoformat(last)
-          except Exception as e:
-              print('FAIL: 주간 데이터를 해석할 수 없습니다 - %s' % e)
-              sys.exit(1)
-
-          age = (datetime.date.today() - d).days
-          print('최신 주간 기준일: %s (경과 %d일, 허용 %d일)' % (last, age, MAX_AGE))
-          print('최신 월간 기준일: %s' % adv.get('monthly', {}).get('rows', [{}])[-1].get('p', '?'))
-
-          if age > MAX_AGE:
-              print('')
-              print('FAIL: 주간 데이터가 %d일째 갱신되지 않았습니다.' % age)
-              print('  → 주간 배치가 실패했거나 실행되지 않았을 가능성이 높습니다.')
-              print('  확인: PC 전원/작업 스케줄러 이력, aptweather\\logs\\weekly-*.log,')
-              print('        GitHub 토큰 만료 여부, KOSIS/R-ONE API 표 변경 여부')
-              sys.exit(1)
-
-          # ── 원천 대조: R-ONE에 더 최신 주차가 있는데 우리가 못 받았는가 ──
-          # 나이 임계만으로는 회차 누락을 늦게 잡는다(위 주석 참고). 다만 발표 당일
-          # (목)은 '원천에 있고 배치는 아직'이 정상이라 대조를 건너뛴다.
-          RK = os.environ.get('RONE_API_KEY', '')
-          if RK and datetime.date.today().weekday() != 3:
-              try:
-                  api = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
-                         '?KEY=%s&Type=json&STATBL_ID=T244183132827305'
-                         '&DTACYCLE_CD=WK&pIndex=1&pSize=1' % RK)
-                  head = json.loads(urllib.request.urlopen(
-                      urllib.request.Request(api, headers={'User-Agent': 'agongmap-watchdog'}),
-                      timeout=60).read().decode('utf-8', 'replace'))
-                  total = None
-                  for blk in head.get('SttsApiTblData', []):
-                      for h in blk.get('head', []) or []:
-                          if 'list_total_count' in h:
-                              total = h['list_total_count']
-                  # R-ONE은 과거부터 페이징된다 — 마지막 페이지가 최신 주차다.
-                  page = (total // 1000) + 1
-                  last_pg = json.loads(urllib.request.urlopen(
-                      urllib.request.Request(api.replace('pIndex=1&pSize=1',
-                                                         'pIndex=%d&pSize=1000' % page),
-                                             headers={'User-Agent': 'agongmap-watchdog'}),
-                      timeout=60).read().decode('utf-8', 'replace'))
-                  rows = []
-                  for blk in last_pg.get('SttsApiTblData', []):
-                      if 'row' in blk:
-                          rows = blk['row']
-                  src = max((r.get('WRTTIME_DESC') or '').strip() for r in rows) if rows else ''
-                  print('원천(R-ONE) 최신 주차: %s' % (src or '?'))
-                  if src and src > last:
-                      print('')
-                      print('FAIL: 원천에 %s가 있는데 라이브는 %s입니다 — 회차를 놓쳤습니다.' % (src, last))
-                      print('  → update-cloud 산출물 채택/수집 실패 여부 확인')
-                      sys.exit(1)
-              except SystemExit:
-                  raise
-              except Exception as e:
-                  print('원천 대조 건너뜀: %s' % str(e)[:80])
-
-          # ── 월간 원천 대조 (R-ONE 월간표) ──
-          # 부동산원 월간동향은 매월 15일경 전월분 발표 → 당일 20시 배치가 받는다.
-          # 감시는 10시라 발표 전이므로 주간과 달리 요일 예외가 필요 없다.
-          mon = (adv.get('monthly', {}).get('rows') or [{}])[-1].get('p', '')
-          if RK and mon:
-              try:
-                  mapi = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
-                          '?KEY=%s&Type=json&STATBL_ID=A_2024_00045'
-                          '&DTACYCLE_CD=MM&pIndex=1&pSize=1' % RK)
-                  h = json.loads(urllib.request.urlopen(
-                      urllib.request.Request(mapi, headers={'User-Agent': 'agongmap-watchdog'}),
-                      timeout=60).read().decode('utf-8', 'replace'))
-                  tot = None
-                  for blk in h.get('SttsApiTblData', []):
-                      for hh in blk.get('head', []) or []:
-                          if 'list_total_count' in hh:
-                              tot = hh['list_total_count']
-                  pg = (tot // 1000) + 1
-                  lp = json.loads(urllib.request.urlopen(
-                      urllib.request.Request(mapi.replace('pIndex=1&pSize=1',
-                                                          'pIndex=%d&pSize=1000' % pg),
-                                             headers={'User-Agent': 'agongmap-watchdog'}),
-                      timeout=60).read().decode('utf-8', 'replace'))
-                  rr = []
-                  for blk in lp.get('SttsApiTblData', []):
-                      if 'row' in blk:
-                          rr = blk['row']
-                  ids = [str(x.get('WRTTIME_IDTFR_ID') or '') for x in rr]
-                  ids = [i for i in ids if len(i) == 6 and i.isdigit()]
-                  msrc = max(ids) if ids else ''
-                  ours_m = mon.replace('-', '')
-                  print('원천(R-ONE) 최신 월: %s / 라이브 %s' % (msrc or '?', ours_m))
-                  if msrc and msrc > ours_m:
-                      print('')
-                      print('FAIL: 월간이 원천 %s보다 뒤처집니다(라이브 %s).' % (msrc, ours_m))
-                      sys.exit(1)
-              except SystemExit:
-                  raise
-              except Exception as e:
-                  print('월간 원천 대조 건너뜀: %s' % str(e)[:80])
-
-          # ── 기본통계·연간 계열 신선도 ──
-          # 소스 하나가 조용히 끊기면(표 ID 변경 등) 그 계열만 멈춘다. 주간 체크로는
-          # 안 잡히므로 계열별 나이를 본다. 임계는 발표 지연(최대 2개월)에 여유를 더한 값.
-          # 연간은 정상 상태로도 1년 넘게 같은 값이라 '연도'로 본다(올해-2보다 오래면 실패).
-          MONTHLY_MAX_DAYS = 120
-          ANNUAL_MIN_YEAR = datetime.date.today().year - 2
-          try:
-              rest = json.loads(urllib.request.urlopen(urllib.request.Request(
-                  'https://www.agongmap.co.kr/data-rest.json',
-                  headers={'User-Agent': 'agongmap-watchdog'}), timeout=60
-              ).read().decode('utf-8', 'replace'))
-              stale = []
-              print('')
-              print('[기본통계 계열]')
-              for nm, S in sorted((rest.get('STATS') or {}).items()):
-                  ds = S.get('dates') or []
-                  if not ds:
-                      stale.append('%s(비어 있음)' % nm)
-                      continue
-                  lastv = str(ds[-1])
-                  ym = re.match(r'^(\d{4})[.-](\d{1,2})', lastv)
-                  if ym:
-                      y, mo = int(ym.group(1)), int(ym.group(2))
-                      # 해당 월 1일 기준 경과일 (라벨이 월 단위라 일자는 무의미)
-                      age_d = (datetime.date.today() - datetime.date(y, mo, 1)).days
-                      flag = '  ← 낡음' if age_d > MONTHLY_MAX_DAYS else ''
-                      print('  %-12s %-10s %4d일%s' % (nm, lastv, age_d, flag))
-                      if age_d > MONTHLY_MAX_DAYS:
-                          stale.append('%s(%s, %d일)' % (nm, lastv, age_d))
-                  elif re.match(r'^\d{4}$', lastv):
-                      yr = int(lastv)
-                      flag = '  ← 낡음' if yr < ANNUAL_MIN_YEAR else ''
-                      print('  %-12s %-10s (연간)%s' % (nm, lastv, flag))
-                      if yr < ANNUAL_MIN_YEAR:
-                          stale.append('%s(%s년)' % (nm, lastv))
-                  else:
-                      print('  %-12s %-10s (형식 미상 — 건너뜀)' % (nm, lastv))
-              if stale:
-                  print('')
-                  print('FAIL: 갱신이 멈춘 계열 %d개 — %s' % (len(stale), ', '.join(stale)))
-                  print('  → 해당 소스의 KOSIS 표 ID 변경/폐지 여부부터 확인')
-                  sys.exit(1)
-          except SystemExit:
-              raise
-          except Exception as e:
-              print('기본통계 점검 건너뜀: %s' % str(e)[:80])
-
-          print('')
-          print('OK: 데이터가 최신입니다.')
-          PY
+        run: python tools/check_freshness.py
