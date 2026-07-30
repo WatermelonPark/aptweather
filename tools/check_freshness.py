@@ -37,6 +37,7 @@ import update_adv_data as U  # noqa: E402  (표 설정을 배치와 공유 — �
 SITE = 'https://www.agongmap.co.kr'
 UA = {'User-Agent': 'agongmap-watchdog'}
 TODAY = datetime.date.today()
+SKIPPED = []           # 원천 조회 실패로 판정하지 못한 계열
 
 # 계열별 정상 최대 나이(일). 이 안쪽이면 '발표 직후 배치 전'일 수 있어 봐준다.
 # 주간 9는 감시를 배치 뒤(22시)에 돌린다는 전제에 기댄다. 기준일은 월요일이고
@@ -140,6 +141,8 @@ def check(label, ours, getter, grace):
     try:
         src = getter()
     except Exception as e:
+        # 원천이 잠깐 죽는 건 흔하다 — 한둘은 넘기고, 대량 건너뜀만 아래에서 잡는다.
+        SKIPPED.append(label)
         print('  %-12s %-12s 원천 조회 건너뜀 (%s)' % (label, ours, str(e)[:40]))
         return None
     o, s = digits(ours), digits(src)
@@ -157,6 +160,13 @@ def check(label, ours, getter, grace):
 
 
 def main():
+    # 키가 비면 모든 원천 조회가 '건너뜀'이 되어 감시가 조용히 통과한다.
+    # 감시자가 무력해진 것을 감시할 사람은 없으니 여기서 바로 실패시킨다.
+    missing = [k for k in ('KOSIS_API_KEY', 'RONE_API_KEY') if not os.environ.get(k)]
+    if missing:
+        print('FAIL: %s 없음 — 원천 대조를 할 수 없습니다 (시크릿 확인)' % ', '.join(missing))
+        sys.exit(1)
+
     adv, stats = live_adv_stats()
     fails = []
     print('[시세 — 원천 R-ONE]')
@@ -195,6 +205,15 @@ def main():
             print('  - %s' % b)
         print('  → update-cloud 실행 이력, 해당 KOSIS 표 ID 변경/폐지 여부 확인')
         sys.exit(1)
+    if len(SKIPPED) * 2 > len(fails):
+        # 절반 넘게 못 봤으면 'OK'는 근거가 없다. 통과시키면 감시가 켜져 있는
+        # 채로 아무것도 안 보는 상태가 된다 — 그게 가장 위험한 실패다.
+        print('FAIL: %d/%d 계열을 원천과 대조하지 못했습니다 — %s'
+              % (len(SKIPPED), len(fails), ', '.join(SKIPPED)))
+        print('  → API 키 만료·표 ID 변경·원천 장애 여부 확인')
+        sys.exit(1)
+    if SKIPPED:
+        print('참고: %s 계열은 원천 조회 실패로 건너뜀' % ', '.join(SKIPPED))
     print('OK: 모든 계열이 원천과 같은 시점입니다.')
 
 

@@ -34,6 +34,8 @@ jobs:
 
       - name: 라이브 데이터와 원천 대조
         env:
-          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
-          RONE_API_KEY: ${{ secrets.RONE_API_KEY }}
+          # 배치(update-cloud.yml)와 같은 폴백 이름을 쓴다 — 한쪽만 고쳐두면
+          # 키가 비어 원천 조회가 통째로 '건너뜀'이 되고 감시가 조용히 무력해진다.
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+          RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
         run: python tools/check_freshness.py
