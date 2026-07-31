@@ -243,16 +243,6 @@ def make_capital(rows):
     return agg
 
 
-def tier(v):
-    # v = 누적 순부족(양수 = 부족). 화면 표시는 -v(부족을 음수로).
-    # 0을 경계로 부족(빨강)/충분(파랑)을 가른다. '수급 균형' 완충구간은
-    # 밴드 방식이던 시절의 잔재라, 절대값 비교로 바뀐 지금은 없앤다.
-    if v >= 15000: return ('공급 절벽', '#a93226')
-    if v > 0:      return ('공급 부족', '#c0392b')
-    if v >= -3000: return ('공급 충분', '#3a7bd5')
-    return ('공급 과잉', '#1a5276')
-
-
 def num(v):
     return '{:,}'.format(int(round(v)))
 
@@ -1081,19 +1071,19 @@ def build_hub(pages, prd, today):
     rows = []
     for i, r in enumerate(live):
         nm = r['z']['z']
-        tname, tcol = tier(r['tot'])
+        gr = r['gr']
         rows.append(
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
             '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
-            % (i + 1, nm, nm, tcol, signed(r['tot']), tname))
+            % (i + 1, nm, nm, gr['color'], signed(r['tot']), gr['label']))
     if roll is not None:
-        tname, tcol = tier(roll['tot'])
+        gr = roll['gr']
         sub = len(roll['z'].get('subs') or []) or 16
         rows.append(
             '      <tr class="rollup"><td class="rk">—</td>'
             '<td><a class="z" href="/zone/%s/">%s</a> <span class="sub">%d개 생활권 합계</span></td>'
             '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
-            % (ROLLUP, ROLLUP, sub, tcol, signed(roll['tot']), tname))
+            % (ROLLUP, ROLLUP, sub, gr['color'], signed(roll['tot']), gr['label']))
     ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",

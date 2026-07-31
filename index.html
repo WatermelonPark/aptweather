@@ -155,7 +155,7 @@
   </div></header>
 
   <section class="home-sec" id="sec-score"><div class="wrap">
-    <h2>지금 어디에 상승 압력이 쌓이고 있나</h2>
+    <h2>전국 한눈에 — 어디가 모자라고 어디가 남나</h2>
     <div class="sc-key">
       <div class="k-l"><b>+ 공급 과잉</b><i>하락 압력</i></div>
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
@@ -166,7 +166,18 @@
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
 
-    <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">아공맵 자체 산출 · 매주 갱신</span></summary><div class="body">목포와 광양이 같은 전남이어도 딴 시장이듯, 행정구역이 아니라 실제 생활권으로 묶어 계산합니다. 세 구간의 부족분을 <b>세대수</b>로 더합니다 — <b>앞으로 남은 입주 예정</b>(생활권 실측, 가중 0.55 — 원자료가 닿는 미래 분기까지)·<b>인허가</b>(3~4년 뒤 입주로 실현, 0.35)·<b>최근 3년 입주 실적</b>(0.10). 과거를 3년으로 보는 이유는 부족이 <b>재고처럼 쌓이기</b> 때문입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 그 부족이 메워지지 않습니다. 모두 <b>멸실을 뺀 순공급</b> 기준입니다. 인허가와 최근 실적은 시군구 단위 통계가 없어 <b>소속 시도 값을 인구 비중으로 배분한 추정치</b>입니다. 금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 반대로 <b>이자가 월세보다 싸면</b> <b style="color:#7a4fb5">★ 실거주 유리</b> 플래그로만 표시합니다.</div></details>
+    <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">아공맵 자체 산출 · 매주 갱신</span></summary><div class="body">아파트는 짓는 데 3~4년 걸려, 지금 공사 중인 물량으로 4년 뒤까지 내다볼 수 있습니다.
+행정구역이 아니라 실제 생활권 단위로, <b>필요한 집</b>(세대수 기준 추정)과
+<b>그동안 밀린 것 + 들어올 집</b>(국토부 건축HUB 단지별 실측, 멸실 차감)을 견줘
+세대수로 계산합니다. 등급은 필요량 대비 부족 비율의 절대 구간입니다.
+공급 기준이며 가격 예측이 아닙니다 — 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.</div></details>
+  </div></section>
+
+  <section class="home-sec"><div class="wrap">
+    <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
+    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
+    <p>전국 시군구 시세를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b> 지도로.</p>
+    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">이번 주 시세 지도 보기</button></div>
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
@@ -180,23 +191,13 @@
     </div>
   </div></section>
 
-  <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
-    <h2>이번 주, 어디가 오르고 내렸을까?</h2>
-    <p>전국 시군구 시세를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b> 지도로.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">이번 주 시세 지도 보기</button></div>
-  </div></section>
-
-  <section class="home-sec"><div class="wrap">
-    <div class="hs-kicker">15개 시도 · 20년</div>
-    <h2>집값은 왜 돌고 도는가</h2>
-    <p>공급 → 전세 → 매매 → 다시 공급. 20년 데이터로 검증한 순환의 6개 고리.</p>
-    <div class="hs-cta"><a class="home-cta" href="/cycle/" onclick="track('home_cta',{to:'cycle'})">사이클 리포트 읽기</a></div>
-  </div></section>
-
   <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">KOSIS · 한국은행 · 국토교통부</div>
-    <h2>국가기관 원자료 그대로</h2>
+    <div class="hs-kicker">15개 시도 · 20년</div>
+    <h3>집값은 왜 돌고 도는가</h3>
+    <p>공급 → 전세 → 매매 → 다시 공급, 20년 데이터로 검증한 순환의 6개 고리입니다.</p>
+    <div class="hs-cta"><a class="home-cta" href="/cycle/" onclick="track('home_cta',{to:'cycle'})">사이클 리포트 읽기</a></div>
+    <div class="hs-kicker" style="margin-top:26px">KOSIS · 한국은행 · 국토교통부</div>
+    <h3>국가기관 원자료 그대로</h3>
     <p>실거래지수·인허가·착공·준공·금리를 지역과 기간으로 나눠 봅니다.</p>
     <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">통계 원자료 보기</button></div>
   </div></section>
@@ -2293,10 +2294,6 @@ function scFmt(v){   // 화면 표기는 부호 반전: 부족을 음수로 보�
   const d=-v, s=d<0?'−':'+', a=Math.abs(d);
   return s+(a>=10000?(a/10000).toFixed(1)+'만':Math.round(a).toLocaleString());
 }
-function scTier(v){
-  return v>=15000?['t4','공급 절벽','#a93226']:v>0?['t3','공급 부족','#c0392b']
-       :v>=-3000?['t2','공급 충분','#3a7bd5']:['t1','공급 과잉','#1a5276'];
-}
 /* 등급 판정 — tools/make_zone_pages.py grade()와 반드시 동치(미러). 컷·라벨·색 동일. */
 var GRADE_CUTS=[1.5,1.0,0.5,-0.5];
 var GRADES=[
@@ -2412,22 +2409,30 @@ function renderScoreSec(){
     u.pop+=z.pop;u.supply+=z.supply;u.dA+=z.dA;u.dB+=z.dB;u.dC+=z.dC;u.tot+=z.tot;u.need+=z.need;u.zones.push(z);
   });
   const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.tot-a.tot);
+  // 집계 유닛(수도권 1행 포함)에도 등급 — 합산 tot/need4로 판정
+  units.forEach(u=>{u.need4=u.zones.reduce((s,z)=>s+(z.need4||0),0);u.gr=scGrade(u.tot,u.need4);});
   const mx=Math.max.apply(null,units.map(u=>Math.abs(u.tot)))||1;
-  document.getElementById('score-wrap').innerHTML=units.map(u=>{
-    const tv=scTier(u.tot);
-    // 가운데 0을 축으로 발산 — 부족(−)은 오른쪽, 과잉(+)은 왼쪽. 색도 부호를 따라간다.
-    const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(u.tot)/mx)*50));
-    const barCol=u.tot>=0?(u.tot>=30000?'#a93226':'#c0392b'):(u.tot<=-10000?'#1a5276':'#3a7bd5');
-    const bar='<div class="sc-zero"></div>'+(u.tot>=0
-      ?'<div class="sc-fill" style="left:50%;width:'+w+'%;background:'+barCol+'"></div>'
-      :'<div class="sc-fill" style="right:50%;width:'+w+'%;background:'+barCol+'"></div>');
-    const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>'
-      :u.flag==='watch'?'<span class="sc-flag watch" title="대출 이자가 이 지역 월세보다 싼 구간 — 실거주라면 매수를 검토해볼 만합니다">★</span>':'<span class="sc-flag"></span>';
-    const sub=u.name==='수도권'?' <span style="color:var(--muted);font-weight:400">('+u.zones.length+'개 생활권)</span>':'';
-    return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/"><span class="sc-lab">'+u.name+'</span>'+fb
-      +'<div class="sc-track">'+bar+'</div>'
-      +'<span class="sc-val" style="color:'+tv[2]+'">'+scFmt(u.tot)+'</span>'
-      +'<span class="sc-tier '+tv[0]+'">'+tv[1]+'</span><span class="sc-go">›</span></a>';
+  const GORDER=['g4','g3','g2','g1','g0'];
+  document.getElementById('score-wrap').innerHTML=GORDER.map(gk=>{
+    const list=units.filter(u=>u.gr.k===gk);
+    if(!list.length)return '';
+    const g=list[0].gr;
+    return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'곳</i></div>'
+      +list.map(u=>{
+        // 가운데 0을 축으로 발산 — 부족(−)은 오른쪽, 과잉(+)은 왼쪽. 색도 부호를 따라간다.
+        const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(u.tot)/mx)*50));
+        const barCol=u.tot>=0?(u.tot>=30000?'#a93226':'#c0392b'):(u.tot<=-10000?'#1a5276':'#3a7bd5');
+        const bar='<div class="sc-zero"></div>'+(u.tot>=0
+          ?'<div class="sc-fill" style="left:50%;width:'+w+'%;background:'+barCol+'"></div>'
+          :'<div class="sc-fill" style="right:50%;width:'+w+'%;background:'+barCol+'"></div>');
+        const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>'
+          :u.flag==='watch'?'<span class="sc-flag watch" title="대출 이자가 이 지역 월세보다 싼 구간 — 실거주라면 매수를 검토해볼 만합니다">★</span>':'<span class="sc-flag"></span>';
+        const sub=u.name==='수도권'?' <span style="color:var(--muted);font-weight:400">('+u.zones.length+'개 생활권)</span>':'';
+        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/"><span class="sc-lab">'+u.name+'</span>'+fb
+          +'<div class="sc-track">'+bar+'</div>'
+          +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)+'</span>'
+          +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
+      }).join('');
   }).join('');
   // ── 지도: 상세 생활권 36개 ──
   const REGORD=['수도권','충청','강원','전라','경상','제주'];
