@@ -778,17 +778,20 @@ def build_page(r, allrows, prd, today, punits=None):
     # ── ⑥ 주변과 비교하면 — 같은 시도(ps) 생활권 미니 카드(최대 4곳) + 기존
     # zlist(전체 생활권 nav, SEO 링크 자산 — 삭제 말고 그대로 재사용)
     near = [x for x in allrows if x['ps'] == ps and x['z']['z'] != nm][:4]
-    near_html = (
-        '<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near">' +
-        ''.join('<a class="n-card" href="/zone/%s/"><b>%s</b>'
-                '<span class="n-g" style="color:%s">%s</span><i>%s</i></a>'
-                % (x['z']['z'], x['z']['z'], x['gr']['color'], x['gr']['label'],
-                   signed(x['tot']))
-                for x in near) +
-        '</div>'
-        '<div class="zlist" style="margin-top:14px">%s</div>'
-        '<a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>'
-        '</div></section>' % nav)
+    if near:
+        near_html = (
+            '<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near">' +
+            ''.join('<a class="n-card" href="/zone/%s/"><b>%s</b>'
+                    '<span class="n-g" style="color:%s">%s</span><i>%s</i></a>'
+                    % (x['z']['z'], x['z']['z'], x['gr']['color'], x['gr']['label'],
+                       signed(x['tot']))
+                    for x in near) +
+            '</div>'
+            '<div class="zlist" style="margin-top:14px">%s</div>'
+            '<a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>'
+            '</div></section>' % nav)
+    else:
+        near_html = ''
 
     # ── 저장 CTA — 수도권 합계 페이지(subs 있음)는 저장 버튼을 렌더하지 않으므로
     # 스크립트도 만들지 않는다.
