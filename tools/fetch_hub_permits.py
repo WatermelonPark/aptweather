@@ -463,8 +463,14 @@ def _aggregate(items):
             sched_q[sq] += n
             units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched'])
         # 둘 다 없으면 미정 — 미반영
+    # ⚠️ 캡을 stage별로 따로 건다(2026-08-01). 예전엔 done+sched를 섞어 세대 큰 순
+    # 상위 40개만 남겼는데, 큰 시군구는 옛 준공 대단지가 40칸을 다 차지해 '앞으로
+    # 들어올 단지' 목록이 비다시피 했다(춘천권 차트 5분기 중 목록엔 2곳만).
+    # done/sched 각각 UNITS_CAP개면 존 페이지 두 섹션이 모두 채워진다.
     units.sort(key=lambda u: -u[1])
-    return dict(done_q), dict(sched_q), units[:UNITS_CAP]
+    kept = ([u for u in units if u[3] == 'done'][:UNITS_CAP]
+            + [u for u in units if u[3] == 'sched'][:UNITS_CAP])
+    return dict(done_q), dict(sched_q), kept
 
 
 def _aggregate_demol(items):

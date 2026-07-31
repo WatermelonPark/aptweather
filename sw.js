@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v43'; // 물량 수치 정합 · 단지 중복제거 · 시세 3계열 그래프 · 축 정리
+const VERSION = 'v44'; // 단지목록 창 정합 · 막대 양식 통일 · 시세 hover 툴팁 · 통계 링크
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

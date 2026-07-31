@@ -355,15 +355,32 @@ def render_units_2sec(units, today=None):
             return None
         return (y - today.year) * 12 + (m - today.month)
 
-    def in_window(u, lo, hi):
+    # ⚠️ 창은 '언제 들어오나' 차트와 분기 단위로 정확히 같아야 한다(2026-08-01 버그):
+    # 예전엔 목록이 '오늘로부터 0~48개월'이라 현재 분기 물량까지 넣었는데, 차트는
+    # cur_q+1..cur_q+16이라 현재 분기를 뺐다 — 춘천권 874세대(2026-08)가 목록에만
+    # 있고 차트엔 없어 합이 안 맞았다. 이제 둘 다 분기 인덱스로 비교한다.
+    cur_q = today.year * 4 + (today.month - 1) // 3
+    HQ = UNIT_WINDOW // 3                   # 48개월 = 16분기
+
+    def uq(u):
         ym = u[2] if len(u) > 2 else None
         if not ym:
-            return True                     # 연월 결측("미정"/"미상")은 남긴다
-        mo = months_out(ym)
-        return mo is not None and lo <= mo <= hi
+            return None
+        try:
+            return int(ym[:4]) * 4 + (int(ym[5:7]) - 1) // 3
+        except (TypeError, ValueError, IndexError):
+            return None
 
-    sched = [u for u in sched if in_window(u, 0, UNIT_WINDOW)]
-    done = [u for u in done if in_window(u, -UNIT_WINDOW, 0)]
+    def in_future(u):
+        q = uq(u)
+        return True if q is None else (cur_q < q <= cur_q + HQ)
+
+    def in_past(u):
+        q = uq(u)
+        return True if q is None else (cur_q - HQ < q <= cur_q)
+
+    sched = [u for u in sched if in_future(u)]
+    done = [u for u in done if in_past(u)]
     # 같은 단지가 동·블록별로 따로 등록돼 PK가 갈리는 경우가 있다(예: 대구금호워터폴리스
     # D2블록 ×2) — 화면에선 (이름, 세대, 연월)이 같으면 한 줄로 접는다.
     def _dedupe(us):
@@ -563,8 +580,14 @@ details.fold .dbody p{font-size:14px}
 .n-card{border:1px solid var(--line);padding:10px 12px;display:block}
 .n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
 .n-card i{font-style:normal;color:var(--muted);font-size:12px}
-.q-col.q-max .q-bar{background:#5e6f74}
-.q-col.q-max .q-v{font-weight:700;color:var(--ink)}"""
+.px-tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;
+ font-size:11.5px;line-height:1.6;white-space:nowrap;opacity:0;transition:opacity .12s;z-index:5}
+.px-tip b{font-weight:700}
+.px-tip i{font-style:normal;display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.pidx{position:relative}
+.px-more{display:inline-block;margin-top:12px;padding:8px 15px;border:1px solid var(--line);
+ background:#fff;font-weight:600;font-size:13px;color:var(--ink);text-decoration:none}
+.px-more:hover{border-color:var(--ink)}"""
 
 
 
@@ -741,15 +764,34 @@ def render_price_index(adv, zone, codes):
         pts = ' '.join('%.1f,%.1f' % (X(i), Y(v)) for i, v in enumerate(l))
         g.append('<polyline fill="none" stroke="%s" stroke-width="1.9" '
                  'stroke-linejoin="round" points="%s"/>' % (col, pts))
-    svg = ('<svg viewBox="0 0 %d %d" role="img" aria-label="%s 아파트 매매·전세·월세 지수 흐름">'
-           '%s</svg>' % (int(W), int(H), zone, ''.join(g)))
+    # hover: 월별 세로 히트영역 + 표식점(스크립트가 켜고 끈다)
+    g.append('<g class="px-mk" style="display:none">'
+             '<line class="px-vline" y1="%.1f" y2="%.1f" stroke="#c4cec9"/>%s</g>'
+             % (T, H - B, ''.join('<circle class="px-dot" r="3.2" fill="%s"/>' % col
+                                  for (_, _, col), _ in live)))
+    step = (W - L - R) / (n - 1) if n > 1 else (W - L - R)
+    for i in range(n):
+        g.append('<rect class="px-hit" data-i="%d" x="%.1f" y="%.1f" width="%.1f" height="%.1f" '
+                 'fill="transparent"/>' % (i, X(i) - step / 2, T, step, H - T - B))
+    # 툴팁용 원자료(변동률 %) — 지수 레벨이 아니라 사용자가 물어본 '상승률'
+    tip = {'m': months,
+           's': [{'k': lab, 'c': col,
+                  'v': [round(v, 2) for _, v in (mo.get(k) or [])]}
+                 for (k, lab, col), _ in live]}
+    svg = ('<svg viewBox="0 0 %d %d" role="img" aria-label="%s 아파트 매매·전세·월세 지수 흐름" '
+           'data-tip=\'%s\'>%s</svg>'
+           % (int(W), int(H), zone,
+              json.dumps(tip, ensure_ascii=False).replace("'", '&#39;'), ''.join(g)))
     legend = ''.join('<span class="px-lg"><i style="background:%s"></i>%s</span>' % (col, lab)
                      for (k, lab, col), _ in live)
     return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
             '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균 '
-            '· 최근값 100 기준 흐름</p>'
+            '· 최근값 100 기준 흐름 · <b>선 위에 마우스를 올리면 그 달 수치</b></p>'
             '<div class="px-now">%s</div>'
-            '<div class="px-lgs">%s</div>%s</div>' % (now, legend, svg))
+            '<div class="px-lgs">%s</div>%s'
+            '<div class="px-tip" hidden></div>'
+            '<a class="px-more" href="/#stats">전국 시황 통계 자세히 보기 →</a>'
+            '</div>' % (now, legend, svg))
 
 def build_page(r, allrows, prd, today, punits=None, pidx=None):
     z = r['z']; nm = z['z']; ps = r['ps']
@@ -879,12 +921,12 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         peakq = max(qs, key=lambda q: byq[q])
         def qfmt(v):
             return ('%.1f만' % (v / 10000)) if v >= 10000 else format(v, ',')
-        # 최대 분기는 색(진한 톤)으로만 구분한다 — 외곽선 박스는 제거(2026-08-01 사용자).
+        # 모든 막대 양식 동일 — 최대 분기 강조(외곽선·진한 색·굵은 숫자) 전부 제거
+        # (2026-08-01 사용자). 어느 분기가 몰리는지는 아래 캡션 문장이 말해준다.
         cols = ''.join(
-            '<div class="q-col%s"><span class="q-v">%s</span>'
+            '<div class="q-col"><span class="q-v">%s</span>'
             '<div class="q-bar" style="height:%.0f%%"></div>'
             '<span class="q-l">%s</span></div>' % (
-                ' q-max' if q == peakq else '',
                 qfmt(byq[q]), max(byq[q] / mxq * 72, 3), qlabel(q))
             for q in qs)
         # 합계는 여기서만 보여준다 — 단지 목록(상위 N곳)과 헷갈리지 않게 '전체'로 명시.
@@ -1153,6 +1195,39 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             % (json.dumps(nm, ensure_ascii=False), json.dumps(nm, ensure_ascii=False),
                json.dumps(str(today)), round(r['tot']), rank_no,
                json.dumps(gr['label'], ensure_ascii=False), json.dumps(str(today))))
+
+    # 시세 그래프 hover — 월별 히트영역에 올리면 세로선·표식점·툴팁(그 달 변동률).
+    # 정적 페이지라 인라인 스크립트로 자족 동작한다(그래프 없으면 no-op).
+    if idx_html:
+        save_js += (
+            '<script>(function(){var w=document.querySelector(".pidx");if(!w)return;'
+            'var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");'
+            'if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}'
+            'var mk=svg.querySelector(".px-mk"),vl=svg.querySelector(".px-vline"),'
+            'dots=svg.querySelectorAll(".px-dot"),lines=svg.querySelectorAll("polyline"),'
+            'hits=svg.querySelectorAll(".px-hit");'
+            'function pts(p){return p.getAttribute("points").split(" ").map(function(s){'
+            'var a=s.split(",");return [parseFloat(a[0]),parseFloat(a[1])]})}'
+            'var P=[].map.call(lines,pts);'
+            'function show(i){if(!P.length||!P[0][i])return;mk.style.display="";'
+            'vl.setAttribute("x1",P[0][i][0]);vl.setAttribute("x2",P[0][i][0]);'
+            'for(var k=0;k<dots.length;k++){if(!P[k]||!P[k][i]){dots[k].style.display="none";continue}'
+            'dots[k].style.display="";dots[k].setAttribute("cx",P[k][i][0]);dots[k].setAttribute("cy",P[k][i][1])}'
+            'var h="<b>"+d.m[i]+"</b>";'
+            'for(var s=0;s<d.s.length;s++){var v=d.s[s].v[i];if(v==null)continue;'
+            'h+="<br><i style=\\"background:"+d.s[s].c+"\\"></i>"+d.s[s].k+" "+(v>0?"+":"")+v.toFixed(2)+"%"}'
+            'tip.innerHTML=h;tip.hidden=false;tip.style.opacity=1;'
+            'var b=svg.getBoundingClientRect(),wb=w.getBoundingClientRect(),'
+            'x=b.left-wb.left+P[0][i][0]/svg.viewBox.baseVal.width*b.width,'
+            'y=b.top-wb.top+P[0][i][1]/svg.viewBox.baseVal.height*b.height;'
+            'tip.style.left=Math.max(0,Math.min(x+10,wb.width-tip.offsetWidth-2))+"px";'
+            'tip.style.top=Math.max(0,y-tip.offsetHeight-8)+"px"}'
+            'function hide(){mk.style.display="none";tip.style.opacity=0;tip.hidden=true}'
+            '[].forEach.call(hits,function(r){var i=+r.getAttribute("data-i");'
+            'r.addEventListener("mouseenter",function(){show(i)});'
+            'r.addEventListener("touchstart",function(){show(i)},{passive:true})});'
+            'svg.addEventListener("mouseleave",hide);'
+            '})();</script>')
 
     title = '%s 아파트 공급 분석 — 준공·입주예정으로 본 %s | 아공맵' % (nm, tname)
     # sgg가 비면 '구성: —'가 그대로 메타 설명에 나갔다. odcloud는 물량이 없는

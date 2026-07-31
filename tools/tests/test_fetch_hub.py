@@ -153,7 +153,9 @@ def test_aggregate_classifies_latest_stage_once():
     assert done == {'2024Q1': 100}
     assert sched == {'2029Q4': 200}
     # 세대 큰 순 정렬(B=200 sched 먼저) — bldNm 필드가 픽스처에 없어 빈 문자열
-    assert units == [['', 200, '2029-11', 'sched'], ['', 100, '2024-03', 'done']]
+    # 저장 순서는 stage별 묶음(done 먼저) — 화면 순서는 렌더러가 날짜로 다시 정한다.
+    assert sorted(units) == sorted([['', 200, '2029-11', 'sched'],
+                                    ['', 100, '2024-03', 'done']])
 
 
 def test_aggregate_caps_units_at_top_40_by_household():
@@ -1068,3 +1070,26 @@ def test_load_bdong_rows_filters_active_and_parses_columnar_json(tmp_path):
     rows = F.load_bdong_rows(str(p))
     assert len(rows) == 1
     assert rows[0]['sgg_cd'] == '41370'
+
+
+def test_aggregate_units_cap_is_per_stage():
+    """캡은 done/sched 각각 UNITS_CAP — 섞어서 자르면 옛 준공 대단지가 자리를 다
+    차지해 '앞으로 들어올 단지' 목록이 비어버린다(2026-08-01 춘천권 사례)."""
+    items = []
+    # 준공(과거) 대단지 60개: 세대 2000~2059 — 섞어 자르면 이들이 상위를 독점
+    for i in range(60):
+        items.append({'purpsCdNm': '공동주택', 'totHhldCnt': 2000 + i,
+                      'mgmHsrgstPk': 'D%d' % i, 'bldNm': '옛단지%d' % i,
+                      'useInsptDay': '20200315'})
+    # 준공예정(미래) 소단지 60개: 세대 100~159
+    for i in range(60):
+        items.append({'purpsCdNm': '공동주택', 'totHhldCnt': 100 + i,
+                      'mgmHsrgstPk': 'S%d' % i, 'bldNm': '새단지%d' % i,
+                      'useInsptSchedDay': '20281120'})
+    _dq, _sq, units = F._aggregate(items)
+    done = [u for u in units if u[3] == 'done']
+    sched = [u for u in units if u[3] == 'sched']
+    assert len(done) == F.UNITS_CAP, 'done이 캡만큼 남아야 한다'
+    assert len(sched) == F.UNITS_CAP, 'sched가 옛 대단지에 밀리면 안 된다'
+    # 각 stage 안에서는 세대 큰 순
+    assert done[0][1] == 2059 and sched[0][1] == 159
