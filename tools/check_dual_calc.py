@@ -47,6 +47,7 @@ def js_side():
     anchor = grab(r'var ANCHOR=[^;\n]*;', 'ANCHOR')
     # 재고 하한(부족 누적 상한). 함수 밖 상수라 여기서 같이 떼와야 ReferenceError가 안 난다.
     cap = grab(r'var DEFICIT_CAP=[^;\n]*;', 'DEFICIT_CAP')
+    sgrade = grab(r'var GRADE_CUTS=.*?\nfunction scGrade\([^)]*\)\{.*?\n\}', 'scGrade')
     rsh = grab(r'function runningShortage\([^)]*\)\{.*?\n\}', 'runningShortage')
     data = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()
 
@@ -58,9 +59,10 @@ def js_side():
 %s
 %s
 %s
-const out = scCalc().map(z => ({z: z.z, dA: z.dA, dB: z.dB, dC: z.dC, tot: z.tot}));
+%s
+const out = scCalc().map(z => ({z: z.z, dA: z.dA, dB: z.dB, dC: z.dC, tot: z.tot, need4: z.need4, gk: z.gr.k}));
 console.log(JSON.stringify(out));
-""" % (data, qkey, conf, anchor, cap, rsh, fn)
+""" % (data, qkey, conf, anchor, cap, sgrade, rsh, fn)
     with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False, encoding='utf-8') as f:
         f.write(src)
         path = f.name
@@ -84,10 +86,12 @@ def main():
     only_js = sorted(set(js) - set(py))
     bad = []
     for z in sorted(set(py) & set(js)):
-        for k in ('dA', 'dB', 'dC', 'tot'):
+        for k in ('dA', 'dB', 'dC', 'tot', 'need4'):
             a, b = py[z][k], js[z][k]
             if abs(a - b) > TOL:
                 bad.append((z, k, a, b))
+        if M.grade(py[z]['tot'], py[z]['need4'])['k'] != js[z]['gk']:
+            bad.append((z, 'grade', py[z]['gr']['k'], js[z]['gk']))
 
     print('생활권 — calc() %d곳 · scCalc %d곳 · 공통 %d곳'
           % (len(py), len(js), len(set(py) & set(js))))
@@ -101,14 +105,17 @@ def main():
         print('❌ 불일치 %d건 (같은 지표가 화면마다 다르게 나온다)' % len(bad))
         print('%-11s %5s %14s %14s %10s' % ('생활권', '항목', 'calc()/zone', 'scCalc/홈', '배율'))
         for z, k, a, b in bad[:20]:
-            print('%-11s %5s %14s %14s %10s' % (
-                z, k, format(int(a), ','), format(int(b), ','),
-                ('%.2f' % (b / a)) if a else '-'))
+            if k == 'grade':
+                print('%-11s %5s %14s %14s %10s' % (z, k, a, b, '-'))
+            else:
+                print('%-11s %5s %14s %14s %10s' % (
+                    z, k, format(int(a), ','), format(int(b), ','),
+                    ('%.2f' % (b / a)) if a else '-'))
         if len(bad) > 20:
             print('  ... 외 %d건' % (len(bad) - 20))
         return 1
 
-    print('✅ 두 구현이 모든 생활권에서 일치한다 (dA·dB·dC·tot)')
+    print('✅ 두 구현이 모든 생활권에서 일치한다 (dA·dB·dC·tot·need4·grade)')
     return 0
 
 

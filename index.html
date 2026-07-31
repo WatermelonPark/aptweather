@@ -2297,6 +2297,19 @@ function scTier(v){
   return v>=15000?['t4','공급 절벽','#a93226']:v>0?['t3','공급 부족','#c0392b']
        :v>=-3000?['t2','공급 충분','#3a7bd5']:['t1','공급 과잉','#1a5276'];
 }
+/* 등급 판정 — tools/make_zone_pages.py grade()와 반드시 동치(미러). 컷·라벨·색 동일. */
+var GRADE_CUTS=[1.5,1.0,0.5,-0.5];
+var GRADES=[
+  ['g4','매우 부족','#a93226','앞으로 4년, 필요한 집이 크게 모자랍니다'],
+  ['g3','부족','#c0392b','공급이 수요를 못 따라갑니다'],
+  ['g2','다소 부족','#b9770e','부족하지만 심하진 않습니다'],
+  ['g1','균형','#5e6f74','필요한 만큼 들어오고 있습니다'],
+  ['g0','공급 여유','#1a5276','입주가 몰려 있어 세입자·매수자에게 유리한 시기가 옵니다']];
+function scGrade(tot,need4){
+  var r=need4?tot/need4:0, g=GRADES[GRADES.length-1];
+  for(var i=0;i<GRADE_CUTS.length;i++){if(r>=GRADE_CUTS[i]){g=GRADES[i];break;}}
+  return {k:g[0],label:g[1],color:g[2],desc:g[3],ratio:r};
+}
 /* 러닝재고 순부족 — tools/make_zone_pages.py calc()/running_shortage()와 반드시 동치(미러). 정규화 금지.
    B안(weight_demand=False)+horizon 16(4년) 고정 — 기준표 「기본의 기본 3」 근거(2026-07-25 확정).
    수요는 비가중(Σrefq), 공급만 conf로 가중(Σconf(k)*sched) — calc()의 fut_weighted(A안) 분기는 여기 없다. */
@@ -2312,7 +2325,8 @@ function runningShortage(done,sched,demol,refq,curQ,horizon){
   for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.max(lo, I+((done[qk])||0)-((demol[qk])||0)-refq); }
   var demandSum=0, supplyWeighted=0;
   for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
-  return (demandSum-supplyWeighted)-I;
+  /* 분해값 포함 반환 — Python running_shortage(full=True) 미러. tot==demand-supplyw-inow */
+  return {tot:(demandSum-supplyWeighted)-I, inow:I, demand:demandSum, supplyw:supplyWeighted};
 }
 /* 생활권별 누적 순부족(세대) — 적정물량 대비. + = 부족(상승압력), − = 과잉 */
 function scCalc(){
@@ -2356,13 +2370,16 @@ function scCalc(){
     // zdone/zsched는 ZONE 실적, refq는 REGION 적정 — share를 곱해 zone-level 적정으로 맞춘다
     // (tools/make_zone_pages.py calc()와 반드시 동치, dA/dB/dC와 동일 원칙).
     // zdemol도 zdone과 동일하게 이미 zone-level 절대값(멸실 세대)이라 share를 곱하지 않는다.
-    const tot=invPath?runningShortage(zdone,zsched,zdemol,refq*share,curQ):tot_fallback;
+    const _rs=invPath?runningShortage(zdone,zsched,zdemol,refq*share,curQ):null;
+    const tot=_rs?_rs.tot:tot_fallback;
+    const need4=refq*share*16;
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
     if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}
     return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,
             q0:z.q0,q1:z.q1,span:z.span,dA:dA,dB:dB,dC:dC,tot:tot,flag:flag,lo:lo,hi:hi,
-            need:refq*H*share,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null};
+            need:refq*H*share,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null,
+            need4:need4,inow:(_rs?_rs.inow:0),fsupw:(_rs?_rs.supplyw:0),gr:scGrade(tot,need4)};
   }).filter(Boolean);
 }
 function renderHeroMap(){
