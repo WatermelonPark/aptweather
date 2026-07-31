@@ -128,8 +128,8 @@ def test_calc_live_path_uses_b_and_horizon16():
     adv = {
         'livezone': {
             'zones': [{'z': '테스트권', 'region': '충북', 'psido': '충북',
-                       'pop': 100000, 'byq': {}}],
-            'sidopop': {'충북': 200000},
+                       'pop': 100000, 'hh': 50000, 'byq': {}}],
+            'sidohh': {'충북': 100000},
         },
         'occupancy': {
             'regions': ['충북'],
@@ -171,8 +171,8 @@ def test_calc_demol_not_share_scaled():
     adv = {
         'livezone': {
             'zones': [{'z': '테스트권', 'region': '충북', 'psido': '충북',
-                       'pop': 100000, 'byq': {}}],
-            'sidopop': {'충북': 200000},          # share = 100000/200000 = 0.5
+                       'pop': 100000, 'hh': 50000, 'byq': {}}],
+            'sidohh': {'충북': 100000},           # share = 50000/100000 = 0.5
         },
         'occupancy': {
             'regions': ['충북'],
