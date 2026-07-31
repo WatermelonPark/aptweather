@@ -778,3 +778,13 @@ a.nav-btn,a.home-cta{text-decoration:none}
 
 /* 표 헤더는 항상 중앙정렬(2026-07-22 원칙) — 고정컬럼 헤더의 좌측 예외 무효화 */
 table.adv thead th:first-child{text-align:center}
+
+/* 히어로 내 지역(2026-07-31) — 첫 방문 질문+선택기 / 재방문 판정 */
+#hero-zone{margin-top:18px}
+.hz-q{font-size:18px;font-weight:700;margin:0 0 6px}
+.hz-verdict{display:inline-block;text-align:center}
+.hz-head{display:flex;align-items:center;justify-content:center;gap:10px;font-size:22px;font-weight:700}
+.hz-desc{margin:5px 0 2px;font-weight:600}
+.hz-meta{color:var(--muted);font-size:12.5px;margin:0}
+.hz-links{margin:10px 0 0;display:flex;gap:16px;justify-content:center;align-items:center}
+.hz-links a{font-weight:700;text-decoration:underline}

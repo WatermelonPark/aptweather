@@ -1197,24 +1197,34 @@ def _hub_zone_map(bdong):
         if z: out[cd] = z
     return out
 
-def _zone_units(hp, z_of, complete):
+def _zone_units(hp, z_of, complete, today=None):
     """존별 done_q/sched_q와 동일한 완결성 게이트(complete)로, 시군구 raw 단지
     리스트(hp['sgg'][cd]['units'])를 생활권 단위로 합산한 뒤 상세페이지 렌더용으로
     다듬는다. 반환: {zone: {'sched':[[단지명,세대,'YYYY-MM'],...], 'done':[...]}}
     (raw 4번째 원소 stage는 sched/done 키로 이미 나뉘었으니 드롭한다).
 
-    순위(어느 단지를 목록에 남길지)는 세대 큰 순 상위 UCAP개로 자르고,
-    화면 순서(그 안에서 어떻게 나열할지)는 날짜로 다시 정렬한다 — sched는
-    준공예정 연월 오름차순(가까운 미래 먼저), done은 준공 연월 내림차순
-    (최신 먼저). 연월 결측(ym=None)은 항상 리스트 맨 뒤로 보낸다.
+    선별은 시간 창(2026-07-31, top-20 캡 폐지): sched는 미래 UNIT_WINDOW개월 안,
+    done은 과거 UNIT_WINDOW개월 안만 남긴다 — 옛 세대순 캡은 2005년 준공 대단지가
+    '최근' 목록을 밀고 들어오는 문제가 있었다(존 페이지 render_units_2sec의 창과
+    같은 값). 화면 순서는 날짜 정렬 — sched는 준공예정 연월 오름차순(가까운 미래
+    먼저), done은 준공 연월 내림차순(최신 먼저). 연월 결측(ym=None)은 창 필터를
+    통과시키되(미정 표기용) 리스트 맨 뒤로 보낸다.
     """
-    import collections
-    # 2단계 캡: tools/fetch_hub_permits.py의 UNITS_CAP=40이 시군구당 상위 40개
-    # (수집기 슈퍼셋)로 이미 잘라놨고, 여기 UCAP=20은 그걸 생활권(존) 단위로 합산한
-    # 뒤 표시용으로 다시 상위 20개(서브셋)로 좁힌다. 존 하나에 시군구가 여럿 묶이면
-    # 40개 초과분이 들어와도 UCAP이 걸러주므로 의도적 여유 — 두 상수를 하나로
-    # 통일하지 말 것.
-    UCAP = 20
+    import collections, datetime
+    # 수집기(fetch_hub_permits.py UNITS_CAP=40)가 시군구당 상위 40개 슈퍼셋을
+    # 이미 저장한다 — 여기서는 개수 캡 없이 시간 창만 적용한다.
+    UNIT_WINDOW = 48
+    _t = today or datetime.date.today()
+
+    def _mo(ym):
+        try:
+            return (int(ym[:4]) - _t.year) * 12 + (int(ym[5:7]) - _t.month)
+        except (TypeError, ValueError, IndexError):
+            return None
+
+    def _in_win(u, lo, hi):
+        m = _mo(u[2]) if u[2] else None
+        return True if m is None else (lo <= m <= hi)
     raw_sched = collections.defaultdict(list)
     raw_done = collections.defaultdict(list)
     for cd, v in hp.get('sgg', {}).items():
@@ -1231,8 +1241,8 @@ def _zone_units(hp, z_of, complete):
                 raw_done[z].append([name, hh, ym])
     out = {}
     for z in set(raw_sched) | set(raw_done):
-        sched = sorted(raw_sched.get(z, []), key=lambda u: -u[1])[:UCAP]
-        done = sorted(raw_done.get(z, []), key=lambda u: -u[1])[:UCAP]
+        sched = [u for u in raw_sched.get(z, []) if _in_win(u, 0, UNIT_WINDOW)]
+        done = [u for u in raw_done.get(z, []) if _in_win(u, -UNIT_WINDOW, 0)]
         sched.sort(key=lambda u: u[2] or '9999-99')          # 준공예정 오름차순, 결측은 맨 뒤
         done.sort(key=lambda u: u[2] or '0000-00', reverse=True)  # 준공 내림차순, 결측은 맨 뒤
         out[z] = {'sched': sched, 'done': done}

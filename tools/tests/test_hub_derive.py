@@ -2,6 +2,15 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import update_adv_data as U
 
+def _ym_off(months):
+    """오늘 기준 months개월 뒤(음수면 전)의 'YYYY-MM' — 시간 창 테스트가 달력에
+    좌우되지 않게 동적으로 만든다."""
+    import datetime
+    t = datetime.date.today()
+    m = t.year * 12 + (t.month - 1) + months
+    return '%04d-%02d' % (m // 12, m % 12 + 1)
+
+
 def _bdong(): return {'41370':('경기도','오산시'), '41131':('경기도','성남시 수정구')}
 
 def test_hub_zone_map_leading_token():
@@ -98,33 +107,37 @@ def test_hub_derive_injects_units_sorted_and_capped(tmp_path, monkeypatch):
               'name': '오산시',
               'done_q': {'2023Q1': 300}, 'sched_q': {'2028Q2': 500, '2027Q1': 400},
               'units': [
-                  ['오산자이', 300, '2023-01', 'done'],
-                  ['오산푸르지오', 200, '2022-06', 'done'],
-                  ['오산센트럴', 500, '2028-04', 'sched'],
-                  ['오산더샵', 400, '2027-03', 'sched'],
+                  ['오산자이', 300, _ym_off(-42), 'done'],      # 창 안(-48~0)
+                  ['오산푸르지오', 200, _ym_off(-49), 'done'],  # 창 밖 — 제외
+                  ['오산센트럴', 500, _ym_off(21), 'sched'],    # 창 안
+                  ['오산더샵', 400, _ym_off(8), 'sched'],       # 창 안, 더 가까움
               ]}}}
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
     u = adv['permits']['units']['오산권']
-    # done: 준공 연월 내림차순(최신 먼저)
-    assert u['done'] == [['오산자이', 300, '2023-01'], ['오산푸르지오', 200, '2022-06']]
+    # done: 시간 창(UNIT_WINDOW=48개월) — -49개월짜리는 제외, 창 안만 남는다
+    assert u['done'] == [['오산자이', 300, _ym_off(-42)]]
     # sched: 준공예정 연월 오름차순(가까운 미래 먼저)
-    assert u['sched'] == [['오산더샵', 400, '2027-03'], ['오산센트럴', 500, '2028-04']]
+    assert u['sched'] == [['오산더샵', 400, _ym_off(8)], ['오산센트럴', 500, _ym_off(21)]]
 
 
-def test_hub_derive_units_caps_at_top_20_by_household(monkeypatch):
+def test_hub_derive_units_window_no_count_cap(monkeypatch):
+    # 2026-07-31: top-20 캡 폐지, 시간 창(±48개월)으로 전환 — 창 안이면 개수 제한 없이
+    # 전부 들어가고, 창 밖(과거 준공·먼 미래 예정)은 제외된다.
     adv = {'permits': {}}
-    units = [['단지%d' % i, 100 + i, '2029-%02d' % ((i % 12) + 1), 'sched'] for i in range(30)]
+    units = [['단지%d' % i, 100 + i, _ym_off((i % 12) + 1), 'sched'] for i in range(30)]
+    units.append(['먼미래단지', 999, _ym_off(60), 'sched'])   # +48개월 밖 — 제외
+    units.append(['옛날단지', 888, _ym_off(-100), 'done'])    # -48개월 밖 — 제외
     hp = {'meta': {'activate': True, 'scanned': ['41370'], 'unresolved_legacy': []},
           'sgg': {'41370': {'name': '오산시', 'done_q': {}, 'sched_q': {}, 'units': units}}}
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    sched = adv['permits']['units']['오산권']['sched']
-    assert len(sched) == 20
-    # 상위 20은 세대 큰 순(100+10..100+29)으로 뽑힌 뒤 날짜순 재정렬됨
-    assert set(u[1] for u in sched) == set(range(110, 130))
+    zu = adv['permits']['units']['오산권']
+    assert len(zu['sched']) == 30                     # 창 안 30개 전부 (캡 없음)
+    assert '먼미래단지' not in [u[0] for u in zu['sched']]
+    assert zu['done'] == []                           # 옛날단지 제외
 
 
 def test_hub_derive_units_missing_date_sorts_last(monkeypatch):

@@ -148,16 +148,10 @@
     <div class="home-eyebrow" style="color:var(--muted)">아파트 · 공급량 · 투자지도</div>
     <h1>아공맵</h1>
     <p class="sub">국가 통계로 전국 아파트의 공급과 시세를 추적합니다. 매주 자동 갱신.</p>
-    <div class="hero-cta" style="display:flex;flex-direction:column;gap:12px;align-items:center">
-      <button class="home-cta" onclick="goStats('market');track('home_cta',{to:'market'})">이번 주 시세 지도 보기</button>
-      <button class="home-cta alt" style="background:#FEE500;color:#191919;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="addKakaoChannel('hero')"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>통계 업데이트 알림 받기</button>
-    </div>
+    <!-- 내 지역이 히어로를 차지한다(2026-07-31 스펙 관철): 첫 방문=질문+선택기,
+         재방문=내 지역 판정. 기존 CTA(시세지도=아래 주간 섹션과 중복, 카카오=하단 이동)는 제거. -->
+    <div id="hero-zone"></div>
   </div></header>
-
-  <section class="home-sec" id="sec-myzone"><div class="wrap">
-    <h2 id="mz-title">우리 동네 아파트, 앞으로 모자랄까 남을까</h2>
-    <div id="mz-body"></div>
-  </div></section>
 
   <section class="home-sec" id="sec-score"><div class="wrap">
     <h2>전국 한눈에 — 어디가 모자라고 어디가 남나</h2>
@@ -166,7 +160,7 @@
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
 
-    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대 · 막대는 제곱근 비례</span></div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 4년 필요량 대비 % · 절대 세대수는 행 설명에</span></div></div>
     <div id="score-wrap" style="text-align:left"></div>
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
@@ -176,7 +170,7 @@
 <b>그동안 밀린 것 + 들어올 집</b>(국토부 건축HUB 단지별 실측, 멸실 차감)을 견줘
 세대수로 계산합니다. 등급은 필요량 대비 부족 비율의 절대 구간입니다.
 공급 기준이며 가격 예측이 아닙니다 — 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.
-금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 이자가 월세보다 싸면 <b style="color:#7a4fb5">★ 실거주 유리</b> 표시만 합니다.</div></details>
+금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b> 표시만 합니다.</div></details>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
@@ -205,7 +199,10 @@
     <div class="hs-kicker" style="margin-top:26px">KOSIS · 한국은행 · 국토교통부</div>
     <h3>국가기관 원자료 그대로</h3>
     <p>실거래지수·인허가·착공·준공·금리를 지역과 기간으로 나눠 봅니다.</p>
-    <div class="hs-cta"><button class="home-cta" onclick="goStats('basic')">통계 원자료 보기</button></div>
+    <div class="hs-cta">
+      <button class="home-cta" onclick="goStats('basic')">통계 원자료 보기</button>
+      <button class="home-cta alt" style="background:#FEE500;color:#191919;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="addKakaoChannel('home_bottom')"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66-.15.52-.97 3.36-1 3.58 0 0-.02.17.09.24.11.07.24.02.24.02.32-.04 3.66-2.4 4.24-2.81.57.08 1.16.13 1.77.13 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>통계 업데이트 알림 받기</button>
+    </div>
   </div></section>
 
 
@@ -2414,10 +2411,13 @@ function renderScoreSec(){
     const u=agg[k]||(agg[k]={name:k,region:z.region,psido:z.psido,pop:0,supply:0,dA:0,dB:0,dC:0,tot:0,need:0,zones:[],flag:z.flag,lo:z.lo,hi:z.hi,loan:z.loan,pv:z.pv,dY:z.dY});
     u.pop+=z.pop;u.supply+=z.supply;u.dA+=z.dA;u.dB+=z.dB;u.dC+=z.dC;u.tot+=z.tot;u.need+=z.need;u.zones.push(z);
   });
-  const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.tot-a.tot);
-  // 집계 유닛(수도권 1행 포함)에도 등급 — 합산 tot/need4로 판정
-  units.forEach(u=>{u.need4=u.zones.reduce((s,z)=>s+(z.need4||0),0);u.gr=scGrade(u.tot,u.need4);});
-  const mx=Math.max.apply(null,units.map(u=>Math.abs(u.tot)))||1;
+  // 집계 유닛(수도권 1행 포함)에도 등급 — 합산 tot/need4로 판정.
+  // 정렬·막대·표시값 전부 비율(순부족/4년 필요량) 기준 — 2026-07-31 사용자 결정:
+  // 절대값 정렬은 큰 지역이 항상 위라 등급 그룹과 어긋나 반직관적이었다.
+  // 절대 세대수는 행 title 툴팁으로만 남긴다.
+  Object.keys(agg).forEach(k=>{const u=agg[k];u.need4=u.zones.reduce((s,z)=>s+(z.need4||0),0);u.gr=scGrade(u.tot,u.need4);});
+  const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
+  const mxr=Math.max.apply(null,units.map(u=>Math.abs(u.gr.ratio||0)))||1;
   const GORDER=['g4','g3','g2','g1','g0'];
   document.getElementById('score-wrap').innerHTML=GORDER.map(gk=>{
     const list=units.filter(u=>u.gr.k===gk);
@@ -2426,17 +2426,17 @@ function renderScoreSec(){
     return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
       +list.map(u=>{
         // 가운데 0을 축으로 발산 — 부족(−)은 오른쪽, 과잉(+)은 왼쪽. 색도 부호를 따라간다.
-        const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(u.tot)/mx)*50));
-        const barCol=u.tot>=0?(u.tot>=30000?'#a93226':'#c0392b'):(u.tot<=-10000?'#1a5276':'#3a7bd5');
-        const bar='<div class="sc-zero"></div>'+(u.tot>=0
+        const rr=u.gr.ratio||0;
+        const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(rr)/mxr)*50));
+        const barCol=rr>=0?(rr>=1?'#a93226':'#c0392b'):(rr<=-0.5?'#1a5276':'#3a7bd5');
+        const bar='<div class="sc-zero"></div>'+(rr>=0
           ?'<div class="sc-fill" style="left:50%;width:'+w+'%;background:'+barCol+'"></div>'
           :'<div class="sc-fill" style="right:50%;width:'+w+'%;background:'+barCol+'"></div>');
-        const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>'
-          :u.flag==='watch'?'<span class="sc-flag watch" title="대출 이자가 이 지역 월세보다 싼 구간 — 실거주라면 매수를 검토해볼 만합니다">★</span>':'<span class="sc-flag"></span>';
-        const sub=u.name==='수도권'?' <span style="color:var(--muted);font-weight:400">('+u.zones.length+'개 생활권)</span>':'';
-        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/"><span class="sc-lab">'+u.name+'</span>'+fb
+        // ★(watch)는 2026-07-31 제거 — 투자 추천처럼 읽히는 오해 소지. ⚠(warn)만 유지.
+        const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>':'<span class="sc-flag"></span>';
+        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · '+scFmt(u.tot)+'세대'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
-          +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)+'</span>'
+          +'<span class="sc-val" style="color:'+u.gr.color+'">'+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%</span>'
           +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
       }).join('');
   }).join('');
@@ -2445,59 +2445,66 @@ function renderScoreSec(){
   const byreg={}; zones.forEach(z=>{(byreg[z.region]=byreg[z.region]||[]).push(z);});
   const mapEl=document.getElementById('score-map');
   if(mapEl)mapEl.innerHTML=REGORD.map(rg=>{
-    const list=(byreg[rg]||[]).slice().sort((a,b)=>b.tot-a.tot);
+    // 타일도 비율 기준(정렬·색·표시) — 리스트와 같은 잣대. 절대값은 title로.
+    const list=(byreg[rg]||[]).slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
     if(!list.length)return '';
+    const rcol=r=>{const a=Math.min(Math.sqrt(Math.abs(r)/2),1);
+      return r>=0?'rgba(224,86,74,'+(0.12+0.72*a).toFixed(3)+')':'rgba(58,123,213,'+(0.12+0.72*a).toFixed(3)+')';};
     return '<div class="lz-reg"><div class="lz-regname">'+rg+'</div><div class="lz-tiles">'+
-      list.map(z=>'<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+scColor(z.tot)+'" title="'+z.z+' · 누적 '+scFmt(z.tot)+'세대">'+
-        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+scFmt(z.tot)+'</span></a>').join('')+
+      list.map(z=>{const rr=z.gr.ratio||0;
+        return '<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+rcol(rr)+'" title="'+z.z+' · '+scFmt(z.tot)+'세대">'+
+        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%</span></a>';}).join('')+
       '</div></div>';
   }).join('');
   window.__SCZ=zones;
 }
-/* ── 내 지역 (localStorage: agong_myzone — 존 페이지 저장 버튼과 스키마 공유) ── */
+/* ── 내 지역 — 히어로 안에 렌더(2026-07-31: 스펙 관철 + 암묵 저장).
+   localStorage agong_myzone은 존 페이지의 자동 기억 스크립트와 스키마 공유.
+   순위는 비율(순부족/4년 필요량 = gr.ratio) 기준 — 등급·순위표와 같은 잣대. ── */
 const MYZONE_KEY='agong_myzone';
-const MZ_TITLE_DEFAULT='우리 동네 아파트, 앞으로 모자랄까 남을까';
 function mzGet(){try{const d=JSON.parse(localStorage.getItem(MYZONE_KEY));return (d&&d.z)?d:null;}catch(e){return null;}}
 function mzSet(d){try{localStorage.setItem(MYZONE_KEY,JSON.stringify(d));}catch(e){}}
 function mzClear(){try{localStorage.removeItem(MYZONE_KEY);}catch(e){}}
+function mzRank(zones,nm){
+  return zones.slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0)).findIndex(z=>z.z===nm)+1;
+}
 function renderMyZone(){
-  const body=document.getElementById('mz-body'),title=document.getElementById('mz-title');
+  const box=document.getElementById('hero-zone');
   const zones=window.__SCZ;
-  if(!body||!zones||!zones.length){const s=document.getElementById('sec-myzone');if(s)s.style.display='none';return;}
+  if(!box||!zones||!zones.length){if(box)box.style.display='none';return;}
   const saved=mzGet();
   const row=saved?zones.find(z=>z.z===saved.z):null;
   if(saved&&!row){mzClear();}          // 생활권 개편 등으로 사라진 존 → 첫 방문 상태
   if(row){
-    const rank=zones.slice().sort((a,b)=>b.tot-a.tot).findIndex(z=>z.z===row.z)+1;
-    const g=row.gr;
+    const rank=mzRank(zones,row.z), g=row.gr;
     let diff='';
     const justSaved=!!window.__MZ_JUST;   // 첫 저장 직후엔 last===방금값이라 diff가 무의미 — 억제
     if(!justSaved&&saved.last&&typeof saved.last.tot==='number'&&saved.last.seen!==undefined){
       const d=Math.round(row.tot-saved.last.tot);
       if(d!==0)diff='<span class="mz-diff" style="color:'+(d>0?'#a93226':'#1a5276')+'">지난 방문보다 '
         +(d>0?'부족 +':'부족 −')+Math.abs(d).toLocaleString()+'세대 '+(d>0?'▲':'▼')+'</span>';
-      else diff='<span class="mz-diff" style="color:var(--muted)">지난 방문과 같음</span>';
+      else if(saved.last.seen!==new Date().toISOString().slice(0,10))
+        diff='<span class="mz-diff" style="color:var(--muted)">지난 방문과 같음</span>';
+      // 오늘 기록(존 페이지에서 방금 넘어온 경우)이면 '같음' 표시도 생략 — 정보가 없다
     }
-    title.textContent='내 지역';
-    body.innerHTML='<div class="mz-card">'
-      +'<div class="mz-head"><b>'+row.z+'</b>'
-      +'<span class="sc-tier '+g.k+'">'+g.label+'</span></div>'
-      +'<p class="mz-desc">'+g.desc+'</p>'
-      +'<p class="mz-meta">순위 '+rank+'위 / '+zones.length+'곳 · 공급 기준 · 가격 예측 아님 '+diff+'</p>'
-      +'<div class="mz-actions"><a class="home-cta" href="/zone/'+encodeURIComponent(row.z)+'/">자세히 보기</a>'
-      +'<button class="mz-change" onclick="mzClear();renderMyZone();track(\'myzone\',{a:\'change\'})">지역 바꾸기</button></div>'
+    box.innerHTML='<div class="hz-verdict">'
+      +'<div class="hz-head"><b>'+row.z+'</b><span class="sc-tier '+g.k+'">'+g.label+'</span></div>'
+      +'<p class="hz-desc">'+g.desc+'</p>'
+      +'<p class="hz-meta">공급 부족 '+rank+'위 / '+zones.length+'곳 · 공급 기준 · 가격 예측 아님 '+diff+'</p>'
+      +'<p class="hz-links"><a href="/zone/'+encodeURIComponent(row.z)+'/">자세히 보기 ›</a>'
+      +'<button class="mz-change" onclick="mzClear();renderMyZone();track(\'myzone\',{a:\'change\'})">지역 바꾸기</button></p>'
       +'</div>';
     window.__MZ_JUST=0;
     mzSet({z:row.z,savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
            last:{tot:Math.round(row.tot),rank:rank,grade:g.label,seen:new Date().toISOString().slice(0,10)}});
     return;
   }
-  // 첫 방문 / 지역 바꾸기 / 폴백: 시도 → 생활권 2단 선택기 + 전국 요약 한 줄
-  title.textContent=MZ_TITLE_DEFAULT;
+  // 첫 방문 / 지역 바꾸기 / 폴백: 질문 + 시도 → 생활권 2단 선택기 + 전국 요약 한 줄
   const lack=zones.filter(z=>z.gr.k==='g4'||z.gr.k==='g3').length;
   const byps={};zones.forEach(z=>{(byps[z.psido]=byps[z.psido]||[]).push(z);});
   const sidos=Object.keys(byps);
-  body.innerHTML='<p class="mz-sum">지금 전국 '+zones.length+'개 생활권 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
+  box.innerHTML='<p class="hz-q">우리 동네 아파트, 앞으로 모자랄까 남을까</p>'
+    +'<p class="mz-sum">지금 전국 '+zones.length+'개 생활권 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
     +'<div class="mz-sido">'+sidos.map(s=>'<button class="mz-chip" onclick="mzPick(this,\''+s+'\')">'+s+'</button>').join('')+'</div>'
     +'<div class="mz-zones" id="mz-zones"></div>';
 }
@@ -2511,9 +2518,8 @@ function mzPick(btn,ps){
 function mzSave(nm){
   const zones=window.__SCZ||[],row=zones.find(z=>z.z===nm);
   if(!row)return;
-  const rank=zones.slice().sort((a,b)=>b.tot-a.tot).findIndex(z=>z.z===nm)+1;
   mzSet({z:nm,savedAt:new Date().toISOString().slice(0,10),
-         last:{tot:Math.round(row.tot),rank:rank,grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
+         last:{tot:Math.round(row.tot),rank:mzRank(zones,nm),grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
   window.__MZ_JUST=1;
   renderMyZone();track('myzone',{a:'save',v:nm});
 }

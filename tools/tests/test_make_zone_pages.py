@@ -17,15 +17,14 @@ def test_render_units_2sec_empty_units_returns_empty_string():
     assert M.render_units_2sec({'sched': [], 'done': []}, TODAY) == ''
 
 
-def test_render_units_2sec_renders_both_sections_with_markers():
+def test_render_units_2sec_renders_both_sections():
     units = {
         'sched': [
-            ['오산더샵', 400, '2027-03'],           # 8개월 뒤 — 정상
-            ['오산센트럴', 999, None],                # 연월 결측 — "미정"
-            ['오산레이크', 300, '2031-01'],           # ~4.5년 뒤 — 지연 가능
+            ['오산더샵', 400, '2027-03'],           # 8개월 뒤 — 창 안
+            ['오산센트럴', 999, None],                # 연월 결측 — "미정"으로 유지
         ],
         'done': [
-            ['오산자이', 832, '2024-03'],
+            ['오산자이', 832, '2024-03'],            # 28개월 전 — 창 안
         ],
     }
     html = M.render_units_2sec(units, TODAY)
@@ -33,39 +32,34 @@ def test_render_units_2sec_renders_both_sections_with_markers():
     assert '최근 들어온 물량' in html
     assert '오산더샵' in html and '2027.03 예정' in html
     assert '오산센트럴' in html and '미정' in html
-    assert '오산레이크' in html and '지연 가능' in html
     assert '오산자이' in html and '2024.03 준공' in html
     assert '832' in html and '400' in html
+    # 2026-07-31: 지연/지연 가능 태그 제거 결정
+    assert '지연' not in html
 
 
-def test_render_units_2sec_far_future_gets_muted_class_and_hint():
-    units = {'sched': [['오산레이크', 300, '2031-01']], 'done': []}
-    html = M.render_units_2sec(units, TODAY)
-    assert 'class="far"' in html
-    assert '지연 가능' in html
-
-
-def test_render_units_2sec_near_future_no_hint():
-    units = {'sched': [['오산더샵', 400, '2027-03']], 'done': []}
-    html = M.render_units_2sec(units, TODAY)
-    assert '지연 가능' not in html
-    assert 'class="far"' not in html
-
-
-def test_render_units_2sec_overdue_sched_gets_delay_marker():
-    # 준공예정일이 이미 지난(months_out<0) 항목은 "지연 가능"보다 강한 확정 신호라
-    # "지연"(가능 없이) 마커 + far와 같은 muted 톤으로 나가야 한다.
+def test_render_units_2sec_window_drops_far_and_old():
+    # UNIT_WINDOW(±48개월) 밖은 목록에서 제외: 4.5년 뒤 예정, 10년+ 전 준공,
+    # 이미 지난 예정일(스테일)도 빠진다.
     units = {'sched': [
-        ['오산지연단지', 250, '2026-01'],   # TODAY(2026-07-24)보다 과거 — 지연
-        ['오산더샵', 400, '2027-03'],       # 8개월 뒤 — 정상, 마커 없음
-    ], 'done': []}
+        ['오산레이크', 300, '2031-01'],     # +54개월 — 제외
+        ['오산지난예정', 250, '2026-01'],   # 예정일 경과 — 제외
+        ['오산더샵', 400, '2027-03'],       # 창 안 — 유지
+    ], 'done': [
+        ['오산옛단지', 500, '2005-06'],     # 21년 전 — 제외
+        ['오산자이', 832, '2024-03'],       # 창 안 — 유지
+    ]}
     html = M.render_units_2sec(units, TODAY)
-    assert '오산지연단지' in html
-    assert '2026.01 예정' in html
-    assert '<span class="hint">지연</span>' in html
-    assert '지연 가능' not in html   # overdue는 "가능" 없이 "지연"만
-    assert 'class="far"' in html     # 동일한 muted 톤 재사용
-    assert '오산더샵' in html and '2027.03 예정' in html
+    assert '오산더샵' in html and '오산자이' in html
+    assert '오산레이크' not in html
+    assert '오산지난예정' not in html
+    assert '오산옛단지' not in html
+
+
+def test_render_units_2sec_all_outside_window_returns_empty():
+    units = {'sched': [['오산레이크', 300, '2031-01']],
+             'done': [['오산옛단지', 500, '2005-06']]}
+    assert M.render_units_2sec(units, TODAY) == ''
 
 
 def test_render_units_2sec_sched_only_omits_done_section():

@@ -278,20 +278,19 @@ def signed(v):
     return s + ('{:,}'.format(int(round(a))))
 
 
-FAR_MONTHS = 36   # 준공예정이 이보다 더 먼 미래면 저신뢰(회색+"지연 가능")
-UCAP = 20   # 수도권처럼 여러 존 units를 합칠 때의 표시 상한 —
-            # update_adv_data._zone_units의 UCAP(존당 캡)과 같은 값으로 맞춘다.
+UNIT_WINDOW = 48   # 단지 목록 창(개월): 앞으로 4년 · 지난 4년. 상위 N개 캡 대신
+                   # 시간 창으로 자른다(옛 top-20은 2005년 준공 대단지가 밀고 들어왔다).
 
 
 def render_units_2sec(units, today=None):
     """permits.units[zone](또는 수도권처럼 소속 존 합산) → 2섹션 HTML.
 
-    "앞으로 들어올 물량"(sched: 단지명·세대·"YYYY.MM 예정", 연월 결측이면 "미정",
-    준공예정이 오늘로부터 FAR_MONTHS개월 넘게 남았으면 저신뢰 톤+"지연 가능")과
+    "앞으로 들어올 물량"(sched: 단지명·세대·"YYYY.MM 예정", 연월 결측이면 "미정")과
     "최근 들어온 물량"(done: 단지명·세대·"YYYY.MM 준공")을 만든다.
 
-    준공예정일이 이미 지난(오늘 기준 months_out<0) 항목은 "지연 가능"보다 강한
-    확정적 지연 신호이므로 같은 저신뢰 톤에 "지연"(가능 없이) 마커를 단다.
+    창은 UNIT_WINDOW: sched는 오늘~+48개월, done은 -48개월~오늘만 남긴다(예정일이
+    이미 지난 sched 항목도 제외 — 스테일 데이터). 2026-07-31 사용자 결정으로
+    지연/지연 가능 태그는 제거했다(공간 과다 + 판정과 무관한 노이즈).
 
     units에 sched/done이 둘 다 없으면 빈 문자열을 반환 — 호출부가 이걸로
     "이 존은 HUB 커버 안 됨"을 판단해 기존 odcloud 리스트로 폴백한다.
@@ -312,18 +311,24 @@ def render_units_2sec(units, today=None):
             return None
         return (y - today.year) * 12 + (m - today.month)
 
+    def in_window(u, lo, hi):
+        ym = u[2] if len(u) > 2 else None
+        if not ym:
+            return True                     # 연월 결측("미정"/"미상")은 남긴다
+        mo = months_out(ym)
+        return mo is not None and lo <= mo <= hi
+
+    sched = [u for u in sched if in_window(u, 0, UNIT_WINDOW)]
+    done = [u for u in done if in_window(u, -UNIT_WINDOW, 0)]
+    if not sched and not done:
+        return ''
+
     def sched_row(u):
         name, hh = u[0], u[1]
         ym = u[2] if len(u) > 2 else None
-        mo = months_out(ym) if ym else None
-        overdue = mo is not None and mo < 0
-        far = mo is not None and mo > FAR_MONTHS
         label = ('%s 예정' % ym.replace('-', '.')) if ym else '미정'
-        hint = (' <span class="hint">지연</span>' if overdue
-                 else ' <span class="hint">지연 가능</span>' if far else '')
-        cls = ' class="far"' if (overdue or far) else ''
-        return ('<tr%s><td class="uname" title="%s">%s</td><td class="num">%s</td>'
-                '<td class="num">%s%s</td></tr>' % (cls, esc(name), esc(name), num(hh), label, hint))
+        return ('<tr><td class="uname" title="%s">%s</td><td class="num">%s</td>'
+                '<td class="num">%s</td></tr>' % (esc(name), esc(name), num(hh), label))
 
     def done_row(u):
         name, hh = u[0], u[1]
@@ -480,7 +485,6 @@ details.fold .dbody p{font-size:14px}
 @media(max-width:560px){.utable2{font-size:12.5px}}
 .zg-badge{display:inline-block;padding:5px 12px;font-weight:700;font-size:14px;border-radius:2px}
 .zg-cap{color:var(--muted);font-size:12px;margin:6px 0 0}
-.zg-save{margin-top:12px;padding:9px 18px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:600}
 .why3 .w-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
 .why3 .w-lab i{display:block;font-style:normal;color:var(--muted);font-size:11.5px}
 .why3 .w-sum{padding:11px 0 0;font-weight:700}
@@ -512,19 +516,22 @@ def build_page(r, allrows, prd, today, punits=None):
     if subs:
         ranktxt = '수도권 %d개 생활권 합계' % len(subs)
     else:
-        rk = [i for i, x in enumerate(allrows, 1) if x['z']['z'] == nm]
+        # 순위 기준 = 비율(순부족/4년 필요량) — 등급과 같은 잣대(2026-07-31 사용자 결정:
+        # 절대값 순위는 큰 지역이 항상 위라 등급 그룹과 어긋나 반직관적이었다).
+        by_ratio = sorted(allrows, key=lambda x: -(x['tot'] / x['need4'] if x['need4'] else 0))
+        rk = [i for i, x in enumerate(by_ratio, 1) if x['z']['z'] == nm]
         ranktxt = ('생활권 %d곳 중 %d위' % (len(allrows), rk[0])) if rk else ''
         rank_no = rk[0] if rk else 0
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
     # ── ① 판정 히어로 — 5등급 배지 + 자연어 판정문 (2026-07-31 UX 재기획) ──
-    save_btn = '' if subs else '<button class="zg-save" onclick="agongSaveZone()">내 지역으로 저장</button>\n'
+    # 저장 버튼 없음 — 2026-07-31 사용자 결정: 명시적 '저장' 대신 페이지를 보면
+    # 조용히 기억(암묵 저장, 하단 save_js). 홈 히어로가 이 값을 읽는다.
     hero_html = (
         '<span class="zg-badge" style="background:%s1a;color:%s">%s</span>\n'
         '<h1>%s, %s</h1>\n'
         '<p class="zg-cap">공급 기준 · 가격 예측 아님 · %s 데이터 · %s</p>\n'
-        '%s'
-        % (gr['color'], gr['color'], gr['label'], nm, gr['desc'], prd, ranktxt, save_btn))
+        % (gr['color'], gr['color'], gr['label'], nm, gr['desc'], prd, ranktxt))
 
     # ── ② 왜 이 판정인가 — 근거 3줄. 세 줄의 합이 히어로 순부족과 정확히 일치
     # (need4/inow/fsupw만 사용 — tot == need4 - fsupw - inow 항등식이 Task 1
@@ -532,6 +539,10 @@ def build_page(r, allrows, prd, today, punits=None):
     backlog = -r['inow']          # 양수면 '밀린 것', 음수면 '쌓인 재고'
     b_lab, b_sub = ('그동안 밀린 것', '2010년부터 못 지은 만큼 · 최대 4년치') if backlog >= 0 \
               else ('그동안 쌓인 것', '2010년부터 남은 만큼 · 재고')
+    # 밀림이 상한(=4년 필요량)에 닿은 존은 '필요한 집'과 숫자가 정확히 같아져
+    # 버그처럼 보인다 — 상한 도달임을 명시(2026-07-31 사용자 오인 사례).
+    if backlog >= 0 and abs(backlog - r['need4']) < 1:
+        b_sub += ' · 상한 도달(더 많이 밀렸지만 4년치까지만 셉니다)'
     if r['tot'] < 0:
         sum_line = '여유 %s세대' % num(-r['tot'])
     else:
@@ -689,12 +700,12 @@ def build_page(r, allrows, prd, today, punits=None):
             agg_sched += uu.get('sched') or []
             agg_done += uu.get('done') or []
         if agg_sched or agg_done:
-            # 개별 존은 _zone_units가 세대순 상위 20개로 자르고 날짜순 정렬해 넣지만,
-            # 수도권은 여러 존의 리스트를 이어붙인 것이라 순서가 존별 블록으로 뒤섞이고
-            # 20개를 넘는다. _zone_units와 같은 규칙으로 다시 캡·정렬해 개별 존
-            # 페이지와 형식을 맞춘다(세대순 상위 UCAP → 준공예정 오름/준공 내림).
-            agg_sched = sorted(agg_sched, key=lambda u: -u[1])[:UCAP]
-            agg_done = sorted(agg_done, key=lambda u: -u[1])[:UCAP]
+            # 수도권은 여러 존의 리스트를 이어붙인 것이라 순서가 존별 블록으로 뒤섞인다.
+            # 개수 캡은 두지 않는다 — render_units_2sec의 UNIT_WINDOW(±4년)가 창으로
+            # 자른다(2026-07-31: top-N 캡 폐지, 시간 창으로 전환). 세대 큰 순으로
+            # 먼저 세워 상위가 앞서게 한 뒤 날짜순(준공예정 오름/준공 내림) 정렬.
+            agg_sched = sorted(agg_sched, key=lambda u: -u[1])
+            agg_done = sorted(agg_done, key=lambda u: -u[1])
             agg_sched.sort(key=lambda u: u[2] or '9999-99')
             agg_done.sort(key=lambda u: u[2] or '0000-00', reverse=True)
             zone_units = {'sched': agg_sched, 'done': agg_done}
@@ -703,19 +714,9 @@ def build_page(r, allrows, prd, today, punits=None):
     if unitsec2:
         unitsec = unitsec2
 
-    # ── ④ 어느 단지가 들어오나 — 기존 목록(들)을 <details> 하나로 감싸 기본 접힘
-    if unitsec:
-        if hub_units:
-            n_sched = len(zone_units.get('sched') or [])
-            n_done = len(zone_units.get('done') or [])
-        else:
-            n_sched, n_done = len(ufut), 0
-        units_sec_html = (
-            '<section><div class="wrap"><h2>어느 단지가 들어오나</h2>\n'
-            '<details class="z-units"><summary>단지별로 보기 (앞으로 %d곳 · 최근 %d곳)</summary>\n'
-            '%s\n</details>\n</div></section>\n' % (n_sched, n_done, unitsec))
-    else:
-        units_sec_html = ''
+    # ── ④ 어느 단지가 들어오나 — 펼친 두 섹션 그대로(2026-07-31 사용자 결정:
+    # 접이식보다 기존 UI가 낫다). 창은 render_units_2sec의 UNIT_WINDOW(±4년)가 자른다.
+    units_sec_html = unitsec or ''
 
     rows_html = ''.join([
         '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
@@ -751,15 +752,10 @@ def build_page(r, allrows, prd, today, punits=None):
             '<b>시도(%s) 값을 인구 비중으로 배분한 추정치</b>이고, 입주예정만 단지 주소 기반 실측입니다.</p>'
             % (rows_html, ps))
 
+    # ★(watch) 섹션은 2026-07-31 제거 — "실거주 유리" 표기가 투자 추천처럼 읽히는
+    # 오해 소지(홈 리스트 보라 별표 삭제와 같은 결정). ⚠(warn)는 위험 경고라 유지.
     flag_html = ''
-    if r['flag'] == 'watch':
-        flag_html = ('<section><div class="wrap"><h2>★ 실거주라면 검토해볼 구간입니다</h2>'
-            '<p>%s의 임대수익률(전세가율 × 전월세전환율 = 연 <b>%.1f%%</b>)이 주택담보대출 금리 <b>%.2f%%</b>보다 높습니다. '
-            '쉽게 말해 <b>이 지역은 대출 이자가 월세보다 쌉니다.</b></p>'
-            '<p class="note">이자만 비교한 값입니다. 원금·세금·대출 한도와 하락 가능성은 따로 따져야 합니다.</p>'
-            '</div></section>'
-            % (ps, r['lo'], r['loan']))
-    elif r['flag'] == 'warn':
+    if r['flag'] == 'warn':
         flag_html = ('<section><div class="wrap"><h2>⚠ 보유 부담이 큰 구간입니다</h2>'
             '<p>%s의 주택담보대출 금리(<b>%.2f%%</b>)가 임대수익률의 두 배(위험선 <b>%.1f%%</b>)를 넘었습니다. '
             '대출로 사서 보유하면 <b>이자가 월세로 받을 수 있는 돈의 두 배를 넘는다</b>는 뜻입니다. '
@@ -849,20 +845,23 @@ def build_page(r, allrows, prd, today, punits=None):
     else:
         near_html = ''
 
-    # ── 저장 CTA — 수도권 합계 페이지(subs 있음)는 저장 버튼을 렌더하지 않으므로
-    # 스크립트도 만들지 않는다.
+    # ── 암묵 저장(2026-07-31) — 버튼 없이 페이지를 보면 이 존을 '내 지역'으로 기억.
+    # 같은 존을 다시 보면 last(지난 방문 기록)를 보존해 홈의 diff 표시가 살아있게 하고,
+    # 다른 존이면 이 페이지의 빌드 시점 값으로 last를 초기화한다(엉뚱한 diff 방지).
+    # 수도권 합계 페이지는 선택 가능한 존이 아니라 기억하지 않는다.
     if subs:
         save_js = ''
     else:
         save_js = (
-            '<script>function agongSaveZone(){try{'
-            'localStorage.setItem("agong_myzone",JSON.stringify({z:%s,savedAt:%s,'
-            'last:{tot:%d,rank:%d,grade:%s,seen:%s}}));'
-            'var b=document.querySelector(".zg-save");if(b){b.textContent="저장됨 \\u2713 홈에서 확인";b.onclick=function(){location.href="/";};}'
-            '}catch(e){}}</script>'
-            % (json.dumps(nm, ensure_ascii=False), json.dumps(str(today)),
-               round(r['tot']), rank_no, json.dumps(gr['label'], ensure_ascii=False),
-               json.dumps(str(today))))
+            '<script>try{var _mz=null;try{_mz=JSON.parse(localStorage.getItem("agong_myzone"))}catch(e){}'
+            'var _same=_mz&&_mz.z===%s;'
+            'localStorage.setItem("agong_myzone",JSON.stringify({z:%s,'
+            'savedAt:(_same&&_mz.savedAt)||%s,'
+            'last:(_same&&_mz.last)||{tot:%d,rank:%d,grade:%s,seen:%s}}));'
+            '}catch(e){}</script>'
+            % (json.dumps(nm, ensure_ascii=False), json.dumps(nm, ensure_ascii=False),
+               json.dumps(str(today)), round(r['tot']), rank_no,
+               json.dumps(gr['label'], ensure_ascii=False), json.dumps(str(today))))
 
     title = '%s 아파트 공급 분석 — 준공·입주예정으로 본 %s | 아공맵' % (nm, tname)
     # sgg가 비면 '구성: —'가 그대로 메타 설명에 나갔다. odcloud는 물량이 없는
@@ -1139,7 +1138,9 @@ def build_hub(pages, prd, today):
     # 넣으면 이중 계상이 되고, 그 아래 행이 상세 페이지와 1씩 어긋난다.
     # 홈(index.html)이 이미 쓰는 방식대로 순위 밖 소계로 분리한다.
     ROLLUP = '수도권'
-    live = sorted([r for r in pages if r['z']['z'] != ROLLUP], key=lambda r: -r['tot'])
+    # 정렬 기준 = 비율(순부족/4년 필요량) — 등급·본문 순위와 같은 잣대(2026-07-31).
+    live = sorted([r for r in pages if r['z']['z'] != ROLLUP],
+                  key=lambda r: -(r['tot'] / r['need4'] if r['need4'] else 0))
     roll = next((r for r in pages if r['z']['z'] == ROLLUP), None)
     rows = []
     for i, r in enumerate(live):
@@ -1147,8 +1148,11 @@ def build_hub(pages, prd, today):
         gr = r['gr']
         rows.append(
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
-            '<td class="num" style="color:%s">%s</td><td><span class="tag %s">%s</span></td></tr>'
-            % (i + 1, nm, nm, gr['color'], signed(r['tot']), gr['k'], gr['label']))
+            '<td class="num" style="color:%s" title="%s세대">%s</td>'
+            '<td><span class="tag %s">%s</span></td></tr>'
+            % (i + 1, nm, nm, gr['color'], signed(r['tot']),
+               ('%+.0f%%' % (-100 * r['tot'] / r['need4']) if r['need4'] else '·'),
+               gr['k'], gr['label']))
     if roll is not None:
         gr = roll['gr']
         sub = len(roll['z'].get('subs') or []) or 16
