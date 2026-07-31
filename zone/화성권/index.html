@@ -155,14 +155,20 @@ details.fold .dbody p{font-size:14px}
 .pidx{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
 .pidx h3{font-size:14px;margin:0 0 2px}
 .pidx .px-sub{color:var(--muted);font-size:11.5px;margin:0 0 10px}
-.pidx .px-now{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 10px;font-size:13px}
-.pidx .px-now b{font-weight:700}
-.pidx svg{display:block;width:100%;height:auto}
+.pidx .px-now{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 10px;font-size:13px}
+.pidx .px-c{white-space:nowrap}
+.pidx .px-c b{font-weight:700;margin-left:4px}
+.pidx .px-c i{font-style:normal;color:var(--muted);font-size:11px;margin-left:5px}
+.pidx .px-lgs{display:flex;gap:14px;margin:0 0 4px;font-size:11.5px;color:var(--muted)}
+.pidx .px-lg{display:inline-flex;align-items:center;gap:5px}
+.pidx .px-lg i{width:14px;height:2.5px;display:inline-block;border-radius:2px}
+.pidx svg{display:block;width:100%;height:auto;overflow:visible}
 .near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .n-card{border:1px solid var(--line);padding:10px 12px;display:block}
 .n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
 .n-card i{font-style:normal;color:var(--muted);font-size:12px}
-.q-col.q-max .q-bar{outline:2px solid currentColor}</style>
+.q-col.q-max .q-bar{background:#5e6f74}
+.q-col.q-max .q-v{font-weight:700;color:var(--ink)}</style>
 </head>
 <body>
 
@@ -174,17 +180,17 @@ details.fold .dbody p{font-size:14px}
 
 </div></header>
 
-<section><div class="wrap"><h2>왜 이 판정인가</h2><div class="w-lead" style="border-color:#a93226"><div class="wl-sum" style="color:#a93226">순부족 50,505세대 = 밀린 것 + 필요 − 들어올 것</div><p class="wl-note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p></div><div class="why3"><div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>그동안 밀린 집<i>2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다(그래서 아래 ‘필요한 집’과 숫자가 같습니다)</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>수도권 세대의 4% = 화성권 몫 · 추정</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−3,543</b></div></div><div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3><p class="px-sub">한국부동산원 아파트 매매가격지수 변동률 · 이 생활권 시군구 평균</p><div class="px-now"><span>이번 주 <b style="color:#a93226">+0.14%</b> <i style="color:var(--muted);font-style:normal">2026-07-27 </i></span><span>이번 달 <b style="color:#a93226">+1.74%</b> <i style="color:var(--muted);font-style:normal">2026-06 </i></span></div></div></div></section>
-<section><div class="wrap"><h2>언제 들어오나</h2><p class="note" style="margin-bottom:9px">앞으로 4년(16분기) 창 · 국토부 건축HUB 준공예정 실측</p><div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div><div class="qchart"><div class="q-col"><span class="q-v">1,247</span><div class="q-bar" style="height:44%"></div><span class="q-l">27Q1</span></div><div class="q-col q-max"><span class="q-v">2,020</span><div class="q-bar" style="height:72%"></div><span class="q-l">28Q2</span></div><div class="q-col"><span class="q-v">1,453</span><div class="q-bar" style="height:52%"></div><span class="q-l">28Q3</span></div></div></div><p class="note" style="margin-top:9px">가장 몰리는 분기는 28Q2 — 그래도 필요량에는 못 미칩니다</p></div></section>
+<section><div class="wrap"><h2>왜 이 판정인가</h2><div class="w-lead" style="border-color:#a93226"><div class="wl-sum" style="color:#a93226">순부족 50,505세대 = 밀린 것 + 필요 − 들어올 것</div><p class="wl-note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p></div><div class="why3"><div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>그동안 밀린 집<i>2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다(그래서 아래 ‘필요한 집’과 숫자가 같습니다)</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>수도권 세대의 4% = 화성권 몫 · 추정</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−3,543</b></div></div><div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3><p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균</p><div class="px-now"><span class="px-c">이번 주 매매 <b style="color:#a93226">+0.14%</b><i>2026-07-27</i></span><span class="px-c">이번 달 매매 <b style="color:#a93226">+1.74%</b><i>2026-06</i></span><span class="px-c">이번 달 전세 <b style="color:#a93226">+1.21%</b><i>2026-06</i></span></div></div></div></section>
+<section><div class="wrap"><h2>언제 들어오나</h2><p class="note" style="margin-bottom:9px">앞으로 4년(16분기) 창 · 국토부 건축HUB 준공예정 실측</p><div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대) <b style="color:var(--ink)">· 전체 4,720세대</b></div><div class="qchart"><div class="q-col"><span class="q-v">1,247</span><div class="q-bar" style="height:44%"></div><span class="q-l">27Q1</span></div><div class="q-col q-max"><span class="q-v">2,020</span><div class="q-bar" style="height:72%"></div><span class="q-l">28Q2</span></div><div class="q-col"><span class="q-v">1,453</span><div class="q-bar" style="height:52%"></div><span class="q-l">28Q3</span></div></div></div><p class="note" style="margin-top:9px">가장 몰리는 분기는 28Q2 — 그래도 필요량에는 못 미칩니다</p></div></section>
 <section><div class="wrap">
-  <h2>앞으로 들어올 물량 <span class="ucnt">3곳 · 3,307세대</span></h2>
+  <h2>앞으로 들어올 단지 <span class="ucnt">4년 내 · 세대 큰 순 3곳</span></h2>
   <div class="ulist"><table class="utable2">
     <thead><tr><th>단지명</th><th>세대수</th><th>준공예정</th></tr></thead>
     <tbody><tr><td class="uname" title="동탄2지구 A58BL 공동주택">동탄2지구 A58BL 공동주택</td><td class="num">1,247</td><td class="num">2027.02 예정</td></tr><tr><td class="uname" title="화성동탄2 A78블록 공공주택">화성동탄2 A78블록 공공주택</td><td class="num">1,170</td><td class="num">2028.05 예정</td></tr><tr><td class="uname" title="화성능동 A-1BL 공공지원 민간임대리츠">화성능동 A-1BL 공공지원 민간임대리츠</td><td class="num">890</td><td class="num">2028.08 예정</td></tr></tbody>
   </table></div>
 </div></section>
 <section><div class="wrap">
-  <h2>최근 들어온 물량 <span class="ucnt">1곳 · 1,500세대</span></h2>
+  <h2>최근 들어온 단지 <span class="ucnt">지난 4년 · 세대 큰 순 1곳</span></h2>
   <div class="ulist"><table class="utable2">
     <thead><tr><th>단지명</th><th>세대수</th><th>준공</th></tr></thead>
     <tbody><tr><td class="uname" title="동탄2 신동포레 경기행복주택">동탄2 신동포레 경기행복주택</td><td class="num">1,500</td><td class="num">2024.05 준공</td></tr></tbody>

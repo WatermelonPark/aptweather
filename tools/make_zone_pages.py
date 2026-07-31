@@ -325,8 +325,12 @@ UNIT_WINDOW = 48   # 단지 목록 창(개월): 앞으로 4년 · 지난 4년. �
 def render_units_2sec(units, today=None):
     """permits.units[zone](또는 수도권처럼 소속 존 합산) → 2섹션 HTML.
 
-    "앞으로 들어올 물량"(sched: 단지명·세대·"YYYY.MM 예정", 연월 결측이면 "미정")과
-    "최근 들어온 물량"(done: 단지명·세대·"YYYY.MM 준공")을 만든다.
+    "앞으로 들어올 단지"(sched)와 "최근 들어온 단지"(done) 2섹션.
+
+    ⚠️ 합계(N세대)를 쓰지 않는다. units는 수집기(fetch_hub_permits UNITS_CAP=40)가
+    시군구당 상위 40개만 담은 **부분집합**이라 존 전체 물량과 다르다 — 총량은
+    '언제 들어오나' 차트(permits.sched 전량)가 유일한 출처다. 두 숫자를 나란히
+    보이면 안 맞는다(2026-08-01 실제 보고: 대구권 차트 55,693 vs 목록 15,020).
 
     창은 UNIT_WINDOW: sched는 오늘~+48개월, done은 -48개월~오늘만 남긴다(예정일이
     이미 지난 sched 항목도 제외 — 스테일 데이터). 2026-07-31 사용자 결정으로
@@ -360,6 +364,18 @@ def render_units_2sec(units, today=None):
 
     sched = [u for u in sched if in_window(u, 0, UNIT_WINDOW)]
     done = [u for u in done if in_window(u, -UNIT_WINDOW, 0)]
+    # 같은 단지가 동·블록별로 따로 등록돼 PK가 갈리는 경우가 있다(예: 대구금호워터폴리스
+    # D2블록 ×2) — 화면에선 (이름, 세대, 연월)이 같으면 한 줄로 접는다.
+    def _dedupe(us):
+        seen, out = set(), []
+        for u in us:
+            k = (u[0], u[1], u[2] if len(u) > 2 else None)
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(u)
+        return out
+    sched, done = _dedupe(sched), _dedupe(done)
     if not sched and not done:
         return ''
 
@@ -382,22 +398,22 @@ def render_units_2sec(units, today=None):
         rows = ''.join(sched_row(u) for u in sched)
         parts.append(
             '<section><div class="wrap">\n'
-            '  <h2>앞으로 들어올 물량 <span class="ucnt">%d곳 · %s세대</span></h2>\n'
+            '  <h2>앞으로 들어올 단지 <span class="ucnt">4년 내 · 세대 큰 순 %d곳</span></h2>\n'
             '  <div class="ulist"><table class="utable2">\n'
             '    <thead><tr><th>단지명</th><th>세대수</th><th>준공예정</th></tr></thead>\n'
             '    <tbody>%s</tbody>\n'
             '  </table></div>\n'
-            '</div></section>\n' % (len(sched), num(sum(u[1] for u in sched)), rows))
+            '</div></section>\n' % (len(sched), rows))
     if done:
         rows = ''.join(done_row(u) for u in done)
         parts.append(
             '<section><div class="wrap">\n'
-            '  <h2>최근 들어온 물량 <span class="ucnt">%d곳 · %s세대</span></h2>\n'
+            '  <h2>최근 들어온 단지 <span class="ucnt">지난 4년 · 세대 큰 순 %d곳</span></h2>\n'
             '  <div class="ulist"><table class="utable2">\n'
             '    <thead><tr><th>단지명</th><th>세대수</th><th>준공</th></tr></thead>\n'
             '    <tbody>%s</tbody>\n'
             '  </table></div>\n'
-            '</div></section>\n' % (len(done), num(sum(u[1] for u in done)), rows))
+            '</div></section>\n' % (len(done), rows))
     return ''.join(parts)
 
 
@@ -535,14 +551,20 @@ details.fold .dbody p{font-size:14px}
 .pidx{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
 .pidx h3{font-size:14px;margin:0 0 2px}
 .pidx .px-sub{color:var(--muted);font-size:11.5px;margin:0 0 10px}
-.pidx .px-now{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 10px;font-size:13px}
-.pidx .px-now b{font-weight:700}
-.pidx svg{display:block;width:100%;height:auto}
+.pidx .px-now{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 10px;font-size:13px}
+.pidx .px-c{white-space:nowrap}
+.pidx .px-c b{font-weight:700;margin-left:4px}
+.pidx .px-c i{font-style:normal;color:var(--muted);font-size:11px;margin-left:5px}
+.pidx .px-lgs{display:flex;gap:14px;margin:0 0 4px;font-size:11.5px;color:var(--muted)}
+.pidx .px-lg{display:inline-flex;align-items:center;gap:5px}
+.pidx .px-lg i{width:14px;height:2.5px;display:inline-block;border-radius:2px}
+.pidx svg{display:block;width:100%;height:auto;overflow:visible}
 .near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .n-card{border:1px solid var(--line);padding:10px 12px;display:block}
 .n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
 .n-card i{font-style:normal;color:var(--muted);font-size:12px}
-.q-col.q-max .q-bar{outline:2px solid currentColor}"""
+.q-col.q-max .q-bar{background:#5e6f74}
+.q-col.q-max .q-v{font-weight:700;color:var(--ink)}"""
 
 
 
@@ -618,11 +640,18 @@ def _lz_members(zone):
     return [('경기', base + '시'), ('경기', base + '군')]
 
 
-def render_price_index(adv, zone, codes, hh_by_name=None):
-    """존 소속 시군구의 주간·월간 변동률 평균 -> 최근값 + 월간 24개월 누적 지수선."""
+def render_price_index(adv, zone, codes):
+    """존 소속 시군구의 매매·전세·월세 지수 흐름(24개월) + 최근 변동률.
+
+    시황통계(ADV.monthly/weekly.sgg)는 시군구별 전월(주)비 변동률(%)이라, 최근값을
+    100으로 두고 거꾸로 누적해 '흐름'을 만든다(수준 비교가 아니라 추세를 보여주는 것).
+    월세(wo)는 주간 계열에 없고 월간에만 있다.
+    """
     if not codes:
         return ''
-    def series(block, n):
+    SERIES = (('ma', '매매', '#a93226'), ('je', '전세', '#1a5276'), ('wo', '월세', '#5e6f74'))
+
+    def series(block, key, n):
         sg = (adv.get(block) or {}).get('sgg') or {}
         allc = sg.get('codes') or []
         idx = [allc.index(c) for c in codes if c in allc]
@@ -630,47 +659,97 @@ def render_price_index(adv, zone, codes, hh_by_name=None):
             return []
         out = []
         for row in (sg.get('rows') or [])[-n:]:
-            vs = [row['ma'][i] for i in idx if i < len(row['ma']) and row['ma'][i] is not None]
+            arr = row.get(key) or []
+            vs = [arr[i] for i in idx if i < len(arr) and arr[i] is not None]
             if vs:
                 out.append((row['p'], sum(vs) / len(vs)))
         return out
-    wk = series('weekly', 13)
-    mo = series('monthly', 24)
-    if not wk and not mo:
+
+    mo = {k: series('monthly', k, 24) for k, _, _ in SERIES}
+    wk = {k: series('weekly', k, 13) for k, _, _ in SERIES}
+    if not any(mo.values()) and not any(wk.values()):
         return ''
-    def chip(lab, ser, unit):
+
+    def chip(lab, ser):
         if not ser:
             return ''
-        p, v = ser[-1]
+        p_, v = ser[-1]
         col = '#a93226' if v > 0 else ('#1a5276' if v < 0 else 'var(--muted)')
-        return ('<span>%s <b style="color:%s">%+.2f%%</b> <i style="color:var(--muted);'
-                'font-style:normal">%s %s</i></span>' % (lab, col, v, p, unit))
-    # 월간 누적 지수선(마지막 값 100 기준으로 역산 — 수준이 아니라 흐름을 보여준다)
-    chart = ''
-    if len(mo) >= 6:
+        return ('<span class="px-c">%s <b style="color:%s">%+.2f%%</b>'
+                '<i>%s</i></span>' % (lab, col, v, p_))
+
+    now = ''.join([chip('이번 주 매매', wk.get('ma') or []),
+                   chip('이번 달 매매', mo.get('ma') or []),
+                   chip('이번 달 전세', mo.get('je') or [])])
+
+    # ── 24개월 지수 흐름(마지막=100 기준 역산) ──
+    lines, months = [], []
+    for k, _, _ in SERIES:
+        ser = mo.get(k) or []
+        if len(ser) < 6:
+            lines.append(None)
+            continue
         lvl, cur = [], 100.0
-        for _, v in reversed(mo):
+        for _, v in reversed(ser):
             lvl.append(cur)
             cur = cur / (1 + v / 100)
         lvl.reverse()
-        lo, hi = min(lvl), max(lvl)
-        rng = (hi - lo) or 1.0
-        W, H = 320.0, 74.0
-        pts = ' '.join('%.1f,%.1f' % (6 + (W - 12) * i / (len(lvl) - 1),
-                                      6 + (H - 12) * (1 - (v - lo) / rng))
-                       for i, v in enumerate(lvl))
-        chart = ('<svg viewBox="0 0 %d %d" role="img" aria-label="%s 월간 아파트 매매가격 흐름">'
-                 '<polyline fill="none" stroke="%s" stroke-width="1.8" points="%s"/>'
-                 '<text x="6" y="%d" font-size="9" fill="#8a969b">%s</text>'
-                 '<text x="%d" y="%d" font-size="9" fill="#8a969b" text-anchor="end">%s</text>'
-                 '</svg>' % (int(W), int(H), zone,
-                             '#a93226' if lvl[-1] >= lvl[0] else '#1a5276', pts,
-                             int(H) - 1, mo[0][0], int(W) - 6, int(H) - 1, mo[-1][0]))
-    return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
-            '<p class="px-sub">한국부동산원 아파트 매매가격지수 변동률 · 이 생활권 시군구 평균</p>'
-            '<div class="px-now">%s%s</div>%s</div>'
-            % (chip('이번 주', wk, ''), chip('이번 달', mo, ''), chart))
+        lines.append(lvl)
+        if len(ser) > len(months):
+            months = [p_ for p_, _ in ser]
+    live = [(SERIES[i], l) for i, l in enumerate(lines) if l]
+    if not live:
+        return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
+                '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균</p>'
+                '<div class="px-now">%s</div></div>' % now)
 
+    vals = [v for _, l in live for v in l]
+    lo, hi = min(vals), max(vals)
+    pad = max((hi - lo) * 0.12, 0.4)
+    lo, hi = lo - pad, hi + pad
+    W, H = 640.0, 200.0
+    L, R, T, B = 42.0, 10.0, 12.0, 24.0
+    n = max(len(months), 2)
+
+    def X(i):
+        return L + (W - L - R) * i / (n - 1)
+
+    def Y(v):
+        return T + (H - T - B) * (1 - (v - lo) / (hi - lo))
+
+    g = []
+    # y 그리드 3줄 + 라벨
+    for t in (0.0, 0.5, 1.0):
+        v = lo + (hi - lo) * t
+        y = Y(v)
+        g.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#e6eae8"/>'
+                 % (L, y, W - R, y))
+        g.append('<text x="%.1f" y="%.1f" font-size="10" fill="#8a969b" text-anchor="end">%.0f</text>'
+                 % (L - 6, y + 3.4, v))
+    # 100 기준선(현재 수준)
+    if lo < 100 < hi:
+        g.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#c4cec9" '
+                 'stroke-dasharray="3 3"/>' % (L, Y(100), W - R, Y(100)))
+    # x 눈금: 1월과 마지막
+    for i, m in enumerate(months):
+        if m.endswith('-01') or i == len(months) - 1:
+            g.append('<text x="%.1f" y="%.1f" font-size="10" fill="#8a969b" '
+                     'text-anchor="%s">%s</text>'
+                     % (X(i), H - 6, 'end' if i == len(months) - 1 else 'middle',
+                        m if m.endswith('-01') else m))
+    for (k, lab, col), l in live:
+        pts = ' '.join('%.1f,%.1f' % (X(i), Y(v)) for i, v in enumerate(l))
+        g.append('<polyline fill="none" stroke="%s" stroke-width="1.9" '
+                 'stroke-linejoin="round" points="%s"/>' % (col, pts))
+    svg = ('<svg viewBox="0 0 %d %d" role="img" aria-label="%s 아파트 매매·전세·월세 지수 흐름">'
+           '%s</svg>' % (int(W), int(H), zone, ''.join(g)))
+    legend = ''.join('<span class="px-lg"><i style="background:%s"></i>%s</span>' % (col, lab)
+                     for (k, lab, col), _ in live)
+    return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
+            '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균 '
+            '· 최근값 100 기준 흐름</p>'
+            '<div class="px-now">%s</div>'
+            '<div class="px-lgs">%s</div>%s</div>' % (now, legend, svg))
 
 def build_page(r, allrows, prd, today, punits=None, pidx=None):
     z = r['z']; nm = z['z']; ps = r['ps']
@@ -800,6 +879,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         peakq = max(qs, key=lambda q: byq[q])
         def qfmt(v):
             return ('%.1f만' % (v / 10000)) if v >= 10000 else format(v, ',')
+        # 최대 분기는 색(진한 톤)으로만 구분한다 — 외곽선 박스는 제거(2026-08-01 사용자).
         cols = ''.join(
             '<div class="q-col%s"><span class="q-v">%s</span>'
             '<div class="q-bar" style="height:%.0f%%"></div>'
@@ -807,8 +887,11 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
                 ' q-max' if q == peakq else '',
                 qfmt(byq[q]), max(byq[q] / mxq * 72, 3), qlabel(q))
             for q in qs)
-        qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div>'
-                       '<div class="qchart">%s</div></div>' % cols)
+        # 합계는 여기서만 보여준다 — 단지 목록(상위 N곳)과 헷갈리지 않게 '전체'로 명시.
+        qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대) '
+                       '<b style="color:var(--ink)">· 전체 %s세대</b></div>'
+                       '<div class="qchart">%s</div></div>'
+                       % (num(sum(byq[q] for q in qs)), cols))
         # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
         qcap = ('가장 몰리는 분기는 %s — 그래도 필요량에는 못 미칩니다' % qlabel(peakq)) if r['tot'] > 0 else \
                ('입주가 가장 몰리는 %s 전후가 세입자·매수자에게 유리합니다' % qlabel(peakq))

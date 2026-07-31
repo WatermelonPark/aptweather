@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v42'; // 홈 절대값 원복 · 존 결론부터 · 지역 시세지수 · 허브 등급 개편
+const VERSION = 'v43'; // 물량 수치 정합 · 단지 중복제거 · 시세 3계열 그래프 · 축 정리
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

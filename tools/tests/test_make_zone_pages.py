@@ -28,8 +28,8 @@ def test_render_units_2sec_renders_both_sections():
         ],
     }
     html = M.render_units_2sec(units, TODAY)
-    assert '앞으로 들어올 물량' in html
-    assert '최근 들어온 물량' in html
+    assert '앞으로 들어올 단지' in html
+    assert '최근 들어온 단지' in html
     assert '오산더샵' in html and '2027.03 예정' in html
     assert '오산센트럴' in html and '미정' in html
     assert '오산자이' in html and '2024.03 준공' in html
@@ -65,15 +65,15 @@ def test_render_units_2sec_all_outside_window_returns_empty():
 def test_render_units_2sec_sched_only_omits_done_section():
     units = {'sched': [['오산더샵', 400, '2027-03']], 'done': []}
     html = M.render_units_2sec(units, TODAY)
-    assert '앞으로 들어올 물량' in html
-    assert '최근 들어온 물량' not in html
+    assert '앞으로 들어올 단지' in html
+    assert '최근 들어온 단지' not in html
 
 
 def test_render_units_2sec_done_only_omits_sched_section():
     units = {'sched': [], 'done': [['오산자이', 832, '2024-03']]}
     html = M.render_units_2sec(units, TODAY)
-    assert '최근 들어온 물량' in html
-    assert '앞으로 들어올 물량' not in html
+    assert '최근 들어온 단지' in html
+    assert '앞으로 들어올 단지' not in html
 
 
 # ---------------------------------------------------------------------------
@@ -105,8 +105,8 @@ def test_build_page_renders_2sections_when_zone_has_permits_units():
         'done': [['헌아파트', 300, '2024-01']],
     }}
     html = M.build_page(r, [r], '2026-07', '2026-07-24', punits)
-    assert '앞으로 들어올 물량' in html
-    assert '최근 들어온 물량' in html
+    assert '앞으로 들어올 단지' in html
+    assert '최근 들어온 단지' in html
     assert '새아파트' in html and '2027.06 예정' in html
     assert '헌아파트' in html and '2024.01 준공' in html
 
@@ -120,15 +120,15 @@ def test_build_page_falls_back_to_odcloud_list_when_no_permits_units():
     html = M.build_page(r, [r], '2026-07', '2026-07-24', punits={})
     assert '입주 예정 단지' in html
     assert '옛아파트' in html
-    assert '앞으로 들어올 물량' not in html
-    assert '최근 들어온 물량' not in html
+    assert '앞으로 들어올 단지' not in html
+    assert '최근 들어온 단지' not in html
 
 
 def test_build_page_no_permits_units_and_no_odcloud_units_does_not_error():
     r = _fake_row('테스트권')   # z['units'] 아예 없음, punits도 없음
     html = M.build_page(r, [r], '2026-07', '2026-07-24', punits=None)
     assert '<html' in html
-    assert '앞으로 들어올 물량' not in html
+    assert '앞으로 들어올 단지' not in html
 
 
 # ---------------------------------------------------------------------------
@@ -174,8 +174,8 @@ def test_build_page_rollup_aggregates_subs_units_when_own_missing():
         '인천권': {'sched': [], 'done': [['인천단지', 200, '2024-05']]},
     }
     html = M.build_page(rollup, [rollup, sub1, sub2], '2026-07', '2026-07-24', punits)
-    assert '앞으로 들어올 물량' in html
-    assert '최근 들어온 물량' in html
+    assert '앞으로 들어올 단지' in html
+    assert '최근 들어온 단지' in html
     assert '서울단지' in html and '2027.01 예정' in html
     assert '인천단지' in html and '2024.05 준공' in html
 
@@ -249,3 +249,25 @@ def test_regression_near_section_present_with_real_data(tmp_path):
     pages = _real_pages(tmp_path)
     for nm, html in pages.items():
         assert '주변과 비교하면' in html, '%s: 주변 카드가 비었다' % nm
+
+
+def test_render_units_2sec_dedupes_same_project():
+    """같은 단지가 동·블록별 별도 PK로 두 번 오면(대구금호워터폴리스 D2블록 사례)
+    화면에선 한 줄로 접는다."""
+    units = {'sched': [
+        ['대구금호워터폴리스 D2블록', 1334, '2028-10'],
+        ['대구금호워터폴리스 D2블록', 1334, '2028-10'],   # 중복
+        ['다른단지', 500, '2028-10'],
+    ], 'done': []}
+    html = M.render_units_2sec(units, TODAY)
+    assert html.count('대구금호워터폴리스 D2블록</td>') == 1
+    assert '세대 큰 순 2곳' in html
+
+
+def test_render_units_2sec_shows_no_total():
+    """목록은 수집기 캡(시군구당 40)이 걸린 부분집합이라 합계를 쓰지 않는다 —
+    총량은 '언제 들어오나' 차트가 유일한 출처(2026-08-01 수치 불일치 보고)."""
+    units = {'sched': [['오산더샵', 400, '2027-03'], ['오산자이', 600, '2028-01']], 'done': []}
+    html = M.render_units_2sec(units, TODAY)
+    assert '1,000' not in html and '세대</span>' not in html
+    assert '세대 큰 순 2곳' in html
