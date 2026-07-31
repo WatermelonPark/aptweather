@@ -184,3 +184,74 @@ def test_build_page_rollup_aggregates_subs_units_when_own_missing():
     assert '최근 들어온 물량' in html
     assert '서울단지' in html and '2027.01 예정' in html
     assert '인천단지' in html and '2024.05 준공' in html
+
+
+# ---------------------------------------------------------------------------
+# 회귀 테스트(FINAL review C1 재발 방지): '주변과 비교하면'(near) 섹션이 비면
+# near_html=''로 처리했는데, 44존 nav(zlist)와 /#score CTA가 그 안에 함께
+# 있어서 같이 사라졌다 — 시도에 존이 하나뿐인 7곳(부산·대구·대전세종·광주·
+# 울산·청주·제주권)이 5섹션+아웃바운드 /zone/ 링크 0짜리 고아 페이지가 됐다.
+# 이제 nav/zlist/CTA는 near와 무관한 독립 섹션(항상 렌더)이고, near는 같은
+# 시도 → 같은 region → 전국 순으로 최대 4곳을 채우는 3단 폴백을 쓴다.
+# 전체 45장을 매번 생성하는 대신 대표 존 3곳(서울권·평택권·제주권) + 수도권
+# 합계로 build_page를 직접 호출하되, 링크 검증은 그 결과를 실제로 파일에
+# 쓰고 다시 읽은 내용(실제 생성물)으로 한다.
+# ---------------------------------------------------------------------------
+
+def _real_pages(tmp_path):
+    adv, sts = M.load()
+    rows = M.calc(adv, sts)
+    cap = M.make_capital(rows)
+    punits = (adv.get('permits') or {}).get('units') or {}
+    prd = adv['livezone'].get('prd', '')
+    today = datetime.date.today().isoformat()
+    by_name = {row['z']['z']: row for row in rows}
+    picks = [by_name[nm] for nm in ('서울권', '평택권', '제주권') if nm in by_name]
+    if cap:
+        picks.append(cap)
+    out = {}
+    for row in picks:
+        nm = row['z']['z']
+        html = M.build_page(row, rows, prd, today, punits)
+        d = tmp_path / 'zone' / nm
+        d.mkdir(parents=True, exist_ok=True)
+        fp = d / 'index.html'
+        fp.write_text(html, encoding='utf-8')
+        out[nm] = fp.read_text(encoding='utf-8')
+    return out
+
+
+def test_regression_representative_zones_have_required_h2_sections(tmp_path):
+    pages = _real_pages(tmp_path)
+    assert pages, "대표 존을 하나도 못 찾았다 — data.js 생활권 이름이 바뀌었는지 확인할 것"
+    for nm, html in pages.items():
+        assert '왜 이 판정인가' in html, nm
+        assert '언제 들어오나' in html, nm
+        assert '이 숫자의 한계' in html, nm
+
+
+def test_regression_outbound_zone_links_at_least_40(tmp_path):
+    # C1 핵심 가드: nav가 near와 분리돼 항상 렌더되므로, 시도에 존이 하나뿐인
+    # 7곳을 포함해 모든 페이지가 44개 생활권 전체로 나가는 링크를 가져야 한다.
+    pages = _real_pages(tmp_path)
+    for nm, html in pages.items():
+        n_links = html.count('href="/zone/')
+        assert n_links >= 40, '%s: /zone/ 링크 %d개뿐 (>=40 기대)' % (nm, n_links)
+
+
+def test_regression_near_section_absent_when_truly_empty():
+    # 근처 비교 카드가 진짜로 하나도 없는(같은 시도·region·전국 어디에도 다른
+    # 존이 없는) 극단적 단일-존 상황에서는 '주변과 비교하면' 섹션이 나가면
+    # 안 된다 — 반면 nav(다른 생활권도 보기)는 이런 상황에서도 항상 남아야 한다.
+    r = _fake_row('테스트권')
+    html = M.build_page(r, [r], '2026-07', '2026-07-24', punits=None)
+    assert '주변과 비교하면' not in html
+    assert '다른 생활권도 보기' in html
+
+
+def test_regression_near_section_present_with_real_data(tmp_path):
+    # 실제 데이터에서는 3단계 폴백(같은 시도 → 같은 region → 전국) 덕에
+    # region에도 혼자인 극단 케이스(제주권)까지 카드가 채워져야 한다.
+    pages = _real_pages(tmp_path)
+    for nm, html in pages.items():
+        assert '주변과 비교하면' in html, '%s: 주변 카드가 비었다' % nm

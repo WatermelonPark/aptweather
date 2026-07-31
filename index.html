@@ -175,7 +175,8 @@
 행정구역이 아니라 실제 생활권 단위로, <b>필요한 집</b>(세대수 기준 추정)과
 <b>그동안 밀린 것 + 들어올 집</b>(국토부 건축HUB 단지별 실측, 멸실 차감)을 견줘
 세대수로 계산합니다. 등급은 필요량 대비 부족 비율의 절대 구간입니다.
-공급 기준이며 가격 예측이 아닙니다 — 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.</div></details>
+공급 기준이며 가격 예측이 아닙니다 — 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.
+금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b>, 이자가 월세보다 싸면 <b style="color:#7a4fb5">★ 실거주 유리</b> 표시만 합니다.</div></details>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
@@ -2422,7 +2423,7 @@ function renderScoreSec(){
     const list=units.filter(u=>u.gr.k===gk);
     if(!list.length)return '';
     const g=list[0].gr;
-    return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'곳</i></div>'
+    return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
       +list.map(u=>{
         // 가운데 0을 축으로 발산 — 부족(−)은 오른쪽, 과잉(+)은 왼쪽. 색도 부호를 따라간다.
         const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(u.tot)/mx)*50));
@@ -2496,7 +2497,7 @@ function renderMyZone(){
   const lack=zones.filter(z=>z.gr.k==='g4'||z.gr.k==='g3').length;
   const byps={};zones.forEach(z=>{(byps[z.psido]=byps[z.psido]||[]).push(z);});
   const sidos=Object.keys(byps);
-  body.innerHTML='<p class="mz-sum">지금 전국 '+zones.length+'곳 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
+  body.innerHTML='<p class="mz-sum">지금 전국 '+zones.length+'개 생활권 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
     +'<div class="mz-sido">'+sidos.map(s=>'<button class="mz-chip" onclick="mzPick(this,\''+s+'\')">'+s+'</button>').join('')+'</div>'
     +'<div class="mz-zones" id="mz-zones"></div>';
 }

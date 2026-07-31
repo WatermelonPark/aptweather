@@ -99,6 +99,11 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=
     두 안 모두 refq는 호출측이 이미 zone-level(적정*share)로 넘긴 값이어야 한다.
     양수=부족(발산 막대 오른쪽), 음수=과잉.
     """
+    # M1: full(분해값 반환)은 항등식 tot == demand - supplyw - inow 성립을 전제로
+    # 문서화돼 있는데, 그 항등식은 weight_demand=False(B안)에서만 성립한다(A안은
+    # fut가 이미 conf 가중 결합이라 demand_sum/supply_weighted로 쪼갤 수 없다).
+    # 두 플래그가 동시에 True인 호출은 분해값이 조용히 틀린 채 나가므로 여기서 막는다.
+    assert not (full and weight_demand), '분해값은 B안(weight_demand=False)에서만 유효'
     I = 0.0
     lo = -DEFICIT_CAP * refq
     for idx in range(ANCHOR, cur_q + 1):
@@ -190,9 +195,18 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         # zdone/zsched는 ZONE(생활권) 단위 실적인데 refq는 REGION(시도) 적정이다 —
         # zone-level 적정으로 맞추려면 share를 곱해야 한다(dA/dB/dC 폴백 경로와 동일 원칙).
         if inv_path:
-            _rs = running_shortage(zdone, zsched, zdemol, refq * share, cur_q,
-                                   horizon=horizon, weight_demand=weight_demand, full=True)
-            tot = _rs['tot']
+            # M1: full=True(분해값)는 weight_demand=False(B안·라이브)에서만 유효하다.
+            # verify_rankdiff.py의 A안(weight_demand=True) 호출이 이 calc()를 거쳐
+            # 오므로, A안일 때는 분해 없이 tot만 받는다(그렇지 않으면 running_shortage의
+            # 새 assert에 걸려 A/B 비교 스크립트가 죽는다).
+            if weight_demand:
+                _rs = None
+                tot = running_shortage(zdone, zsched, zdemol, refq * share, cur_q,
+                                       horizon=horizon, weight_demand=True, full=False)
+            else:
+                _rs = running_shortage(zdone, zsched, zdemol, refq * share, cur_q,
+                                       horizon=horizon, weight_demand=False, full=True)
+                tot = _rs['tot']
         else:
             _rs = None
             tot = tot_fallback
@@ -215,6 +229,7 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
                         need4=need4,
                         inow=(_rs['inow'] if _rs else 0.0),
                         fsupw=(_rs['supplyw'] if _rs else 0.0),
+                        zsched=zsched,
                         gr=grade(tot, need4)))
     out.sort(key=lambda r: -r['tot'])
     return out
@@ -235,6 +250,14 @@ def make_capital(rows):
                 'span': 1 if q0s else 0}
     for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup', 'need4', 'inow', 'fsupw'):
         agg[k] = sum(c[k] for c in caps)
+    # Fix I3+M4: ③ 타임라인이 ②와 같은 HUB sched 소스를 쓰려면 수도권 롤업도
+    # 자기 zsched(원래 없음 — 수도권은 calc()의 개별 zone 루프를 안 돈다)를
+    # 소속 생활권 합산으로 채워야 한다(분기별 세대수 합).
+    agg_sched = {}
+    for c in caps:
+        for qk, v in (c.get('zsched') or {}).items():
+            agg_sched[qk] = agg_sched.get(qk, 0) + v
+    agg['zsched'] = agg_sched
     agg['fq'] = max(c['fq'] for c in caps)
     agg['share'] = sum(c['share'] for c in caps)
     agg['ps'] = '수도권'
@@ -529,18 +552,34 @@ def build_page(r, allrows, prd, today, punits=None):
             num(r['fsupw']),
             gr['color'], sum_line))
 
-    # ── 인포그래픽: 분기별 입주 미니차트 (byq — 수도권은 소속 합산) ──
-    byq = dict(z.get('byq') or {})
-    if subs and not byq:
-        for cc in subs:
-            for q, v in (cc['z'].get('byq') or {}).items():
-                byq[q] = byq.get(q, 0) + v
+    # ── 인포그래픽: 분기별 입주 미니차트 ──
+    # Fix I3+M4: 이전엔 legacy odcloud byq(짧은 창, H_MAX=8분기)를 그려 ②(왜 이
+    # 판정인가 — HUB sched 16분기 가중)와 다른 미래를 말했다. ③도 같은 소스
+    # (permits['sched'][존], calc()가 running_shortage에 넘기는 것과 동일 —
+    # calc()가 r['zsched']로 그대로 실어 보낸다; 수도권은 make_capital()이 이미
+    # subs 합산)로 같은 16분기(FUT_HORIZON) 창을 그린다. sched가 아예 없는 존
+    # (HUB 미커버)만 옛 odcloud 단지 실측(byq)으로 폴백한다.
+    _now = datetime.date.today()
+    _curq = _now.year * 4 + (_now.month - 1) // 3
+    zsched_raw = dict(r.get('zsched') or {})
+    hub_sched = bool(zsched_raw)
+    if hub_sched:
+        byq = {}
+        for k in range(1, FUT_HORIZON + 1):
+            qk = _qkey(_curq + k)
+            v = zsched_raw.get(qk, 0)
+            if v:
+                byq[qk] = v
+    else:
+        byq = dict(z.get('byq') or {})
+        if subs and not byq:
+            for cc in subs:
+                for q, v in (cc['z'].get('byq') or {}).items():
+                    byq[q] = byq.get(q, 0) + v
     # calc()의 FUTQ와 같은 규칙: 유효한 분기 라벨 + 미래 분기만.
     # (원자료에 '2027Q0' 같은 비정상 키와 과거 분기가 섞여 있다 — 과거까지 그리면
     #  게이지의 '들어올 집' 합과 막대 합이 안 맞아 정합성이 깨진다)
     _qre = re.compile(r'^(\d{4})Q([1-4])$')
-    _now = datetime.date.today()
-    _curq = _now.year * 4 + (_now.month - 1) // 3
     def qkey(q):
         m = _qre.match(q)
         return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else -1
@@ -567,11 +606,13 @@ def build_page(r, allrows, prd, today, punits=None):
     else:
         qchart_html = '<div class="qwrap"><div class="qtitle">입주 예정 단지 없음</div></div>'
         qcap = ''
+    cap_line = ('앞으로 4년(16분기) 창 · 국토부 건축HUB 준공예정 실측' if hub_sched
+                else '앞으로 %s분기 · 입주예정 단지 실측' % r['fq'])
     timeline_html = (
         '<section><div class="wrap"><h2>언제 들어오나</h2>'
-        '<p class="note" style="margin-bottom:9px">앞으로 %s분기 · 입주예정 단지 실측</p>'
+        '<p class="note" style="margin-bottom:9px">%s</p>'
         '%s%s</div></section>' % (
-            r['fq'], qchart_html,
+            cap_line, qchart_html,
             ('<p class="note" style="margin-top:9px">%s</p>' % qcap) if qcap else ''))
 
     # ── 인포그래픽: 기여 3카드 (가중 반영, 합계 = tot = 히어로 숫자) ──
@@ -698,7 +739,7 @@ def build_page(r, allrows, prd, today, punits=None):
         calc_detail_html = (
             '<p class="note" style="margin-top:10px">이 존은 준공(입주 완료)·준공예정 물량 '
             '실측을 기반으로 하는 <b>러닝재고</b> 방식입니다. 적정 공급량 대비 쌓인 재고와 '
-            '앞으로 %s분기의 준공예정을 함께 반영한 누적 순부족입니다.</p>' % r['fq'])
+            '앞으로 %s분기의 준공예정을 함께 반영한 누적 순부족입니다.</p>' % FUT_HORIZON)
     else:
         calc_detail_html = (
             '<table>\n'
@@ -765,9 +806,37 @@ def build_page(r, allrows, prd, today, punits=None):
         '이 페이지는 <b>이 동네 공급 사정</b>으로만 읽어주세요.</p>'
         '%s</div></section>' % methodology_details_html)
 
-    # ── ⑥ 주변과 비교하면 — 같은 시도(ps) 생활권 미니 카드(최대 4곳) + 기존
-    # zlist(전체 생활권 nav, SEO 링크 자산 — 삭제 말고 그대로 재사용)
-    near = [x for x in allrows if x['ps'] == ps and x['z']['z'] != nm][:4]
+    # ── C1(최우선 회귀): nav/zlist/CTA는 near의 존재 여부와 무관하게 '항상' 렌더한다.
+    # 예전엔 이 44존 전체 링크 + /#score CTA가 near 섹션 안에 있어서, near가 빈
+    # 7개 시도(부산·대구·대전세종·광주·울산·청주·제주권 — 시도에 존이 하나뿐)에서
+    # 통째로 사라져 그 페이지들의 아웃바운드 /zone/ 링크가 0이 됐다(727행 주석이
+    # 경고한 고아 페이지). nav 섹션을 near와 분리해 모든 페이지에 항상 낸다.
+    nav_html = (
+        '<section><div class="wrap"><h2>다른 생활권도 보기</h2>'
+        '<div class="zlist">%s</div>'
+        '<a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>'
+        '</div></section>' % nav)
+
+    # ── ⑥ 주변과 비교하면 — 같은 시도(ps) 생활권 미니 카드(최대 4곳).
+    # 시도에 존이 하나뿐이면(위 7곳) 같은 region(경상·전라 등)으로 넓히고,
+    # 그래도 못 채우면(제주권처럼 region에도 혼자인 경우) 전국에서 채운다 —
+    # "카드가 아예 안 뜨는" 상태를 만들지 않기 위한 최후 단계.
+    near = [x for x in allrows if x['ps'] == ps and x['z']['z'] != nm]
+    seen = {x['z']['z'] for x in near} | {nm}
+    if len(near) < 4:
+        reg = z.get('region')
+        for x in allrows:
+            if len(near) >= 4:
+                break
+            if x['z'].get('region') == reg and x['z']['z'] not in seen:
+                near.append(x); seen.add(x['z']['z'])
+    if len(near) < 4:
+        for x in allrows:
+            if len(near) >= 4:
+                break
+            if x['z']['z'] not in seen:
+                near.append(x); seen.add(x['z']['z'])
+    near = near[:4]
     if near:
         near_html = (
             '<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near">' +
@@ -776,10 +845,7 @@ def build_page(r, allrows, prd, today, punits=None):
                     % (x['z']['z'], x['z']['z'], x['gr']['color'], x['gr']['label'],
                        signed(x['tot']))
                     for x in near) +
-            '</div>'
-            '<div class="zlist" style="margin-top:14px">%s</div>'
-            '<a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>'
-            '</div></section>' % nav)
+            '</div></div></section>')
     else:
         near_html = ''
 
@@ -798,7 +864,7 @@ def build_page(r, allrows, prd, today, punits=None):
                round(r['tot']), rank_no, json.dumps(gr['label'], ensure_ascii=False),
                json.dumps(str(today))))
 
-    title = '%s 아파트 공급 분석 — 입주예정·인허가로 본 %s | 아공맵' % (nm, tname)
+    title = '%s 아파트 공급 분석 — 준공·입주예정으로 본 %s | 아공맵' % (nm, tname)
     # sgg가 비면 '구성: —'가 그대로 메타 설명에 나갔다. odcloud는 물량이 없는
     # 지역의 행을 보내지 않으므로, 빈 sgg는 '입주예정 단지가 없다'는 뜻이다.
     comp = ('구성: %s. ' % ', '.join(sgg_names[:3])) if sgg_names else '예정 단지 없음. '
@@ -866,6 +932,7 @@ def build_page(r, allrows, prd, today, punits=None):
 %(flag)s
 %(limits)s
 %(near)s
+%(nav)s
 
 <footer><div class="wrap">
   <b>아공맵</b> — 아파트 · 공급량 · 투자지도<br>
@@ -911,7 +978,7 @@ def build_page(r, allrows, prd, today, punits=None):
         title=title, desc=desc, site=SITE, nm=nm, enc=quote(nm), tname=tname, tcol=tcol, disp=disp,
         ranktxt=ranktxt, prd=prd, fq=r['fq'],
         hero=hero_html, why=why_html, timeline=timeline_html, units=units_sec_html,
-        flag=flag_html, limits=limits_html, near=near_html, save_js=save_js,
+        flag=flag_html, limits=limits_html, near=near_html, nav=nav_html, save_js=save_js,
         ld=json.dumps(ld, ensure_ascii=False),
         css=CSS)
 
@@ -996,7 +1063,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.rk{color:var(--muted);width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
 a.z{color:var(--ink);text-decoration:none;font-weight:600}
 a.z:hover{text-decoration:underline}
-.tag{font-size:11.5px;padding:2px 7px;border-radius:0;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag{font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:0;white-space:nowrap}
+.tag.g4{background:#fdecea;color:#a93226}
+.tag.g3{background:#fbeee9;color:#c0392b}
+.tag.g2{background:#faf3e7;color:#b9770e}
+.tag.g1{background:#edf0ee;color:#5e6f74}
+.tag.g0{background:#e9f0f7;color:#1a5276}
 .bottomnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--ink);
  display:flex;justify-content:center;z-index:100}
 .nav-btn{flex:1;max-width:220px;display:flex;flex-direction:column;align-items:center;
@@ -1016,6 +1088,7 @@ footer a{color:var(--muted)}
 <section><div class="wrap">
   <h2>순위표</h2>
   <p>생활권 이름을 누르면 그 지역의 분기별 입주예정·인허가·적정물량 비교를 볼 수 있습니다.</p>
+  <p style="color:var(--muted);font-size:12.5px">공급 기준 · 가격 예측 아님</p>
   <table>
     <thead><tr><th>#</th><th>생활권</th><th class="num">누적 순부족</th><th>판정</th></tr></thead>
     <tbody>
@@ -1074,16 +1147,16 @@ def build_hub(pages, prd, today):
         gr = r['gr']
         rows.append(
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
-            '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
-            % (i + 1, nm, nm, gr['color'], signed(r['tot']), gr['label']))
+            '<td class="num" style="color:%s">%s</td><td><span class="tag %s">%s</span></td></tr>'
+            % (i + 1, nm, nm, gr['color'], signed(r['tot']), gr['k'], gr['label']))
     if roll is not None:
         gr = roll['gr']
         sub = len(roll['z'].get('subs') or []) or 16
         rows.append(
             '      <tr class="rollup"><td class="rk">—</td>'
             '<td><a class="z" href="/zone/%s/">%s</a> <span class="sub">%d개 생활권 합계</span></td>'
-            '<td class="num" style="color:%s">%s</td><td><span class="tag">%s</span></td></tr>'
-            % (ROLLUP, ROLLUP, sub, gr['color'], signed(roll['tot']), gr['label']))
+            '<td class="num" style="color:%s">%s</td><td><span class="tag %s">%s</span></td></tr>'
+            % (ROLLUP, ROLLUP, sub, gr['color'], signed(roll['tot']), gr['k'], gr['label']))
     ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",

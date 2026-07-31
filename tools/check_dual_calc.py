@@ -90,7 +90,7 @@ def main():
             a, b = py[z][k], js[z][k]
             if abs(a - b) > TOL:
                 bad.append((z, k, a, b))
-        if M.grade(py[z]['tot'], py[z]['need4'])['k'] != js[z]['gk']:
+        if py[z]['gr']['k'] != js[z]['gk']:
             bad.append((z, 'grade', py[z]['gr']['k'], js[z]['gk']))
 
     print('생활권 — calc() %d곳 · scCalc %d곳 · 공통 %d곳'
