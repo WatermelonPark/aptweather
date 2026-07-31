@@ -48,8 +48,32 @@ ANCHOR = 2010 * 4  # 2010Q1
 FUT_HORIZON = 16  # 4년(기준표 3년룰 + 준공예정 실측 ~4년); conf가 3~4년차를 낮게 가중
 DEFICIT_CAP = 16  # 부족(음수 재고) 누적 상한 = 적정물량 몇 분기치까지 쌓이게 둘지(4년)
 
+# ── 등급 판정 (2026-07-31 UX 재기획) ─────────────────────────────
+# 기준값 = 순부족(tot) ÷ 4년 필요량(refq*share*16). 경계는 상위 등급 포함(>=).
+# 절대 컷 고정 — 상대평가는 전국이 과잉이어도 같은 수의 '부족'을 만들어 왜곡한다.
+# 색은 app.css .sc-tier 팔레트 재사용(새 색 도입 금지).
+# ⚠️ index.html의 scGrade()와 반드시 동치(이중구현 미러) — check_dual_calc가 대조한다.
+GRADE_CUTS = (1.5, 1.0, 0.5, -0.5)
+GRADES = (
+    ('g4', '매우 부족', '#a93226', '앞으로 4년, 필요한 집이 크게 모자랍니다'),
+    ('g3', '부족', '#c0392b', '공급이 수요를 못 따라갑니다'),
+    ('g2', '다소 부족', '#b9770e', '부족하지만 심하진 않습니다'),
+    ('g1', '균형', '#5e6f74', '필요한 만큼 들어오고 있습니다'),
+    ('g0', '공급 여유', '#1a5276', '입주가 몰려 있어 세입자·매수자에게 유리한 시기가 옵니다'),
+)
 
-def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=True):
+
+def grade(tot, need4):
+    r = (tot / need4) if need4 else 0.0
+    for cut, g in zip(GRADE_CUTS, GRADES):
+        if r >= cut:
+            break
+    else:
+        g = GRADES[-1]
+    return {'k': g[0], 'label': g[1], 'color': g[2], 'desc': g[3], 'ratio': r}
+
+
+def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=True, full=False):
     """준공 기반 러닝재고 순부족.
 
     I_now = 2010Q1부터 현재분기까지 매 분기 max(-DEFICIT_CAP*refq, 재고+준공-멸실-refq)로
@@ -93,7 +117,13 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=
         demand_sum += refq
         supply_weighted += w * s
     fut = fut_weighted if weight_demand else (demand_sum - supply_weighted)
-    return fut - I_now
+    tot = fut - I_now
+    if full:
+        # 존 페이지 '왜 이 판정인가' 근거 3줄용 분해값.
+        # 항등식: tot == demand - supplyw - inow (weight_demand=False 기준.
+        # True(A안)면 fut가 이미 가중 결합이라 분해가 성립하지 않는다 — 라이브는 False).
+        return {'tot': tot, 'inow': I_now, 'demand': demand_sum, 'supplyw': supply_weighted}
+    return tot
 
 
 def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
@@ -159,7 +189,13 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         # pre-HUB 산식(dA/dB/dC 가중합)을 그대로 유지 — activate 게이트 전엔 전 존이 이 경로.
         # zdone/zsched는 ZONE(생활권) 단위 실적인데 refq는 REGION(시도) 적정이다 —
         # zone-level 적정으로 맞추려면 share를 곱해야 한다(dA/dB/dC 폴백 경로와 동일 원칙).
-        tot = running_shortage(zdone, zsched, zdemol, refq * share, cur_q, horizon=horizon, weight_demand=weight_demand) if inv_path else tot_fallback
+        if inv_path:
+            _rs = running_shortage(zdone, zsched, zdemol, refq * share, cur_q,
+                                   horizon=horizon, weight_demand=weight_demand, full=True)
+            tot = _rs['tot']
+        else:
+            _rs = None
+            tot = tot_fallback
         flag = None; lo = hi = None
         cv = (B.get('conv') or {}).get(ps)
         jr = last_of(J, ps) or None
@@ -172,9 +208,14 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         # 원자료 자체의 건강성은 update_adv_data의 가드 1(생활권 급감 감지)이 따로 지킨다.
         # 진주권 실측(2026-07-19): 2027-12까지 입주 0세대, 다음은 2028-06 840세대로
         # 원자료 시야(2026-01~2027-12) 밖. 즉 결측이 아니라 실제 공급 가뭄이다.
+        need4 = refq * share * 16
         out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
                         flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band,
-                        inv_path=inv_path, tot_fallback=tot_fallback))
+                        inv_path=inv_path, tot_fallback=tot_fallback,
+                        need4=need4,
+                        inow=(_rs['inow'] if _rs else 0.0),
+                        fsupw=(_rs['supplyw'] if _rs else 0.0),
+                        gr=grade(tot, need4)))
     out.sort(key=lambda r: -r['tot'])
     return out
 
@@ -192,12 +233,13 @@ def make_capital(rows):
                 'supply': sum(c['z']['supply'] for c in caps),
                 'sgg': [], 'q0': min(q0s) if q0s else '', 'q1': max(q1s) if q1s else '',
                 'span': 1 if q0s else 0}
-    for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup'):
+    for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup', 'need4', 'inow', 'fsupw'):
         agg[k] = sum(c[k] for c in caps)
     agg['fq'] = max(c['fq'] for c in caps)
     agg['share'] = sum(c['share'] for c in caps)
     agg['ps'] = '수도권'
     agg['subs'] = sorted(caps, key=lambda c: -c['tot'])
+    agg['gr'] = grade(agg['tot'], agg['need4'])
     return agg
 
 
