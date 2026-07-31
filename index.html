@@ -2319,6 +2319,10 @@ function scCalc(){
   const LZ=ADV.livezone,B=ADV.bubble,O=ADV.occupancy,P=ADV.permits,J=STATS['전세가율'],DM=STATS['주택멸실'];
   if(!LZ||!LZ.zones||!LZ.zones.length||!O||!P||!LZ.sidopop)return null;
   const SP=LZ.sidopop;
+  /* 적정물량 안분 잣대 — 2026-07-31 인구 -> 주민등록세대수(hh/sidohh).
+     옛 data.js가 캐시돼 있어도 죽지 않게 pop으로 폴백한다.
+     ⚠️ tools/make_zone_pages.py calc()에 같은 폴백이 있어야 한다(이중구현 미러). */
+  const SH=LZ.sidohh||{};
   // 앞으로 창 = 오늘 이후 분기만. 원자료가 과거 분기까지 담고 있어 그대로 쓰면 지난 물량을 미래로 셈.
   const now=new Date(), curQ=now.getFullYear()*4+Math.floor(now.getMonth()/3);
   const qIdx=s=>{const m=/^(\d{4})Q([1-4])$/.exec(s);return m?(+m[1])*4+(+m[2]-1):null;};
@@ -2337,7 +2341,8 @@ function scCalc(){
     const oi=O.regions.indexOf(ps); if(oi<0)return null;
     const band=O.band&&O.band[ps];
     const refq=(O.ref&&O.ref[ps])||(band?(band[0]+band[1])/2:null); if(!refq)return null;
-    const share=Math.min(1,z.pop/(SP[ps]||z.pop||1));
+    const useHH=z.hh&&SH[ps], shBase=useHH?z.hh:z.pop, shTot=useHH?SH[ps]:SP[ps];
+    const share=Math.min(1,shBase/(shTot||shBase||1));
     const dY=lastOf(DM&&DM.series,ps), dQ=dY/4;
     // ⚠️ 정규화(×12/H)를 넣지 말 것 — make_zone_pages.py calc()에는 없다.
     // 2026-07-20에 여기만 정규화가 남아 홈이 zone 페이지의 2.4배로 표시된 적 있다.

@@ -1349,9 +1349,27 @@ LZ_REGION = {'서울권':'수도권','인천권':'수도권','원주권':'강원
  '부산권':'경상','김해권':'경상','창원권':'경상','울산권':'경상','진주권':'경상','대구권':'경상',
  '포항권':'경상','구미권':'경상','안동권':'경상','제주권':'제주'}
 
+def _lz_hh():
+    """행정구역(시군구)별 주민등록세대수 — 적정물량 안분의 잣대.
+
+    2026-07-31에 인구(_lz_pop)에서 세대수로 바꿨다. 아파트 수요는 사람 수보다
+    가구 수에 가깝고, 1인가구 증가는 인구가 줄어도 필요 호수를 늘리기 때문이다.
+    ⚠️ 안분 잣대는 반드시 **공급과 독립**이어야 한다 — 'HUB 누적준공(재고) 비중으로
+    안분'을 시험했다가 예측력이 0.142 -> 0.084로 무너졌다(많이 지은 존에 수요도 크게
+    배정돼 과잉/부족 차이가 지워지는 내생성). 세대수는 인구와 마찬가지로 이 함정이 없다.
+    ⚠️ pop은 화면 표시('인구 N명')와 편입 임계(MIN_POP)에 계속 쓰이므로 지우지 않는다."""
+    return _lz_region('DT_1B040B3', 'T1')
+
+
 def _lz_pop():
+    return _lz_region('DT_1B040A3', 'T20')
+
+
+def _lz_region(tbl, itm):
+    """KOSIS 주민등록 계열 표 -> (시도 dict, 시군구 dict). 두 표의 지역 계층이 동일해
+    같은 파서를 쓴다. 광역시 소속 구는 시도 단위로 처리하므로 sgg에 넣지 않는다."""
     url = API + '?' + urllib.parse.urlencode(dict(method='getList', apiKey=KEY, format='json', jsonVD='Y',
-        orgId='101', tblId='DT_1B040A3', objL1='ALL', itmId='T20', prdSe='M', newEstPrdCnt='1'))
+        orgId='101', tblId=tbl, objL1='ALL', itmId=itm, prdSe='M', newEstPrdCnt='1'))
     sido, sgg, cur = {}, {}, None
     for r in http_json(url):
         nm = (r.get('C1_NM') or '').strip()
@@ -1400,6 +1418,7 @@ def fetch_livezone():
     import collections, datetime
     assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
     sido_pop, sgg_pop = _lz_pop()
+    sido_hh, sgg_hh = _lz_hh()
     m2z = {m: z for z, mm in LIVEZONE.items() for m in mm}
     def gg_zone(sg):
         """경기 시군 → 생활권명.
@@ -1420,13 +1439,19 @@ def fetch_livezone():
         if (sd, sg) in m2z: return m2z[(sd, sg)]
         if sd == '경기': return gg_zone(sg)
         return None
-    def zone_pop(z):
+    def zone_val(z, sido, sgg):
         if z in LIVEZONE:
-            return sum(sido_pop.get(m[0], 0) if m[1] == '*' else sgg_pop.get(m, 0) for m in LIVEZONE[z])
+            return sum(sido.get(m[0], 0) if m[1] == '*' else sgg.get(m, 0) for m in LIVEZONE[z])
         nm = z[:-1]
         if nm.startswith('경기'):        # 이름 충돌로 접두어를 붙인 경우
             nm = nm[2:]
-        return sum(sgg_pop.get(('경기', nm + s), 0) for s in ('시', '군'))
+        return sum(sgg.get(('경기', nm + s), 0) for s in ('시', '군'))
+
+    def zone_pop(z):
+        return zone_val(z, sido_pop, sgg_pop)
+
+    def zone_hh(z):
+        return zone_val(z, sido_hh, sgg_hh)
     supply = collections.defaultdict(int)
     detail = collections.defaultdict(lambda: collections.defaultdict(int))
     qset = collections.defaultdict(set)
@@ -1464,9 +1489,10 @@ def fetch_livezone():
     # _fetch_chung()은 나중에 쓸 수 있게 남겨두되 여기서 호출하지 않는다.
     def mk(z, region):
         pop = zone_pop(z); s = supply.get(z, 0); qs = sorted(qset.get(z, []))
+        hh = zone_hh(z)
         span = ((qs[-1][0] - qs[0][0]) * 4 + (qs[-1][1] - qs[0][1]) + 1) if qs else 0
         det = sorted(detail[z].items(), key=lambda x: -x[1])
-        return {'z': z, 'region': region, 'psido': LZ_PSIDO.get(z, '수도권'), 'pop': pop, 'supply': s,
+        return {'z': z, 'region': region, 'psido': LZ_PSIDO.get(z, '수도권'), 'pop': pop, 'hh': hh, 'supply': s,
                 'inten': round(s / (pop / 10000), 1) if pop else 0, 'span': span,
                 'q0': ('%dQ%d' % qs[0] if qs else ''), 'q1': ('%dQ%d' % qs[-1] if qs else ''),
                 'sgg': [[k, v] for k, v in det],
@@ -1485,8 +1511,10 @@ def fetch_livezone():
     td = datetime.date.today()
     spop = dict(sido_pop)
     spop['수도권'] = sido_pop.get('서울', 0) + sido_pop.get('인천', 0) + sido_pop.get('경기', 0)
+    shh = dict(sido_hh)
+    shh['수도권'] = sido_hh.get('서울', 0) + sido_hh.get('인천', 0) + sido_hh.get('경기', 0)
     return {'prd': '%d.%02d' % (td.year, td.month), 'unit': '만명당 예정세대(향후 전량)',
-            'sidopop': spop, 'zones': zones}
+            'sidopop': spop, 'sidohh': shh, 'zones': zones}
 
 
 def main():

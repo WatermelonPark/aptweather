@@ -109,6 +109,10 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
     J = (sts.get('전세가율') or {}).get('series') or {}
     DM = (sts.get('주택멸실') or {}).get('series') or {}
     SP = LZ.get('sidopop') or {}
+    # 적정물량 안분 잣대 — 2026-07-31 인구 -> 주민등록세대수. 아파트 수요는 사람 수보다
+    # 가구 수에 가깝고 1인가구 증가를 반영한다. 옛 data.js(hh 없음)에서도 죽지 않게
+    # pop으로 폴백한다. ⚠️ index.html scCalc()에 같은 폴백이 있어야 한다(이중구현 미러).
+    SH = LZ.get('sidohh') or {}
     act = [r for r in O['rows'] if not r.get('e')]
     ph = P['rows'][-2:]
     today = datetime.date.today()
@@ -133,7 +137,8 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         refq = (O.get('ref') or {}).get(ps) or (sum(band) / 2 if band else None)
         if not refq:
             continue
-        share = min(1.0, z['pop'] / (SP.get(ps) or z['pop'] or 1))
+        base, tot = (z.get('hh'), SH.get(ps)) if (z.get('hh') and SH.get(ps)) else (z['pop'], SP.get(ps))
+        share = min(1.0, base / (tot or base or 1))
         dY = last_of(DM, ps); dQ = dY / 4.0
         fsup, H = fut_supply(z)
         need = refq * H * share
