@@ -154,6 +154,11 @@
     </div>
   </div></header>
 
+  <section class="home-sec" id="sec-myzone"><div class="wrap">
+    <h2 id="mz-title">우리 동네 아파트, 앞으로 모자랄까 남을까</h2>
+    <div id="mz-body"></div>
+  </div></section>
+
   <section class="home-sec" id="sec-score"><div class="wrap">
     <h2>전국 한눈에 — 어디가 모자라고 어디가 남나</h2>
     <div class="sc-key">
@@ -2448,6 +2453,69 @@ function renderScoreSec(){
   }).join('');
   window.__SCZ=zones;
 }
+/* ── 내 지역 (localStorage: agong_myzone — 존 페이지 저장 버튼과 스키마 공유) ── */
+const MYZONE_KEY='agong_myzone';
+const MZ_TITLE_DEFAULT='우리 동네 아파트, 앞으로 모자랄까 남을까';
+function mzGet(){try{const d=JSON.parse(localStorage.getItem(MYZONE_KEY));return (d&&d.z)?d:null;}catch(e){return null;}}
+function mzSet(d){try{localStorage.setItem(MYZONE_KEY,JSON.stringify(d));}catch(e){}}
+function mzClear(){try{localStorage.removeItem(MYZONE_KEY);}catch(e){}}
+function renderMyZone(){
+  const body=document.getElementById('mz-body'),title=document.getElementById('mz-title');
+  const zones=window.__SCZ;
+  if(!body||!zones||!zones.length){const s=document.getElementById('sec-myzone');if(s)s.style.display='none';return;}
+  const saved=mzGet();
+  const row=saved?zones.find(z=>z.z===saved.z):null;
+  if(saved&&!row){mzClear();}          // 생활권 개편 등으로 사라진 존 → 첫 방문 상태
+  if(row){
+    const rank=zones.slice().sort((a,b)=>b.tot-a.tot).findIndex(z=>z.z===row.z)+1;
+    const g=row.gr;
+    let diff='';
+    const justSaved=!!window.__MZ_JUST;   // 첫 저장 직후엔 last===방금값이라 diff가 무의미 — 억제
+    if(!justSaved&&saved.last&&typeof saved.last.tot==='number'&&saved.last.seen!==undefined){
+      const d=Math.round(row.tot-saved.last.tot);
+      if(d!==0)diff='<span class="mz-diff" style="color:'+(d>0?'#a93226':'#1a5276')+'">지난 방문보다 '
+        +(d>0?'부족 +':'부족 −')+Math.abs(d).toLocaleString()+'세대 '+(d>0?'▲':'▼')+'</span>';
+      else diff='<span class="mz-diff" style="color:var(--muted)">지난 방문과 같음</span>';
+    }
+    title.textContent='내 지역';
+    body.innerHTML='<div class="mz-card">'
+      +'<div class="mz-head"><b>'+row.z+'</b>'
+      +'<span class="sc-tier '+g.k+'">'+g.label+'</span></div>'
+      +'<p class="mz-desc">'+g.desc+'</p>'
+      +'<p class="mz-meta">순위 '+rank+'위 / '+zones.length+'곳 · 공급 기준 · 가격 예측 아님 '+diff+'</p>'
+      +'<div class="mz-actions"><a class="home-cta" href="/zone/'+encodeURIComponent(row.z)+'/">자세히 보기</a>'
+      +'<button class="mz-change" onclick="mzClear();renderMyZone();track(\'myzone\',{a:\'change\'})">지역 바꾸기</button></div>'
+      +'</div>';
+    window.__MZ_JUST=0;
+    mzSet({z:row.z,savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
+           last:{tot:Math.round(row.tot),rank:rank,grade:g.label,seen:new Date().toISOString().slice(0,10)}});
+    return;
+  }
+  // 첫 방문 / 지역 바꾸기 / 폴백: 시도 → 생활권 2단 선택기 + 전국 요약 한 줄
+  title.textContent=MZ_TITLE_DEFAULT;
+  const lack=zones.filter(z=>z.gr.k==='g4'||z.gr.k==='g3').length;
+  const byps={};zones.forEach(z=>{(byps[z.psido]=byps[z.psido]||[]).push(z);});
+  const sidos=Object.keys(byps);
+  body.innerHTML='<p class="mz-sum">지금 전국 '+zones.length+'곳 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
+    +'<div class="mz-sido">'+sidos.map(s=>'<button class="mz-chip" onclick="mzPick(this,\''+s+'\')">'+s+'</button>').join('')+'</div>'
+    +'<div class="mz-zones" id="mz-zones"></div>';
+}
+function mzPick(btn,ps){
+  document.querySelectorAll('.mz-sido .mz-chip').forEach(b=>b.classList.toggle('on',b===btn));
+  const zones=(window.__SCZ||[]).filter(z=>z.psido===ps);
+  document.getElementById('mz-zones').innerHTML=zones.map(z=>
+    '<button class="mz-chip zone" onclick="mzSave(\''+z.z+'\')">'+z.z+' <span class="sc-tier '+z.gr.k+'">'+z.gr.label+'</span></button>').join('');
+  track('myzone',{a:'sido',v:ps});
+}
+function mzSave(nm){
+  const zones=window.__SCZ||[],row=zones.find(z=>z.z===nm);
+  if(!row)return;
+  const rank=zones.slice().sort((a,b)=>b.tot-a.tot).findIndex(z=>z.z===nm)+1;
+  mzSet({z:nm,savedAt:new Date().toISOString().slice(0,10),
+         last:{tot:Math.round(row.tot),rank:rank,grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
+  window.__MZ_JUST=1;
+  renderMyZone();track('myzone',{a:'save',v:nm});
+}
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
   const B=ADV.bubble,J=STATS['전세가율'];
@@ -2500,6 +2568,7 @@ function renderBubbleSec(){
 /* 모든 선언(QUIZSETS·curSet 등) 이후에 초기 라우팅 실행 — TDZ 방지 */
 renderHeroMap();    // 히어로 배경 = 이번 주 전국 시군구 지도
 renderScoreSec();   // 홈 섹션 — 뷰 진입과 무관하게 로드 시 렌더
+renderMyZone();     // 내 지역 카드 — __SCZ 설정 이후여야 함
 CHALLENGE=readChallenge();
 if(CHALLENGE){
   track('challenge_accepted',{quiz_type:CHALLENGE.set,friend_score:CHALLENGE.score,
