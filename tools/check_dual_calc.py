@@ -45,6 +45,8 @@ def js_side():
     qkey = grab(r'function _qkey\(i\)\{[^}]*\}', '_qkey')
     conf = grab(r'function _conf\(k\)\{[^}]*\}', '_conf')
     anchor = grab(r'var ANCHOR=[^;\n]*;', 'ANCHOR')
+    # 재고 하한(부족 누적 상한). 함수 밖 상수라 여기서 같이 떼와야 ReferenceError가 안 난다.
+    cap = grab(r'var DEFICIT_CAP=[^;\n]*;', 'DEFICIT_CAP')
     rsh = grab(r'function runningShortage\([^)]*\)\{.*?\n\}', 'runningShortage')
     data = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()
 
@@ -55,9 +57,10 @@ def js_side():
 %s
 %s
 %s
+%s
 const out = scCalc().map(z => ({z: z.z, dA: z.dA, dB: z.dB, dC: z.dC, tot: z.tot}));
 console.log(JSON.stringify(out));
-""" % (data, qkey, conf, anchor, rsh, fn)
+""" % (data, qkey, conf, anchor, cap, rsh, fn)
     with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False, encoding='utf-8') as f:
         f.write(src)
         path = f.name

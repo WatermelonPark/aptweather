@@ -2303,9 +2303,13 @@ function scTier(v){
 function _qkey(i){return Math.floor(i/4)+'Q'+(i%4+1);}
 function _conf(k){return Math.max(0,1-((k-1)/4)*0.2);}
 var ANCHOR=2010*4;
+/* 재고 하한 = -DEFICIT_CAP*refq. 부족도 4년치까지 쌓인다(옛 max(0,·)는 만성부족 존의
+   재고를 늘 0에 붙여 정보를 죽였다 — 서울권 재고>0 분기 6%). 근거는 tools/make_zone_pages.py
+   running_shortage() 주석. ⚠️ 두 구현은 반드시 같이 고친다(max abs diff 0.0). */
+var DEFICIT_CAP=16;
 function runningShortage(done,sched,demol,refq,curQ,horizon){
-  horizon=horizon||16; var I=0;
-  for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.max(0, I+((done[qk])||0)-((demol[qk])||0)-refq); }
+  horizon=horizon||16; var I=0, lo=-DEFICIT_CAP*refq;
+  for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.max(lo, I+((done[qk])||0)-((demol[qk])||0)-refq); }
   var demandSum=0, supplyWeighted=0;
   for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
   return (demandSum-supplyWeighted)-I;

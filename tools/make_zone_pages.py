@@ -46,13 +46,22 @@ def _conf(k):
 
 ANCHOR = 2010 * 4  # 2010Q1
 FUT_HORIZON = 16  # 4년(기준표 3년룰 + 준공예정 실측 ~4년); conf가 3~4년차를 낮게 가중
+DEFICIT_CAP = 16  # 부족(음수 재고) 누적 상한 = 적정물량 몇 분기치까지 쌓이게 둘지(4년)
 
 
 def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=True):
     """준공 기반 러닝재고 순부족.
 
-    I_now = 2010Q1부터 현재분기까지 매 분기 max(0, 재고+준공-멸실-refq)로 굴린
-    재고(음수 불가). 순공급=준공−멸실(기준표: 재건축 준공은 순공급을 부풀린다 —
+    I_now = 2010Q1부터 현재분기까지 매 분기 max(-DEFICIT_CAP*refq, 재고+준공-멸실-refq)로
+    굴린 재고. 음수(=부족)도 쌓이되 적정물량 DEFICIT_CAP분기치(4년)가 상한이다.
+    ⚠️ 원래는 max(0, ·)였는데, 그러면 만성부족 존은 재고가 늘 0에 붙어 정보를 잃는다
+    (서울권은 2010Q1 이후 재고>0인 분기가 6%뿐이었다 — "이번 분기부터 모자란 곳"과
+    "16년째 모자란 곳"이 똑같이 0). 2026-07-31 검증: 44개 생활권 × 2010~ 패널에서
+    금리 잔잔한 구간만 뽑아 재고→향후 2년 가격을 보면 예측력이 0.030(p=0.31, 무의미)
+    -> 0.142(p=0.007)로 오른다. 상한을 더 늘리면 8년에서 0.179로 포화하지만 서울권
+    순부족이 78만세대(4년 수요의 2.9배)까지 터져 쓸 수 없어 4년으로 정했다(순위 변동
+    평균 1.3계단). 근거·재현: tools/zone_floor_cap.py, memory/agongmap-index-calibration.md
+    순공급=준공−멸실(기준표: 재건축 준공은 순공급을 부풀린다 —
     서울 인허가 100 = 멸실 70 + 순증 30) — 철거(멸실) 시점에 재고를 먼저 깎고
     준공 시점에 다시 채우므로, 재건축 진행중(철거~준공 사이)엔 재고가 낮게
     잡혀 그 구간의 단기 공급부족이 드러난다. demol은 done과 동일하게 이미
@@ -67,9 +76,10 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=
     양수=부족(발산 막대 오른쪽), 음수=과잉.
     """
     I = 0.0
+    lo = -DEFICIT_CAP * refq
     for idx in range(ANCHOR, cur_q + 1):
         qk = _qkey(idx)
-        I = max(0.0, I + done.get(qk, 0) - demol.get(qk, 0) - refq)
+        I = max(lo, I + done.get(qk, 0) - demol.get(qk, 0) - refq)
     I_now = I
     fut_weighted = 0.0
     demand_sum = 0.0
