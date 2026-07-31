@@ -103,6 +103,112 @@ BASIC_CONF = {
 BASIC_REGMAP = {'지방소계': '지방', '총계': '전국', '수도권소계': '수도권'}   # KOSIS 지역명 → STATS 지역명
 BASIC_MONTHS = 8                      # 최근 8개월 조회(잠정치 소급 정정 커버)
 
+# ---- 분양·미분양 (기본통계 공급 파이프라인 보강) --------------------------
+# 기본통계 공급 구간이 인허가→착공→준공이라, 실제 단계(인허가→착공→분양→준공)의
+# 중간이 비어 있었다. 분양·미분양을 나란히 넣어 그 고리를 잇는다.
+# ⚠️ 미분양은 '결과값'이라 아공맵 순위 산식(원인값=인허가)에는 넣지 않는다.
+#    분양물량을 함께 넣는 이유: 분양이 없으면 미분양도 자동으로 줄어든다.
+#    분모 없이 미분양만 보면 그 감소를 '수요 회복'으로 오독한다.
+# 준공후 미분양은 월간·시도별 공개 소스가 없어(KOSIS DT_MLTM_2086은 전국·연간) 제외.
+SUPPLY_CONF = {
+    '분양':   {'tbl': 'T244633134461863', 'unit': '세대 (월별)',
+               'source': '한국부동산원 R-ONE 신규 분양세대수'},
+    '미분양': {'tbl': 'T237973129847263', 'unit': '호 (월별)',
+               'source': '한국부동산원 R-ONE 미분양주택현황'},
+}
+SUPPLY_MONTHS = 8          # 최근 8개월(소급 정정 커버) — BASIC_MONTHS와 같은 기조
+SUPPLY_SIDO = [r for r in WEEKLY_REGIONS if r not in ('전국', '수도권', '지방')]
+
+
+def _supply_region(full):
+    """R-ONE CLS_FULLNM → STATS 지역명. 두 표의 계층이 서로 다르다.
+       분양표:  '전국' · '수도권' · '수도권>서울' · '기타지방>강원'
+       미분양표: '강원>계' (시도 소계가 '계')
+       '기타지방'·'5대광역시 및 세종특별자치시' 같은 중간 집계행은 STATS에
+       대응 지역이 없어 버린다(전국/수도권/지방은 아래 _supply_rollup이 만든다)."""
+    parts = [p.strip() for p in (full or '').split('>') if p.strip()]
+    if not parts:
+        return None
+    last = parts[-1]
+    if last == '계':
+        return parts[0] if len(parts) > 1 else None
+    if last in ('전국', '수도권'):
+        return last
+    if len(parts) == 1:
+        return None
+    return last
+
+
+def _supply_rollup(fetched, regions):
+    """미분양표는 시도만 주므로 전국/수도권/지방 합계를 직접 만든다.
+       분양표처럼 원천이 이미 주는 경우엔 덮어쓰지 않는다."""
+    for vals in fetched.values():
+        sido = {k: v for k, v in vals.items() if k in SUPPLY_SIDO}
+        if len(sido) < len(SUPPLY_SIDO) - 2:     # 결측이 많으면 합계를 만들지 않는다
+            continue
+        if '전국' in regions and '전국' not in vals:
+            vals['전국'] = sum(sido.values())
+        cap = [vals.get(x) for x in ('서울', '경기', '인천')]
+        if '수도권' in regions and '수도권' not in vals and all(c is not None for c in cap):
+            vals['수도권'] = sum(cap)
+        if ('지방' in regions and '지방' not in vals
+                and '전국' in vals and '수도권' in vals):
+            vals['지방'] = vals['전국'] - vals['수도권']
+
+
+def _fetch_supply_one(cfg, regions, months=None):
+    """R-ONE 월간표에서 최근 months개월치 {(y,m):{region:val}}.
+       months=0이면 전량(최초 시딩용 — 미분양은 2000-12부터 26년치가 있다)."""
+    months = SUPPLY_MONTHS if months is None else months
+    # 미분양은 시군구까지 담겨 월당 ~246행, 분양은 ~21행. 넉넉히 받아 뒤에서 자른다.
+    need = 10 ** 9 if months == 0 else max((months + 2) * 260, 3000)
+    rows = _rone_recent_rows(cfg['tbl'], need, cycle='MM')
+    out = {}
+    for r in rows:
+        t = (r.get('WRTTIME_IDTFR_ID') or '').strip()
+        if len(t) != 6 or not t.isdigit():
+            continue
+        reg = _supply_region(r.get('CLS_FULLNM'))
+        if reg not in regions:
+            continue
+        try:
+            v = float(r['DTA_VAL'])
+        except (TypeError, ValueError, KeyError):
+            continue
+        out.setdefault((int(t[:4]), int(t[4:6])), {})[reg] = v
+    keys = sorted(out)
+    return {k: out[k] for k in (keys if months == 0 else keys[-months:])}
+
+
+def update_supply(stats, months=None):
+    changed = []
+    base = list(((stats.get('준공') or {}).get('series') or {}).keys()) or list(WEEKLY_REGIONS)
+    for name, cfg in SUPPLY_CONF.items():
+        try:
+            # 시딩(months=0)은 계열을 새로 만든다. 증분 8개월이 이미 들어간 계열에
+            # 과거 전량을 merge하면 merge_basic이 뒤에 append만 하므로
+            # dates가 '2025.11 ~ 2025.10'처럼 뒤섞인다(정렬하지 않는 함수다).
+            if months == 0:
+                stats.pop(name, None)
+            if name not in stats:
+                stats[name] = {'dates': [], 'unit': cfg['unit'],
+                               'series': {r: [] for r in base}, 'source': cfg['source']}
+            D = stats[name]
+            regions = set(D['series'])
+            fetched = _fetch_supply_one(cfg, regions, months)
+            if not fetched:
+                print('supply %s: 빈 응답 — 건너뜀' % name)
+                continue
+            _supply_rollup(fetched, regions)
+            n = merge_basic(D, fetched)
+            if n:
+                changed.append('%s(%d)' % (name, n))
+            time.sleep(0.2)
+        except Exception as e:
+            print('supply %s skip: %s' % (name, e))
+    return changed
+
+
 # ---- 연간 계열 자동 갱신 --------------------------------------------------
 # 연 1회 발표라 수동 시딩으로 두었더니 아무도 새 연도를 가져오지 않아 뒤처졌다
 # (2026-07-30 감사에서 노후주택30년이 2025 미반영으로 발견). 배치에 편입한다.
@@ -921,6 +1027,10 @@ def update_basic():
     except Exception as e:
         print('size skip:', e)
     try:
+        changed += update_supply(stats)
+    except Exception as e:
+        print('supply skip:', e)
+    try:
         changed += update_annual(stats)
     except Exception as e:
         print('annual skip:', e)
@@ -1402,12 +1512,23 @@ def main():
         print('bubble seeded: prd %s, loan %s, %d regions' % (
             adv['bubble']['prd'], adv['bubble']['loan'], len(adv['bubble']['regions'])))
         return
+    if arg == '--seed-supply':   # 분양·미분양 장기 시계열 최초 시딩(1회성, R-ONE 전량)
+        st = read_current_stats()
+        ch = update_supply(st, months=0)
+        if ch:
+            write_stats(st)
+        print('supply seeded:', ', '.join(ch) or '변경 없음')
+        for k in SUPPLY_CONF:
+            D = st.get(k) or {}
+            if D.get('dates'):
+                print('  %s: %s ~ %s (%d개월)' % (k, D['dates'][0], D['dates'][-1], len(D['dates'])))
+        return
     if arg == '--seed-livezone':   # 생활권 입주예정 최초 시딩 (KOSIS+DATAGO 필요)
         adv['livezone'] = fetch_livezone()
         write_adv(adv)
         print('livezone seeded: %d zones, prd %s' % (len(adv['livezone']['zones']), adv['livezone']['prd']))
         return
-    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-livezone | --dry-run | --discover <kw>'
+    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-livezone | --seed-supply | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
     failed = []     # 어떤 지표 fetch가 죽었는지 집계 — 전량 실패를 '변경 없음'과 구분한다
