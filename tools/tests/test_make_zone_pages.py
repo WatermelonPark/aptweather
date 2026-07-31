@@ -92,9 +92,13 @@ def _fake_row(nm='테스트권', units_field=None, subs=None):
          'sgg': [('테스트시', 500)], 'q0': '', 'q1': '', 'span': 0}
     if units_field is not None:
         z['units'] = units_field
+    need4 = 1000.0
+    fsupw = 900.0
+    inow = need4 - fsupw - 130   # tot == need4 - fsupw - inow 항등식 유지
     r = dict(z=z, ps='충북', share=0.1, need=1000, dA=100, dB=10, dC=20, tot=130,
              fsup=900, fq=4, flag=None, lo=None, hi=None, loan=None, pv=None, plo=None,
-             dY=0, refq=1000, band=None, inv_path=False, tot_fallback=130)
+             dY=0, refq=1000, band=None, inv_path=False, tot_fallback=130,
+             need4=need4, inow=inow, fsupw=fsupw, gr=M.grade(130, need4))
     if subs is not None:
         r['subs'] = subs
     return r

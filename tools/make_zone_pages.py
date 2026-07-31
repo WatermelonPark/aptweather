@@ -464,13 +464,24 @@ details.fold .dbody p{font-size:14px}
 .utable2 .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .utable2 tr.far td{color:var(--muted)}
 .utable2 .hint{font-size:11px;color:#a93226}
-@media(max-width:560px){.utable2{font-size:12.5px}}"""
+@media(max-width:560px){.utable2{font-size:12.5px}}
+.zg-badge{display:inline-block;padding:5px 12px;font-weight:700;font-size:14px;border-radius:2px}
+.zg-cap{color:var(--muted);font-size:12px;margin:6px 0 0}
+.zg-save{margin-top:12px;padding:9px 18px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:600}
+.why3 .w-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.why3 .w-lab i{display:block;font-style:normal;color:var(--muted);font-size:11.5px}
+.why3 .w-sum{padding:11px 0 0;font-weight:700}
+.near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.n-card{border:1px solid var(--line);padding:10px 12px;display:block}
+.n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
+.n-card i{font-style:normal;color:var(--muted);font-size:12px}
+.q-col.q-max .q-bar{outline:2px solid currentColor}"""
 
 
 def build_page(r, allrows, prd, today, punits=None):
     z = r['z']; nm = z['z']; ps = r['ps']
-    tname, tcol = tier(r['tot'])
-    lack = r['tot'] > 0
+    gr = r['gr']
+    tname, tcol = gr['label'], gr['color']
     disp = signed(r['tot'])
     sgg = z.get('sgg') or []
     subs = r.get('subs') or []
@@ -484,31 +495,49 @@ def build_page(r, allrows, prd, today, punits=None):
         members = ' · '.join('%s %s세대' % (s[0], num(s[1])) for s in sgg) if sgg else '입주예정 단지 없음'
         sublist = ''
         sgg_names = [s[0] for s in sgg]
-    # 서술
-    head_line = ('%s은 앞으로 아파트가 <b>모자랄</b> 쪽입니다.' % nm) if lack else \
-                ('%s은 앞으로 아파트가 <b>남을</b> 쪽입니다.' % nm)
+    rank_no = 0
     if subs:
         ranktxt = '수도권 %d개 생활권 합계' % len(subs)
     else:
         rk = [i for i, x in enumerate(allrows, 1) if x['z']['z'] == nm]
         ranktxt = ('생활권 %d곳 중 %d위' % (len(allrows), rk[0])) if rk else ''
+        rank_no = rk[0] if rk else 0
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
-    # ── 인포그래픽: 게이지 (필요한 집 vs 들어올 집, 미래 창 기준) ──
-    mxg = max(r['need'], r['fsup']) or 1
-    gap_txt = ('이 기간에만 <b>%s세대 부족</b>' % num(r['dA'])) if r['dA'] > 0 else \
-              ('이 기간에는 <b>%s세대 여유</b>' % num(-r['dA']))
-    gauge_html = (
-        '<div class="gauge">'
-        '<div class="g-row"><div class="g-lab"><span>필요한 집</span><b>%s</b></div>'
-        '<div class="g-bar"><div class="g-fill" style="width:%.1f%%;background:#9aa8ae"></div></div></div>'
-        '<div class="g-row"><div class="g-lab"><span>들어올 집</span><b>%s</b></div>'
-        '<div class="g-bar"><div class="g-fill" style="width:%.1f%%;background:%s"></div></div></div>'
-        '<div class="g-gap" style="color:%s">%s → %s</div>'
-        '</div>' % (
-            num(r['need']), r['need'] / mxg * 100,
-            num(r['fsup']), max(r['fsup'] / mxg * 100, 0.8), tcol,
-            tcol, head_line, gap_txt))
+    # ── ① 판정 히어로 — 5등급 배지 + 자연어 판정문 (2026-07-31 UX 재기획) ──
+    save_btn = '' if subs else '<button class="zg-save" onclick="agongSaveZone()">내 지역으로 저장</button>\n'
+    hero_html = (
+        '<span class="zg-badge" style="background:%s1a;color:%s">%s</span>\n'
+        '<h1>%s, %s</h1>\n'
+        '<p class="zg-cap">공급 기준 · 가격 예측 아님 · %s 데이터 · %s</p>\n'
+        '%s'
+        % (gr['color'], gr['color'], gr['label'], nm, gr['desc'], prd, ranktxt, save_btn))
+
+    # ── ② 왜 이 판정인가 — 근거 3줄. 세 줄의 합이 히어로 순부족과 정확히 일치
+    # (need4/inow/fsupw만 사용 — tot == need4 - fsupw - inow 항등식이 Task 1
+    # 테스트로 보장된다). 여유 존(tot<0)은 "여유"로 문구 분기.
+    backlog = -r['inow']          # 양수면 '밀린 것', 음수면 '쌓인 재고'
+    b_lab, b_sub = ('그동안 밀린 것', '2010년부터 못 지은 만큼 · 최대 4년치') if backlog >= 0 \
+              else ('그동안 쌓인 것', '2010년부터 남은 만큼 · 재고')
+    if r['tot'] < 0:
+        sum_line = '여유 %s세대' % num(-r['tot'])
+    else:
+        sum_line = ('순부족 %s세대 = 필요 %s 밀림 − 들어올 것'
+                     % (num(r['tot']), '+' if backlog >= 0 else '−'))
+    why_html = (
+        '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
+        '<div class="why3">'
+        '<div class="w-row"><span class="w-lab">필요한 집<i>%s 세대의 %d%% = %s 몫 · 4년치 · 추정</i></span><b>%s</b></div>'
+        '<div class="w-row"><span class="w-lab">%s<i>%s · 실측</i></span><b>%s%s</b></div>'
+        '<div class="w-row"><span class="w-lab">들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−%s</b></div>'
+        '<div class="w-sum" style="color:%s">%s</div>'
+        '</div>'
+        '<p class="note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p>'
+        '</div></section>' % (
+            ps, round(r['share'] * 100), nm, num(r['need4']),
+            b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
+            num(r['fsupw']),
+            gr['color'], sum_line))
 
     # ── 인포그래픽: 분기별 입주 미니차트 (byq — 수도권은 소속 합산) ──
     byq = dict(z.get('byq') or {})
@@ -526,20 +555,34 @@ def build_page(r, allrows, prd, today, punits=None):
         m = _qre.match(q)
         return int(m.group(1)) * 4 + int(m.group(2)) - 1 if m else -1
     qs = sorted((q for q in byq if byq[q] > 0 and qkey(q) > _curq), key=qkey)
+    def qlabel(q):
+        return q[2:4] + 'Q' + q[5]
     if qs:
         mxq = max(byq[q] for q in qs) or 1
+        peakq = max(qs, key=lambda q: byq[q])
         def qfmt(v):
             return ('%.1f만' % (v / 10000)) if v >= 10000 else format(v, ',')
         cols = ''.join(
-            '<div class="q-col"><span class="q-v">%s</span>'
+            '<div class="q-col%s"><span class="q-v">%s</span>'
             '<div class="q-bar" style="height:%.0f%%"></div>'
             '<span class="q-l">%s</span></div>' % (
-                qfmt(byq[q]), max(byq[q] / mxq * 72, 3), q[2:4] + 'Q' + q[5])
+                ' q-max' if q == peakq else '',
+                qfmt(byq[q]), max(byq[q] / mxq * 72, 3), qlabel(q))
             for q in qs)
         qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대)</div>'
                        '<div class="qchart">%s</div></div>' % cols)
+        # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
+        qcap = ('가장 몰리는 분기는 %s — 그래도 필요량에는 못 미칩니다' % qlabel(peakq)) if r['tot'] > 0 else \
+               ('입주가 가장 몰리는 %s 전후가 세입자·매수자에게 유리합니다' % qlabel(peakq))
     else:
         qchart_html = '<div class="qwrap"><div class="qtitle">입주 예정 단지 없음</div></div>'
+        qcap = ''
+    timeline_html = (
+        '<section><div class="wrap"><h2>언제 들어오나</h2>'
+        '<p class="note" style="margin-bottom:9px">앞으로 %s분기 · 입주예정 단지 실측</p>'
+        '%s%s</div></section>' % (
+            r['fq'], qchart_html,
+            ('<p class="note" style="margin-top:9px">%s</p>' % qcap) if qcap else ''))
 
     # ── 인포그래픽: 기여 3카드 (가중 반영, 합계 = tot = 히어로 숫자) ──
     def tcard(lab, sub_, contrib, w):
@@ -560,20 +603,15 @@ def build_page(r, allrows, prd, today, punits=None):
     # 한 줄 요약으로 바꾼다(폴백 존은 기존 그대로).
     inv = bool(r.get('inv_path'))
     if inv:
-        breakdown_sec_html = (
-            '<section><div class="wrap">\n'
-            '  <h2>이 숫자는 어디서 왔나</h2>\n'
-            '  <p class="note">적정 공급량 대비 <b>준공(입주 완료)</b>·<b>준공예정</b> 물량 '
-            '실측을 누적한 러닝재고 기준 순부족입니다.</p>\n'
-            '</div></section>\n')
+        origin_body_html = (
+            '<p class="note">적정 공급량 대비 <b>준공(입주 완료)</b>·<b>준공예정</b> 물량 '
+            '실측을 누적한 러닝재고 기준 순부족입니다.</p>')
     else:
-        breakdown_sec_html = (
-            '<section><div class="wrap">\n'
-            '  <h2>이 숫자는 어디서 왔나</h2>\n'
-            '  %s\n'
-            '  <p class="note" style="margin-top:9px">세 값을 더한 것이 맨 위의 '
-            '<b style="color:%s">%s세대</b>입니다. 음수(−)는 부족, 양수(+)는 여유.</p>\n'
-            '</div></section>\n' % (trio_html, tcol, disp))
+        origin_body_html = (
+            '%s\n'
+            '<p class="note" style="margin-top:9px">세 값을 더한 것이 맨 위의 '
+            '<b style="color:%s">%s세대</b>입니다. 음수(−)는 부족, 양수(+)는 여유.</p>'
+            % (trio_html, tcol, disp))
 
     # ── 입주 예정 단지 목록 (아실 스타일) — 미래 분기만, 차트·게이지와 동일 규칙 ──
     uraw = list(z.get('units') or [])
@@ -630,8 +668,23 @@ def build_page(r, allrows, prd, today, punits=None):
             agg_done.sort(key=lambda u: u[2] or '0000-00', reverse=True)
             zone_units = {'sched': agg_sched, 'done': agg_done}
     unitsec2 = render_units_2sec(zone_units, _now)
+    hub_units = bool(unitsec2)
     if unitsec2:
         unitsec = unitsec2
+
+    # ── ④ 어느 단지가 들어오나 — 기존 목록(들)을 <details> 하나로 감싸 기본 접힘
+    if unitsec:
+        if hub_units:
+            n_sched = len(zone_units.get('sched') or [])
+            n_done = len(zone_units.get('done') or [])
+        else:
+            n_sched, n_done = len(ufut), 0
+        units_sec_html = (
+            '<section><div class="wrap"><h2>어느 단지가 들어오나</h2>\n'
+            '<details class="z-units"><summary>단지별로 보기 (앞으로 %d곳 · 최근 %d곳)</summary>\n'
+            '%s\n</details>\n</div></section>\n' % (n_sched, n_done, unitsec))
+    else:
+        units_sec_html = ''
 
     rows_html = ''.join([
         '<tr><td class="lbl">앞으로 ' + str(r['fq']) + '분기, 입주 예정<br><span class="note">생활권 실측 · 가중 0.55</span></td>'
@@ -689,6 +742,68 @@ def build_page(r, allrows, prd, today, punits=None):
     nav += '<a href="/zone/수도권/">수도권</a>' if nm != '수도권' else ''
     nav += ''.join('<a href="/zone/%s/">%s</a>' % (x['z']['z'], x['z']['z'])
                    for x in allrows if x['z']['z'] != nm)
+
+    # ── ⑤ 이 숫자의 한계 — breakdown_sec_html/calc_detail_html(방법론) +
+    # 기존 구성/주의점 폴드를 details로 흡수(삭제 없이 재배치, 6섹션 구조 유지)
+    origin_fold_html = (
+        '<details class="fold"><summary>이 숫자는 어디서 왔나</summary><div class="dbody">\n'
+        '%s\n</div></details>' % origin_body_html)
+    calc_fold_html = (
+        '<details class="fold"><summary>어떻게 계산했나</summary><div class="dbody">\n'
+        '<p><b>적정물량</b>은 과거 이 지역의 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 기준선입니다.</p>\n'
+        '%s\n</div></details>' % calc_detail_html)
+    compo_fold_html = (
+        '<details class="fold"><summary>이 생활권은 어디를 묶었나</summary><div class="dbody">\n'
+        '<p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>\n'
+        '<div class="card"><b>%s 구성</b><span>%s</span></div>%s\n'
+        '<p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(%s).</p>\n'
+        '</div></details>' % (nm, members, sublist, span))
+    caution_fold_html = (
+        '<details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">\n'
+        '<div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>\n'
+        '<div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>\n'
+        '<div class="card"><b>절대량으로 비교한다</b><span>인구 대비 비율이 아니라 세대수 절대량이라, 시장이 큰 곳일수록 부족 규모도 크게 잡힙니다. 작은 지역의 가뭄은 순위에서 희석될 수 있습니다.</span></div>\n'
+        '</div></details>')
+    methodology_details_html = (
+        origin_fold_html + calc_fold_html + compo_fold_html + caution_fold_html +
+        '<a class="cta" href="/cycle/">사이클 리포트 읽기 →</a>')
+    limits_html = (
+        '<section><div class="wrap"><h2>이 숫자의 한계</h2>'
+        '<p class="note">가격을 맞히는 지표가 아닙니다. 2010년 이후 44개 생활권으로 직접 확인한 결과, '
+        '금리가 크게 움직인 시기에는 공급이 가격에 준 영향이 거의 보이지 않았습니다. '
+        '금리가 잔잔했던 시기에는 공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다. '
+        '이 페이지는 <b>이 동네 공급 사정</b>으로만 읽어주세요.</p>'
+        '%s</div></section>' % methodology_details_html)
+
+    # ── ⑥ 주변과 비교하면 — 같은 시도(ps) 생활권 미니 카드(최대 4곳) + 기존
+    # zlist(전체 생활권 nav, SEO 링크 자산 — 삭제 말고 그대로 재사용)
+    near = [x for x in allrows if x['ps'] == ps and x['z']['z'] != nm][:4]
+    near_html = (
+        '<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near">' +
+        ''.join('<a class="n-card" href="/zone/%s/"><b>%s</b>'
+                '<span class="n-g" style="color:%s">%s</span><i>%s</i></a>'
+                % (x['z']['z'], x['z']['z'], x['gr']['color'], x['gr']['label'],
+                   signed(x['tot']))
+                for x in near) +
+        '</div>'
+        '<div class="zlist" style="margin-top:14px">%s</div>'
+        '<a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>'
+        '</div></section>' % nav)
+
+    # ── 저장 CTA — 수도권 합계 페이지(subs 있음)는 저장 버튼을 렌더하지 않으므로
+    # 스크립트도 만들지 않는다.
+    if subs:
+        save_js = ''
+    else:
+        save_js = (
+            '<script>function agongSaveZone(){try{'
+            'localStorage.setItem("agong_myzone",JSON.stringify({z:%s,savedAt:%s,'
+            'last:{tot:%d,rank:%d,grade:%s,seen:%s}}));'
+            'var b=document.querySelector(".zg-save");if(b){b.textContent="저장됨 \\u2713 홈에서 확인";b.onclick=function(){location.href="/";};}'
+            '}catch(e){}}</script>'
+            % (json.dumps(nm, ensure_ascii=False), json.dumps(str(today)),
+               round(r['tot']), rank_no, json.dumps(gr['label'], ensure_ascii=False),
+               json.dumps(str(today))))
 
     title = '%s 아파트 공급 분석 — 입주예정·인허가로 본 %s | 아공맵' % (nm, tname)
     # sgg가 비면 '구성: —'가 그대로 메타 설명에 나갔다. odcloud는 물량이 없는
@@ -749,47 +864,15 @@ def build_page(r, allrows, prd, today, punits=None):
 
 <header><div class="wrap">
   <div class="chip">아공맵 생활권 리포트</div>
-  <h1>%(h1)s</h1>
-  <div class="big" style="color:%(tcol)s">%(disp)s세대</div>
-  <div class="bigsub">적정 공급량 대비 누적 순부족 · <b style="color:%(tcol)s">%(tname)s</b> · %(ranktxt)s · 기준 %(prd)s</div>
+  %(hero)s
 </div></header>
 
-<section><div class="wrap">
-  <h2>필요한 집 vs 들어올 집</h2>
-  <p class="note" style="margin-bottom:9px">앞으로 %(fq)s분기 · 입주예정 단지 실측</p>
-  %(gauge)s
-  %(qchart)s
-</div></section>
-
-%(unitsec)s
-%(breakdown_sec)s
+%(why)s
+%(timeline)s
+%(units)s
 %(flag)s
-
-<section><div class="wrap">
-  <h2>더 알아보기</h2>
-  <details class="fold"><summary>이 생활권은 어디를 묶었나</summary><div class="dbody">
-  <p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>
-  <div class="card"><b>%(nm)s 구성</b><span>%(members)s</span></div>%(sublist)s
-  <p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(%(span)s).</p>
-  </div></details>
-
-  <details class="fold"><summary>어떻게 계산했나</summary><div class="dbody">
-  <p><b>적정물량</b>은 과거 이 지역의 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 기준선입니다.</p>
-  %(calc_detail)s
-  </div></details>
-  <details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">
-  <div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>
-  <div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>
-  <div class="card"><b>절대량으로 비교한다</b><span>인구 대비 비율이 아니라 세대수 절대량이라, 시장이 큰 곳일수록 부족 규모도 크게 잡힙니다. 작은 지역의 가뭄은 순위에서 희석될 수 있습니다.</span></div>
-  </div></details>
-  <a class="cta" href="/cycle/">사이클 리포트 읽기 →</a>
-</div></section>
-
-<section><div class="wrap">
-  <h2>다른 생활권</h2>
-  <div class="zlist">%(nav)s</div>
-  <a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>
-</div></section>
+%(limits)s
+%(near)s
 
 <footer><div class="wrap">
   <b>아공맵</b> — 아파트 · 공급량 · 투자지도<br>
@@ -828,20 +911,15 @@ def build_page(r, allrows, prd, today, punits=None):
   });
 })();
 </script>
+%(save_js)s
 
 </body>
 </html>""" % dict(
         title=title, desc=desc, site=SITE, nm=nm, enc=quote(nm), tname=tname, tcol=tcol, disp=disp,
-        ranktxt=ranktxt, prd=prd, fq=r['fq'], head=head_line, need=num(r['need']), sup=num(r['fsup']),
-        calcsent=('인허가와 최근 입주까지 더하면 <b style="color:%s">%s세대</b>입니다.' % (tcol, disp)),
-        legend=('<p class="note">음수(−)는 부족, 양수(+)는 초과입니다.</p>'),
-        h1=('%s 아파트,<br>앞으로 얼마나 %s' % (nm, '모자랄까' if lack else '남을까')),
-        gauge=gauge_html, qchart=qchart_html, breakdown_sec=breakdown_sec_html, unitsec=unitsec,
-        supsent=('앞으로 %d개 분기에 필요한 <b>%s세대</b> 중 입주 예정은 <b>%s세대</b>입니다.' % (
-                     r['fq'], num(r['need']), num(r['fsup']))),
-        members=members, sublist=sublist, span=span, calc_detail=calc_detail_html, sharep=r['share'] * 100,
-        dYtxt=('이 시도의 최근 멸실은 연 %s호입니다.' % num(r['dY'])) if r['dY'] else '',
-        flag=flag_html, nav=nav, ld=json.dumps(ld, ensure_ascii=False),
+        ranktxt=ranktxt, prd=prd, fq=r['fq'],
+        hero=hero_html, why=why_html, timeline=timeline_html, units=units_sec_html,
+        flag=flag_html, limits=limits_html, near=near_html, save_js=save_js,
+        ld=json.dumps(ld, ensure_ascii=False),
         css=CSS)
 
 
