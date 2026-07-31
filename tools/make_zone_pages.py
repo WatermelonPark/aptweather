@@ -53,6 +53,24 @@ DEFICIT_CAP = 16  # 부족(음수 재고) 누적 상한 = 적정물량 몇 분�
 # 절대 컷 고정 — 상대평가는 전국이 과잉이어도 같은 수의 '부족'을 만들어 왜곡한다.
 # 색은 app.css .sc-tier 팔레트 재사용(새 색 도입 금지).
 # ⚠️ index.html의 scGrade()와 반드시 동치(이중구현 미러) — check_dual_calc가 대조한다.
+# ── 수요 풀(공급 영향권) — 2026-08-01 재정의 ────────────────────────────────
+# 생활권의 원 정의(사용자): 일상 이동권이 아니라 "공급에 따라 가격 방향이 같이
+# 정해지는 영향권". 잔차 가격 동조성(0.73~0.89) × 지리 인접(45km) × 12격자
+# 강건성(9/12+)으로 확정한 두 풀만 묶는다(tools/zone_pool_map.py, 2026-08-01).
+# 풀 적정 = 구성 존들의 기존 시도 배분액 합 → 풀 안에서 세대(hh) 비중으로 재배분.
+# 새 추정 없이 기존 시도 ref만 재배선 — 세대당 수요가 풀 안에서 균등해진다
+# (부산으로 통근하는 김해·창원에 부산 수준의 세대당 수요가 배정되는 효과).
+# 두 풀은 서로 완전히 별개다(부산권역과 대구권역을 합치는 게 아니다).
+# 이천·평택은 수도권 사이클과 독립(실측)이지만 자체 역산이 표본 부족(금리쇼크
+# 제외 시 저점 1개)으로 불가해 현행 수도권 안분 유지 + 존 페이지 공시(사용자 결정).
+# ⚠️ index.html scCalc()와 반드시 동치(이중구현 미러 — check_dual_calc가 대조).
+POOLS = {
+    '동남권': ('부산권', '김해권', '창원권'),
+    '대구권역': ('대구권', '구미권'),
+}
+POOL_OF = {z: p for p, ms in POOLS.items() for z in ms}
+INDEP_ZONES = ('이천권', '평택권')   # 독립 시장 공시 대상(⑤ 한계 섹션)
+
 GRADE_CUTS = (1.5, 1.0, 0.5, -0.5)
 GRADES = (
     ('g4', '매우 부족', '#a93226', '앞으로 4년, 필요한 집이 크게 모자랍니다'),
@@ -161,6 +179,20 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
     def fut_supply(zz):
         b = zz.get('byq') or {}
         return sum(b.get(k, 0) for k in FUTQ), HQ
+    # 풀 사전 패스: 구성 존들의 기존 시도 배분액과 세대수를 합산(POOLS 주석 참조).
+    # ⚠️ scCalc()의 poolRef/poolHh 패스와 반드시 동치.
+    pool_ref, pool_hh = {}, {}
+    for zz in LZ['zones']:
+        p = POOL_OF.get(zz['z'])
+        if not p:
+            continue
+        ps_ = '수도권' if zz['region'] == '수도권' else (zz.get('psido') or '수도권')
+        band_ = (O.get('band') or {}).get(ps_)
+        ref_ = (O.get('ref') or {}).get(ps_) or (sum(band_) / 2 if band_ else None)
+        if not ref_:
+            continue
+        pool_ref[p] = pool_ref.get(p, 0.0) + ref_ * min(1.0, zz['hh'] / (SH.get(ps_) or zz['hh'] or 1))
+        pool_hh[p] = pool_hh.get(p, 0.0) + zz['hh']
     out = []
     for z in LZ['zones']:
         ps = '수도권' if z['region'] == '수도권' else (z.get('psido') or '수도권')
@@ -172,9 +204,16 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         if not refq:
             continue
         share = min(1.0, z['hh'] / (SH.get(ps) or z['hh'] or 1))
+        # 존 적정(zrefq): 기본은 시도 안분, 풀 소속 존은 풀 배분액을 세대 비중으로.
+        zrefq = refq * share
+        pool = POOL_OF.get(z['z'])
+        pshare = None
+        if pool and pool_hh.get(pool):
+            pshare = z['hh'] / pool_hh[pool]
+            zrefq = pool_ref[pool] * pshare
         dY = last_of(DM, ps); dQ = dY / 4.0
         fsup, H = fut_supply(z)
-        need = refq * H * share
+        need = zrefq * H
         dA = need - fsup
         n4 = [r['v'][oi] for r in act[-LB:] if r['v'][oi] is not None]
         dB = (refq * len(n4) - (sum(n4) - dQ * len(n4))) * share if n4 else 0
@@ -201,10 +240,10 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
             # 새 assert에 걸려 A/B 비교 스크립트가 죽는다).
             if weight_demand:
                 _rs = None
-                tot = running_shortage(zdone, zsched, zdemol, refq * share, cur_q,
+                tot = running_shortage(zdone, zsched, zdemol, zrefq, cur_q,
                                        horizon=horizon, weight_demand=True, full=False)
             else:
-                _rs = running_shortage(zdone, zsched, zdemol, refq * share, cur_q,
+                _rs = running_shortage(zdone, zsched, zdemol, zrefq, cur_q,
                                        horizon=horizon, weight_demand=False, full=True)
                 tot = _rs['tot']
         else:
@@ -222,11 +261,11 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         # 원자료 자체의 건강성은 update_adv_data의 가드 1(생활권 급감 감지)이 따로 지킨다.
         # 진주권 실측(2026-07-19): 2027-12까지 입주 0세대, 다음은 2028-06 840세대로
         # 원자료 시야(2026-01~2027-12) 밖. 즉 결측이 아니라 실제 공급 가뭄이다.
-        need4 = refq * share * 16
+        need4 = zrefq * 16
         out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
                         flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band,
                         inv_path=inv_path, tot_fallback=tot_fallback,
-                        need4=need4,
+                        need4=need4, zrefq=zrefq, pool=pool, pshare=pshare,
                         inow=(_rs['inow'] if _rs else 0.0),
                         fsupw=(_rs['supplyw'] if _rs else 0.0),
                         zsched=zsched,
@@ -548,6 +587,13 @@ def build_page(r, allrows, prd, today, punits=None):
     if backlog >= 0 and abs(backlog - r['need4']) < 1:
         b_sub = ('2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다'
                  '(그래서 아래 ‘필요한 집’과 숫자가 같습니다)')
+    # 필요한 집 출처: 풀 소속 존은 풀 이름·구성·풀 내 세대 비중으로 표기.
+    if r.get('pool'):
+        need_src = '%s 풀(%s) 세대의 %d%%' % (
+            r['pool'], '·'.join(m[:-1] for m in POOLS[r['pool']]),
+            round((r['pshare'] or 0) * 100))
+    else:
+        need_src = '%s 세대의 %d%%' % (ps, round(r['share'] * 100))
     if r['tot'] < 0:
         sum_line = '여유 %s세대' % num(-r['tot'])
     elif backlog >= 0:
@@ -558,14 +604,14 @@ def build_page(r, allrows, prd, today, punits=None):
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
         '<div class="why3">'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s 세대의 %d%% = %s 몫 · 추정</i></span><b>+%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s = %s 몫 · 추정</i></span><b>+%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−%s</b></div>'
         '<div class="w-sum" style="color:%s">%s</div>'
         '</div>'
         '<p class="note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p>'
         '</div></section>' % (
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
-            ps, round(r['share'] * 100), nm, num(r['need4']),
+            need_src, nm, num(r['need4']),
             num(r['fsupw']),
             gr['color'], sum_line))
 
@@ -800,13 +846,23 @@ def build_page(r, allrows, prd, today, punits=None):
     methodology_details_html = (
         origin_fold_html + calc_fold_html + compo_fold_html + caution_fold_html +
         '<a class="cta" href="/cycle/">사이클 리포트 읽기 →</a>')
+    # 이천·평택 공시(2026-08-01 사용자 결정): 이 두 곳은 수도권 가격 사이클과
+    # 독립적으로 움직이는 것으로 실측됐지만(잔차 동조 0.14 이하), 자체 적정물량
+    # 역산이 표본 부족(금리쇼크 저점 제외 시 전환점 1개)으로 불가해 수도권 안분을
+    # 유지한다 — 그 사실을 숨기지 않고 명시한다.
+    indep_note = ''
+    if nm in INDEP_ZONES:
+        indep_note = ('<p class="note"><b>이 지역만의 참고</b>: %s 가격은 수도권 사이클과 '
+                      '독립적으로 움직이는 것으로 실측됐습니다. 위 \'필요한 집\'은 수도권 기준 '
+                      '배분값이라 실제 지역 수요와 다를 수 있습니다 — 다음 가격 전환점이 '
+                      '확인되면 이 지역만의 값으로 다시 계산할 예정입니다.</p>' % nm)
     limits_html = (
         '<section><div class="wrap"><h2>이 숫자의 한계</h2>'
         '<p class="note">가격을 맞히는 지표가 아닙니다. 2010년 이후 44개 생활권으로 직접 확인한 결과, '
         '금리가 크게 움직인 시기에는 공급이 가격에 준 영향이 거의 보이지 않았습니다. '
         '금리가 잔잔했던 시기에는 공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다. '
         '이 페이지는 <b>이 동네 공급 사정</b>으로만 읽어주세요.</p>'
-        '%s</div></section>' % methodology_details_html)
+        '%s%s</div></section>' % (indep_note, methodology_details_html))
 
     # ── C1(최우선 회귀): nav/zlist/CTA는 near의 존재 여부와 무관하게 '항상' 렌더한다.
     # 예전엔 이 44존 전체 링크 + /#score CTA가 near 섹션 안에 있어서, near가 빈

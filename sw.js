@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v40'; // UX 피드백 반영 — 히어로 내지역·비율 순위·암묵 저장·단지 4년 창
+const VERSION = 'v41'; // 수요 풀 재배선(동남권·대구권역) + 이천·평택 독립시장 공시
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

@@ -43,7 +43,9 @@ def test_calc_rows_carry_grade_fields():
     r = rows[0]
     for k in ('need4', 'inow', 'fsupw', 'gr'):
         assert k in r, k
-    assert abs(r['need4'] - r['refq'] * r['share'] * 16) < 1e-6
+    assert abs(r['need4'] - r['zrefq'] * 16) < 1e-6
+    if not r.get('pool'):                       # 풀 밖 존은 zrefq == 시도 안분
+        assert abs(r['zrefq'] - r['refq'] * r['share']) < 1e-6
     # 재조합 정합: tot = demand(=need4) - supplyw - inow
     assert abs(r['tot'] - (r['need4'] - r['fsupw'] - r['inow'])) < 1e-6
     assert r['gr']['k'] in ('g0', 'g1', 'g2', 'g3', 'g4')
@@ -61,3 +63,28 @@ def test_make_capital_agg_carries_grade():
     assert abs(agg['need4'] - sum(c['need4'] for c in caps)) < 1e-6
     assert abs(agg['tot'] - (agg['need4'] - agg['fsupw'] - agg['inow'])) < 1e-6
     assert len(agg['subs']) == len(caps)
+
+
+def test_pool_reallocation_conserves_and_redistributes():
+    """수요 풀(동남권·대구권역, 2026-08-01): 풀 배분 합 = 구성 존 기존 시도 배분 합
+    (보존), 풀 안 배분은 세대(hh) 비중 비례(재배분). 두 풀은 서로 섞이지 않는다."""
+    adv, sts = M.load()
+    rows = {r['z']['z']: r for r in M.calc(adv, sts)}
+    hh = {z['z']: z['hh'] for z in adv['livezone']['zones']}
+    for pool, members in M.POOLS.items():
+        ms = [rows[m] for m in members if m in rows]
+        assert len(ms) == len(members), '풀 구성 존이 calc 결과에 다 있어야 한다'
+        tot_new = sum(r['zrefq'] for r in ms)
+        tot_old = sum(r['refq'] * r['share'] for r in ms)
+        assert abs(tot_new - tot_old) < 1e-6, '%s 풀 배분 총량이 보존돼야 한다' % pool
+        # 세대당 적정이 풀 안에서 균등한가
+        per_hh = [r['zrefq'] / hh[r['z']['z']] for r in ms]
+        assert max(per_hh) - min(per_hh) < 1e-9, '%s 풀 안 세대당 수요가 균등해야 한다' % pool
+        # 풀 소속 표시
+        for r in ms:
+            assert r['pool'] == pool and r['pshare'] is not None
+    # 풀 밖 존은 pool=None, zrefq=시도 안분
+    for z, r in rows.items():
+        if z not in M.POOL_OF:
+            assert r['pool'] is None
+            assert abs(r['zrefq'] - r['refq'] * r['share']) < 1e-6
