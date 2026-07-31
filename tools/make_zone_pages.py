@@ -487,6 +487,7 @@ details.fold .dbody p{font-size:14px}
 .zg-cap{color:var(--muted);font-size:12px;margin:6px 0 0}
 .why3 .w-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
 .why3 .w-lab i{display:block;font-style:normal;color:var(--muted);font-size:11.5px}
+.why3 .w-tag{display:inline-block;font-style:normal;font-size:10.5px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:1px 7px;margin-right:8px;vertical-align:2px;white-space:nowrap}
 .why3 .w-sum{padding:11px 0 0;font-weight:700}
 .near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .n-card{border:1px solid var(--line);padding:10px 12px;display:block}
@@ -536,30 +537,35 @@ def build_page(r, allrows, prd, today, punits=None):
     # ── ② 왜 이 판정인가 — 근거 3줄. 세 줄의 합이 히어로 순부족과 정확히 일치
     # (need4/inow/fsupw만 사용 — tot == need4 - fsupw - inow 항등식이 Task 1
     # 테스트로 보장된다). 여유 존(tot<0)은 "여유"로 문구 분기.
-    backlog = -r['inow']          # 양수면 '밀린 것', 음수면 '쌓인 재고'
-    b_lab, b_sub = ('그동안 밀린 것', '2010년부터 못 지은 만큼 · 최대 4년치') if backlog >= 0 \
-              else ('그동안 쌓인 것', '2010년부터 남은 만큼 · 재고')
-    # 밀림이 상한(=4년 필요량)에 닿은 존은 '필요한 집'과 숫자가 정확히 같아져
-    # 버그처럼 보인다 — 상한 도달임을 명시(2026-07-31 사용자 오인 사례).
+    backlog = -r['inow']          # 양수면 '밀린 집', 음수면 '쌓인 재고'
+    # 2026-07-31 사용자 피드백: '필요한 집'(미래)과 '밀린 것'(과거)은 시간 방향이
+    # 반대인데 라벨에 안 드러나고, 상한 도달 존은 숫자까지 같아(둘 다 4년치) 버그처럼
+    # 보였다. → 과거→미래 시간순으로 재배열하고 각 줄에 [과거]/[앞으로 4년] 시간
+    # 칩을 달아 방향을 명시한다. 서사: "이미 이만큼 밀렸는데, 앞으로 이만큼 더
+    # 필요하고, 들어올 건 이것뿐".
+    b_lab, b_sub = ('그동안 밀린 집', '2010년부터 쌓인 부족 · 실측') if backlog >= 0 \
+              else ('그동안 쌓인 집', '2010년부터 남은 재고 · 실측')
     if backlog >= 0 and abs(backlog - r['need4']) < 1:
-        b_sub += ' · 상한 도달(더 많이 밀렸지만 4년치까지만 셉니다)'
+        b_sub = ('2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다'
+                 '(그래서 아래 ‘필요한 집’과 숫자가 같습니다)')
     if r['tot'] < 0:
         sum_line = '여유 %s세대' % num(-r['tot'])
+    elif backlog >= 0:
+        sum_line = '순부족 %s세대 = 밀린 것 + 필요 − 들어올 것' % num(r['tot'])
     else:
-        sum_line = ('순부족 %s세대 = 필요 %s 밀림 − 들어올 것'
-                     % (num(r['tot']), '+' if backlog >= 0 else '−'))
+        sum_line = '순부족 %s세대 = 필요 − 쌓인 것 − 들어올 것' % num(r['tot'])
     why_html = (
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
         '<div class="why3">'
-        '<div class="w-row"><span class="w-lab">필요한 집<i>%s 세대의 %d%% = %s 몫 · 4년치 · 추정</i></span><b>%s</b></div>'
-        '<div class="w-row"><span class="w-lab">%s<i>%s · 실측</i></span><b>%s%s</b></div>'
-        '<div class="w-row"><span class="w-lab">들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s 세대의 %d%% = %s 몫 · 추정</i></span><b>+%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−%s</b></div>'
         '<div class="w-sum" style="color:%s">%s</div>'
         '</div>'
         '<p class="note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p>'
         '</div></section>' % (
-            ps, round(r['share'] * 100), nm, num(r['need4']),
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
+            ps, round(r['share'] * 100), nm, num(r['need4']),
             num(r['fsupw']),
             gr['color'], sum_line))
 
