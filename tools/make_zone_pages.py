@@ -58,9 +58,10 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=
     잡혀 그 구간의 단기 공급부족이 드러난다. demol은 done과 동일하게 이미
     zone-level 절대값(멸실 세대)이라 share를 곱하지 않는다(호출측 계약).
     미래(future) 항은 멸실 데이터가 희소해 그대로 sched만 사용한다.
-    weight_demand=True (A안·기본값·현재 라이브): 수요도 conf로 가중 —
+    weight_demand=True (A안 — 이 함수의 기본값일 뿐, 라이브는 아니다): 수요도 conf로 가중 —
       순부족 = Σ_{k=1..horizon} conf(k)*(refq - sched(cur_q+k)) - I_now.
-    weight_demand=False (B안·스펙 원문): 수요는 비가중, 공급만 conf로 가중 —
+    weight_demand=False (B안·스펙 원문 — 현재 라이브. calc()가 False로 넘긴다): 수요는
+      비가중, 공급만 conf로 가중 —
       순부족 = Σ_{k=1..horizon} refq  -  Σ_{k=1..horizon} conf(k)*sched(cur_q+k) - I_now.
     두 안 모두 refq는 호출측이 이미 zone-level(적정*share)로 넘긴 값이어야 한다.
     양수=부족(발산 막대 오른쪽), 음수=과잉.
