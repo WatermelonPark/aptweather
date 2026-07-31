@@ -47,7 +47,17 @@ def test_calc_rows_carry_grade_fields():
     # 재조합 정합: tot = demand(=need4) - supplyw - inow
     assert abs(r['tot'] - (r['need4'] - r['fsupw'] - r['inow'])) < 1e-6
     assert r['gr']['k'] in ('g0', 'g1', 'g2', 'g3', 'g4')
-    hub = [x for x in rows if x.get('subs')]
-    if hub:
-        assert 'gr' in hub[0] and abs(
-            hub[0]['need4'] - sum(c['need4'] for c in hub[0]['subs'])) < 1e-6
+
+def test_make_capital_agg_carries_grade():
+    # make_capital()이 수도권 16개 생활권을 합산한 unit에도 gr/need4/tot 정합이
+    # 유지되는지 검증. subs 키(합계 행 전용)로만 확인 가능해 calc()의 개별 행
+    # 테스트(위)와는 분리해야 한다 — subs는 make_capital() 반환행에만 있다.
+    adv, sts = M.load()
+    rows = M.calc(adv, sts)
+    agg = M.make_capital(rows)
+    caps = [r for r in rows if r['z']['region'] == '수도권']
+    assert agg is not None and caps
+    assert 'gr' in agg and agg['gr']['k'] in ('g0', 'g1', 'g2', 'g3', 'g4')
+    assert abs(agg['need4'] - sum(c['need4'] for c in caps)) < 1e-6
+    assert abs(agg['tot'] - (agg['need4'] - agg['fsupw'] - agg['inow'])) < 1e-6
+    assert len(agg['subs']) == len(caps)
