@@ -120,7 +120,8 @@ def corr(xs, ys):
 
 def main():
     zones = load_zones()
-    print('생활권 %d곳 · data.js에서 시군구 주간 변동률(R-ONE) 로드 중...' % (len(zones), WEEKS))
+    print('생활권 %d곳 · data.js에서 시군구 주간 변동률(R-ONE) 최대 %d주 로드 중...'
+          % (len(zones), WEEKS))
     c2n = code_name_map()
     ma = fetch_sgg('ma')
     je = fetch_sgg('je')
