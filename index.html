@@ -160,7 +160,7 @@
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
 
-    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 4년 필요량 대비 % · 절대 세대수는 행 설명에</span></div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대 · 막대는 제곱근 비례 · 등급은 필요량 대비 비율</span></div></div>
     <div id="score-wrap" style="text-align:left"></div>
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
@@ -2431,12 +2431,13 @@ function renderScoreSec(){
     u.pop+=z.pop;u.supply+=z.supply;u.dA+=z.dA;u.dB+=z.dB;u.dC+=z.dC;u.tot+=z.tot;u.need+=z.need;u.zones.push(z);
   });
   // 집계 유닛(수도권 1행 포함)에도 등급 — 합산 tot/need4로 판정.
-  // 정렬·막대·표시값 전부 비율(순부족/4년 필요량) 기준 — 2026-07-31 사용자 결정:
-  // 절대값 정렬은 큰 지역이 항상 위라 등급 그룹과 어긋나 반직관적이었다.
-  // 절대 세대수는 행 title 툴팁으로만 남긴다.
+  // 2026-08-01 사용자 결정: 표시값·막대는 절대 세대수로 원복(퍼센트가 안 와닿음).
+  // 다만 그룹은 등급(=비율) 기준을 유지한다 — 그래야 '작은 지역이 더 심하게 모자란'
+  // 사실이 드러나고, 그룹 안에서 절대값 정렬이라 그룹 간 모순도 생기지 않는다.
+  // (비율은 행 title 툴팁으로 보존)
   Object.keys(agg).forEach(k=>{const u=agg[k];u.need4=u.zones.reduce((s,z)=>s+(z.need4||0),0);u.gr=scGrade(u.tot,u.need4);});
-  const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
-  const mxr=Math.max.apply(null,units.map(u=>Math.abs(u.gr.ratio||0)))||1;
+  const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.tot-a.tot);
+  const mx=Math.max.apply(null,units.map(u=>Math.abs(u.tot)))||1;
   const GORDER=['g4','g3','g2','g1','g0'];
   document.getElementById('score-wrap').innerHTML=GORDER.map(gk=>{
     const list=units.filter(u=>u.gr.k===gk);
@@ -2445,17 +2446,17 @@ function renderScoreSec(){
     return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
       +list.map(u=>{
         // 가운데 0을 축으로 발산 — 부족(−)은 오른쪽, 과잉(+)은 왼쪽. 색도 부호를 따라간다.
-        const rr=u.gr.ratio||0;
-        const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(rr)/mxr)*50));
-        const barCol=rr>=0?(rr>=1?'#a93226':'#c0392b'):(rr<=-0.5?'#1a5276':'#3a7bd5');
-        const bar='<div class="sc-zero"></div>'+(rr>=0
+        const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(u.tot)/mx)*50));
+        const barCol=u.tot>=0?(u.tot>=30000?'#a93226':'#c0392b'):(u.tot<=-10000?'#1a5276':'#3a7bd5');
+        const bar='<div class="sc-zero"></div>'+(u.tot>=0
           ?'<div class="sc-fill" style="left:50%;width:'+w+'%;background:'+barCol+'"></div>'
           :'<div class="sc-fill" style="right:50%;width:'+w+'%;background:'+barCol+'"></div>');
         // ★(watch)는 2026-07-31 제거 — 투자 추천처럼 읽히는 오해 소지. ⚠(warn)만 유지.
         const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>':'<span class="sc-flag"></span>';
-        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · '+scFmt(u.tot)+'세대'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+'</span>'+fb
+        const rr=u.gr.ratio||0;
+        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
-          +'<span class="sc-val" style="color:'+u.gr.color+'">'+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%</span>'
+          +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)+'</span>'
           +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
       }).join('');
   }).join('');
@@ -2464,15 +2465,13 @@ function renderScoreSec(){
   const byreg={}; zones.forEach(z=>{(byreg[z.region]=byreg[z.region]||[]).push(z);});
   const mapEl=document.getElementById('score-map');
   if(mapEl)mapEl.innerHTML=REGORD.map(rg=>{
-    // 타일도 비율 기준(정렬·색·표시) — 리스트와 같은 잣대. 절대값은 title로.
-    const list=(byreg[rg]||[]).slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
+    // 타일도 절대 세대수 표시·정렬(2026-08-01 원복). 비율은 title에.
+    const list=(byreg[rg]||[]).slice().sort((a,b)=>b.tot-a.tot);
     if(!list.length)return '';
-    const rcol=r=>{const a=Math.min(Math.sqrt(Math.abs(r)/2),1);
-      return r>=0?'rgba(224,86,74,'+(0.12+0.72*a).toFixed(3)+')':'rgba(58,123,213,'+(0.12+0.72*a).toFixed(3)+')';};
     return '<div class="lz-reg"><div class="lz-regname">'+rg+'</div><div class="lz-tiles">'+
       list.map(z=>{const rr=z.gr.ratio||0;
-        return '<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+rcol(rr)+'" title="'+z.z+' · '+scFmt(z.tot)+'세대">'+
-        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%</span></a>';}).join('')+
+        return '<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+scColor(z.tot)+'" title="'+z.z+' · '+z.gr.label+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%">'+
+        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+scFmt(z.tot)+'</span></a>';}).join('')+
       '</div></div>';
   }).join('');
   window.__SCZ=zones;

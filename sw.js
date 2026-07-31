@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v41'; // 수요 풀 재배선(동남권·대구권역) + 이천·평택 독립시장 공시
+const VERSION = 'v42'; // 홈 절대값 원복 · 존 결론부터 · 지역 시세지수 · 허브 등급 개편
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

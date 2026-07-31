@@ -72,6 +72,7 @@ POOL_OF = {z: p for p, ms in POOLS.items() for z in ms}
 INDEP_ZONES = ('이천권', '평택권')   # 독립 시장 공시 대상(⑤ 한계 섹션)
 
 GRADE_CUTS = (1.5, 1.0, 0.5, -0.5)
+GRADE_ORDER = ('g4', 'g3', 'g2', 'g1', 'g0')
 GRADES = (
     ('g4', '매우 부족', '#a93226', '앞으로 4년, 필요한 집이 크게 모자랍니다'),
     ('g3', '부족', '#c0392b', '공급이 수요를 못 따라갑니다'),
@@ -528,6 +529,15 @@ details.fold .dbody p{font-size:14px}
 .why3 .w-lab i{display:block;font-style:normal;color:var(--muted);font-size:11.5px}
 .why3 .w-tag{display:inline-block;font-style:normal;font-size:10.5px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:1px 7px;margin-right:8px;vertical-align:2px;white-space:nowrap}
 .why3 .w-sum{padding:11px 0 0;font-weight:700}
+.w-lead{border-left:3px solid;padding:2px 0 2px 14px;margin:0 0 18px}
+.w-lead .wl-sum{font-size:19px;font-weight:700;line-height:1.45}
+.w-lead .wl-note{color:var(--muted);font-size:12.5px;margin:4px 0 0}
+.pidx{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.pidx h3{font-size:14px;margin:0 0 2px}
+.pidx .px-sub{color:var(--muted);font-size:11.5px;margin:0 0 10px}
+.pidx .px-now{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 10px;font-size:13px}
+.pidx .px-now b{font-weight:700}
+.pidx svg{display:block;width:100%;height:auto}
 .near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .n-card{border:1px solid var(--line);padding:10px 12px;display:block}
 .n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
@@ -535,7 +545,134 @@ details.fold .dbody p{font-size:14px}
 .q-col.q-max .q-bar{outline:2px solid currentColor}"""
 
 
-def build_page(r, allrows, prd, today, punits=None):
+
+# ── 존별 시세 지수(주간·월간) — 2026-08-01 ──────────────────────────────────
+# 시황통계(ADV.weekly/monthly.sgg)는 시군구별 변동률(%)이다. 존 페이지에 그 존
+# 소속 시군구만 골라 평균(세대 가중)해 보여준다.
+# 코드 사전은 index.html의 SGG_QNAME("서울 강남구"/"수원 장안구"/"이천" 형식)을
+# 빌드 타임에 파싱해 쓴다 — 사전이 거기 한 곳에만 있어 중복 정의를 피하려는 것.
+# 구조가 바뀌면 test_zone_price_index가 커버리지로 즉시 잡는다.
+_SIDO_PREFIX = {'a7': '서울', 'a8': '경기', 'a9': '인천', 'b1': '부산', 'b2': '대구',
+                'b3': '광주', 'b4': '대전', 'b5': '울산', 'b6': '세종', 'c1': '강원',
+                'c2': '충북', 'c3': '충남', 'c4': '전북', 'c5': '전남', 'c6': '경북',
+                'c7': '경남', 'c8': '제주'}
+
+
+def _sgg_qname():
+    src = io.open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
+    m = re.search(r'const SGG_QNAME=(\{.*?\});', src, re.S)
+    if not m:
+        raise SystemExit('index.html에서 SGG_QNAME을 찾지 못했다 — 구조 변경 확인')
+    return json.loads(m.group(1))
+
+
+def zone_sgg_codes(adv):
+    """생활권 -> [시황통계 시군구 코드]. LIVEZONE(시도,시군구) 규칙으로 고른다.
+
+    SGG_QNAME 값 형식 두 가지: '서울 강남구'(시도 접두어) / '이천'(경기 시·군, 접두어
+    없음). 코드 접두어(a7/b1/c7...)로 시도를 판별해 두 형식을 통일해서 매칭한다.
+    분구 도시(수원시 등)는 시 단위 코드가 없고 구 코드만 있어 '수원 '으로 시작하는
+    코드를 전부 담는다.
+    """
+    qn = _sgg_qname()
+    codes = set((adv.get('monthly') or {}).get('sgg', {}).get('codes') or [])
+    # (시도, 표시명) 목록
+    ent = []
+    for c, v in qn.items():
+        if c not in codes:
+            continue
+        sd = _SIDO_PREFIX.get(c[:2])
+        if not sd:
+            continue
+        nm = v.split(' ', 1)[1] if ' ' in v else v
+        base = v.split(' ', 1)[0] if ' ' in v else None   # '수원 장안구' -> '수원'
+        ent.append((sd, nm, base, c))
+    out = {}
+    for z in adv['livezone']['zones']:
+        zn = z['z']
+        picks = []
+        for sd, sg in _lz_members(zn):
+            if sg == '*':
+                picks += [c for s2, _, _, c in ent if s2 == sd]
+                continue
+            stem = re.sub(r'(특별시|광역시|특별자치시|특별자치도|시|군|구)$', '', sg)
+            for s2, nm, base, c in ent:
+                if s2 != sd:
+                    continue
+                if base == stem or nm == sg or nm == stem:
+                    picks.append(c)
+        out[zn] = sorted(set(picks))
+    return out
+
+
+def _lz_members(zone):
+    """생활권 -> [(시도, 시군구)] — update_adv_data.LIVEZONE + 경기 동적존 규칙.
+    존 정의는 파이프라인(update_adv_data)이 단일 소스라 거기서 가져온다."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from update_adv_data import LIVEZONE
+    if zone in LIVEZONE:
+        return list(LIVEZONE[zone])
+    base = zone[:-1]
+    if base.startswith('경기'):
+        base = base[2:]
+    return [('경기', base + '시'), ('경기', base + '군')]
+
+
+def render_price_index(adv, zone, codes, hh_by_name=None):
+    """존 소속 시군구의 주간·월간 변동률 평균 -> 최근값 + 월간 24개월 누적 지수선."""
+    if not codes:
+        return ''
+    def series(block, n):
+        sg = (adv.get(block) or {}).get('sgg') or {}
+        allc = sg.get('codes') or []
+        idx = [allc.index(c) for c in codes if c in allc]
+        if not idx:
+            return []
+        out = []
+        for row in (sg.get('rows') or [])[-n:]:
+            vs = [row['ma'][i] for i in idx if i < len(row['ma']) and row['ma'][i] is not None]
+            if vs:
+                out.append((row['p'], sum(vs) / len(vs)))
+        return out
+    wk = series('weekly', 13)
+    mo = series('monthly', 24)
+    if not wk and not mo:
+        return ''
+    def chip(lab, ser, unit):
+        if not ser:
+            return ''
+        p, v = ser[-1]
+        col = '#a93226' if v > 0 else ('#1a5276' if v < 0 else 'var(--muted)')
+        return ('<span>%s <b style="color:%s">%+.2f%%</b> <i style="color:var(--muted);'
+                'font-style:normal">%s %s</i></span>' % (lab, col, v, p, unit))
+    # 월간 누적 지수선(마지막 값 100 기준으로 역산 — 수준이 아니라 흐름을 보여준다)
+    chart = ''
+    if len(mo) >= 6:
+        lvl, cur = [], 100.0
+        for _, v in reversed(mo):
+            lvl.append(cur)
+            cur = cur / (1 + v / 100)
+        lvl.reverse()
+        lo, hi = min(lvl), max(lvl)
+        rng = (hi - lo) or 1.0
+        W, H = 320.0, 74.0
+        pts = ' '.join('%.1f,%.1f' % (6 + (W - 12) * i / (len(lvl) - 1),
+                                      6 + (H - 12) * (1 - (v - lo) / rng))
+                       for i, v in enumerate(lvl))
+        chart = ('<svg viewBox="0 0 %d %d" role="img" aria-label="%s 월간 아파트 매매가격 흐름">'
+                 '<polyline fill="none" stroke="%s" stroke-width="1.8" points="%s"/>'
+                 '<text x="6" y="%d" font-size="9" fill="#8a969b">%s</text>'
+                 '<text x="%d" y="%d" font-size="9" fill="#8a969b" text-anchor="end">%s</text>'
+                 '</svg>' % (int(W), int(H), zone,
+                             '#a93226' if lvl[-1] >= lvl[0] else '#1a5276', pts,
+                             int(H) - 1, mo[0][0], int(W) - 6, int(H) - 1, mo[-1][0]))
+    return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
+            '<p class="px-sub">한국부동산원 아파트 매매가격지수 변동률 · 이 생활권 시군구 평균</p>'
+            '<div class="px-now">%s%s</div>%s</div>'
+            % (chip('이번 주', wk, ''), chip('이번 달', mo, ''), chart))
+
+
+def build_page(r, allrows, prd, today, punits=None, pidx=None):
     z = r['z']; nm = z['z']; ps = r['ps']
     gr = r['gr']
     tname, tcol = gr['label'], gr['color']
@@ -600,20 +737,29 @@ def build_page(r, allrows, prd, today, punits=None):
         sum_line = '순부족 %s세대 = 밀린 것 + 필요 − 들어올 것' % num(r['tot'])
     else:
         sum_line = '순부족 %s세대 = 필요 − 쌓인 것 − 들어올 것' % num(r['tot'])
+    # 이 지역 시세 지수(주간·월간) — '왜 이 판정인가' 하단에 붙인다(2026-08-01).
+    # 공급 판정 바로 다음에 실제 가격이 어떻게 움직이는지를 보여줘 검증 가능하게.
+    idx_html = pidx.get(nm, '') if pidx else ''
+    # 2026-08-01 사용자: 결론부터 — 순부족 합계와 '재고처럼 쌓인다' 설명을
+    # 근거 3줄 위(=섹션 맨 앞)로 올려 가시성을 높인다.
+    verdict_html = (
+        '<div class="w-lead" style="border-color:%s">'
+        '<div class="wl-sum" style="color:%s">%s</div>'
+        '<p class="wl-note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 '
+        '한 해 물량이 몰려도 메워지지 않습니다.</p></div>' % (gr['color'], gr['color'], sum_line))
     why_html = (
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
+        '%s'
         '<div class="why3">'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s = %s 몫 · 추정</i></span><b>+%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−%s</b></div>'
-        '<div class="w-sum" style="color:%s">%s</div>'
-        '</div>'
-        '<p class="note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p>'
-        '</div></section>' % (
+        '</div>%s</div></section>' % (
+            verdict_html,
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
             need_src, nm, num(r['need4']),
             num(r['fsupw']),
-            gr['color'], sum_line))
+            idx_html))
 
     # ── 인포그래픽: 분기별 입주 미니차트 ──
     # Fix I3+M4: 이전엔 legacy odcloud byq(짧은 창, H_MAX=8분기)를 그려 ②(왜 이
@@ -1087,7 +1233,7 @@ gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
 <script>document.addEventListener('click',function(e){var a=e.target&&e.target.closest?e.target.closest('a[href]'):null;if(!a)return;var h=a.getAttribute('href');if(!h||h.charAt(0)!=='/')return;try{gtag('event','zone_cta',{to:h,zone:'hub'});}catch(err){}});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>전국 생활권 아파트 공급 순위 %(n)d곳 — 입주예정·인허가로 본 부족·과잉 | 아공맵</title>
+<title>전국 생활권 아파트 공급 순위 %(n)d곳 — 준공·입주예정으로 본 부족·과잉 | 아공맵</title>
 <meta name="description" content="전국 %(n)d개 생활권의 아파트 공급을 적정물량과 비교해 누적 순부족 순으로 정렬했습니다. 공급 절벽부터 공급 과잉까지 한눈에. 기준 %(prd)s.">
 <link rel="canonical" href="%(site)s/zone/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -1124,7 +1270,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.rk{color:var(--muted);width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
 a.z{color:var(--ink);text-decoration:none;font-weight:600}
 a.z:hover{text-decoration:underline}
-.tag{font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:0;white-space:nowrap}
+.ghead td{border:0;padding:16px 0 4px;font-weight:700;font-size:13px}
+  .ghead i{font-style:normal;font-weight:400;color:#8a969b;font-size:11.5px}
+  .tag{font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:0;white-space:nowrap}
 .tag.g4{background:#fdecea;color:#a93226}
 .tag.g3{background:#fbeee9;color:#c0392b}
 .tag.g2{background:#faf3e7;color:#b9770e}
@@ -1141,14 +1289,16 @@ footer a{color:var(--muted)}
 </head>
 <body>
 <header><div class="wrap">
-  <h1>전국 생활권 아파트 공급 순위</h1>
-  <p class="lead">%(n)d개 생활권을 적정물량 대비 <b>누적 순부족</b>이 큰 순으로 정렬했습니다.
-    음수(−)는 공급이 모자란 곳, 양수(+)는 남는 곳입니다. 기준 %(prd)s.</p>
+  <h1>전국 어디가 모자라고 어디가 남나</h1>
+  <p class="lead">생활권 %(n)d곳을 <b>공급 부족 등급</b>으로 묶었습니다.
+    등급은 그 지역에 필요한 양 대비 얼마나 모자라는지의 비율이고,
+    숫자는 세대수입니다(음수 −는 모자람, 양수 +는 남음). 기준 %(prd)s.</p>
 </div></header>
 
 <section><div class="wrap">
-  <h2>순위표</h2>
-  <p>생활권 이름을 누르면 그 지역의 분기별 입주예정·인허가·적정물량 비교를 볼 수 있습니다.</p>
+  <h2>등급별 순위</h2>
+  <p>생활권 이름을 누르면 판정 근거(밀린 것·필요한 집·들어올 집)와 분기별 입주 일정,
+    그 지역 아파트값 흐름까지 볼 수 있습니다.</p>
   <p style="color:var(--muted);font-size:12.5px">공급 기준 · 가격 예측 아님</p>
   <table>
     <thead><tr><th>#</th><th>생활권</th><th class="num">누적 순부족</th><th>판정</th></tr></thead>
@@ -1160,8 +1310,9 @@ footer a{color:var(--muted)}
 
 <section><div class="wrap">
   <h2>이 숫자는 무엇인가</h2>
-  <p><b>누적 순부족</b>은 앞으로 들어올 아파트가 그 지역에 필요한 양보다 얼마나 모자라는지를 세대수로 나타낸 값입니다.
-    입주예정, 인허가(3~4년 뒤 공급), 최근 3년 실적을 가중 합산합니다.</p>
+  <p><b>순부족</b>은 그 지역에 <b>그동안 밀린 부족</b>과 <b>앞으로 4년간 필요한 양</b>을 더한 뒤,
+    <b>이미 준공예정이 잡힌 물량</b>을 뺀 값입니다(세대수). 공급은 국토부 건축HUB 단지별 실측이고,
+    필요량만 시장 단위로 배분한 추정입니다.</p>
   <p>공급이 모자란다고 값이 반드시 오르는 것도, 남는다고 반드시 내리는 것도 아닙니다.
     공급은 사이클을 움직이는 여러 힘 가운데 하나이며, 금리·전세가율·심리가 함께 작용합니다.
     <a href="/cycle/">사이클이 어떻게 도는지 보기 →</a></p>
@@ -1204,17 +1355,24 @@ def build_hub(pages, prd, today):
     live = sorted([r for r in pages if r['z']['z'] != ROLLUP],
                   key=lambda r: -(r['tot'] / r['need4'] if r['need4'] else 0))
     roll = next((r for r in pages if r['z']['z'] == ROLLUP), None)
+    # 홈과 같은 언어: 5등급 그룹 헤더로 묶고, 그룹 안은 절대 세대수 순(2026-08-01).
     rows = []
-    for i, r in enumerate(live):
+    prev_gk = None
+    for i, r in enumerate(sorted(live, key=lambda x: (GRADE_ORDER.index(x['gr']['k']), -x['tot']))):
         nm = r['z']['z']
         gr = r['gr']
+        if gr['k'] != prev_gk:
+            n_in = sum(1 for x in live if x['gr']['k'] == gr['k'])
+            rows.append('      <tr class="ghead"><td colspan="4" style="color:%s">%s '
+                        '<i>%d곳</i></td></tr>' % (gr['color'], gr['label'], n_in))
+            prev_gk = gr['k']
         rows.append(
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
-            '<td class="num" style="color:%s" title="%s세대">%s</td>'
+            '<td class="num" style="color:%s" title="필요량 대비 %s">%s</td>'
             '<td><span class="tag %s">%s</span></td></tr>'
-            % (i + 1, nm, nm, gr['color'], signed(r['tot']),
+            % (i + 1, nm, nm, gr['color'],
                ('%+.0f%%' % (-100 * r['tot'] / r['need4']) if r['need4'] else '·'),
-               gr['k'], gr['label']))
+               signed(r['tot']), gr['k'], gr['label']))
     if roll is not None:
         gr = roll['gr']
         sub = len(roll['z'].get('subs') or []) or 16
@@ -1293,12 +1451,20 @@ def main():
                 os.rmdir(os.path.join(outdir, d))
     cap = make_capital(rows)
     pages = list(rows) + ([cap] if cap else [])
+    # 존별 시세 지수 HTML 사전(수도권 합계는 소속 존 코드 합집합)
+    zcodes = zone_sgg_codes(adv)
+    if cap:
+        agg_codes = sorted({c for sub in (cap['z'].get('subs') or []) for c in zcodes.get(sub, [])}
+                           or {c for z in rows if z['z']['region'] == '수도권'
+                               for c in zcodes.get(z['z']['z'], [])})
+        zcodes[cap['z']['z']] = agg_codes
+    pidx = {z: render_price_index(adv, z, cs) for z, cs in zcodes.items()}
     names, lastmods, nchanged = [], {}, 0
     for r in pages:
         nm = r['z']['z']
         d = os.path.join(outdir, nm)
         os.makedirs(d, exist_ok=True)
-        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits), old_pages.get(nm, ''), today)
+        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx), old_pages.get(nm, ''), today)
         io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
         names.append(nm)
         lastmods[nm] = lm
