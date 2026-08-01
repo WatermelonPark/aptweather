@@ -711,11 +711,24 @@ function initStats(){
   // 주간·월간·버블밴드는 탭 진입 시 이미 그렸다 —
   // 여기는 STATS 11계열(data-rest.json)이 있어야만 가능한 것만 남긴다.
 }
+/* 지역 목록 정렬은 사이트 전체가 하나여야 한다 — 예전엔 목록마다 데이터 적재 순서를
+   그대로 써서 화면마다 순서가 달랐고, 내 지역을 찾으려면 매번 훑어야 했다(2026-08-01).
+   인구순도 후보였지만 통계 드롭다운엔 지역명만 있고 인구가 없다. 모든 목록에 적용할 수
+   있는 건 가나다순뿐이고, 찾는 목적에도 그게 낫다(위치가 이름으로 정해진다).
+   전국·수도권 같은 집계 항목은 시도의 동료가 아니므로 맨 앞에 원래 순서로 남긴다. */
+const REG_AGG=['전국','수도권','지방권','6대광역시','5대광역시','9개도','8개도'];
+function regSort(list,label){
+  const nameOf=label||(x=>x);
+  const agg=list.filter(x=>REG_AGG.indexOf(nameOf(x))>=0);
+  const rest=list.filter(x=>REG_AGG.indexOf(nameOf(x))<0)
+                 .sort((a,b)=>String(nameOf(a)).localeCompare(String(nameOf(b)),'ko'));
+  return agg.concat(rest);
+}
 function fillRegions(){
   const sel=document.getElementById('reg-sel');
   const D=STATS[ST.ds];
   // 규모별은 series가 지표 키라 regions 목록을 따로 싣는다. 기본 지역도 전국.
-  const regs=ST.ds==='규모별'?(D.regions||[]):Object.keys(D.series);
+  const regs=regSort(ST.ds==='규모별'?(D.regions||[]):Object.keys(D.series));
   if(!regs.includes(ST.reg)) ST.reg = ST.ds==='규모별'?regs[0]:(regs.includes('서울')?'서울':regs[0]);
   sel.innerHTML=regs.map(r=>`<option${r===ST.reg?' selected':''}>${r}</option>`).join('');
 }
@@ -1673,8 +1686,9 @@ function advFmt(v){ return v==null ? '·' : Number(v).toLocaleString('ko-KR'); }
 function advSel(id, regions){
   const s=document.getElementById(id);
   if(s.options.length) return s.value;
-  s.innerHTML=regions.map(r=>`<option value="${r}">${r}</option>`).join('');
-  return regions[0];
+  const list=regSort(regions);
+  s.innerHTML=list.map(r=>`<option value="${r}">${r}</option>`).join('');
+  return list[0];
 }
 /* --- 인허가 --- */
 function permitCls(region, v){
@@ -1987,7 +2001,7 @@ function fillSggSel(k,keep){
   if(!list.length){ sub.hidden=true; sub.innerHTML=''; return; }
   sub.hidden=false;
   sub.innerHTML='<option value="">'+sido+' 전체</option>'+
-    list.map(c=>'<option value="'+c+'">'+SGG_QNAME[c]+'</option>').join('');
+    regSort(list,c=>SGG_QNAME[c]||c).map(c=>'<option value="'+c+'">'+SGG_QNAME[c]+'</option>').join('');
   if(keep&&list.indexOf(keep)>=0)sub.value=keep;
 }
 /* 표·그래프가 함께 쓰는 '현재 선택' — 시도면 W.rows, 시군구면 W.sgg.rows */
@@ -2490,12 +2504,12 @@ function renderScoreSec(){
         const rr=u.gr.ratio||0;
         return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+(u.name==='수도권'?'<i class="sc-sub">'+u.zones.length+'개 생활권 합계 · 안은 '+capDist(u.zones)+'</i>':'')+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
-          /* 세대수 아래 '필요량 대비 %'를 함께 적는다. 묶는 기준은 비율인데 큰 숫자로
-             보이는 건 세대수뿐이라, 목포권 −2.3만이 수도권 −85.6만보다 위에 오는 게
-             모순처럼 읽혔다(2026-08-01 검수). 비율은 원래 title에만 있어 모바일에선
-             볼 방법이 아예 없었다. 두 잣대를 한 줄에 두면 순서가 설명된다. */
-          +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)
-          +'<i class="sc-pct">필요량의 '+Math.round(Math.abs(rr)*100)+'%</i></span>'
+          /* 값은 '지금 정렬 기준' 하나만 보여준다. 둘을 같이 적으면 칸이 밀리고
+             어느 쪽으로 줄 세운 건지 오히려 헷갈린다(2026-08-01 사용자 지적).
+             다른 잣대가 궁금하면 토글이 그 역할을 한다. */
+          +'<span class="sc-val" style="color:'+u.gr.color+'">'
+          +(SCSORT==='abs' ? scFmt(u.tot)
+                           : (rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%')+'</span>'
           +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
   };
   /* 두 정렬은 다른 질문에 답한다 — 비율순은 '어디가 비율로 가장 급한가',
@@ -2503,11 +2517,15 @@ function renderScoreSec(){
      비율로는 완만해도 절대량이 압도적이라, 한 잣대만 두면 한쪽 질문이 사라진다.
      세대수순에서는 등급 그룹 머리를 걷는다 — 정렬 기준과 묶는 기준이 다르면
      바로 그 모순(큰 숫자가 낮은 그룹에)이 되살아나기 때문이다. 등급은 행 배지로 남는다. */
+  /* 비율순 모드는 값 칸도 %라, 그룹 안까지 비율로 줄 세워야 숫자가 순서대로 읽힌다.
+     등급 경계가 곧 비율 구간이므로 비율 내림차순이면 그룹도 저절로 이어진다. */
+  const ordered = SCSORT==='abs' ? units
+                                 : units.slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
   const wrap=document.getElementById('score-wrap');
   wrap.innerHTML = SCSORT==='abs'
     ? units.map(scRow).join('')            // units는 이미 tot 내림차순
     : GORDER.map(gk=>{
-        const list=units.filter(u=>u.gr.k===gk);
+        const list=ordered.filter(u=>u.gr.k===gk);
         if(!list.length)return '';
         const g=list[0].gr;
         return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
@@ -2515,8 +2533,8 @@ function renderScoreSec(){
       }).join('');
   const cap=document.getElementById('sc-cap');
   if(cap)cap.textContent = SCSORT==='abs'
-    ? '모자란 세대수 큰 순 · 등급은 필요량 대비 비율 · 막대는 제곱근 비례'
-    : '등급은 필요량 대비 비율 · 그 안은 세대수 큰 순 · 막대는 제곱근 비례';
+    ? '모자란 세대수 큰 순 · 막대는 제곱근 비례'
+    : '필요량 대비 부족 비율 큰 순 · 막대는 세대수 제곱근 비례';
   // ── 지도: 상세 생활권 36개 ──
   const REGORD=['수도권','충청','강원','전라','경상','제주'];
   const byreg={}; zones.forEach(z=>{(byreg[z.region]=byreg[z.region]||[]).push(z);});
@@ -2577,7 +2595,7 @@ function renderMyZone(){
   // 첫 방문 / 지역 바꾸기 / 폴백: 질문 + 시도 → 생활권 2단 선택기 + 전국 요약 한 줄
   const lack=zones.filter(z=>z.gr.k==='g4'||z.gr.k==='g3').length;
   const byps={};zones.forEach(z=>{(byps[z.psido]=byps[z.psido]||[]).push(z);});
-  const sidos=Object.keys(byps);
+  const sidos=regSort(Object.keys(byps));
   box.innerHTML='<p class="hz-q">우리 동네 아파트, 앞으로 모자랄까 남을까</p>'
     +'<p class="mz-sum">지금 전국 '+zones.length+'개 생활권 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
     +'<div class="mz-sido">'+sidos.map(s=>'<button class="mz-chip" onclick="mzPick(this,\''+s+'\')">'+s+'</button>').join('')+'</div>'
@@ -2585,7 +2603,8 @@ function renderMyZone(){
 }
 function mzPick(btn,ps){
   document.querySelectorAll('.mz-sido .mz-chip').forEach(b=>b.classList.toggle('on',b===btn));
-  const zones=(window.__SCZ||[]).filter(z=>z.psido===ps);
+  const sw=document.querySelector('.mz-sido'); if(sw)sw.classList.add('picked');
+  const zones=regSort((window.__SCZ||[]).filter(z=>z.psido===ps),z=>z.z);
   document.getElementById('mz-zones').innerHTML=zones.map(z=>
     '<button class="mz-chip zone" onclick="mzSave(\''+z.z+'\')">'+z.z+' <span class="sc-tier '+z.gr.k+'">'+z.gr.label+'</span></button>').join('');
   track('myzone',{action:'sido',region:ps});
