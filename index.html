@@ -162,6 +162,9 @@
 
     <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대 · 막대는 제곱근 비례 · 등급은 필요량 대비 비율</span></div></div>
     <div id="score-wrap" style="text-align:left"></div>
+    <!-- 홈은 수도권을 1행으로 접은 요약(23행)이라, 개별 44곳 전체는 /zone/ 허브로 보낸다.
+         두 화면의 그룹핑·정렬 규칙은 같다(등급 그룹 → 그룹 안 절대 세대수 순). -->
+    <a class="sc-more" href="/zone/" onclick="track('home_cta',{to:'zone_hub'})">전체 44개 지역 보기 →</a>
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
 

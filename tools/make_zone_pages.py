@@ -73,6 +73,18 @@ INDEP_ZONES = ('이천권', '평택권')   # 독립 시장 공시 대상(⑤ 한
 
 GRADE_CUTS = (1.5, 1.0, 0.5, -0.5)
 GRADE_ORDER = ('g4', 'g3', 'g2', 'g1', 'g0')
+
+
+def zone_order(rows):
+    """화면에 나열하는 표준 순서 — 등급(비율) 그룹 → 그룹 안은 절대 세대수 큰 순.
+
+    홈(index.html renderScoreSec)·/zone/ 허브·존 페이지의 "N위"가 **모두 이 하나의
+    순서**를 쓴다. 2026-08-01 사용자 지적: 같은 지표인데 화면마다 그룹핑·정렬이 달라
+    혼란스럽다 — 리스트 범위(홈 23행=수도권 통합 / 허브 44곳=개별)는 역할에 따라
+    달라도, 묶는 기준과 줄 세우는 기준은 같아야 한다.
+    ⚠️ index.html renderScoreSec의 GORDER + `b.tot-a.tot` 정렬과 반드시 동치.
+    """
+    return sorted(rows, key=lambda x: (GRADE_ORDER.index(x['gr']['k']), -x['tot']))
 GRADES = (
     ('g4', '매우 부족', '#a93226', '앞으로 4년, 필요한 집이 크게 모자랍니다'),
     ('g3', '부족', '#c0392b', '공급이 수요를 못 따라갑니다'),
@@ -817,10 +829,8 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     if subs:
         ranktxt = '수도권 %d개 생활권 합계' % len(subs)
     else:
-        # 순위 기준 = 비율(순부족/4년 필요량) — 등급과 같은 잣대(2026-07-31 사용자 결정:
-        # 절대값 순위는 큰 지역이 항상 위라 등급 그룹과 어긋나 반직관적이었다).
-        by_ratio = sorted(allrows, key=lambda x: -(x['tot'] / x['need4'] if x['need4'] else 0))
-        rk = [i for i, x in enumerate(by_ratio, 1) if x['z']['z'] == nm]
+        # 순위 = 표준 순서(zone_order) 상의 위치 — 홈·허브의 나열 순서와 같은 값이다.
+        rk = [i for i, x in enumerate(zone_order(allrows), 1) if x['z']['z'] == nm]
         ranktxt = ('생활권 %d곳 중 %d위' % (len(allrows), rk[0])) if rk else ''
         rank_no = rk[0] if rk else 0
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
@@ -1470,8 +1480,10 @@ footer a{color:var(--muted)}
 </div></header>
 
 <section><div class="wrap">
-  <h2>등급별 순위</h2>
-  <p>생활권 이름을 누르면 판정 근거(밀린 것·필요한 집·들어올 집)와 분기별 입주 일정,
+  <h2>전국 생활권 44곳</h2>
+  <p>홈 순위표와 <b>같은 기준</b>(등급으로 묶고, 그 안은 세대수 큰 순)으로 나열합니다.
+    홈은 수도권을 1행으로 합쳐 보여주고, 여기서는 44곳을 개별로 폅니다.<br>
+    생활권 이름을 누르면 판정 근거(밀린 것·필요한 집·들어올 집)와 분기별 입주 일정,
     그 지역 아파트값 흐름까지 볼 수 있습니다.</p>
   <p style="color:var(--muted);font-size:12.5px">공급 기준 · 가격 예측 아님</p>
   <table>
@@ -1525,19 +1537,14 @@ def build_hub(pages, prd, today):
     # 넣으면 이중 계상이 되고, 그 아래 행이 상세 페이지와 1씩 어긋난다.
     # 홈(index.html)이 이미 쓰는 방식대로 순위 밖 소계로 분리한다.
     ROLLUP = '수도권'
-    # 정렬 기준 = 비율(순부족/4년 필요량) — 등급·본문 순위와 같은 잣대(2026-07-31).
-    live = sorted([r for r in pages if r['z']['z'] != ROLLUP],
-                  key=lambda r: -(r['tot'] / r['need4'] if r['need4'] else 0))
+    # 정렬 = zone_order(표준 순서) — 홈·존 페이지 "N위"와 같은 하나의 기준.
+    live = zone_order([r for r in pages if r['z']['z'] != ROLLUP])
     roll = next((r for r in pages if r['z']['z'] == ROLLUP), None)
     # ⚠️ 표시 번호는 '비율 순위'여야 한다 — 존 페이지의 "생활권 44곳 중 N위"와
     # 홈 히어로(mzRank)가 모두 비율 기준이라, 여기만 표시 순서대로 번호를 매기면
     # 같은 존이 화면마다 다른 순위로 보인다(2026-08-01 리뷰 C1: 31/44곳 불일치,
     # 서울권 허브 #1 vs 페이지 5위). live는 이미 비율 내림차순이므로 그 인덱스를 쓴다.
-    # 여기는 '#' 번호가 있는 순위표다 — 정렬도 그 번호와 같은 잣대(비율)여야 한다.
-    # 등급 구간이 비율 경계라 비율 정렬만으로 그룹이 이어지고 #도 1..44 순차가 된다.
-    # (2026-08-01: 번호만 비율로 바꾸고 정렬은 절대값으로 둬서 5,6,1,3,4,2,7처럼
-    #  뒤죽박죽 나왔다. 홈은 번호가 없으니 그룹 안 절대값 정렬 그대로 유지 — 다른 화면
-    #  다른 규칙이 아니라, 번호가 있느냐 없느냐에 따른 것.)
+    # live가 이미 표준 순서라 '#'은 그대로 1..44 순차이고, 존 페이지의 "N위"와 같은 값.
     rows = []
     prev_gk = None
     for i, r in enumerate(live):
