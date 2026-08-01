@@ -339,8 +339,10 @@
   .meta-bar{display:flex;flex-wrap:wrap;gap:8px 18px;margin:16px 2px 4px;font-size:12.5px;color:var(--muted)}
   .meta-bar b{color:var(--ink2)}
   .period{display:flex;gap:6px;margin:10px 0 4px;flex-wrap:wrap}
+  /* padding 6px → 9px: 높이가 26px라 터치 타깃 권장(44px)은커녕 최소선(32px)에도
+     못 미쳤다(2026-08-01 검수). 글자 크기는 그대로 두고 세로 여백만 늘린다. */
   .period button{flex:1;min-width:54px;border:1px solid var(--line);background:#fff;line-height:1.3;
-    border-radius:var(--r-touch);padding:6px 0;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+    border-radius:var(--r-touch);padding:9px 0;font-size:12.5px;font-weight:600;color:var(--ink2);cursor:pointer}
   .period button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   /* 규모별 동향 피벗 — 지표/규모 멀티토글 + 정렬·행렬전환. 균등 그리드라
      줄바꿈이 안 생기고, 모바일은 규모를 3열×2줄로 의도적으로 나눈다. */
