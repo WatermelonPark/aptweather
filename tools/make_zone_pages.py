@@ -307,7 +307,11 @@ def make_capital(rows):
                 'supply': sum(c['z']['supply'] for c in caps),
                 'sgg': [], 'q0': min(q0s) if q0s else '', 'q1': max(q1s) if q1s else '',
                 'span': 1 if q0s else 0}
-    for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup', 'need4', 'inow', 'fsupw'):
+    # ⚠️ zrefq(분기 적정물량)를 빠뜨리면 롤업이 첫 구성원(서울권) 값을 그대로
+    # 물려받는다 — 수도권 기준선이 17,627(서울권 몫)로 찍혀 22곳 합계 막대들이
+    # 죄다 그 위로 솟았다(2026-08-02 사용자 지적). need4 = zrefq×16 관계가
+    # 롤업에서만 깨져 있었다. 합산 대상에 반드시 포함할 것.
+    for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup', 'need4', 'inow', 'fsupw', 'zrefq'):
         agg[k] = sum(c[k] for c in caps)
     # Fix I3+M4: ③ 타임라인이 ②와 같은 HUB sched 소스를 쓰려면 수도권 롤업도
     # 자기 zsched(원래 없음 — 수도권은 calc()의 개별 zone 루프를 안 돈다)를
@@ -548,7 +552,13 @@ footer a{color:var(--muted)}
  padding-top:2px;padding-left:46px;border-bottom:1px solid var(--line)}
 /* 16분기를 한 화면에 — flex-basis 0으로 균등 분할하고 최소폭을 두지 않는다.
    스크롤시켜 놓으면 '빈 분기가 많다'는 이 그래프의 요점이 화면 밖으로 밀린다. */
-.q-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+.q-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;
+ align-items:center;gap:2px;background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.q-col:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.q-col.on .q-bar{outline:1.5px solid var(--ink);outline-offset:1px}
+/* 누른 분기의 값 — 차트 위 한 줄에 띄운다(막대마다 숫자를 박으면 16칸에 안 들어간다) */
+.q-read{font-size:11.5px;color:var(--ink);font-weight:600;min-height:16px;margin:0 0 2px}
+.q-read span{color:var(--muted);font-weight:500}
 /* 회색 막대는 '들어올 공급'이라는 뜻을 못 나른다. 사이트 컨벤션대로 공급=파랑.
    폭은 22px 칸에 16px — 예전 36px는 너무 뚱뚱해 한눈에 안 들어왔다(2026-08-02). */
 .q-bar{width:100%;max-width:13px;background:#3a7bd5}
@@ -1027,12 +1037,17 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         # 색 농도 = 신뢰가중 _conf(k). 먼 분기일수록 옅다 — 캡션의 '먼 미래는 낮춰
         # 반영'을 글이 아니라 그림으로 보여준다(1분기 뒤 1.0 → 16분기 뒤 0.25).
         # 분기 라벨은 연초(Q1)와 첫 칸만 — 16개를 다 쓰면 겹쳐서 못 읽는다.
+        # 막대 위 숫자는 16칸에 다 못 넣는다 → 누르면(모바일)·올리면(PC) 값을 띄운다.
+        # data-*에 값을 실어두고 아래 스크립트가 읽는다.
         cols = ''.join(
-            '<div class="q-col"><div class="q-bar" style="height:%dpx;opacity:%.2f"></div>'
-            '<span class="q-l">%s</span></div>' % (
+            '<button type="button" class="q-col" data-q="%s" data-v="%s" '
+            'aria-label="%s %s세대"><div class="q-bar" style="height:%dpx;opacity:%.2f"></div>'
+            '<span class="q-l">%s</span></button>' % (
+                qlabel(q), num(qv[q]), qlabel(q), num(qv[q]),
                 int(round(qv[q] / scale * PLOT_H)),
                 max(_conf(k), 0.25),
-                qlabel(q) if (q.endswith('Q1') or k == 1) else '')
+                # 연초(Q1)만 — 첫 칸을 억지로 붙이면 바로 옆 Q1과 겹쳐 못 읽는다
+                qlabel(q) if q.endswith('Q1') else '')
             for k, q in enumerate(qs, 1))
         if qref:
             cols += ('<div class="q-ref" style="bottom:%dpx">'
@@ -1046,6 +1061,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
                        '<b style="color:var(--ink)">· 전체 %s세대</b>'
                        '<span style="color:var(--muted)"> · 먼 미래를 낮춰 반영하면 %s세대'
                        '(위 \'들어올 집\')</span></div>'
+                       '<div class="q-read" data-qread></div>'
                        '<div class="qchart"><div class="q-inner">%s</div></div></div>'
                        % (num(sum(qv.values())), num(r['fsupw']), cols))
         # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
@@ -1334,6 +1350,18 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     # 정적 페이지라 인라인 스크립트로 자족 동작한다(그래프 없으면 no-op).
     if idx_html:
         save_js += (
+            # 분기 막대 → 값 읽기. 누르면 그 분기 값을 차트 위 한 줄에 띄운다.
+            # 기본은 물량이 가장 많은 분기를 미리 띄워 빈 줄이 안 보이게 한다.
+            '<script>(function(){var wrap=document.querySelector(".qwrap");if(!wrap)return;'
+            'var out=wrap.querySelector("[data-qread]"),cols=wrap.querySelectorAll(".q-col");'
+            'if(!out||!cols.length)return;'
+            'function show(b){cols.forEach(function(c){c.classList.toggle("on",c===b)});'
+            'out.innerHTML=b.dataset.q+" <span>입주 예정</span> "+b.dataset.v+"<span>세대</span>";}'
+            'cols.forEach(function(c){c.addEventListener("click",function(){show(c)});'
+            'c.addEventListener("mouseenter",function(){show(c)});});'
+            'var best=cols[0];cols.forEach(function(c){'
+            'if(parseInt(c.dataset.v.replace(/,/g,""),10)>parseInt(best.dataset.v.replace(/,/g,""),10))best=c;});'
+            'show(best);})();</script>'
             '<script>(function(){var w=document.querySelector(".pidx");if(!w)return;'
             'var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");'
             'if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}'
