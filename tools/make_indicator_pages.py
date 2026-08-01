@@ -40,6 +40,21 @@ def num(v):
     return format(int(round(v)), ',')
 
 
+def updown(a, b, tol=0.03):
+    """방향어는 반드시 데이터로 판정한다.
+
+    ⚠️ 2026-08-01 실사고: '줄어든다'를 본문에 박아뒀는데 데이터가 105,950 →
+    115,411(증가)로 바뀌어 라이브에 정반대 문장이 걸렸다. 매주 재생성되는
+    페이지에 방향·비교 단정어를 하드코딩하면 언젠가 반드시 뒤집힌다.
+    변화폭이 tol(기본 3%) 안이면 '거의 그대로'로 — 1% 차이를 '늘어난다'고
+    쓰면 그것도 과장이다."""
+    if not a or not b:
+        return '이어진다'
+    if abs(b - a) <= abs(a) * tol:
+        return '거의 그대로다'
+    return '늘어난다' if b > a else '줄어든다'
+
+
 def ga(w):
     """주격 조사 — 받침 있으면 '이', 없으면 '가' (전남이/경기가)."""
     c = ord(w[-1])
@@ -364,7 +379,7 @@ def build_moveins(adv):
 <section class="wrap">
   <h2>지금 표에서 읽히는 것</h2>
   <p>2026년 적정수요 대비 가장 마른 곳은 <strong>%(lo1)s(%(lo1p)d%%)</strong>, 가장 두터운 곳은 <strong>%(hi1)s(%(hi1p)d%%)</strong>다. 공급이 적정선의 70%%를 밑돌면 전세부터 조여드는 구간, 130%%를 넘으면 입주장이 전세를 누르는 구간으로 본다.</p>
-  <p>수도권은 2026년 %(sudo26)s세대에서 2027년 %(sudo27)s세대로 줄어든다. 다만 시도 합계는 뭉뚱그린 평균이다 — 같은 경기라도 생활권별로 부족과 과잉이 갈리므로, 실제 판단은 생활권 단위로 내려가서 봐야 한다.</p>
+  <p>수도권은 2026년 %(sudo26)s세대에서 2027년 %(sudo27)s세대로 %(sudodir)s. 다만 시도 합계는 뭉뚱그린 평균이다 — 같은 경기라도 생활권별로 부족과 과잉이 갈리므로, 실제 판단은 생활권 단위로 내려가서 봐야 한다.</p>
 </section>
 
 <section class="wrap">
@@ -379,7 +394,8 @@ def build_moveins(adv):
 """ % dict(nat26=num(nat26), nat27=num(nat27), trs='\n'.join(trs),
            lastact=last_act.replace('Q', '년 ') + '분기',
            lo1=lo1[0], lo1p=round(lo1[1]), hi1=hi1[0], hi1p=round(hi1[1]),
-           sudo26=num(sudo['2026'] or 0), sudo27=num(sudo['2027'] or 0))
+           sudo26=num(sudo['2026'] or 0), sudo27=num(sudo['2027'] or 0),
+           sudodir=updown(sudo['2026'], sudo['2027']))
 
     html = fill(SHELL, title=title,
                 ogtitle='아파트 입주물량 — 2026년 전국 %s세대' % num(nat26),
