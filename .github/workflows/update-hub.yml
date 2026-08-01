@@ -37,7 +37,8 @@ name: update-hub
 # workflow_dispatch에는 reseed 옵션을 노출하지 않음 — 실수로 전량 재시딩을 막기 위해).
 on:
   schedule:
-    - cron: '0 18 1 * *'   # 매월 1일 03:00 KST — 증분 갱신
+    - cron: '0 18 1 * *'   # 매월 2일 03:00 KST(=1일 18:00 UTC) — 증분 갱신.
+                           # cron은 UTC라 KST 환산에서 날짜가 하루 넘어간다.
   workflow_dispatch:
     inputs:
       mode:
