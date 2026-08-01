@@ -2005,9 +2005,20 @@ function fillSggSel(k,keep){
   if(keep&&list.indexOf(keep)>=0)sub.value=keep;
 }
 /* 표·그래프가 함께 쓰는 '현재 선택' — 시도면 W.rows, 시군구면 W.sgg.rows */
+/* 시장동향 시도 select — 맨 앞에 '전체'(값 '')를 둔다. 인허가·입주물량이 쓰는
+   advSel()은 '전체' 개념이 없으므로 공유하지 않고 여기서만 채운다. */
+function fillTrendReg(k,regs){
+  const s=document.getElementById(TREND[k].sel); if(!s)return '';
+  if(!s.options.length){
+    s.innerHTML='<option value="">전체 지역</option>'+
+      regSort(regs).map(r=>'<option value="'+r+'">'+r+'</option>').join('');
+  }
+  return s.value;
+}
 function trendPick(k){
   const T=TREND[k], W=trendData(k);
-  const reg=advSel(T.sel,W.regions);
+  const sv=fillTrendReg(k,W.regions);
+  const reg=sv||(W.regions.indexOf('전국')>=0?'전국':W.regions[0]);
   const sub=document.getElementById(T.sel2);
   if(sub&&!sub.hidden&&sub.value&&W.sgg){
     const ci=W.sgg.codes.indexOf(sub.value);
@@ -2054,8 +2065,13 @@ function renderTrendTables(k){
   if(W.rows.length>R.length)mx.push('<button type="button" class="tr-more" data-more="'+k+'">'+
     '이전 '+Math.min(12,W.rows.length-R.length)+'개 더보기</button>');
   document.getElementById(T.matrix).innerHTML=mx.join('');
-  advSel(T.sel,regs);
+  fillTrendReg(k,regs);
   fillSggSel(k,(document.getElementById(T.sel2)||{}).value);
+  /* 아무것도 안 고른 상태(''):  전 지역 매트릭스.  1·2차를 고르면 그 지역만.
+     PC 표 모드에서 시군구는 매트릭스에 아예 없어 첫 화면만으로는 볼 수 없었다
+     (2026-08-01 사용자 지적). 단일 지역 표는 compact가 이미 그리므로 그걸 쓴다. */
+  const secEl=document.getElementById(T.matrix).closest('.gsec');
+  if(secEl)secEl.classList.toggle('sel-one',!!document.getElementById(T.sel).value);
   const P=trendPick(k), ri=P.idx;
   const CR=P.rows.slice(-LIM);
   const cp=['<table class="adv"><thead><tr><th>'+T.col+'</th><th>매매</th><th>전세</th>'+(hasWo?'<th>월세</th>':'')+'</tr></thead><tbody>'];
