@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v48'; // Minor 정리 — 죽은 CSS 제거·계약검사 예외화·그래프 결측 정렬
+const VERSION = 'v49'; // data-rest 408->249KB (규모별 피벗 지연 로드 분리)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
@@ -57,6 +57,7 @@ self.addEventListener('fetch', (e) => {
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
   if (url.pathname === '/data.js' || url.pathname === '/app.css'
       || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json'
+      || url.pathname === '/data-size.json'
       || url.pathname === '/data-trend.json' || url.pathname === '/data-sgg.json') {
     e.respondWith(
       fetch(req)

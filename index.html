@@ -559,8 +559,11 @@ function onTrendSgg(k){
   render();
   if(sub&&sub.value&&!SGG_HIST_READY)ensureSggHist().then(render).catch(()=>{});
 }
-/* 기본통계(11계열)는 이 함수를 거쳐서만 그린다 */
+/* 기본통계(13계열)는 이 함수를 거쳐서만 그린다 */
 function ensureBasicStats(){ return loadData('/data-rest.json'); }
+/* '규모별 동향'(지표4x규모6 피벗)은 혼자 186KB라 rest에서 빼 지연 로드한다 —
+   그 세그먼트를 실제로 누른 사람만 받는다(2026-08-01, tools/split_data.py LAZY_STATS). */
+function ensureSizeStats(){ return loadData('/data-size.json'); }
 /* 감소 모션은 호출 시점에 읽는다 — .matches를 스냅샷으로 잡아두면
    사용자가 세션 중 OS 설정을 바꿔도 따라가지 못한다. */
 const _rm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
@@ -670,7 +673,9 @@ function initStats(){
   // 데이터셋 세그먼트 (+리드타임 특수항목)
   const seg=document.getElementById('ds-seg');
   // DS_ORDER 기준 정렬 — 목록에 없는 신규 계열이 생겨도 빠지지 않게 뒤에 붙인다
-  const avail=[...Object.keys(STATS),'리드타임'];
+  // 지연 로드 계열(규모별)은 아직 STATS에 없어도 목록에 세운다 — 누르면 그때 받는다
+  // (2026-08-01 분리. 안 넣으면 세그먼트에서 통째로 사라진다).
+  const avail=[...new Set([...Object.keys(STATS),'규모별','리드타임'])];
   const keys=DS_ORDER.filter(k=>avail.includes(k))
     .concat(avail.filter(k=>!DS_ORDER.includes(k)));
   seg.innerHTML=keys.map(k=>
@@ -688,7 +693,9 @@ function initStats(){
     const gth=document.querySelector('#sec-basicmain .gt-head');
     if(gth)gth.style.display=isSize?'none':'';
     if(isSize)gtSet('basicmain','t');
-    if(isLead){drawLeadtime();}else{fillRegions();renderAux();drawStat();}
+    // 지연 계열(규모별)은 fillRegions가 STATS[ST.ds]를 바로 읽으므로 여기서 먼저 받는다
+    const go=()=>{ if(isLead){drawLeadtime();}else{fillRegions();renderAux();drawStat();} };
+    if(!isLead&&!STATS[ST.ds]) ensureSizeStats().then(go).catch(()=>{}); else go();
   }));
   // 기간 프리셋
   document.querySelectorAll('#period-seg button').forEach(b=>b.addEventListener('click',()=>{
@@ -719,7 +726,10 @@ function renderAux(){
   }));
 }
 function drawStat(){
-  if(ST.ds==='규모별'){drawSizePivot();return;}
+  if(ST.ds==='규모별'){
+    if(!STATS['규모별']){ ensureSizeStats().then(drawStat).catch(()=>{}); return; }
+    drawSizePivot();return;
+  }
   document.getElementById('stat-tbl').classList.remove('szpivot');
   const D=STATS[ST.ds], raw=D.series[ST.reg]||[];
   const parsed=D.dates.map(parseDate);
