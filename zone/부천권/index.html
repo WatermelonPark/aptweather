@@ -177,10 +177,26 @@ details.fold .dbody p{font-size:14px}
 .pidx .px-lg{display:inline-flex;align-items:center;gap:5px}
 .pidx .px-lg i{width:14px;height:2.5px;display:inline-block;border-radius:2px}
 .pidx svg{display:block;width:100%;height:auto;overflow:visible}
-.near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.n-card{border:1px solid var(--line);padding:10px 12px;display:block}
-.n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
-.n-card i{font-style:normal;color:var(--muted);font-size:12px}
+/* 홈 순위 행(.sc-lab/.sc-val/.sc-tier)의 어법을 그대로 가져온다 — 이름 13.5/600 ink,
+   값 13.5/600 등급색·tabular, 판정은 표와 같은 .tag 배지.
+   ⚠️ 예전엔 color·text-decoration이 없어 브라우저 기본 링크색(파랑/방문 보라)과
+   밑줄이 그대로 나왔다(2026-08-01 지적). 카드 전체가 링크일 땐 반드시 죽일 것. */
+.near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.n-card{border:1px solid var(--line);background:#fff;padding:11px 12px;
+ display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+ text-decoration:none;color:var(--ink)}
+.n-card:hover{border-color:var(--ink)}
+.n-card:visited{color:var(--ink)}
+.n-card b{font-size:13.5px;font-weight:600;color:var(--ink)}
+.n-card .n-v{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+/* 판정 배지는 허브 표와 같은 .tag 어법. 이 클래스는 그동안 HUB_TPL에만 있어서
+   존 페이지에서 쓰면 스타일 없이 16px 맨몸으로 나온다 — 정의를 여기에도 둔다. */
+.tag{font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:0;white-space:nowrap}
+.tag.g4{background:#fdecea;color:#a93226}
+.tag.g3{background:#fbeee9;color:#c0392b}
+.tag.g2{background:#faf3e7;color:#b9770e}
+.tag.g1{background:#edf0ee;color:#5e6f74}
+.tag.g0{background:#e9f0f7;color:#1a5276}
 .px-tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;
  font-size:11.5px;line-height:1.6;white-space:nowrap;opacity:0;transition:opacity .12s;z-index:5}
 .px-tip b{font-weight:700}
@@ -232,7 +248,7 @@ details.fold .dbody p{font-size:14px}
 <div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>
 <div class="card"><b>순위는 비율, 숫자는 절대량</b><span>등급과 순위는 그 지역이 4년간 필요한 양 대비 몇 %%가 모자라는지로 매깁니다. 그래서 작은 지역의 가뭄도 큰 도시와 나란히 비교됩니다. 화면에 보이는 세대수는 체감을 위한 절대량이라, 순위와 크기 순서가 다를 수 있습니다.</span></div>
 </div></details><a class="cta" href="/cycle/">사이클 리포트 읽기 →</a></div></section>
-<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near"><a class="n-card" href="/zone/서울권/"><b>서울권</b><span class="n-g" style="color:#a93226">매우 부족</span><i>−465,831</i></a><a class="n-card" href="/zone/인천권/"><b>인천권</b><span class="n-g" style="color:#c0392b">부족</span><i>−102,691</i></a><a class="n-card" href="/zone/수원권/"><b>수원권</b><span class="n-g" style="color:#a93226">매우 부족</span><i>−54,892</i></a><a class="n-card" href="/zone/화성권/"><b>화성권</b><span class="n-g" style="color:#a93226">매우 부족</span><i>−50,505</i></a></div></div></section>
+<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near"><a class="n-card" href="/zone/서울권/"><b>서울권</b><span class="n-v" style="color:#a93226">−465,831세대</span><span class="tag g4">매우 부족</span></a><a class="n-card" href="/zone/인천권/"><b>인천권</b><span class="n-v" style="color:#c0392b">−102,691세대</span><span class="tag g3">부족</span></a><a class="n-card" href="/zone/수원권/"><b>수원권</b><span class="n-v" style="color:#a93226">−54,892세대</span><span class="tag g4">매우 부족</span></a><a class="n-card" href="/zone/화성권/"><b>화성권</b><span class="n-v" style="color:#a93226">−50,505세대</span><span class="tag g4">매우 부족</span></a></div></div></section>
 <section class="zshare"><div class="wrap"><p class="zs-lead">이 지역에 관심 있는 사람에게 보내보세요</p><button class="cta sub" onclick="shareZone()"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M8 7l4-4 4 4"/></svg>부천권 리포트 공유하기</button></div></section>
 <section><div class="wrap"><h2>다른 생활권도 보기</h2><div class="zlist"><a href="/zone/"><b>전체 생활권</b></a><a href="/zone/수도권/">수도권</a><a href="/zone/서울권/">서울권</a><a href="/zone/대구권/">대구권</a><a href="/zone/인천권/">인천권</a><a href="/zone/수원권/">수원권</a><a href="/zone/화성권/">화성권</a><a href="/zone/고양권/">고양권</a><a href="/zone/용인권/">용인권</a><a href="/zone/성남권/">성남권</a><a href="/zone/광주권/">광주권</a><a href="/zone/안산권/">안산권</a><a href="/zone/여순광권/">여순광권</a><a href="/zone/울산권/">울산권</a><a href="/zone/청주권/">청주권</a><a href="/zone/목포권/">목포권</a><a href="/zone/원주권/">원주권</a><a href="/zone/춘천권/">춘천권</a><a href="/zone/구미권/">구미권</a><a href="/zone/강릉권/">강릉권</a><a href="/zone/의정부권/">의정부권</a><a href="/zone/대전세종권/">대전세종권</a><a href="/zone/포항권/">포항권</a><a href="/zone/파주권/">파주권</a><a href="/zone/창원권/">창원권</a><a href="/zone/전주권/">전주권</a><a href="/zone/안양권/">안양권</a><a href="/zone/부산권/">부산권</a><a href="/zone/시흥권/">시흥권</a><a href="/zone/군포권/">군포권</a><a href="/zone/경기광주권/">경기광주권</a><a href="/zone/서산당진권/">서산당진권</a><a href="/zone/진주권/">진주권</a><a href="/zone/안동권/">안동권</a><a href="/zone/이천권/">이천권</a><a href="/zone/군산익산권/">군산익산권</a><a href="/zone/광명권/">광명권</a><a href="/zone/남양주권/">남양주권</a><a href="/zone/오산권/">오산권</a><a href="/zone/양주권/">양주권</a><a href="/zone/김해권/">김해권</a><a href="/zone/제주권/">제주권</a><a href="/zone/천안아산권/">천안아산권</a><a href="/zone/김포권/">김포권</a><a href="/zone/평택권/">평택권</a></div><a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a></div></section>
 

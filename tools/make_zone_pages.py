@@ -337,6 +337,11 @@ def signed(v):
     return s + ('{:,}'.format(int(round(a))))
 
 
+def signed_u(v):
+    """signed()에 단위까지 — 숫자만 있으면 무엇의 개수인지 안 읽힌다(2026-08-01)."""
+    return signed(v) + '세대'
+
+
 UNIT_WINDOW = 48   # 단지 목록 창(개월): 앞으로 4년 · 지난 4년. 상위 N개 캡 대신
                    # 시간 창으로 자른다(옛 top-20은 2005년 준공 대단지가 밀고 들어왔다).
 
@@ -612,10 +617,26 @@ details.fold .dbody p{font-size:14px}
 .pidx .px-lg{display:inline-flex;align-items:center;gap:5px}
 .pidx .px-lg i{width:14px;height:2.5px;display:inline-block;border-radius:2px}
 .pidx svg{display:block;width:100%;height:auto;overflow:visible}
-.near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.n-card{border:1px solid var(--line);padding:10px 12px;display:block}
-.n-card .n-g{display:block;font-size:12px;font-weight:700;margin-top:2px}
-.n-card i{font-style:normal;color:var(--muted);font-size:12px}
+/* 홈 순위 행(.sc-lab/.sc-val/.sc-tier)의 어법을 그대로 가져온다 — 이름 13.5/600 ink,
+   값 13.5/600 등급색·tabular, 판정은 표와 같은 .tag 배지.
+   ⚠️ 예전엔 color·text-decoration이 없어 브라우저 기본 링크색(파랑/방문 보라)과
+   밑줄이 그대로 나왔다(2026-08-01 지적). 카드 전체가 링크일 땐 반드시 죽일 것. */
+.near{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.n-card{border:1px solid var(--line);background:#fff;padding:11px 12px;
+ display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+ text-decoration:none;color:var(--ink)}
+.n-card:hover{border-color:var(--ink)}
+.n-card:visited{color:var(--ink)}
+.n-card b{font-size:13.5px;font-weight:600;color:var(--ink)}
+.n-card .n-v{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+/* 판정 배지는 허브 표와 같은 .tag 어법. 이 클래스는 그동안 HUB_TPL에만 있어서
+   존 페이지에서 쓰면 스타일 없이 16px 맨몸으로 나온다 — 정의를 여기에도 둔다. */
+.tag{font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:0;white-space:nowrap}
+.tag.g4{background:#fdecea;color:#a93226}
+.tag.g3{background:#fbeee9;color:#c0392b}
+.tag.g2{background:#faf3e7;color:#b9770e}
+.tag.g1{background:#edf0ee;color:#5e6f74}
+.tag.g0{background:#e9f0f7;color:#1a5276}
 .px-tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;
  font-size:11.5px;line-height:1.6;white-space:nowrap;opacity:0;transition:opacity .12s;z-index:5}
 .px-tip b{font-weight:700}
@@ -1248,9 +1269,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         near_html = (
             '<section><div class="wrap"><h2>주변과 비교하면</h2><div class="near">' +
             ''.join('<a class="n-card" href="/zone/%s/"><b>%s</b>'
-                    '<span class="n-g" style="color:%s">%s</span><i>%s</i></a>'
-                    % (x['z']['z'], x['z']['z'], x['gr']['color'], x['gr']['label'],
-                       signed(x['tot']))
+                    '<span class="n-v" style="color:%s">%s</span>'
+                    '<span class="tag %s">%s</span></a>'
+                    % (x['z']['z'], x['z']['z'], x['gr']['color'], signed_u(x['tot']),
+                       x['gr']['k'], x['gr']['label'])
                     for x in near) +
             '</div></div></section>')
     else:
@@ -1627,6 +1649,31 @@ def build_hub(pages, prd, today):
     # live가 이미 표준 순서라 '#'은 그대로 1..44 순차이고, 존 페이지의 "N위"와 같은 값.
     rows = []
     prev_gk = None
+    # 롤업 행은 루프 전에 만들어 두고, 자기 등급 머리 아래에 끼워 넣는다.
+    roll_html = None
+    if roll is not None:
+        _gr = roll['gr']
+        subs_rows = [x for x in pages if x['z'].get('region') == '수도권'
+                     and x['z']['z'] != ROLLUP]
+        sub = len(roll['z'].get('subs') or []) or len(subs_rows) or 16
+        # ⚠️ 롤업 등급(비율 1.20 '부족')은 22곳 평균이 아니라 **풀 전체의 값**이다 —
+        # 수도권은 우리 모델에서 단일 수요 풀이고(psido='수도권', share=hh/sidohh),
+        # 스필오버 실측(수도권 20존 잔차 동조 0.7~0.9)이 그 전제를 뒷받침한다.
+        # 구성원 최악값으로 바꾸면 모델과 모순되고, 서울이 늘 심각해 수도권은 영구히
+        # '매우 부족'이 되어 정보가 0이 된다. 다만 안이 극단적으로 갈린다는 사실은
+        # 숨기면 안 되므로 분포를 함께 적는다.
+        import collections as _c
+        dist = _c.Counter(x['gr']['label'] for x in subs_rows)
+        dist_txt = ' · '.join('%s %d' % (lab, dist[lab])
+                              for _, lab, _, _ in GRADES if dist.get(lab))
+        roll_html = (
+            '      <tr class="rollup"><td class="rk">—</td>'
+            '<td><a class="z" href="/zone/%s/">%s</a> '
+            '<span class="sub">%d개 생활권 합계 · 안은 %s</span></td>'
+            '<td class="num" style="color:%s">%s</td>'
+            '<td><span class="tag %s">%s</span></td></tr>'
+            % (ROLLUP, ROLLUP, sub, dist_txt or '집계 없음', _gr['color'],
+               signed_u(roll['tot']), _gr['k'], _gr['label']))
     for i, r in enumerate(live):
         nm = r['z']['z']
         gr = r['gr']
@@ -1635,41 +1682,19 @@ def build_hub(pages, prd, today):
             rows.append('      <tr class="ghead"><td colspan="4" style="color:%s">%s '
                         '<i>%d곳</i></td></tr>' % (gr['color'], gr['label'], n_in))
             prev_gk = gr['k']
+            # 롤업은 자기 등급 머리 바로 아래. 예전엔 루프 밖에서 append해 등급과
+            # 무관하게 표 맨 끝(45번째)에 붙었다 — 그룹핑이 깨져 보였다(2026-08-01).
+            # 합계라 절대값이 그룹 최대이므로 그룹 안 세대수 순서와도 맞는다.
+            if roll_html and roll and roll['gr']['k'] == gr['k']:
+                rows.append(roll_html)
+                roll_html = None
         rows.append(
-            # 비율은 title 툴팁에만 두면 모바일에서 볼 방법이 없다 — 홈(.sc-pct)과
-            # 같은 형식으로 본문에 병기해 순서가 스스로 설명되게 한다(2026-08-01).
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
-            '<td class="num" style="color:%s">%s<i class="pct">필요량의 %s</i></td>'
+            '<td class="num" style="color:%s">%s</td>'
             '<td><span class="tag %s">%s</span></td></tr>'
-            % (i + 1, nm, nm, gr['color'], signed(r['tot']),
-               ('%.0f%%' % abs(100 * r['tot'] / r['need4']) if r['need4'] else '·'),
-               gr['k'], gr['label']))
-    if roll is not None:
-        gr = roll['gr']
-        subs_rows = [r for r in pages if r['z'].get('region') == '수도권'
-                     and r['z']['z'] != ROLLUP]
-        sub = len(roll['z'].get('subs') or []) or len(subs_rows) or 16
-        # ⚠️ 롤업 등급(비율 1.20 '부족')은 22곳 평균이 아니라 **풀 전체의 값**이다 —
-        # 수도권은 우리 모델에서 단일 수요 풀이고(psido='수도권', share=hh/sidohh),
-        # 스필오버 실측(수도권 20존 잔차 동조 0.7~0.9)이 그 전제를 뒷받침한다.
-        # 그래서 김포·평택의 여유가 서울의 부족을 실제로 흡수할 수 있다는 게 모델의
-        # 주장이고, 롤업 비율은 그 주장 그대로다(구성원 최악값으로 바꾸면 모델과
-        # 모순되고, 서울이 늘 심각해 수도권은 영구히 '매우 부족'이 되어 정보가 0이 된다).
-        # 다만 안이 극단적으로 갈린다는 사실(매우 부족 5 / 여유 4)은 숨기면 안 되므로
-        # 분포를 함께 적는다(2026-08-01 디자인 세션 지적).
-        import collections as _c
-        dist = _c.Counter(r['gr']['label'] for r in subs_rows)
-        dist_txt = ' · '.join('%s %d' % (lab, dist[lab])
-                              for _, lab, _, _ in GRADES if dist.get(lab))
-        rows.append(
-            '      <tr class="rollup"><td class="rk">—</td>'
-            '<td><a class="z" href="/zone/%s/">%s</a> '
-            '<span class="sub">%d개 생활권 합계 · 안은 %s</span></td>'
-            '<td class="num" style="color:%s">%s<i class="pct">필요량의 %s</i></td>'
-            '<td><span class="tag %s">%s</span></td></tr>'
-            % (ROLLUP, ROLLUP, sub, dist_txt or '집계 없음', gr['color'], signed(roll['tot']),
-               ('%.0f%%' % abs(100 * roll['tot'] / roll['need4']) if roll.get('need4') else '·'),
-               gr['k'], gr['label']))
+            % (i + 1, nm, nm, gr['color'], signed_u(r['tot']), gr['k'], gr['label']))
+    if roll_html:      # 등급 머리를 못 만난 방어 경로(이론상 없음)
+        rows.append(roll_html)
     ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",
