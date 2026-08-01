@@ -897,7 +897,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     hero_html = (
         '<span class="zg-badge" style="background:%s1a;color:%s">%s</span>\n'
         '<h1>%s, %s</h1>\n'
-        '<p class="zg-cap">공급 기준 · 가격 예측 아님 · %s 데이터 · %s</p>\n'
+        '<p class="zg-cap">공급 기준 · %s 데이터 · %s</p>\n'
         % (gr['color'], gr['color'], gr['label'], nm, gr['desc'], prd, ranktxt))
 
     # ── ② 왜 이 판정인가 — 근거 3줄. 세 줄의 합이 히어로 순부족과 정확히 일치
@@ -1193,6 +1193,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         '</div></details>' % (nm, members, sublist, span))
     caution_fold_html = (
         '<details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">\n'
+        '<div class="card"><b>가격을 맞히는 지표는 아니다</b><span>2010년 이후 44개 생활권 실측에서, 금리가 크게 움직인 시기엔 공급의 영향이 거의 보이지 않았고, 금리가 잔잔한 시기에도 공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다.</span></div>\n'
         '<div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>\n'
         '<div class="card"><b>순위는 비율, 숫자는 절대량</b><span>등급·순위는 필요량 대비 부족 비율로 매깁니다. 화면의 세대수는 절대량이라 순위와 순서가 다를 수 있습니다.</span></div>\n'
         '</div></details>')
@@ -1209,12 +1210,12 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
                       '독립적으로 움직이는 것으로 실측됐습니다. 위 \'필요한 집\'은 수도권 기준 '
                       '배분값이라 실제 지역 수요와 다를 수 있습니다 — 다음 가격 전환점이 '
                       '확인되면 이 지역만의 값으로 다시 계산할 예정입니다.</p>' % nm)
+    # 면책은 푸터 한 곳에만. 남은 건 '이 지표를 어떻게 읽나'라는 해석 안내라
+    # 별도 섹션·별도 접힘을 만들지 않고 아래 '주의할 점' 접힘의 첫 카드로 넣었다
+    # (접힘이 5개로 늘면 그 자체가 또 다른 소음이다).
     limits_html = (
-        '<section><div class="wrap"><h2>이 숫자의 한계</h2>'
-        '<p class="note">가격을 맞히는 지표가 아닙니다. 2010년 이후 44개 생활권 실측에서, '
-        '금리가 크게 움직인 시기엔 공급의 영향이 거의 보이지 않았고, 금리가 잔잔한 시기에도 '
-        '공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다.</p>'
-        '%s%s</div></section>' % (indep_note, methodology_details_html))
+        '<section><div class="wrap">%s%s</div></section>'
+        % (indep_note, methodology_details_html))
 
     # ── C1(최우선 회귀): nav/zlist/CTA는 near의 존재 여부와 무관하게 '항상' 렌더한다.
     # 예전엔 이 44존 전체 링크 + /#score CTA가 near 섹션 안에 있어서, near가 빈
@@ -1413,7 +1414,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
 <footer><div class="wrap">
   <b>아공맵</b> — 아파트 · 공급량 · 투자지도<br>
   <a href="/">agongmap.co.kr</a> · <a href="/about/">아공맵 소개</a> · 자료: 한국부동산원 입주예정물량 · 국토교통부 주택건설실적 · 행정안전부 주민등록인구 · 한국은행
-  <div class="disc">본 페이지는 공개된 국가통계를 가공한 정보 제공 목적의 자료이며, 특정 부동산의 매수·매도를 권유하거나 투자 수익을 보장하지 않습니다. 투자 판단과 그 결과는 이용자 본인에게 귀속됩니다.</div>
+  <div class="disc">공공 데이터를 가공한 참고 자료이며 투자자문이 아닙니다. 투자 판단과 책임은 이용자에게 있습니다.</div>
 </div></footer>
 
 <nav class="bottomnav">
@@ -1585,7 +1586,6 @@ footer a{color:var(--muted)}
     홈은 수도권을 1행으로 합쳐 보여주고, 여기서는 44곳을 개별로 폅니다.<br>
     생활권 이름을 누르면 판정 근거(밀린 것·필요한 집·들어올 집)와 분기별 입주 일정,
     그 지역 아파트값 흐름까지 볼 수 있습니다.</p>
-  <p style="color:var(--muted);font-size:12.5px">공급 기준 · 가격 예측 아님</p>
   <table>
     <thead><tr><th>#</th><th>생활권</th><th class="num">누적 순부족</th><th>판정</th></tr></thead>
     <tbody>
