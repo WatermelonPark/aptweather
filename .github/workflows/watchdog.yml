@@ -12,6 +12,16 @@ name: 데이터 신선도 감시 (배치 실패 알림)
 # 이 한 번의 실행으로 다음이 전부 걸린다:
 #   PC 꺼짐 / 배치 크래시 / git push 실패(토큰 만료) / Pages 배포 실패 /
 #   산출물 채택 오류 / 특정 소스만 조용히 끊김(KOSIS 표 ID 변경·폐지)
+#
+# 잡이 둘인 이유(2026-08-01 오경보): KOSIS는 GitHub 러너 IP 일부를 간헐 차단한다.
+# 나쁜 IP를 뽑으면 KOSIS 계열 10개가 통째로 timeout → SKIPPED 게이트가 red를 띄운다.
+# 데이터는 멀쩡한데 감시자만 못 본 것이다. 러너 IP는 잡 단위로 새로 뽑히므로
+# 1차 실패는 삼키고 **새 잡(=새 IP)** 으로 한 번 더 본다. 오경보율 12.5% → 1.6%.
+# 오경보가 쌓이면 진짜 경보도 같이 묻힌다 — 그래서 이건 민감도가 아니라 신뢰도 문제다.
+#
+# ⚠️ recheck는 절대 삼키지 말 것. 재시도까지 나쁜 IP면 red가 맞다. 양쪽 다 관대하게
+# 두면 '감시가 켜진 채 아무것도 안 보는' 상태가 되고, 그게 이 워크플로가 막으려는 것이다.
+# check_freshness.py의 SKIPPED 게이트도 같은 이유로 손대지 말 것 — 그건 정상 동작이다.
 
 on:
   schedule:
@@ -22,7 +32,69 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  # 1차: 실패해도 red로 만들지 않는다. 판정은 recheck가 한다.
   freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: IP 프리플라이트
+        id: pre
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+        run: |
+          # 나쁜 IP면 KOSIS 호출마다 60s씩 먹어 잡이 10분 넘게 hang한다. 작은 호출
+          # 하나로 15초 내 판정해서, 나쁜 IP면 대조를 건너뛰고 바로 recheck로 넘긴다.
+          # 속도 최적화 겸 진단이다 — 로그에 '나쁜 IP'와 '진짜 뒤처짐'이 구분돼 남는다.
+          if [ -z "$KOSIS_API_KEY" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; echo "KOSIS 시크릿 없음 — 대조는 진행(키 누락도 감시 대상)"; exit 0; fi
+          if python - << 'PY'
+          import os, sys, urllib.parse, urllib.request
+          u='https://kosis.kr/openapi/Param/statisticsParameterData.do?'+urllib.parse.urlencode(
+            dict(method='getList',apiKey=os.environ['KOSIS_API_KEY'],format='json',jsonVD='Y',
+                 orgId='408',tblId='DT_304004_WEEK_001_B',objL1='ALL',itmId='ALL',prdSe='F',
+                 startPrdDe='20260601',endPrdDe='20260620'))
+          try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+              urllib.request.urlopen(req,timeout=15).read()
+          except Exception as e:
+              print('나쁜 IP:',type(e).__name__); sys.exit(1)
+          PY
+          then
+            echo "ok=true" >> "$GITHUB_OUTPUT"; echo "프리플라이트 OK — 좋은 IP"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "이 러너 나쁜 IP — 대조 건너뛰고 새 IP로 재확인"
+          fi
+
+      - name: 라이브 데이터와 원천 대조
+        id: check
+        if: steps.pre.outputs.ok == 'true'
+        env:
+          # 배치(update-cloud.yml)와 같은 폴백 이름을 쓴다 — 한쪽만 고쳐두면
+          # 키가 비어 원천 조회가 통째로 '건너뜀'이 되고 감시가 조용히 무력해진다.
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+          RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
+        run: |
+          # 여기서 exit 1로 죽으면 잡이 red가 되고 GitHub이 메일을 보낸다.
+          # 1차는 '의심'까지만 하고 판정은 recheck에 넘기므로 종료코드를 삼킨다.
+          if python tools/check_freshness.py; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::1차 대조 실패 — 새 러너(=새 IP)로 재확인한다"
+          fi
+
+  # 2차: 여기가 진짜 판정자. 실패하면 그대로 red → GitHub 실패 메일.
+  recheck:
+    needs: freshness
+    if: needs.freshness.outputs.ok != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -32,10 +104,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 라이브 데이터와 원천 대조
+      - name: 새 IP로 재대조 (여기서 실패하면 진짜 경보)
         env:
-          # 배치(update-cloud.yml)와 같은 폴백 이름을 쓴다 — 한쪽만 고쳐두면
-          # 키가 비어 원천 조회가 통째로 '건너뜀'이 되고 감시가 조용히 무력해진다.
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
           RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
