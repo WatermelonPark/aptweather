@@ -1194,8 +1194,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     caution_fold_html = (
         '<details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">\n'
         '<div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>\n'
-        '<div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>\n'
-        '<div class="card"><b>순위는 비율, 숫자는 절대량</b><span>등급과 순위는 그 지역이 4년간 필요한 양 대비 몇 %%가 모자라는지로 매깁니다. 그래서 작은 지역의 가뭄도 큰 도시와 나란히 비교됩니다. 화면에 보이는 세대수는 체감을 위한 절대량이라, 순위와 크기 순서가 다를 수 있습니다.</span></div>\n'
+        '<div class="card"><b>순위는 비율, 숫자는 절대량</b><span>등급·순위는 필요량 대비 부족 비율로 매깁니다. 화면의 세대수는 절대량이라 순위와 순서가 다를 수 있습니다.</span></div>\n'
         '</div></details>')
     methodology_details_html = (
         origin_fold_html + calc_fold_html + compo_fold_html + caution_fold_html +
@@ -1212,10 +1211,9 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
                       '확인되면 이 지역만의 값으로 다시 계산할 예정입니다.</p>' % nm)
     limits_html = (
         '<section><div class="wrap"><h2>이 숫자의 한계</h2>'
-        '<p class="note">가격을 맞히는 지표가 아닙니다. 2010년 이후 44개 생활권으로 직접 확인한 결과, '
-        '금리가 크게 움직인 시기에는 공급이 가격에 준 영향이 거의 보이지 않았습니다. '
-        '금리가 잔잔했던 시기에는 공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다. '
-        '이 페이지는 <b>이 동네 공급 사정</b>으로만 읽어주세요.</p>'
+        '<p class="note">가격을 맞히는 지표가 아닙니다. 2010년 이후 44개 생활권 실측에서, '
+        '금리가 크게 움직인 시기엔 공급의 영향이 거의 보이지 않았고, 금리가 잔잔한 시기에도 '
+        '공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다.</p>'
         '%s%s</div></section>' % (indep_note, methodology_details_html))
 
     # ── C1(최우선 회귀): nav/zlist/CTA는 near의 존재 여부와 무관하게 '항상' 렌더한다.
