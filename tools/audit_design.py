@@ -11,6 +11,7 @@
   3 조판   한글에 uppercase 금지, 양수 자간 .04em 초과 금지
   4 radius 데이터=0 / 터치=3px 두 값
   5 색     --gold/--accent 폐기, 웜 뉴트럴 금지, 데이터 색(빨강/파랑)은 보존
+          (예외: 등급 스케일의 앰버 틴트 — 아래 DATA_TINTS 주석 참조)
   6 장식   장식용 그림자·그라디언트 금지
 
 사용: python tools/audit_design.py
@@ -28,7 +29,18 @@ os.chdir(ROOT)
 SHARED = io.open('app.css', encoding='utf-8').read()
 
 
+# 데이터 스케일 틴트 예외 — 웜 뉴트럴 판정은 '넓은 면의 베이지'를 잡으라고 만든
+# 것인데, 5등급 발산 스케일(빨강→앰버→중립→파랑)의 **앰버 단계 배경**은 정의상
+# 채도가 낮은 웜 색이라 무슨 값을 골라도 걸린다. 개편이 걷어낸 건 페이지·카드를
+# 덮던 베이지이지 62px 배지의 데이터 틴트가 아니므로 이 색만 통과시킨다.
+# (짝인 글자색 #b9770e는 채도 171이라 애초에 안 걸린다 — 앰버 자체는 쟁점이 아니다.)
+# ⚠️ 여기 새 색을 추가하기 전에: 넓은 면 배경으로 쓰이는 색이면 예외 대상이 아니다.
+DATA_TINTS = {'faf3e7'}   # .sc-tier.g2 / .tag.g2 — 등급 '다소 부족'
+
+
 def warm_neutral(h):
+    if h in DATA_TINTS:
+        return False
     r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
     chroma = max(r, g, b) - min(r, g, b)
     return chroma <= 32 and (g - b) >= (r - g) and r > b + 4 and 40 <= (0.299*r + 0.587*g + 0.114*b) <= 254
