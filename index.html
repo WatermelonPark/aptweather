@@ -2523,7 +2523,7 @@ function renderMyZone(){
       +'<p class="hz-desc">'+g.desc+'</p>'
       +'<p class="hz-meta">공급 부족 '+rank+'위 / '+zones.length+'곳 · 공급 기준 · 가격 예측 아님 '+diff+'</p>'
       +'<p class="hz-links"><a href="/zone/'+encodeURIComponent(row.z)+'/">자세히 보기 ›</a>'
-      +'<button class="mz-change" onclick="mzClear();renderMyZone();track(\'myzone\',{a:\'change\'})">지역 바꾸기</button></p>'
+      +'<button class="mz-change" onclick="mzClear();renderMyZone();track(\'myzone\',{action:\'change\',region:\''+row.z+'\'})">지역 바꾸기</button></p>'
       +'</div>';
     window.__MZ_JUST=0;
     mzSet({z:row.z,savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
@@ -2544,7 +2544,7 @@ function mzPick(btn,ps){
   const zones=(window.__SCZ||[]).filter(z=>z.psido===ps);
   document.getElementById('mz-zones').innerHTML=zones.map(z=>
     '<button class="mz-chip zone" onclick="mzSave(\''+z.z+'\')">'+z.z+' <span class="sc-tier '+z.gr.k+'">'+z.gr.label+'</span></button>').join('');
-  track('myzone',{a:'sido',v:ps});
+  track('myzone',{action:'sido',region:ps});
 }
 function mzSave(nm){
   const zones=window.__SCZ||[],row=zones.find(z=>z.z===nm);
@@ -2552,7 +2552,7 @@ function mzSave(nm){
   mzSet({z:nm,savedAt:new Date().toISOString().slice(0,10),
          last:{tot:Math.round(row.tot),rank:mzRank(zones,nm),grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
   window.__MZ_JUST=1;
-  renderMyZone();track('myzone',{a:'save',v:nm});
+  renderMyZone();track('myzone',{action:'save',region:nm});
 }
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
