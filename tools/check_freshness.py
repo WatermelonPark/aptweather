@@ -113,6 +113,20 @@ def kosis_latest(org, tbl, objn, prd, extra=None):
     return prds[-1]
 
 
+def ecos_latest():
+    """한국은행 ECOS CD금리(721Y001, 월). 최근 1년만 받아 최신 시점을 본다."""
+    url = ('https://ecos.bok.or.kr/api/StatisticSearch/%s/json/kr/1/50/721Y001/M'
+           '/%d%02d/%d%02d/2010000'
+           % (os.environ.get('ECOS_API_KEY', ''),
+              TODAY.year - 1, TODAY.month, TODAY.year, TODAY.month))
+    rows = (get_json(url).get('StatisticSearch') or {}).get('row') or []
+    times = [str(r.get('TIME') or '') for r in rows]
+    times = [t for t in times if len(t) == 6 and t.isdigit()]
+    if not times:
+        raise RuntimeError('시점 없음')
+    return max(times)
+
+
 def digits(s):
     return re.sub(r'\D', '', str(s))
 
@@ -162,7 +176,8 @@ def check(label, ours, getter, grace):
 def main():
     # 키가 비면 모든 원천 조회가 '건너뜀'이 되어 감시가 조용히 통과한다.
     # 감시자가 무력해진 것을 감시할 사람은 없으니 여기서 바로 실패시킨다.
-    missing = [k for k in ('KOSIS_API_KEY', 'RONE_API_KEY') if not os.environ.get(k)]
+    missing = [k for k in ('KOSIS_API_KEY', 'RONE_API_KEY', 'ECOS_API_KEY')
+               if not os.environ.get(k)]
     if missing:
         print('FAIL: %s 없음 — 원천 대조를 할 수 없습니다 (시크릿 확인)' % ', '.join(missing))
         sys.exit(1)
@@ -189,6 +204,22 @@ def main():
                            lambda: kosis_latest('408', sz, 3, 'M', {'objL1': '01'}),
                            GRACE_BASIC))
 
+    # 분양·미분양은 BASIC_CONF가 아니라 SUPPLY_CONF에 있어 예전엔 감시에서 통째로
+    # 빠져 있었다(2026-07-31 발견). 새 지표를 추가할 때 감시에도 들어왔는지
+    # 확인하는 자리가 여기다 — 라이브 STATS 계열 수와 아래 점검 수가 맞아야 한다.
+    print('[공급 파이프라인 — 원천 R-ONE]')
+    for name, cfg in sorted(U.SUPPLY_CONF.items()):
+        D = stats.get(name) or {}
+        last = (D.get('dates') or [None])[-1]
+        fails.append(check(name, last,
+                           lambda c=cfg: rone_latest(c['tbl'], 'MM'),
+                           GRACE_MONTHLY))
+
+    print('[금리 — 원천 한국은행 ECOS]')
+    D = stats.get('금리') or {}
+    fails.append(check('금리', (D.get('dates') or [None])[-1],
+                       ecos_latest, GRACE_MONTHLY))
+
     print('[연간 — 원천 KOSIS]')
     for name, cfg in sorted(U.ANNUAL_CONF.items()):
         D = stats.get(name) or {}
@@ -197,10 +228,21 @@ def main():
                            lambda c=cfg: kosis_latest(c['org'], c['tbl'], c['objn'], 'Y'),
                            None))
 
+    # 커버리지 가드: 라이브에 있는데 위에서 한 번도 대조 안 한 계열을 잡는다.
+    # 분양·미분양이 SUPPLY_CONF에 있다는 이유로 몇 주간 감시 밖에 있었다 — 사람이
+    # 기억으로 막을 일이 아니라서, 새 계열이 늘면 감시가 스스로 실패하게 둔다.
+    covered = (set(U.BASIC_CONF) | set(U.ANNUAL_CONF) | set(U.SUPPLY_CONF)
+               | {'규모별', '금리'})
+    uncovered = sorted(set(stats) - covered)
+    if uncovered:
+        fails.append('감시 누락 계열 %s — check_freshness.py에 대조를 추가할 것'
+                     % ', '.join(uncovered))
+
     bad = [f for f in fails if f]
     print('')
     if bad:
-        print('FAIL: 원천보다 뒤처진 계열 %d개' % len(bad))
+        # 뒤처짐과 감시 누락이 섞이므로 제목은 중립적으로 쓴다.
+        print('FAIL: 문제 %d건' % len(bad))
         for b in bad:
             print('  - %s' % b)
         print('  → update-cloud 실행 이력, 해당 KOSIS 표 ID 변경/폐지 여부 확인')

@@ -38,4 +38,5 @@ jobs:
           # 키가 비어 원천 조회가 통째로 '건너뜀'이 되고 감시가 조용히 무력해진다.
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
           RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
         run: python tools/check_freshness.py

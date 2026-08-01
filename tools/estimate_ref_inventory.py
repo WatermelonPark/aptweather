@@ -11,18 +11,42 @@
   가장 잘 맞는 적정물량 X를 찾는다. 지연은 강의 근거로 4분기 고정한다.
 """
 import io, os, json, re, statistics, collections
+import sys
 
-SC = r'C:\Users\shpar\AppData\Local\Temp\claude\C--Users-shpar-OneDrive----Claude\6daa8fa3-db54-41a3-bab0-72d67ac03f73\scratchpad'
-ROOT = r'C:\Users\shpar\OneDrive\문서\Claude\aptweather'
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+DATA = os.path.join(HERE, 'data')
 LAG = 4          # 강의: 소진 후 약 1년
 TOL = 3          # 예측-실제 허용 오차(분기)
 
-EXCL = set(json.load(io.open(os.path.join(SC, 'rate_shock.json'), encoding='utf-8'))['excl_quarters'])
-kapt = json.load(io.open(os.path.join(SC, 'kapt.json'), encoding='utf-8'))
-cache = json.load(io.open(os.path.join(SC, 'trade_raw.json'), encoding='utf-8'))
-lawd = json.load(io.open(os.path.join(SC, 'lawd.json'), encoding='utf-8'))
-import sys
-sys.path.insert(0, os.path.join(ROOT, 'tools'))
+# 입력·산출물 모두 tools/data. 세션 스크래치패드 절대경로를 쓰던 것을 걷어냈다
+# (그 디렉터리가 비워져 이 도구가 실행 불가였다 — 2026-07-31 발견).
+sys.path.insert(0, HERE)
+
+# verify_ref_sido에도 같은 로더가 있다. import하면 그 스크립트가 통째로 실행돼
+# 버려서(모듈 가드가 없다) 짧은 함수를 그대로 둔다.
+REBUILD = {
+    'rate_shock.json': 'python tools/rate_shock.py 로 재생성',
+    'kapt.json':       '공동주택 단지 목록 캐시 — 수집 스크립트 유실, 재작성 필요',
+    'trade_raw.json':  '국토부 실거래가 원자료 캐시 — 수집 스크립트 유실, 재작성 필요',
+    'lawd.json':       '법정동 코드 캐시 — tools/data/code_bdong.json에서 파생 가능',
+    'scale.json':      'verify_ref_scale.py 산출물 — 저장 경로 미복원',
+}
+
+
+def need(fn):
+    p = os.path.join(DATA, fn)
+    if not os.path.exists(p):
+        print('입력 없음: tools/data/%s' % fn)
+        print('  → %s' % REBUILD.get(fn, '재생성 방법 미상'))
+        sys.exit(2)
+    return json.load(io.open(p, encoding='utf-8'))
+
+
+EXCL = set(need('rate_shock.json')['excl_quarters'])
+kapt = need('kapt.json')
+cache = need('trade_raw.json')
+lawd = need('lawd.json')
 import update_adv_data as U
 
 SD = {'서울특별시': '수도권', '인천광역시': '수도권', '경기도': '수도권',
@@ -159,7 +183,7 @@ src = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()
 adv = json.loads(re.search(r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/',
                            src, re.S).group(1))
 REF = adv['occupancy']['ref']
-sc = json.load(io.open(os.path.join(SC, 'scale.json'), encoding='utf-8'))
+sc = need('scale.json')
 SITE_H, KAPT_H = sc['site_over_hog'], sc['kapt_over_hog']
 
 # ── ① 시도 ───────────────────────────────────────────────────────
@@ -227,6 +251,6 @@ for s in ORDER:
         s, format(v['cur'], ','), format(rec, ','),
         (rec / v['cur'] - 1) * 100, why))
 print('-' * 60)
-io.open(os.path.join(SC, 'ref_final.json'), 'w', encoding='utf-8').write(
+io.open(os.path.join(DATA, 'ref_final.json'), 'w', encoding='utf-8').write(
     json.dumps({'sido': sido, 'zone': zone, 'final': final}, ensure_ascii=False, indent=1))
-print('저장: ref_final.json')
+print('저장: tools/data/ref_final.json')

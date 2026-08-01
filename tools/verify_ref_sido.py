@@ -11,13 +11,35 @@
 """
 import io, os, sys, json, re, statistics, collections
 
-SC = r'C:\Users\shpar\AppData\Local\Temp\claude\C--Users-shpar-OneDrive----Claude\6daa8fa3-db54-41a3-bab0-72d67ac03f73\scratchpad'
-ROOT = r'C:\Users\shpar\OneDrive\문서\Claude\aptweather'
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+DATA = os.path.join(HERE, 'data')
 
-EXCL = set(json.load(io.open(os.path.join(SC, 'rate_shock.json'), encoding='utf-8'))['excl_quarters'])
-kapt = json.load(io.open(os.path.join(SC, 'kapt.json'), encoding='utf-8'))
-cache = json.load(io.open(os.path.join(SC, 'trade_raw.json'), encoding='utf-8'))
-lawd = json.load(io.open(os.path.join(SC, 'lawd.json'), encoding='utf-8'))
+# 입력은 tools/data에서 읽는다. 예전엔 세션 스크래치패드 절대경로를 박아뒀는데,
+# 그 디렉터리가 비워지면서 이 도구가 통째로 실행 불가가 됐다(2026-07-31 발견).
+# rate_shock.json은 tools/rate_shock.py로 언제든 재생성된다. 나머지 셋은
+# 실거래·단지 원자료 캐시라 아직 저장소에 없다 — 아래 안내대로 다시 만들어야 한다.
+REBUILD = {
+    'rate_shock.json': 'python tools/rate_shock.py 로 재생성',
+    'kapt.json':       '공동주택 단지 목록 캐시 — 수집 스크립트 유실, 재작성 필요',
+    'trade_raw.json':  '국토부 실거래가 원자료 캐시 — 수집 스크립트 유실, 재작성 필요',
+    'lawd.json':       '법정동 코드 캐시 — tools/data/code_bdong.json에서 파생 가능',
+}
+
+
+def need(fn):
+    p = os.path.join(DATA, fn)
+    if not os.path.exists(p):
+        print('입력 없음: tools/data/%s' % fn)
+        print('  → %s' % REBUILD.get(fn, '재생성 방법 미상'))
+        sys.exit(2)
+    return json.load(io.open(p, encoding='utf-8'))
+
+
+EXCL = set(need('rate_shock.json')['excl_quarters'])
+kapt = need('kapt.json')
+cache = need('trade_raw.json')
+lawd = need('lawd.json')
 
 SD = {'서울특별시': '수도권', '인천광역시': '수도권', '경기도': '수도권',
       '부산광역시': '부산', '대구광역시': '대구', '광주광역시': '광주',

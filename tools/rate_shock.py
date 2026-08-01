@@ -11,9 +11,14 @@ IMF·서브프라임·레고랜드 같은 외부 변수가 시장의 사이클�
 CD금리(91일) 시계열로 급변동기를 데이터로 식별한다.
 """
 import sys, os, io, json, collections, statistics
-ROOT = r'C:\Users\shpar\OneDrive\문서\Claude\aptweather'
-SC = r'C:\Users\shpar\AppData\Local\Temp\claude\C--Users-shpar-OneDrive----Claude\6daa8fa3-db54-41a3-bab0-72d67ac03f73\scratchpad'
-sys.path.insert(0, os.path.join(ROOT, 'tools'))
+
+# 산출물은 저장소 안(tools/data)에 둔다. 예전엔 세션 스크래치패드에 썼는데,
+# 그 디렉터리가 비워지면서 이 결론(금리 급변 구간)을 재현할 수 없게 됐다
+# — 다른 곳에서 인용되는 값이라 버전 관리 대상이어야 한다.
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+OUT = os.path.join(HERE, 'data', 'rate_shock.json')
+sys.path.insert(0, HERE)
 import update_adv_data as U
 
 # ── CD금리 수집 (한국은행 ECOS) ──────────────────────────────────
@@ -90,6 +95,7 @@ print()
 print('제외 분기 %d개 (앞뒤 6개월 여유 포함)' % len(EXCL))
 print('  ', ' '.join(sorted(EXCL)[:40]), '...' if len(EXCL) > 40 else '')
 
-io.open(os.path.join(SC, 'rate_shock.json'), 'w', encoding='utf-8').write(
-    json.dumps({'runs': runs, 'excl_quarters': sorted(EXCL)}, ensure_ascii=False))
-print('저장: rate_shock.json')
+io.open(OUT, 'w', encoding='utf-8').write(
+    json.dumps({'runs': runs, 'excl_quarters': sorted(EXCL)},
+               ensure_ascii=False, indent=1))
+print('저장: %s' % os.path.relpath(OUT, ROOT))
