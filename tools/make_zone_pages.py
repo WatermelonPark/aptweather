@@ -493,6 +493,11 @@ tbody tr:last-child td{border-bottom:0}
 .cta{display:block;max-width:400px;margin:22px auto 0;text-align:center;text-decoration:none;
  background:var(--ink);color:#fff;font-size:16.5px;font-weight:600;padding:15px 22px;border-radius:3px}
 .cta.sub{background:#fff;color:var(--ink);border:1.5px solid var(--ink);font-size:15px;padding:13px 20px}
+button.cta{width:100%;max-width:400px;border:0;cursor:pointer;font-family:inherit;
+ display:flex;align-items:center;justify-content:center;gap:8px}
+button.cta.sub{border:1.5px solid var(--ink)}
+.zshare{padding:4px 0 28px}
+.zshare .zs-lead{font-size:13.5px;color:var(--muted);text-align:center;margin-bottom:10px}
 .zlist{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
 .zlist a{font-size:12.5px;font-weight:600;text-decoration:none;color:var(--ink2);background:#fff;
  border:1px solid var(--line);border-radius:3px;padding:5px 9px}
@@ -1203,6 +1208,22 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         '<a class="cta sub" href="/#score">전국 생활권 순위 한눈에 보기 →</a>'
         '</div></section>' % nav)
 
+    # ── 공유. 지역 단톡방이 이 리포트의 자연 유통 경로라, 공유를 한 번의 탭으로
+    # 만든다. 카카오 SDK는 싣지 않는다 — 존 페이지는 SEO 랜딩이라 가벼워야 하고,
+    # Web Share API를 쓰면 모바일에서 카톡을 포함한 네이티브 공유 시트가 열려
+    # 결과가 같으면서 스크립트가 0바이트다. 링크만 전달되면 카톡이 og:image
+    # (share/zone-<이름>.png)를 읽어 지역명 카드를 띄운다.
+    # 데스크톱엔 share API가 없는 경우가 많아 클립보드로 폴백한다.
+    share_html = (
+        '<section class="zshare"><div class="wrap">'
+        '<p class="zs-lead">이 지역에 관심 있는 사람에게 보내보세요</p>'
+        '<button class="cta sub" onclick="shareZone()">'
+        '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        'stroke-linejoin="round" d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M8 7l4-4 4 4"/>'
+        '</svg>%s 리포트 공유하기</button>'
+        '</div></section>' % nm)
+
     # ── ⑥ 주변과 비교하면 — 같은 시도(ps) 생활권 미니 카드(최대 4곳).
     # 시도에 존이 하나뿐이면(위 7곳) 같은 region(경상·전라 등)으로 넓히고,
     # 그래도 못 채우면(제주권처럼 region에도 혼자인 경우) 전국에서 채운다 —
@@ -1348,7 +1369,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
 <meta property="og:title" content="%(nm)s 아파트 공급 분석 — %(tname)s">
 <meta property="og:description" content="%(desc)s">
 <meta property="og:url" content="%(site)s/zone/%(enc)s/">
-<meta property="og:image" content="%(site)s/og-brand.png">
+<meta property="og:image" content="%(site)s/share/zone-%(enc)s.png">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">%(ld)s</script>
 <style>%(css)s</style>
@@ -1366,6 +1387,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
 %(flag)s
 %(limits)s
 %(near)s
+%(share)s
 %(nav)s
 
 <footer><div class="wrap">
@@ -1404,6 +1426,20 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     });
   });
 })();
+function shareZone(){
+  var nm='%(nm)s';
+  var u=location.origin+location.pathname+'?utm_source=zone_share&utm_medium=viral&utm_campaign=zone';
+  var t=nm+' 아파트 공급 분석 — 아공맵';
+  var x=nm+'에 필요한 집과 앞으로 들어올 집, 국가 통계로 확인해보세요.';
+  try{gtag('event','share',{content_type:'zone',method:navigator.share?'web_share':'copy',zone:nm});}catch(e){}
+  if(navigator.share){navigator.share({title:t,text:x,url:u}).catch(function(){});return;}
+  var b=document.querySelector('.zshare button');
+  function done(m){if(!b)return;var o=b.innerHTML;b.textContent=m;setTimeout(function(){b.innerHTML=o;},2000);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t+'\\n'+u).then(function(){done('링크가 복사됐어요');})
+      .catch(function(){done('복사 실패 — 주소창을 복사하세요');});
+  }else{done('복사 실패 — 주소창을 복사하세요');}
+}
 </script>
 %(save_js)s
 
@@ -1413,6 +1449,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         ranktxt=ranktxt, prd=prd, fq=r['fq'],
         hero=hero_html, why=why_html, timeline=timeline_html, units=units_sec_html,
         flag=flag_html, limits=limits_html, near=near_html, nav=nav_html, save_js=save_js,
+        share=share_html,
         ld=json.dumps(ld, ensure_ascii=False),
         css=CSS)
 
