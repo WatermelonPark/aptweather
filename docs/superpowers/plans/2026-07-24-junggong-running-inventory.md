@@ -1,5 +1,26 @@
 # 준공 기반 러닝재고 순부족 모델 Implementation Plan
 
+> ## ✅ 실행 완료 + go-live (2026-07-31 활성화 · 2026-08-01 검증)
+>
+> Task 1~8 산출물이 모두 실재하고, 계획서상 "시드·검토 후 활성화"까지 **실제로 수행됨** —
+> `tools/data/hub_permits.json`의 `meta.activate=true`로 준공 기반 러닝재고가 **라이브 스코어**다.
+> 되돌리려면 `meta.activate`를 제거/`false`로 커밋하면 다음 daily부터 구모델로 복귀한다.
+>
+> **검증 근거(2026-08-01 실측)**: `running_shortage()`·`hub_derive()`·`done_q`/`sched_q` 버킷·
+> `verify_rankdiff.py`·`verify_ref_scale.py`·`test_calc_inventory.py`·JS 미러 `runningShortage()`·
+> 존 단지목록 2섹션 전부 실재. `pytest tools/tests/` **140 passed**,
+> `check_dual_calc.py` **생활권 44곳 전원 일치**(dA·dB·dC·tot·need4·grade).
+>
+> **계획 이후 확정된 사항(계획서 본문과 다른 부분 — 본문보다 이쪽이 정본)**:
+> - 계획 §Global Constraints의 순부족 산식은 수요항도 conf 가중(A안)으로 적혀 있으나,
+>   **라이브는 B안**(수요 비가중·공급만 conf 감쇠)이다 — `calc()`가 `weight_demand=False`로 넘긴다.
+>   `running_shortage()`의 기본값 `True`는 함수 기본값일 뿐 라이브 경로가 아니다.
+> - `refq`는 호출측이 **zone-level(적정×share, 수요 풀 존은 pool_ref×pshare)**로 만들어 넘긴다.
+> - 재고 바닥은 `max(0,·)`가 아니라 **적정 4년치 상한**(`DEFICIT_CAP`)을 둔 음수 허용으로 바뀌었고,
+>   순공급에 **멸실(demol)**이 추가됐다(준공−멸실).
+>
+> ⚠️ 아래 체크박스는 단계별 실행 로그가 아니라 **산출물 실측 검증에 근거해 사후 표기**한 것이다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 생활권 공급점수를 건축HUB 단일소스(단지별 준공/준공예정, 무중복)로 재구축 — 기준표 러닝재고에 공급으로 넣어 "순부족 = 미래수요 − (현재재고 + 미래공급×신뢰감쇠)"를 산출한다.
@@ -47,19 +68,19 @@ Q6=A. calc/scCalc를 HUB 이전으로 복원하고 obsolete 산물 제거. 라�
 **Interfaces:**
 - Produces: pre-HUB calc()/scCalc()(원 3항목 dA/dB/dC pop-alloc·2yr forward). 이후 태스크가 이걸 러닝재고로 재작성.
 
-- [ ] **Step 1: pre-HUB calc() 복원**
+- [x] **Step 1: pre-HUB calc() 복원**
 
 `git show 8aa6863:tools/make_zone_pages.py` 로 pre-HUB 버전을 얻어, 현재 `make_zone_pages.py`의 `calc()`(및 Task6이 추가한 `fut_window`/`zone_fut_supply`/`calc_dc`, FARQ/NEARQ, dcsrc, make_capital의 dcsrc/mixed)를 그 버전으로 되돌린다. 파일의 HUB 무관 부분(있다면)은 유지.
 
-- [ ] **Step 2: scCalc() surgical 복원**
+- [x] **Step 2: scCalc() surgical 복원**
 
 `git show 725d453~1:index.html` 에서 `scCalc()` 함수 본문만 추출해, 현재 index.html의 `scCalc()`를 교체. **index.html의 나머지(병렬 세션 랜딩/지도 작업)는 절대 건드리지 말 것** — 함수 하나만 교체. 교체 전 `git fetch && git pull --rebase origin main`.
 
-- [ ] **Step 3: hub_derive 제거**
+- [x] **Step 3: hub_derive 제거**
 
 `tools/update_adv_data.py`에서 `hub_derive`·`_hub_zone_map`·`load_bdong`(hub 전용이면) 및 그 호출을 제거. `permits` 갱신 경로는 pre-HUB(fetch_permits만)로.
 
-- [ ] **Step 4: obsolete 삭제 + 테스트**
+- [x] **Step 4: obsolete 삭제 + 테스트**
 
 ```bash
 cd "C:/Users/shpar/OneDrive/문서/Claude/aptweather"
@@ -69,7 +90,7 @@ python tools/make_zone_pages.py   # 생성 후 zone/*·sitemap 되돌리기
 ```
 Expected: 테스트 통과(HUB 점수 테스트 삭제됨), 존페이지 생성 예외 없음. calc()가 pre-HUB 산식.
 
-- [ ] **Step 5: 커밋 + push**
+- [x] **Step 5: 커밋 + push**
 
 ```bash
 git add -A && git commit -m "revert: HUB 점수변경(dC meas·착공 forward) pre-HUB로 되돌림 — 러닝재고 재구축 기반"
@@ -90,7 +111,7 @@ push 거부 시 `git pull --rebase origin main` 후 재push, scCalc/calc 변경 
 - Consumes: `hub_common.apt_records`, `to_quarter`.
 - Produces: `hub_permits.json` sgg 항목이 `{"name","done_q":{q:세대},"sched_q":{q:세대}}`. `fetch_group`/`run` 시그니처의 permit_q/start_q → done_q/sched_q.
 
-- [ ] **Step 1: 분류 실패 테스트**
+- [x] **Step 1: 분류 실패 테스트**
 
 ```python
 # tools/tests/test_fetch_hub.py 에 추가
@@ -107,14 +128,14 @@ def test_aggregate_classifies_latest_stage_once():
     assert sched == {'2029Q4': 200}
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 ```bash
 python -m pytest tools/tests/test_fetch_hub.py::test_aggregate_classifies_latest_stage_once -v
 ```
 Expected: FAIL (현재 _aggregate는 permit_q/start_q 반환, done/sched 아님).
 
-- [ ] **Step 3: `_aggregate` 재작성**
+- [x] **Step 3: `_aggregate` 재작성**
 
 `tools/fetch_hub_permits.py`의 `_aggregate`를 교체:
 ```python
@@ -142,15 +163,15 @@ def _aggregate(items):
     return dict(done_q), dict(sched_q)
 ```
 
-- [ ] **Step 4: fetch_group/run 명칭 전파**
+- [x] **Step 4: fetch_group/run 명칭 전파**
 
 `fetch_group`(반환 `permit_q, start_q, productive, had_unresolved_error` → `done_q, sched_q, productive, had_unresolved_error`)와 `run`의 write(`out['sgg'][key] = {'name':…, 'done_q':done_q, 'sched_q':sched_q}`)를 갱신. 진행 로그·주석의 permit_q/start_q 표현도 done_q/sched_q로.
 
-- [ ] **Step 5: shift_quarter 제거**
+- [x] **Step 5: shift_quarter 제거**
 
 `tools/hub_common.py`에서 `shift_quarter` 함수 삭제. `tools/tests/test_hub_common.py`에서 `test_shift_quarter` 삭제.
 
-- [ ] **Step 6: 통과 확인 + 소표본 실호출**
+- [x] **Step 6: 통과 확인 + 소표본 실호출**
 
 ```bash
 python -m pytest tools/tests/test_fetch_hub.py tools/tests/test_hub_common.py -q
@@ -159,7 +180,7 @@ python -c "import json;d=json.load(open('tools/data/hub_permits.json',encoding='
 ```
 Expected: 테스트 통과. 평택 sched_q에 2026~2030 미래 준공예정 세대(밀도조사와 정합), done_q에 과거 준공.
 
-- [ ] **Step 7: 커밋 + push**
+- [x] **Step 7: 커밋 + push**
 
 ```bash
 git add tools/fetch_hub_permits.py tools/hub_common.py tools/tests/test_fetch_hub.py tools/tests/test_hub_common.py tools/data/hub_permits.json
@@ -178,7 +199,7 @@ git commit -m "feat: HUB 수집 버킷을 준공(done_q)/준공예정(sched_q) �
 - Consumes: `hub_permits.json`(done_q/sched_q), `LIVEZONE`/`LZ_GU2SI`/`LZ_SIDO_FULL`, `code_bdong.json`.
 - Produces: `adv['permits']['done'] = {zone:{q:세대}}`, `adv['permits']['sched'] = {zone:{q:세대}}`. activate·완결성 게이트.
 
-- [ ] **Step 1: 매핑·집계 테스트**
+- [x] **Step 1: 매핑·집계 테스트**
 
 ```python
 # tools/tests/test_hub_derive.py
@@ -213,14 +234,14 @@ def test_hub_derive_active_complete_zone_only(tmp_path, monkeypatch):
     assert adv['permits']['sched']['오산권'] == {'2028Q2':200}
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 ```bash
 python -m pytest tools/tests/test_hub_derive.py -q
 ```
 Expected: FAIL (hub_derive/_hub_zone_map 없음 — Task1에서 제거됨).
 
-- [ ] **Step 3: 구현**
+- [x] **Step 3: 구현**
 
 `tools/update_adv_data.py`에 재도입(Task5 매핑 로직 재사용하되 done/sched 산출):
 ```python
@@ -288,14 +309,14 @@ def hub_derive(adv):
 ```
 `permits` 갱신 경로 끝에서 `hub_derive(adv)` 호출.
 
-- [ ] **Step 4: 통과 + 실데이터 sanity**
+- [x] **Step 4: 통과 + 실데이터 sanity**
 
 ```bash
 python -m pytest tools/tests/test_hub_derive.py -q
 ```
 Expected: 3 passed. (실데이터는 activate=false라 방출 없음 — 정상.)
 
-- [ ] **Step 5: 커밋 + push**
+- [x] **Step 5: 커밋 + push**
 
 ```bash
 git add tools/update_adv_data.py tools/tests/test_hub_derive.py
@@ -314,7 +335,7 @@ git commit -m "feat: hub_derive 재작성 — 존별 준공/준공예정 시계�
 **Interfaces:**
 - Produces: 시도/생활권별 `HUB준공 분기평균` vs `occupancy 준공실적 분기평균` vs `refq(적정)` 표. 스케일 계수 제안.
 
-- [ ] **Step 1: 진단 스크립트**
+- [x] **Step 1: 진단 스크립트**
 
 ```python
 # tools/verify_ref_scale.py — HUB done_q 분기평균과 occupancy ref 스케일 대조
@@ -324,14 +345,14 @@ git commit -m "feat: hub_derive 재작성 — 존별 준공/준공예정 시계�
 ```
 (전량 시드 후 의미 있으므로, 시드 전엔 표본 시군구로 스모크만.)
 
-- [ ] **Step 2: 실행(표본) + 판단 기록**
+- [x] **Step 2: 실행(표본) + 판단 기록**
 
 ```bash
 python tools/verify_ref_scale.py
 ```
 Expected: 표본 존(오산·성남·부산권 등)에 대해 HUB준공 분기세대 / refq 비율 출력. **비율이 ~1 근처면 스케일 OK(계수 불필요), 체계적으로 벗어나면 계수 기록**. 결과를 `tools/data/hub_pilot_notes.md`에 한 섹션으로 남김. (실제 보정 계수 적용은 전량 시드 후 Task 5 순위검토에서 확정.)
 
-- [ ] **Step 3: 커밋 + push**
+- [x] **Step 3: 커밋 + push**
 
 ```bash
 git add tools/verify_ref_scale.py tools/data/hub_pilot_notes.md
@@ -351,7 +372,7 @@ git commit -m "feat: 적정 스케일 검증 도구 — HUB준공 vs occupancy/r
 - Consumes: `adv['permits']['done']`, `['sched']`, `O['ref']`(refq).
 - Produces: 러닝재고 순부족을 담은 calc() 결과(`tot`). `running_shortage()` 헬퍼.
 
-- [ ] **Step 1: 러닝재고 순부족 테스트**
+- [x] **Step 1: 러닝재고 순부족 테스트**
 
 ```python
 # tools/tests/test_calc_inventory.py
@@ -377,14 +398,14 @@ def test_running_shortage_no_negative_inventory():
     assert s > 0
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 ```bash
 python -m pytest tools/tests/test_calc_inventory.py -q
 ```
 Expected: FAIL (running_shortage 없음).
 
-- [ ] **Step 3: 구현**
+- [x] **Step 3: 구현**
 
 `make_zone_pages.py`에 헬퍼 추가 + calc()가 이를 사용:
 ```python
@@ -413,7 +434,7 @@ def running_shortage(done, sched, refq, cur_q, horizon=20):
 ```
 calc()에서 존별로: `refq = O['ref'][ps] or band중앙`, `done = (P.get('done') or {}).get(z['z']) or {}`, `sched = (P.get('sched') or {}).get(z['z']) or {}`, `tot = running_shortage(done, sched, refq, cur_q)`. **done/sched 없는 존(비완결·inactive)** → pre-HUB 폴백 산식 유지(Task1 복원분). `cur_q = today.year*4 + (today.month-1)//3`.
 
-- [ ] **Step 4: 통과 + verify_rankdiff**
+- [x] **Step 4: 통과 + verify_rankdiff**
 
 ```python
 # tools/verify_rankdiff.py — 구모델(pre-HUB) vs 신모델(러닝재고, hub_derive 강제 activate 주입) 36존 순위 나란히
@@ -425,7 +446,7 @@ python tools/make_zone_pages.py    # 스모크(zone/*·sitemap 되돌리기)
 ```
 Expected: 테스트 통과. 순위표에서 활성 개발지(화성·평택 등)가 미래 준공예정 반영으로 **과잉 방향(순부족↓)**이면 정합. 설명 안 되는 요동이면 conf/앵커/스케일 재검토.
 
-- [ ] **Step 5: 커밋 + push**
+- [x] **Step 5: 커밋 + push**
 
 ```bash
 git add tools/make_zone_pages.py tools/verify_rankdiff.py tools/tests/test_calc_inventory.py
@@ -443,7 +464,7 @@ git commit -m "feat: calc() 러닝재고 순부족(미래수요-(재고+미래�
 **Interfaces:**
 - Consumes: `ADV.permits.done`, `ADV.permits.sched`, `O.ref`.
 
-- [ ] **Step 1: scCalc 미러 작성**
+- [x] **Step 1: scCalc 미러 작성**
 
 `index.html`의 `scCalc()`에 JS 러닝재고를 calc()와 **동일 산식**으로 이식 (`git fetch && git pull --rebase` 먼저, 함수만 surgical 편집):
 ```javascript
@@ -461,12 +482,12 @@ function runningShortage(done,sched,refq,curQ,horizon){
 ```
 존별로 `refq`, `done=(P.done&&P.done[z.z])||{}`, `sched=(P.sched&&P.sched[z.z])||{}`, `tot=runningShortage(...)`. done/sched 없으면 pre-HUB 폴백(복원된 scCalc 산식). 정규화 금지.
 
-- [ ] **Step 2: Node 등가 재증명**
+- [x] **Step 2: Node 등가 재증명**
 
 스크래치패드 Node 스크립트: data.js(또는 hub_derive activate=true 주입 ADV) 로드 → scCalc 실행 → Python calc()와 존별 tot 비교, **max abs diff < 1e-6** (done/sched 있는 존·없는 존 둘 다 포함).
 Expected: max abs diff ≈ 0. 불일치 존은 scCalc 수정.
 
-- [ ] **Step 3: 커밋 + push**
+- [x] **Step 3: 커밋 + push**
 
 ```bash
 git add index.html
@@ -484,16 +505,16 @@ git commit -m "feat: scCalc 홈 미러 — 러닝재고 순부족 동치(calc()�
 **Interfaces:**
 - Consumes: 존별 준공예정 단지·최근 준공 단지 목록(이름·세대·연월).
 
-- [ ] **Step 1: 리스트 데이터 주입**
+- [x] **Step 1: 리스트 데이터 주입**
 
 hub_derive(또는 별도)에서 존별 **단지 리스트**를 소량 주입: `permits['units'][zone] = {'sched':[[단지명,세대,'YYYY-MM',conf],...], 'done':[[단지명,세대,'YYYY-MM'],...]}` — sched는 준공예정 최근순, done은 최근 N년(예 3년). 원시 전량 아님, 존당 상위 몇 개.
 (collector가 단지명·연월을 hub_permits.json에 단지 리스트로 남기도록 `_aggregate` 확장 필요 — done/sched 집계와 함께 `units` 목록 축적. 세대 큰 순 상위 N.)
 
-- [ ] **Step 2: 렌더 2섹션**
+- [x] **Step 2: 렌더 2섹션**
 
 `make_zone_pages.py`의 기존 입주예정 리스트 렌더를 교체: **"앞으로 들어올 물량"**(sched: "2029.06 예정", 준공예정 없으면 "미정", conf 낮으면 회색+"지연 가능") + **"최근 들어온 물량"**(done: "2024.03 준공"). 세대·단지명 표기.
 
-- [ ] **Step 3: 스모크 + 커밋**
+- [x] **Step 3: 스모크 + 커밋**
 
 ```bash
 python tools/make_zone_pages.py   # 존페이지에 2섹션 렌더 확인, zone/*·sitemap 되돌리기
@@ -509,15 +530,15 @@ git commit -m "feat: 존페이지 단지 리스트 2섹션(앞으로 준공예�
 - Modify: `sw.js`, `tools/data/hub_pilot_notes.md`
 - Reuse: `.github/workflows/update-hub.yml`, `tools/split_data.py`
 
-- [ ] **Step 1: split_data 확인 + sw.js**
+- [x] **Step 1: split_data 확인 + sw.js**
 
 `split_data.py`가 `permits.done`/`sched`/`units`를 data-core에 포함하는지 확인(permits 통째 복사면 자동). `sw.js` 캐시 버전 +1.
 
-- [ ] **Step 2: 롤아웃 절차 문서화**
+- [x] **Step 2: 롤아웃 절차 문서화**
 
 `hub_pilot_notes.md`에 go-live 절차 기록: (a) `update-hub.yml` `mode=full` 2-3회(재개가능) 전량 시드 — **DATA_GO_KR_KEY 일일쿼터 확인**, (b) `verify_rankdiff` + `verify_ref_scale`로 순위·스케일 검토(사용자 승인), (c) 승인 시 `hub_permits.json` `meta.activate=true` 커밋 → 다음 daily가 data.js 반영.
 
-- [ ] **Step 3: 커밋 + push + 메모리**
+- [x] **Step 3: 커밋 + push + 메모리**
 
 ```bash
 git add sw.js tools/data/hub_pilot_notes.md tools/split_data.py

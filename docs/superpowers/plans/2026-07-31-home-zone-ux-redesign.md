@@ -1,5 +1,15 @@
 # 홈·존 페이지 UX 재기획 구현 계획
 
+> ## ✅ 실행 완료 · 배포됨 (2026-08-01 검증)
+>
+> Task 1~6 산출물이 모두 실재하고 **라이브 사이트에 반영 완료**(origin/main과 라이브 index.html 해시 일치).
+>
+> **검증 근거(2026-08-01 실측)**: `tools/tests/test_grade.py`·`GRADE_CUTS`(Python)·`scGrade()`(JS 미러)·
+> `check_dual_calc`의 등급 대조·지역 선택기(`agong_myzone` localStorage)·`sw.js` 버전 전부 실재.
+> `pytest tools/tests/` **140 passed**, 미러 검증 **44곳 전원 일치**(등급 `grade` 포함).
+>
+> ⚠️ 아래 체크박스는 단계별 실행 로그가 아니라 **산출물 실측 검증에 근거해 사후 표기**한 것이다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 실수요자 타깃으로 홈(내 지역 먼저 + 등급 그룹 순위)과 존 페이지(등급 판정 → 근거 → 타임라인 6섹션)를 재구성하고, localStorage 기반 내 지역 저장·재방문 카드를 붙인다.
@@ -30,7 +40,7 @@
 - Produces: `GRADE_CUTS = (1.5, 1.0, 0.5, -0.5)`, `GRADES` 5-튜플 목록, `grade(tot, need4) -> dict(k,label,color,desc,ratio)`, `running_shortage(..., full=False)` — `full=True`면 `{'tot','inow','demand','supplyw'}` dict 반환, `calc()`의 각 row에 `need4`(refq×share×16), `inow`, `fsupw`, `gr`(grade dict) 필드 추가
 - Consumes: 기존 `running_shortage`/`calc` (현행 시그니처 유지 — `full` 생략 시 동작 불변)
 
-- [ ] **Step 1: 실패하는 테스트 작성** — `tools/tests/test_grade.py`:
+- [x] **Step 1: 실패하는 테스트 작성** — `tools/tests/test_grade.py`:
 
 ```python
 import sys, os
@@ -84,12 +94,12 @@ def test_calc_rows_carry_grade_fields():
     assert r['gr']['k'] in ('g0', 'g1', 'g2', 'g3', 'g4')
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `PYTHONIOENCODING=utf-8 python -m pytest tools/tests/test_grade.py -q`
 Expected: FAIL — `AttributeError: module 'make_zone_pages' has no attribute 'grade'`
 
-- [ ] **Step 3: 구현** — `tools/make_zone_pages.py`의 `DEFICIT_CAP = 16` 줄 바로 아래에 추가:
+- [x] **Step 3: 구현** — `tools/make_zone_pages.py`의 `DEFICIT_CAP = 16` 줄 바로 아래에 추가:
 
 ```python
 # ── 등급 판정 (2026-07-31 UX 재기획) ─────────────────────────────
@@ -165,12 +175,12 @@ def grade(tot, need4):
             hub[0]['need4'] - sum(c['need4'] for c in hub[0]['subs'])) < 1e-6
 ```
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 
 Run: `PYTHONIOENCODING=utf-8 python -m pytest tools/tests/ -q`
 Expected: 전체 PASS (기존 123 + 신규 4)
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add tools/make_zone_pages.py tools/tests/test_grade.py
@@ -189,7 +199,7 @@ git commit -m "등급 판정 grade()/GRADE_CUTS + running_shortage 분해값 반
 - Consumes: Task 1의 `GRADE_CUTS`/`GRADES`/`grade()` 값 정의 (JS에 동일 상수 복제)
 - Produces: JS `scGrade(tot, need4) -> {k,label,color,desc,ratio}`, `runningShortage(...)`가 `{tot,inow,demand,supplyw}` 객체 반환, `scCalc()` 각 row에 `need4·inow·fsupw·gr` 추가. check_dual_calc가 `need4·gr.k`까지 대조
 
-- [ ] **Step 1: index.html 수정** — `function scTier(v){...}` 바로 아래에 추가:
+- [x] **Step 1: index.html 수정** — `function scTier(v){...}` 바로 아래에 추가:
 
 ```js
 /* 등급 판정 — tools/make_zone_pages.py grade()와 반드시 동치(미러). 컷·라벨·색 동일. */
@@ -230,7 +240,7 @@ function runningShortage(done,sched,demol,refq,curQ,horizon){
 
 로 바꾸고, 반환 객체(`return {z:z.z,...}`)에 `,need4:need4,inow:(_rs?_rs.inow:0),fsupw:(_rs?_rs.supplyw:0),gr:scGrade(tot,need4)`를 추가.
 
-- [ ] **Step 2: check_dual_calc 확장** — `tools/check_dual_calc.py`:
+- [x] **Step 2: check_dual_calc 확장** — `tools/check_dual_calc.py`:
 
 grab 목록에 (rsh 줄 위에) 추가:
 
@@ -253,12 +263,12 @@ const out = scCalc().map(z => ({z: z.z, dA: z.dA, dB: z.dB, dC: z.dC, tot: z.tot
 
 (주의: `py[z]['gr']['k']`와 `js[z]['gk']` 비교 — 숫자 비교 아님, TOL 미적용.)
 
-- [ ] **Step 3: 미러 검증**
+- [x] **Step 3: 미러 검증**
 
 Run: `PYTHONIOENCODING=utf-8 python tools/check_dual_calc.py`
 Expected: `✅ 두 구현이 모든 생활권에서 일치한다` (need4·grade 포함)
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add index.html tools/check_dual_calc.py
@@ -276,7 +286,7 @@ git commit -m "scGrade/runningShortage 분해값 JS 미러 + check_dual_calc 등
 - Consumes: Task 1의 `r['gr']`, `r['need4']`, `r['inow']`, `r['fsupw']`
 - Produces: 새 페이지 구조(아래 순서). 기존 조각 재사용 — `qchart_html`(분기 차트), 단지 목록 테이블, `sublist`(다른 생활권), 방법론 폴드
 
-- [ ] **Step 1: 히어로 교체** — `build_page()` 안에서 `tname, tcol = tier(r['tot'])` 대신 `gr = r['gr']`를 쓰고, 히어로 HTML을 다음 구조로 교체:
+- [x] **Step 1: 히어로 교체** — `build_page()` 안에서 `tname, tcol = tier(r['tot'])` 대신 `gr = r['gr']`를 쓰고, 히어로 HTML을 다음 구조로 교체:
 
 ```python
     gr = r['gr']
@@ -290,7 +300,7 @@ git commit -m "scGrade/runningShortage 분해값 JS 미러 + check_dual_calc 등
 
 (`%s1a`는 색상 hex 뒤 alpha `1a`≈10% 배경. 기존 히어로의 `head_line`/`disp` 큰 숫자는 ②로 이동.)
 
-- [ ] **Step 2: 근거 3줄 섹션** — 게이지 섹션(`필요한 집 vs 들어올 집`)을 다음으로 교체. **세 줄의 합이 히어로 순부족과 일치**하도록 `need4·fsupw·inow`만 사용:
+- [x] **Step 2: 근거 3줄 섹션** — 게이지 섹션(`필요한 집 vs 들어올 집`)을 다음으로 교체. **세 줄의 합이 히어로 순부족과 일치**하도록 `need4·fsupw·inow`만 사용:
 
 ```python
     backlog = -r['inow']          # 양수면 '밀린 것', 음수면 '쌓인 재고'
@@ -314,7 +324,7 @@ git commit -m "scGrade/runningShortage 분해값 JS 미러 + check_dual_calc 등
 
 (정합 검증: `need4 + backlog − fsupw == tot`이 Task 1 테스트로 보장됨. 여유 존은 순부족이 음수 — `num()` 대신 `signed()` 표기로 "N세대 여유" 문구 분기: `r['tot'] < 0`이면 요약줄을 `'여유 %s세대' % num(-r['tot'])`로.)
 
-- [ ] **Step 3: 섹션 재배열** — 페이지 조립부에서 순서를 다음으로 고정:
+- [x] **Step 3: 섹션 재배열** — 페이지 조립부에서 순서를 다음으로 고정:
 
 1. 판정 히어로 (Step 1)
 2. 왜 이 판정인가 (Step 2)
@@ -344,7 +354,7 @@ git commit -m "scGrade/runningShortage 분해값 JS 미러 + check_dual_calc 등
                          for x in near) + '</div></div></section>')
 ```
 
-- [ ] **Step 4: 저장 CTA 스크립트** — 각 존 페이지 하단 스크립트에 추가 (빌드 타임에 값 주입):
+- [x] **Step 4: 저장 CTA 스크립트** — 각 존 페이지 하단 스크립트에 추가 (빌드 타임에 값 주입):
 
 ```python
     save_js = (
@@ -360,7 +370,7 @@ git commit -m "scGrade/runningShortage 분해값 JS 미러 + check_dual_calc 등
 
 (`rank_no`는 `ranktxt` 계산에서 이미 구한 순위 정수를 변수로 보존해 사용. 수도권 합계 페이지(`subs` 존재)는 저장 버튼을 렌더하지 않는다 — 개별 생활권만 저장 대상.)
 
-- [ ] **Step 5: CSS 추가** — `make_zone_pages.py` 상단 스타일 문자열에:
+- [x] **Step 5: CSS 추가** — `make_zone_pages.py` 상단 스타일 문자열에:
 
 ```css
 .zg-badge{display:inline-block;padding:5px 12px;font-weight:700;font-size:14px;border-radius:2px}
@@ -376,12 +386,12 @@ git commit -m "scGrade/runningShortage 분해값 JS 미러 + check_dual_calc 등
 .q-col.q-max .q-bar{outline:2px solid currentColor}
 ```
 
-- [ ] **Step 6: 재생성 + 육안 확인**
+- [x] **Step 6: 재생성 + 육안 확인**
 
 Run: `PYTHONIOENCODING=utf-8 python tools/make_zone_pages.py`
 Expected: `zone pages: 45개 + 허브 1개 생성`. 이어서 `zone/서울권/index.html`을 열어(브라우저 프리뷰) ①~⑥ 순서, 근거 3줄 합계=히어로 숫자, 저장 버튼 동작(localStorage 기록) 확인. 여유 존(`zone/평택권/`)도 열어 "여유" 문구 분기 확인.
 
-- [ ] **Step 7: 테스트 + 커밋**
+- [x] **Step 7: 테스트 + 커밋**
 
 Run: `PYTHONIOENCODING=utf-8 python -m pytest tools/tests/ -q` → 전체 PASS
 
@@ -401,7 +411,7 @@ git commit -m "존 페이지 6섹션 재구성 — 등급 히어로·근거 3줄
 - Consumes: Task 2의 `scCalc()` row `gr·need4`, `scGrade()`
 - Produces: 등급 그룹 헤더가 있는 순위 리스트. `window.__SCZ`(zones 배열) 유지 — Task 5가 사용
 
-- [ ] **Step 1: 순위 리스트를 등급 그룹으로** — `renderScoreSec()`의 `units` 정렬 뒤, 렌더를 그룹 단위로 교체:
+- [x] **Step 1: 순위 리스트를 등급 그룹으로** — `renderScoreSec()`의 `units` 정렬 뒤, 렌더를 그룹 단위로 교체:
 
 ```js
   // 집계 유닛(수도권 1행 포함)에도 등급 — 합산 tot/need4로 판정
@@ -422,7 +432,7 @@ git commit -m "존 페이지 6섹션 재구성 — 등급 히어로·근거 3줄
 
 (기존 행 렌더 코드는 그대로 두고 `scTier(u.tot)` 참조만 `u.gr`로 바꾼다. `scTier` 함수 자체는 삭제 — 다른 참조가 없음을 `grep scTier`로 확인 후.)
 
-- [ ] **Step 2: 등급 칩 CSS** — `app.css`의 `.sc-tier.t4` 블록들 아래에 추가(기존 t1~t4 클래스는 유지해도 무해하나 참조가 사라지면 함께 삭제):
+- [x] **Step 2: 등급 칩 CSS** — `app.css`의 `.sc-tier.t4` 블록들 아래에 추가(기존 t1~t4 클래스는 유지해도 무해하나 참조가 사라지면 함께 삭제):
 
 ```css
 .sc-tier.g4{background:#fdecea;color:#a93226}
@@ -434,7 +444,7 @@ git commit -m "존 페이지 6섹션 재구성 — 등급 히어로·근거 3줄
 .sc-ghead i{font-style:normal;font-weight:400;color:var(--muted);font-size:11.5px}
 ```
 
-- [ ] **Step 3: 섹션 카피·순서 정리** — `index.html` 홈 HTML에서:
+- [x] **Step 3: 섹션 카피·순서 정리** — `index.html` 홈 HTML에서:
 
 1. `#sec-score`의 `<h2>`를 `전국 한눈에 — 어디가 모자라고 어디가 남나`로 교체
 2. `sc-how` 폴드 본문(구 dA/dB/dC 설명 — 낡음)을 교체:
@@ -450,7 +460,7 @@ git commit -m "존 페이지 6섹션 재구성 — 등급 히어로·근거 3줄
 3. 섹션 순서를 퀴즈(172행)와 주간지도(183행) 블록 맞바꿈 → 최종: score → 주간 → 퀴즈 → 사이클+신뢰
 4. 사이클(190-196행)과 신뢰(197-206행) 섹션을 하나의 `<section class="home-sec hs-alt">`로 합치고 각각 h3로 강등, 본문 각 1문장으로 압축
 
-- [ ] **Step 4: 브라우저 확인 + 커밋**
+- [x] **Step 4: 브라우저 확인 + 커밋**
 
 프리뷰(`agongmap` 서버)에서: 그룹 헤더 5개(빈 등급 생략) 표시, 각 행 등급 칩, 콘솔 에러 0 확인.
 
@@ -470,7 +480,7 @@ git commit -m "홈 순위 등급 그룹핑 + 산출 방법 카피 현행화 + �
 - Consumes: `window.__SCZ`(scCalc rows — Task 4가 유지), `scGrade`, 존 페이지가 쓰는 같은 키 `agong_myzone`(Task 3 Step 4와 스키마 동일)
 - Produces: `renderMyZone()` — 로드 시 실행. 첫 방문=선택기, 재방문=내 지역 카드
 
-- [ ] **Step 1: HTML 골격** — 히어로 `</header>` 바로 다음, `#sec-score` 앞에 삽입:
+- [x] **Step 1: HTML 골격** — 히어로 `</header>` 바로 다음, `#sec-score` 앞에 삽입:
 
 ```html
 <section class="home-sec" id="sec-myzone"><div class="wrap">
@@ -479,7 +489,7 @@ git commit -m "홈 순위 등급 그룹핑 + 산출 방법 카피 현행화 + �
 </div></section>
 ```
 
-- [ ] **Step 2: JS** — `renderScoreSec()` 정의 아래에 추가:
+- [x] **Step 2: JS** — `renderScoreSec()` 정의 아래에 추가:
 
 ```js
 /* ── 내 지역 (localStorage: agong_myzone — 존 페이지 저장 버튼과 스키마 공유) ── */
@@ -546,7 +556,7 @@ function mzSave(nm){
 
 주의: 첫 저장 직후 `renderMyZone()` 재호출 시 `saved.last.tot`이 방금 값이라 diff가 "지난 방문과 같음"으로 뜬다 — 첫 저장에서는 `diff=''`가 되도록 `mzSave`에서 세션 플래그(`window.__MZ_JUST=1`)를 세우고 카드 렌더에서 플래그 있으면 diff 생략, 렌더 후 플래그 해제.
 
-- [ ] **Step 3: CSS** — `app.css`에:
+- [x] **Step 3: CSS** — `app.css`에:
 
 ```css
 .mz-card{border:1px solid var(--line);padding:16px 18px}
@@ -563,11 +573,11 @@ function mzSave(nm){
 .mz-chip.zone{display:inline-flex;align-items:center;gap:6px}
 ```
 
-- [ ] **Step 4: 브라우저 확인 (두 상태)**
+- [x] **Step 4: 브라우저 확인 (두 상태)**
 
 프리뷰에서: (a) localStorage 비운 뒤 → 선택기 표시 → 시도 클릭 → 존 클릭 → 카드로 전환(diff 없음) 확인. (b) 콘솔에서 `localStorage.setItem('agong_myzone', JSON.stringify({z:'서울권',savedAt:'2026-07-24',last:{tot:400000,rank:1,grade:'매우 부족',seen:'2026-07-24'}}))` 주입 후 새로고침 → "지난 방문보다 부족 +N ▲" 표시 확인. (c) 존재하지 않는 존(`z:'없는권'`) 주입 → 선택기로 폴백 확인. 콘솔 에러 0.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add index.html app.css
@@ -584,13 +594,13 @@ git commit -m "지역 선택기 + 내 지역 카드 + localStorage 재방문 변
 **Interfaces:**
 - Consumes: Task 1~5 전부
 
-- [ ] **Step 1: sw.js 버전**
+- [x] **Step 1: sw.js 버전**
 
 ```js
 const VERSION = 'v39'; // 홈·존 UX 재기획 — 등급 판정·내 지역 카드·존 6섹션
 ```
 
-- [ ] **Step 2: 전체 검증 시퀀스**
+- [x] **Step 2: 전체 검증 시퀀스**
 
 ```bash
 PYTHONIOENCODING=utf-8 python -m pytest tools/tests/ -q          # 전체 PASS
@@ -601,11 +611,11 @@ PYTHONIOENCODING=utf-8 python tools/split_data.py                # data-core.js 
 
 브라우저: 홈 첫 방문/재방문 2상태, 존 페이지 부족 존(서울권)·여유 존(평택권) 각 1개, 모바일 뷰포트(375px)로 선택기·카드·근거 3줄 줄바꿈 확인, 콘솔 에러 0.
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add -A
 git commit -m "홈·존 UX 재기획 통합 — sw.js v39, 존 페이지 재생성"
 ```
 
-- [ ] **Step 4: 스펙 대비 최종 점검** — 스펙의 6개 섹션 각각에 대응 구현이 있는지 확인: 등급 규칙(Task 1·2) / 홈 첫·재방문(Task 4·5) / 존 6섹션(Task 3) / localStorage 스키마(Task 3 Step 4 = Task 5 Step 2 동일 키·형태) / 카피 원칙(Task 3·4 본문) / 검증(Task 6). 미충족 발견 시 해당 태스크로 돌아가 보완 후 재검증.
+- [x] **Step 4: 스펙 대비 최종 점검** — 스펙의 6개 섹션 각각에 대응 구현이 있는지 확인: 등급 규칙(Task 1·2) / 홈 첫·재방문(Task 4·5) / 존 6섹션(Task 3) / localStorage 스키마(Task 3 Step 4 = Task 5 Step 2 동일 키·형태) / 카피 원칙(Task 3·4 본문) / 검증(Task 6). 미충족 발견 시 해당 태스크로 돌아가 보완 후 재검증.

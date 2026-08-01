@@ -1,5 +1,16 @@
 # 건축HUB 시군구 실측 통합 Implementation Plan
 
+> ## ✅ 실행 완료 (2026-07-31 라이브 활성화 · 2026-08-01 검증)
+>
+> 건축HUB 수집기가 가동 중이며 **전국 148개 시군구 그룹 전량 시드 완료**(`meta.scanned` 148/148,
+> `sgg` 148항목). 후속 계획 [2026-07-24-junggong-running-inventory.md](2026-07-24-junggong-running-inventory.md)가
+> 이 수집기를 준공/준공예정 버킷으로 교체해 라이브 스코어로 승격시켰다(`meta.activate=true`).
+>
+> **검증 근거(2026-08-01 실측)**: `fetch_hub_permits.py`·`hub_common.py`·`code_bdong.json`·
+> `update-hub.yml`/`hub-probe.yml`·`hub_pilot_notes.md` 전부 실재, 시드 148곳.
+>
+> ⚠️ 아래 체크박스는 단계별 실행 로그가 아니라 **산출물 실측 검증에 근거해 사후 표기**한 것이다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `calc()`/`scCalc()`의 인허가 성분 `dC`를 시도 인구배분에서 건축HUB 시군구 실측으로 교체하고, 착공 실측으로 forward 입주 창을 2년→4년으로 확장한다.
@@ -50,7 +61,7 @@
 **Interfaces:**
 - Produces: 커밋된 `code_bdong.json`; 검증된 사실 — (a) 오산 응답 XML 필드 실재, (b) 부천 옛구코드 정확값, (c) 시군구 1곳당 법정동 수·소요시간 → 전국 런타임 추정, (d) `bjdong` 시군구명 포맷(예 '마산합포구' vs '창원시 마산합포구').
 
-- [ ] **Step 1: bjdong 자산 재다운로드**
+- [x] **Step 1: bjdong 자산 재다운로드**
 
 ```bash
 cd "C:/Users/shpar/OneDrive/문서/Claude/aptweather"
@@ -60,7 +71,7 @@ python -c "import json;d=json.load(open('tools/data/code_bdong.json',encoding='u
 ```
 Expected: dict-of-columns 키 목록에 시도명·시군구코드·법정동코드·동리명·말소일자 포함, 행 수 수만.
 
-- [ ] **Step 2: 오산 실호출로 응답 형상 확인**
+- [x] **Step 2: 오산 실호출로 응답 형상 확인**
 
 오산시 sigunguCd=`41370`. 법정동 하나(예 `41370101` 오산동 계열; bjdong에서 오산 법정동코드 조회해 [5:] 사용) 로 1건 호출:
 ```bash
@@ -69,16 +80,16 @@ curl -sS "https://apis.data.go.kr/1613000/HsPmsHubService/getHpBasisOulnInfo?ser
 ```
 Expected: XML에 `<item>` 다수, 각 item에 `platPlc·purpsCdNm·totHhldCnt·apprvDay·stcnsDay·useInsptDay·mgmHsrgstPk·bldNm`. `hub_pilot_notes.md`에 실제 태그명 그대로 기록(대소문자·철자).
 
-- [ ] **Step 3: 부천 옛구코드 확정**
+- [x] **Step 3: 부천 옛구코드 확정**
 
 부천 현재 41190으로 호출→0건, 옛 41192/41194/41196 각각 호출해 어디에 데이터 있는지 확인. 각 옛구코드의 법정동[5:]는 bjdong에서 (말소 포함) 조회하거나, 데이터가 나온 item의 platPlc로 역확인. `hub_pilot_notes.md`에 `{현재코드: [옛코드…], 옛코드별 법정동리스트}` 기록.
 
-- [ ] **Step 4: 런타임 실측**
+- [x] **Step 4: 런타임 실측**
 
 임의 시군구 3곳(대도시 구 1·중소시 1·군 1)에 대해 소속 법정동 전체를 2.5초 페이싱으로 순차 호출, **법정동 수와 총 소요시간** 기록. 전국 zone-참조 시군구 수(다음 태스크에서 확정, 대략 150)로 곱해 총 런타임 추정. `hub_pilot_notes.md`에 기록.
 Expected: 추정치가 수 시간이면 Task 3의 `productive_bjdong` 증분 캐시가 **필수**임을 확인(첫 full 1회, 이후 증분).
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add tools/data/code_bdong.json tools/data/hub_pilot_notes.md
@@ -97,7 +108,7 @@ HUB가 Azure IP를 차단하는지 GitHub Actions에서 판정. **차단이면 T
 **Interfaces:**
 - Produces: 워크플로 로그에 오산 시군구 응답 item 수. >0 이면 클라우드 가능.
 
-- [ ] **Step 1: 프로브 워크플로 작성**
+- [x] **Step 1: 프로브 워크플로 작성**
 
 ```yaml
 name: hub-probe
@@ -119,11 +130,11 @@ jobs:
           echo "PROBE FAIL: 빈 응답 — Azure IP 차단 의심"; exit 1
 ```
 
-- [ ] **Step 2: Secret 확인 안내**
+- [x] **Step 2: Secret 확인 안내**
 
 `DATA_GO_KR_KEY`가 GitHub Secrets에 없으면 사용자에게 등록 요청(대화로). RONE_KEY 등록 전례 있음.
 
-- [ ] **Step 3: 실행 및 판정**
+- [x] **Step 3: 실행 및 판정**
 
 ```bash
 git add .github/workflows/hub-probe.yml && git commit -m "ci: HUB 클라우드 IP 프로브(호스팅 게이트)"
@@ -150,7 +161,7 @@ Expected: `items>0` 이면 **클라우드 경로 확정**; FAIL이면 **로컬 �
   - `shift_quarter(q: str, lag: int = 13) -> str` — 'YYYYQn' + lag분기.
   - `OLD_GU_MAP: dict[str, list[str]]` — Task1에서 확정된 `{현재5자리: [옛5자리…]}`.
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 ```python
 # tools/tests/test_hub_common.py
@@ -183,7 +194,7 @@ def test_shift_quarter():
     assert H.shift_quarter('2024Q4', 1) == '2025Q1'
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 ```bash
 cd "C:/Users/shpar/OneDrive/문서/Claude/aptweather"
@@ -192,7 +203,7 @@ python -m pytest tools/tests/test_hub_common.py -v
 ```
 Expected: FAIL (`ModuleNotFoundError: hub_common`).
 
-- [ ] **Step 3: 구현**
+- [x] **Step 3: 구현**
 
 ```python
 # tools/hub_common.py
@@ -240,14 +251,14 @@ def shift_quarter(q, lag=13):
     return '%dQ%d' % (idx // 4, idx % 4 + 1)
 ```
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 
 ```bash
 python -m pytest tools/tests/test_hub_common.py -v
 ```
 Expected: 4 passed.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add tools/hub_common.py tools/tests/test_hub_common.py
@@ -273,7 +284,7 @@ git commit -m "feat: hub_common 순수 헬퍼(분기변환·dedupe·공동주택
    "productive_bjdong":["41370101","..."]}
   ```
 
-- [ ] **Step 1: 대상 시군구·법정동 도출 검증(실행 스크립트)**
+- [x] **Step 1: 대상 시군구·법정동 도출 검증(실행 스크립트)**
 
 `build_targets()` — bjdong에서 `name→sigunguCd`, `sido→[sigunguCd…]` 구축 후 `LIVEZONE` 순회(‘*’→시도 전체). 먼저 도출만 해서 개수 출력:
 ```bash
@@ -281,7 +292,7 @@ python tools/fetch_hub_permits.py --list-targets
 ```
 Expected: 시군구 수(대략 150) + 총 법정동 수 출력. Task1 런타임 추정과 대조.
 
-- [ ] **Step 2: 수집기 구현**
+- [x] **Step 2: 수집기 구현**
 
 핵심 로직(요지 — 전체는 파일에):
 ```python
@@ -321,7 +332,7 @@ def _parse_items(xml):
 ```
 페이싱·순차·빈응답 재시도·`{"body":{}}`(≤80바이트) 무재시도·`mgmHsrgstPk` dedupe(`apt_records`)·옛구코드 병합 반드시 포함. 증분: 기본은 `productive_bjdong`만, `--full`은 전체(첫 실행 필수).
 
-- [ ] **Step 3: 소규모 실호출 검증**
+- [x] **Step 3: 소규모 실호출 검증**
 
 오산·부천만 대상으로 `--only 41370,41190` 실행, 결과 확인:
 ```bash
@@ -330,14 +341,14 @@ python -c "import json;d=json.load(open('tools/data/hub_permits.json',encoding='
 ```
 Expected: 오산·부천 둘 다 permit_q/start_q에 세대>0. **부천이 옛구코드 병합으로 0이 아님**(함정3 해소 증거). 파일럿 천명당 세대와 정합.
 
-- [ ] **Step 4: 전체 first-full 실행(로컬)**
+- [x] **Step 4: 전체 first-full 실행(로컬)**
 
 ```bash
 python tools/fetch_hub_permits.py --full 2>&1 | tail -20
 ```
 Expected: 완주, `productive_bjdong` 채워짐, `meta.mode=full`. 소요시간 기록.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add tools/fetch_hub_permits.py tools/data/hub_permits.json
@@ -357,7 +368,7 @@ git commit -m "feat: 건축HUB 페이싱 수집기(옛구코드·PK dedupe·증�
 - Consumes: `hub_permits.json`, `LIVEZONE`, `LZ_GU2SI`, 기존 `zone_of` 규칙.
 - Produces: `adv['permits']['meas'] = {zone: annual_avg_permit_세대}`, `adv['permits']['fwd_far'] = {zone: {'YYYYQn': 세대}}`.
 
-- [ ] **Step 1: 매핑·집계 함수 작성**
+- [x] **Step 1: 매핑·집계 함수 작성**
 
 ```python
 def _hub_zone_map(bdong):
@@ -389,7 +400,7 @@ def hub_derive(adv):
     print('hub_derive: zones=%d orphan_sgg_ignored=%d' % (len(meas), orphan))
 ```
 
-- [ ] **Step 2: permits 갱신 경로에 연결 + 고아 0 확인**
+- [x] **Step 2: permits 갱신 경로에 연결 + 고아 0 확인**
 
 `fetch_permits()` 결과를 adv에 넣은 직후 `hub_derive(adv)` 호출. 실행:
 ```bash
@@ -397,14 +408,14 @@ python -c "import tools.update_adv_data as U; ..."   # 또는 --update의 permit
 ```
 Expected 로그: `orphan_sgg_ignored=0` (모든 수집 시군구가 존에 귀속). >0이면 `_hub_zone_map` 매핑 보정(창원 gu·통합시).
 
-- [ ] **Step 3: 파생값 sanity 검증**
+- [x] **Step 3: 파생값 sanity 검증**
 
 ```bash
 python -c "import json,re;t=open('data.js',encoding='utf-8').read();import json;a=json.loads(re.search(r'const ADV=(\{.*?\});\s*/\*ADV_DATA_END',t,16).group(1));p=a['permits'];print('meas zones',len(p['meas']));print('fwd_far zones',len(p['fwd_far']));print('오산권 meas',{k:v for k,v in p['meas'].items() if '오산' in k or '평택' in k})"
 ```
 Expected: meas가 36곳 대부분 존재, 착공 fwd_far 분기가 2027~2029에 분포.
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add tools/update_adv_data.py data.js
@@ -423,7 +434,7 @@ git commit -m "feat: HUB 집계기 — 존별 meas(연평균 인허가)·fwd_far
 - Consumes: `adv['permits']['meas']`, `adv['permits']['fwd_far']`.
 - Produces: 교체된 `calc()`; `verify_dc_rankdiff.py` 실행 도구.
 
-- [ ] **Step 1: forward 창 4년으로 확장**
+- [x] **Step 1: forward 창 4년으로 확장**
 
 `make_zone_pages.py:53` FUTQ 슬라이스와 fut_supply를 근/원 분할:
 ```python
@@ -443,7 +454,7 @@ def fut_supply(zz):
 ```
 `need = refq * HQ * share` (H 대신 HQ=16).
 
-- [ ] **Step 2: dC 교체**
+- [x] **Step 2: dC 교체**
 
 `make_zone_pages.py:75-81` 을:
 ```python
@@ -461,7 +472,7 @@ elif ps in P['regions']:              # 폴백: HUB 결측 존만 기존 인구�
 tot = W[0] * dA + W[1] * dC + W[2] * dB
 ```
 
-- [ ] **Step 3: 순위 diff 검증 도구 작성·실행**
+- [x] **Step 3: 순위 diff 검증 도구 작성·실행**
 
 ```python
 # tools/verify_dc_rankdiff.py — 교체 전/후 tot 순위를 나란히 출력
@@ -471,14 +482,14 @@ python tools/verify_dc_rankdiff.py
 ```
 Expected: 36곳 before/after 순위표. 급변 존이 파일럿 왜곡(오산·평택 등 과대 인구배분 해소)으로 **설명 가능**해야 함. 설명 불가한 top-10 요동이면 `plo` (A)→(B) HUB 역사중앙값으로 전환(spec 폴백) 후 재실행.
 
-- [ ] **Step 4: 존페이지 생성 스모크**
+- [x] **Step 4: 존페이지 생성 스모크**
 
 ```bash
 python tools/make_zone_pages.py
 ```
 Expected: 예외 없음, 36 존 페이지 생성. dC 카드(`make_zone_pages.py:346-391`) 수치 정상.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add tools/make_zone_pages.py tools/verify_dc_rankdiff.py
@@ -497,7 +508,7 @@ git commit -m "feat: calc() dC 시군구 실측 교체 + forward 4년(분기 배
 **Interfaces:**
 - Consumes: `ADV.permits.meas`, `ADV.permits.fwd_far`.
 
-- [ ] **Step 1: FUTQ 근/원 분할 미러**
+- [x] **Step 1: FUTQ 근/원 분할 미러**
 
 `index.html:1990-1994` 를:
 ```javascript
@@ -513,7 +524,7 @@ const futSum=z=>NEARQ.reduce((s,k)=>s+((z.byq||{})[k]||0),0)
 ```
 `⚠️` 주석을 "H_MAX 8"→"NEAR 8 / FAR 16, make_zone_pages와 동일"로 갱신.
 
-- [ ] **Step 2: dC 미러**
+- [x] **Step 2: dC 미러**
 
 `index.html:2010-2011` 를:
 ```javascript
@@ -525,7 +536,7 @@ const tot=0.55*dA+0.35*dC+0.10*dB;
 ```
 `dA=refq*H*share-futSum(z)` 와 `need:refq*H*share` 의 H가 16인지 확인(Step1의 H).
 
-- [ ] **Step 3: 홈=존페이지 동치 검증**
+- [x] **Step 3: 홈=존페이지 동치 검증**
 
 ```bash
 python tools/make_zone_pages.py   # 존 tot 산출
@@ -533,7 +544,7 @@ python tools/make_zone_pages.py   # 존 tot 산출
 브라우저 프리뷰로 홈 순위표 상위 10곳과 존페이지 tot 비교(preview_start → read_page). 정규화 재발 방지(index.html:2005 경고).
 Expected: 홈 상위 순위 == `calc()` 순위. 어긋나면 near/far·H·dC 식 재대조.
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add index.html
@@ -550,7 +561,7 @@ Task 2 결과에 따라 분기.
 - Create: `.github/workflows/update-hub.yml` (프로브 통과 시) **또는** 로컬 실행 문서화
 - Modify: `sw.js` (버전), `tools/split_data.py` 확인
 
-- [ ] **Step 1 (클라우드 경로): 월 배치 워크플로**
+- [x] **Step 1 (클라우드 경로): 월 배치 워크플로**
 
 프로브 통과 시:
 ```yaml
@@ -581,7 +592,7 @@ jobs:
           git diff --quiet && echo "no change" || git commit -m "data: HUB 월간 갱신" && git push
 ```
 
-- [ ] **Step 1 (로컬 폴백): 문서화**
+- [x] **Step 1 (로컬 폴백): 문서화**
 
 프로브 FAIL 시 워크플로 대신 `tools/data/hub_pilot_notes.md`에 월 1회 로컬 실행 절차 기록:
 ```
@@ -589,18 +600,18 @@ python tools/fetch_hub_permits.py && python tools/update_adv_data.py --update &&
 git add ... && git commit && git push
 ```
 
-- [ ] **Step 2: sw.js 버전 증가 + split 포함 확인**
+- [x] **Step 2: sw.js 버전 증가 + split 포함 확인**
 
 `sw.js`의 캐시 버전(현 v8) +1. `split_data.py`가 `permits.meas/fwd_far`를 data-core에 포함하는지 확인(홈 점수가 필요로 함) — 필요 시 `split_data.py:63` 부근 permits 처리에 추가.
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add .github/workflows/update-hub.yml sw.js tools/split_data.py tools/data/hub_pilot_notes.md
 git commit -m "ci: HUB 월배치(or 로컬폴백) + sw.js 버전 + split 동기화"
 ```
 
-- [ ] **Step 4: 메모리 갱신**
+- [x] **Step 4: 메모리 갱신**
 
 `hub-permit-integration.md`를 "계획"→"구현 완료"로 갱신(호스팅 경로 결과, OLD_GU_MAP 확정값, 런타임 실측, dC plo 선택 A/B 기록). `agongmap-data-pipeline.md` 동기화 체크리스트에 HUB 추가.
 
