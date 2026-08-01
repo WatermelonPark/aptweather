@@ -10,6 +10,10 @@ data.js의 ADV(livezone·occupancy·permits·bubble)와 STATS(전세가율·주�
 import io, os, re, json, sys, datetime
 from urllib.parse import quote
 
+# 같은 폴더의 update_adv_data(존 정의 단일 소스)를 임포트하기 위한 경로 — 모듈 로드
+# 시 1회만. 예전엔 _lz_members가 호출마다 insert해 존 44곳 렌더에 44번 쌓였다.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.js')
 SITE = 'https://www.agongmap.co.kr'
@@ -134,7 +138,9 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=
     # 문서화돼 있는데, 그 항등식은 weight_demand=False(B안)에서만 성립한다(A안은
     # fut가 이미 conf 가중 결합이라 demand_sum/supply_weighted로 쪼갤 수 없다).
     # 두 플래그가 동시에 True인 호출은 분해값이 조용히 틀린 채 나가므로 여기서 막는다.
-    assert not (full and weight_demand), '분해값은 B안(weight_demand=False)에서만 유효'
+    if full and weight_demand:
+        # -O에서도 살아있어야 하는 계약이라 assert가 아니라 예외로 던진다(리뷰 M4).
+        raise ValueError('분해값(full=True)은 B안(weight_demand=False)에서만 유효하다')
     I = 0.0
     lo = -DEFICIT_CAP * refq
     for idx in range(ANCHOR, cur_q + 1):
@@ -470,8 +476,6 @@ header{padding:44px 0 28px;text-align:center}
  background:var(--ink);padding:5px 14px;border-radius:0;margin-bottom:14px}
 h1{font-size:clamp(25px,5.6vw,34px);font-weight:700;letter-spacing:-.02em;line-height:1.28;margin-bottom:12px}
 .lead{font-size:15.5px;color:var(--ink2)}
-.big{font-size:clamp(34px,9vw,48px);font-weight:700;letter-spacing:-.02em;margin:6px 0 2px}
-.bigsub{font-size:13.5px;color:var(--muted)}
 section{padding:30px 0;border-top:1px solid var(--line)}
 h2{font-size:19.5px;font-weight:700;margin-bottom:12px}
 p{font-size:15px;color:var(--ink2);margin-bottom:11px}
@@ -504,13 +508,6 @@ footer a{color:var(--muted)}
  td.lbl .note{display:block;font-weight:400;margin-top:2px}
  td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:600;flex:none}
 }
-.gauge{background:#fff;border:1px solid var(--line);padding:16px 18px 14px}
-.g-row{margin-bottom:10px}
-.g-lab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink2);margin-bottom:4px}
-.g-lab b{font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink)}
-.g-bar{height:14px;background:var(--paper2)}
-.g-fill{height:100%}
-.g-gap{font-size:14.5px;font-weight:600;margin-top:8px}
 .qwrap{background:#fff;border:1px solid var(--line);border-top:0;padding:12px 14px 10px}
 .qtitle{font-size:12px;color:var(--muted);margin-bottom:8px}
 .qchart{display:flex;align-items:flex-end;gap:5px;height:86px}
@@ -568,9 +565,7 @@ details.fold .dbody p{font-size:14px}
 .utable2 td:nth-child(1){text-align:left}
 .utable2 td:nth-child(2),.utable2 td:nth-child(3){text-align:right}
 .utable2 .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.utable2 tr.far td{color:var(--muted)}
-.utable2 .hint{font-size:11px;color:#a93226}
-@media(max-width:560px){.utable2{font-size:12.5px}}
+.utable2 @media(max-width:560px){.utable2{font-size:12.5px}}
 .zg-badge{display:inline-block;padding:5px 12px;font-weight:700;font-size:14px;border-radius:2px}
 .zg-cap{color:var(--muted);font-size:12px;margin:6px 0 0}
 .why3 .w-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
@@ -608,7 +603,7 @@ details.fold .dbody p{font-size:14px}
 
 # ── 존별 시세 지수(주간·월간) — 2026-08-01 ──────────────────────────────────
 # 시황통계(ADV.weekly/monthly.sgg)는 시군구별 변동률(%)이다. 존 페이지에 그 존
-# 소속 시군구만 골라 평균(세대 가중)해 보여준다.
+# 소속 시군구만 골라 단순 산술평균해 보여준다(세대 가중 아님 — 화면 카피도 '시군구 평균').
 # 코드 사전은 index.html의 SGG_QNAME("서울 강남구"/"수원 장안구"/"이천" 형식)을
 # 빌드 타임에 파싱해 쓴다 — 사전이 거기 한 곳에만 있어 중복 정의를 피하려는 것.
 # 구조가 바뀌면 test_zone_price_index가 커버리지로 즉시 잡는다.
@@ -668,7 +663,8 @@ def zone_sgg_codes(adv):
 def _lz_members(zone):
     """생활권 -> [(시도, 시군구)] — update_adv_data.LIVEZONE + 경기 동적존 규칙.
     존 정의는 파이프라인(update_adv_data)이 단일 소스라 거기서 가져온다."""
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    # sys.path는 모듈 로드 시 1회만 손댄다 — 예전엔 여기서 매 호출 insert해
+    # 존 44곳 렌더에 경로가 44번 쌓였다(2026-08-01 리뷰 M9).
     from update_adv_data import LIVEZONE
     if zone in LIVEZONE:
         return list(LIVEZONE[zone])
@@ -721,27 +717,31 @@ def render_price_index(adv, zone, codes):
                    chip('이번 달 전세', mo.get('je') or [])])
 
     # ── 24개월 지수 흐름(마지막=100 기준 역산) ──
-    lines, months = [], []
+    # ⚠️ 계열마다 길이가 다를 수 있다(월세는 나중에 붙은 계열이라 짧을 수 있음).
+    # 월을 x축의 단일 기준으로 삼고 각 계열을 그 축에 맞춰 채운다 — 예전엔 계열별
+    # enumerate 인덱스로 그려서, 짧은 계열이 왼쪽으로 밀리고 툴팁도 다른 달 값을
+    # 가리켰다(2026-08-01 리뷰 M1. 현재는 44존 전부 24개월 동일이라 미발현이었다).
+    months = sorted({p_ for k, _, _ in SERIES for p_, _ in (mo.get(k) or [])})[-24:]
+    mi = {m: i for i, m in enumerate(months)}
+    lines = []
     for k, _, _ in SERIES:
-        ser = mo.get(k) or []
+        ser = [(p_, v) for p_, v in (mo.get(k) or []) if p_ in mi]
         if len(ser) < 6:
             lines.append(None)
             continue
-        lvl, cur = [], 100.0
-        for _, v in reversed(ser):
-            lvl.append(cur)
+        lvl, cur = {}, 100.0
+        for p_, v in reversed(ser):
+            lvl[p_] = cur
             cur = cur / (1 + v / 100)
-        lvl.reverse()
-        lines.append(lvl)
-        if len(ser) > len(months):
-            months = [p_ for p_, _ in ser]
+        # 축 기준으로 정렬 — 값이 없는 달은 None(선을 끊는다)
+        lines.append([lvl.get(m) for m in months])
     live = [(SERIES[i], l) for i, l in enumerate(lines) if l]
     if not live:
         return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
                 '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균</p>'
                 '<div class="px-now">%s</div></div>' % now)
 
-    vals = [v for _, l in live for v in l]
+    vals = [v for _, l in live for v in l if v is not None]
     lo, hi = min(vals), max(vals)
     pad = max((hi - lo) * 0.12, 0.4)
     lo, hi = lo - pad, hi + pad
@@ -776,7 +776,8 @@ def render_price_index(adv, zone, codes):
                      % (X(i), H - 6, 'end' if i == len(months) - 1 else 'middle',
                         m if m.endswith('-01') else m))
     for (k, lab, col), l in live:
-        pts = ' '.join('%.1f,%.1f' % (X(i), Y(v)) for i, v in enumerate(l))
+        pts = ' '.join('%.1f,%.1f' % (X(i), Y(v))
+                       for i, v in enumerate(l) if v is not None)
         g.append('<polyline fill="none" stroke="%s" stroke-width="1.9" '
                  'stroke-linejoin="round" points="%s"/>' % (col, pts))
     # hover: 월별 세로 히트영역 + 표식점(스크립트가 켜고 끈다)
@@ -789,9 +790,12 @@ def render_price_index(adv, zone, codes):
         g.append('<rect class="px-hit" data-i="%d" x="%.1f" y="%.1f" width="%.1f" height="%.1f" '
                  'fill="transparent"/>' % (i, X(i) - step / 2, T, step, H - T - B))
     # 툴팁용 원자료(변동률 %) — 지수 레벨이 아니라 사용자가 물어본 '상승률'
+    def _tipvals(k):
+        d = dict(mo.get(k) or [])
+        return [round(d[m], 2) if m in d else None for m in months]
+
     tip = {'m': months,
-           's': [{'k': lab, 'c': col,
-                  'v': [round(v, 2) for _, v in (mo.get(k) or [])]}
+           's': [{'k': lab, 'c': col, 'v': _tipvals(k)}
                  for (k, lab, col), _ in live]}
     svg = ('<svg viewBox="0 0 %d %d" role="img" aria-label="%s 아파트 매매·전세·월세 지수 흐름" '
            'data-tip=\'%s\'>%s</svg>'
@@ -1230,20 +1234,30 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             'var mk=svg.querySelector(".px-mk"),vl=svg.querySelector(".px-vline"),'
             'dots=svg.querySelectorAll(".px-dot"),lines=svg.querySelectorAll("polyline"),'
             'hits=svg.querySelectorAll(".px-hit");'
-            'function pts(p){return p.getAttribute("points").split(" ").map(function(s){'
+            'var step=hits.length?parseFloat(hits[0].getAttribute("width")):1;'
+            'function pts(p){return p.getAttribute("points").split(" ").filter(Boolean).map(function(s){'
             'var a=s.split(",");return [parseFloat(a[0]),parseFloat(a[1])]})}'
             'var P=[].map.call(lines,pts);'
-            'function show(i){if(!P.length||!P[0][i])return;mk.style.display="";'
-            'vl.setAttribute("x1",P[0][i][0]);vl.setAttribute("x2",P[0][i][0]);'
-            'for(var k=0;k<dots.length;k++){if(!P[k]||!P[k][i]){dots[k].style.display="none";continue}'
-            'dots[k].style.display="";dots[k].setAttribute("cx",P[k][i][0]);dots[k].setAttribute("cy",P[k][i][1])}'
+            # 결측이 있으면 polyline 점 배열과 월 인덱스가 어긋난다 — x는 히트영역
+            # 중심에서 얻고, 각 계열 점은 그 x에 가장 가까운 것을 쓴다(리뷰 M1).
+            'function hx(i){var r=hits[i];return parseFloat(r.getAttribute("x"))+parseFloat(r.getAttribute("width"))/2}'
+            'function near(pp,x){var b=null,bd=1e9;for(var j=0;j<pp.length;j++){'
+            'var d=Math.abs(pp[j][0]-x);if(d<bd){bd=d;b=pp[j]}}return (bd<=step/1.5)?b:null}'
+            'function show(i){var x=hx(i);mk.style.display="";'
+            'vl.setAttribute("x1",x);vl.setAttribute("x2",x);'
+            'for(var k=0;k<dots.length;k++){var pt=P[k]?near(P[k],x):null;'
+            'if(!pt){dots[k].style.display="none";continue}'
+            'dots[k].style.display="";dots[k].setAttribute("cx",pt[0]);dots[k].setAttribute("cy",pt[1])}'
             'var h="<b>"+d.m[i]+"</b>";'
             'for(var s=0;s<d.s.length;s++){var v=d.s[s].v[i];if(v==null)continue;'
             'h+="<br><i style=\\"background:"+d.s[s].c+"\\"></i>"+d.s[s].k+" "+(v>0?"+":"")+v.toFixed(2)+"%"}'
             'tip.innerHTML=h;tip.hidden=false;tip.style.opacity=1;'
+            'var ys=[].filter.call(dots,function(d){return d.style.display!=="none"})'
+            '.map(function(d){return +d.getAttribute("cy")});'
+            'var vy=ys.length?Math.min.apply(null,ys):0;'
             'var b=svg.getBoundingClientRect(),wb=w.getBoundingClientRect(),'
-            'x=b.left-wb.left+P[0][i][0]/svg.viewBox.baseVal.width*b.width,'
-            'y=b.top-wb.top+P[0][i][1]/svg.viewBox.baseVal.height*b.height;'
+            'x=b.left-wb.left+hx(i)/svg.viewBox.baseVal.width*b.width,'
+            'y=b.top-wb.top+vy/svg.viewBox.baseVal.height*b.height;'
             'tip.style.left=Math.max(0,Math.min(x+10,wb.width-tip.offsetWidth-2))+"px";'
             'tip.style.top=Math.max(0,y-tip.offsetHeight-8)+"px"}'
             'function hide(){mk.style.display="none";tip.style.opacity=0;tip.hidden=true}'

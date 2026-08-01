@@ -42,8 +42,6 @@ header{padding:44px 0 28px;text-align:center}
  background:var(--ink);padding:5px 14px;border-radius:0;margin-bottom:14px}
 h1{font-size:clamp(25px,5.6vw,34px);font-weight:700;letter-spacing:-.02em;line-height:1.28;margin-bottom:12px}
 .lead{font-size:15.5px;color:var(--ink2)}
-.big{font-size:clamp(34px,9vw,48px);font-weight:700;letter-spacing:-.02em;margin:6px 0 2px}
-.bigsub{font-size:13.5px;color:var(--muted)}
 section{padding:30px 0;border-top:1px solid var(--line)}
 h2{font-size:19.5px;font-weight:700;margin-bottom:12px}
 p{font-size:15px;color:var(--ink2);margin-bottom:11px}
@@ -76,13 +74,6 @@ footer a{color:var(--muted)}
  td.lbl .note{display:block;font-weight:400;margin-top:2px}
  td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:600;flex:none}
 }
-.gauge{background:#fff;border:1px solid var(--line);padding:16px 18px 14px}
-.g-row{margin-bottom:10px}
-.g-lab{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink2);margin-bottom:4px}
-.g-lab b{font-variant-numeric:tabular-nums;font-size:14px;color:var(--ink)}
-.g-bar{height:14px;background:var(--paper2)}
-.g-fill{height:100%}
-.g-gap{font-size:14.5px;font-weight:600;margin-top:8px}
 .qwrap{background:#fff;border:1px solid var(--line);border-top:0;padding:12px 14px 10px}
 .qtitle{font-size:12px;color:var(--muted);margin-bottom:8px}
 .qchart{display:flex;align-items:flex-end;gap:5px;height:86px}
@@ -140,9 +131,7 @@ details.fold .dbody p{font-size:14px}
 .utable2 td:nth-child(1){text-align:left}
 .utable2 td:nth-child(2),.utable2 td:nth-child(3){text-align:right}
 .utable2 .uname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.utable2 tr.far td{color:var(--muted)}
-.utable2 .hint{font-size:11px;color:#a93226}
-@media(max-width:560px){.utable2{font-size:12.5px}}
+.utable2 @media(max-width:560px){.utable2{font-size:12.5px}}
 .zg-badge{display:inline-block;padding:5px 12px;font-weight:700;font-size:14px;border-radius:2px}
 .zg-cap{color:var(--muted);font-size:12px;margin:6px 0 0}
 .why3 .w-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
@@ -258,7 +247,7 @@ details.fold .dbody p{font-size:14px}
   });
 })();
 </script>
-<script>try{var _mz=null;try{_mz=JSON.parse(localStorage.getItem("agong_myzone"))}catch(e){}var _same=_mz&&_mz.z==="경기광주권";localStorage.setItem("agong_myzone",JSON.stringify({z:"경기광주권",savedAt:(_same&&_mz.savedAt)||"2026-08-01",last:(_same&&_mz.last)||{tot:10141,rank:29,grade:"다소 부족",seen:"2026-08-01"}}));}catch(e){}</script><script>(function(){var w=document.querySelector(".pidx");if(!w)return;var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}var mk=svg.querySelector(".px-mk"),vl=svg.querySelector(".px-vline"),dots=svg.querySelectorAll(".px-dot"),lines=svg.querySelectorAll("polyline"),hits=svg.querySelectorAll(".px-hit");function pts(p){return p.getAttribute("points").split(" ").map(function(s){var a=s.split(",");return [parseFloat(a[0]),parseFloat(a[1])]})}var P=[].map.call(lines,pts);function show(i){if(!P.length||!P[0][i])return;mk.style.display="";vl.setAttribute("x1",P[0][i][0]);vl.setAttribute("x2",P[0][i][0]);for(var k=0;k<dots.length;k++){if(!P[k]||!P[k][i]){dots[k].style.display="none";continue}dots[k].style.display="";dots[k].setAttribute("cx",P[k][i][0]);dots[k].setAttribute("cy",P[k][i][1])}var h="<b>"+d.m[i]+"</b>";for(var s=0;s<d.s.length;s++){var v=d.s[s].v[i];if(v==null)continue;h+="<br><i style=\"background:"+d.s[s].c+"\"></i>"+d.s[s].k+" "+(v>0?"+":"")+v.toFixed(2)+"%"}tip.innerHTML=h;tip.hidden=false;tip.style.opacity=1;var b=svg.getBoundingClientRect(),wb=w.getBoundingClientRect(),x=b.left-wb.left+P[0][i][0]/svg.viewBox.baseVal.width*b.width,y=b.top-wb.top+P[0][i][1]/svg.viewBox.baseVal.height*b.height;tip.style.left=Math.max(0,Math.min(x+10,wb.width-tip.offsetWidth-2))+"px";tip.style.top=Math.max(0,y-tip.offsetHeight-8)+"px"}function hide(){mk.style.display="none";tip.style.opacity=0;tip.hidden=true}[].forEach.call(hits,function(r){var i=+r.getAttribute("data-i");r.addEventListener("mouseenter",function(){show(i)});r.addEventListener("touchstart",function(){show(i)},{passive:true})});svg.addEventListener("mouseleave",hide);document.addEventListener("touchstart",function(e){if(!svg.contains(e.target))hide()},{passive:true});})();</script>
+<script>try{var _mz=null;try{_mz=JSON.parse(localStorage.getItem("agong_myzone"))}catch(e){}var _same=_mz&&_mz.z==="경기광주권";localStorage.setItem("agong_myzone",JSON.stringify({z:"경기광주권",savedAt:(_same&&_mz.savedAt)||"2026-08-01",last:(_same&&_mz.last)||{tot:10141,rank:29,grade:"다소 부족",seen:"2026-08-01"}}));}catch(e){}</script><script>(function(){var w=document.querySelector(".pidx");if(!w)return;var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}var mk=svg.querySelector(".px-mk"),vl=svg.querySelector(".px-vline"),dots=svg.querySelectorAll(".px-dot"),lines=svg.querySelectorAll("polyline"),hits=svg.querySelectorAll(".px-hit");var step=hits.length?parseFloat(hits[0].getAttribute("width")):1;function pts(p){return p.getAttribute("points").split(" ").filter(Boolean).map(function(s){var a=s.split(",");return [parseFloat(a[0]),parseFloat(a[1])]})}var P=[].map.call(lines,pts);function hx(i){var r=hits[i];return parseFloat(r.getAttribute("x"))+parseFloat(r.getAttribute("width"))/2}function near(pp,x){var b=null,bd=1e9;for(var j=0;j<pp.length;j++){var d=Math.abs(pp[j][0]-x);if(d<bd){bd=d;b=pp[j]}}return (bd<=step/1.5)?b:null}function show(i){var x=hx(i);mk.style.display="";vl.setAttribute("x1",x);vl.setAttribute("x2",x);for(var k=0;k<dots.length;k++){var pt=P[k]?near(P[k],x):null;if(!pt){dots[k].style.display="none";continue}dots[k].style.display="";dots[k].setAttribute("cx",pt[0]);dots[k].setAttribute("cy",pt[1])}var h="<b>"+d.m[i]+"</b>";for(var s=0;s<d.s.length;s++){var v=d.s[s].v[i];if(v==null)continue;h+="<br><i style=\"background:"+d.s[s].c+"\"></i>"+d.s[s].k+" "+(v>0?"+":"")+v.toFixed(2)+"%"}tip.innerHTML=h;tip.hidden=false;tip.style.opacity=1;var ys=[].filter.call(dots,function(d){return d.style.display!=="none"}).map(function(d){return +d.getAttribute("cy")});var vy=ys.length?Math.min.apply(null,ys):0;var b=svg.getBoundingClientRect(),wb=w.getBoundingClientRect(),x=b.left-wb.left+hx(i)/svg.viewBox.baseVal.width*b.width,y=b.top-wb.top+vy/svg.viewBox.baseVal.height*b.height;tip.style.left=Math.max(0,Math.min(x+10,wb.width-tip.offsetWidth-2))+"px";tip.style.top=Math.max(0,y-tip.offsetHeight-8)+"px"}function hide(){mk.style.display="none";tip.style.opacity=0;tip.hidden=true}[].forEach.call(hits,function(r){var i=+r.getAttribute("data-i");r.addEventListener("mouseenter",function(){show(i)});r.addEventListener("touchstart",function(){show(i)},{passive:true})});svg.addEventListener("mouseleave",hide);document.addEventListener("touchstart",function(e){if(!svg.contains(e.target))hide()},{passive:true});})();</script>
 
 </body>
 </html>

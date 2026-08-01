@@ -733,12 +733,7 @@
   }
   .sc-det{display:none;font-size:12.5px;color:var(--ink2);line-height:1.75;background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;margin:2px 0 10px}
   /* 내 지역 카드 */
-  .mz-card{border:1px solid var(--line);padding:16px 18px}
-  .mz-head{display:flex;align-items:center;gap:10px;font-size:19px}
-  .mz-desc{margin:6px 0 2px;font-weight:600}
-  .mz-meta{color:var(--muted);font-size:12.5px;margin:0}
   .mz-diff{font-weight:700;margin-left:6px}
-  .mz-actions{display:flex;gap:10px;margin-top:12px;align-items:center}
   .mz-change{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer}
   .mz-sum{margin:0 0 10px}
   .mz-sido,.mz-zones{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
