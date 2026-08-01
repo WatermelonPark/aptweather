@@ -788,3 +788,4 @@ table.adv thead th:first-child{text-align:center}
 .hz-meta{color:var(--muted);font-size:12.5px;margin:0}
 .hz-links{margin:10px 0 0;display:flex;gap:16px;justify-content:center;align-items:center}
 .hz-links a{font-weight:700;text-decoration:underline}
+.sc-lab .sc-sub{display:block;font-style:normal;font-size:10.5px;font-weight:400;color:var(--muted);line-height:1.3}

@@ -1533,13 +1533,15 @@ def build_hub(pages, prd, today):
     # 홈 히어로(mzRank)가 모두 비율 기준이라, 여기만 표시 순서대로 번호를 매기면
     # 같은 존이 화면마다 다른 순위로 보인다(2026-08-01 리뷰 C1: 31/44곳 불일치,
     # 서울권 허브 #1 vs 페이지 5위). live는 이미 비율 내림차순이므로 그 인덱스를 쓴다.
-    rank_by_ratio = {r['z']['z']: i + 1 for i, r in enumerate(live)}
-    # 홈과 같은 언어: 5등급 그룹 헤더로 묶고, 그룹 안은 절대 세대수 순(2026-08-01).
+    # 여기는 '#' 번호가 있는 순위표다 — 정렬도 그 번호와 같은 잣대(비율)여야 한다.
+    # 등급 구간이 비율 경계라 비율 정렬만으로 그룹이 이어지고 #도 1..44 순차가 된다.
+    # (2026-08-01: 번호만 비율로 바꾸고 정렬은 절대값으로 둬서 5,6,1,3,4,2,7처럼
+    #  뒤죽박죽 나왔다. 홈은 번호가 없으니 그룹 안 절대값 정렬 그대로 유지 — 다른 화면
+    #  다른 규칙이 아니라, 번호가 있느냐 없느냐에 따른 것.)
     rows = []
     prev_gk = None
-    for r in sorted(live, key=lambda x: (GRADE_ORDER.index(x['gr']['k']), -x['tot'])):
+    for i, r in enumerate(live):
         nm = r['z']['z']
-        i = rank_by_ratio[nm] - 1
         gr = r['gr']
         if gr['k'] != prev_gk:
             n_in = sum(1 for x in live if x['gr']['k'] == gr['k'])

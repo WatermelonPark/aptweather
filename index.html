@@ -2454,7 +2454,7 @@ function renderScoreSec(){
         // ★(watch)는 2026-07-31 제거 — 투자 추천처럼 읽히는 오해 소지. ⚠(warn)만 유지.
         const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>':'<span class="sc-flag"></span>';
         const rr=u.gr.ratio||0;
-        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+'</span>'+fb
+        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+(u.name==='수도권'?'<i class="sc-sub">'+u.zones.length+'개 생활권 합계</i>':'')+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
           +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)+'</span>'
           +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
