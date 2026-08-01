@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v50'; // myzone 이벤트 파라미터 action/region으로 개선
+const VERSION = 'v51'; // 수도권 롤업 구성 분포 표기 + 허브 비율 병기
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

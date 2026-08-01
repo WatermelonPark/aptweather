@@ -458,6 +458,7 @@ def render_units_2sec(units, today=None):
 CSS = """b,strong{font-weight:600}
   tr.rollup td{border-top:1.5px solid var(--ink);color:var(--muted)}
   tr.rollup .sub{font-size:11.5px;color:var(--muted)}
+  .num .pct{display:block;font-size:10.5px;font-weight:500;font-style:normal;color:var(--muted);line-height:1.35;margin-top:1px}
 :root{--ink:#131e24;--ink2:#4c5f66;--paper:#f4f6f5;--paper2:#e9edeb;--muted:#5e6f74;--line:#c4cec9}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
@@ -1570,20 +1571,40 @@ def build_hub(pages, prd, today):
                         '<i>%d곳</i></td></tr>' % (gr['color'], gr['label'], n_in))
             prev_gk = gr['k']
         rows.append(
+            # 비율은 title 툴팁에만 두면 모바일에서 볼 방법이 없다 — 홈(.sc-pct)과
+            # 같은 형식으로 본문에 병기해 순서가 스스로 설명되게 한다(2026-08-01).
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
-            '<td class="num" style="color:%s" title="필요량 대비 %s">%s</td>'
+            '<td class="num" style="color:%s">%s<i class="pct">필요량의 %s</i></td>'
             '<td><span class="tag %s">%s</span></td></tr>'
-            % (i + 1, nm, nm, gr['color'],
-               ('%+.0f%%' % (-100 * r['tot'] / r['need4']) if r['need4'] else '·'),
-               signed(r['tot']), gr['k'], gr['label']))
+            % (i + 1, nm, nm, gr['color'], signed(r['tot']),
+               ('%.0f%%' % abs(100 * r['tot'] / r['need4']) if r['need4'] else '·'),
+               gr['k'], gr['label']))
     if roll is not None:
         gr = roll['gr']
-        sub = len(roll['z'].get('subs') or []) or 16
+        subs_rows = [r for r in pages if r['z'].get('region') == '수도권'
+                     and r['z']['z'] != ROLLUP]
+        sub = len(roll['z'].get('subs') or []) or len(subs_rows) or 16
+        # ⚠️ 롤업 등급(비율 1.20 '부족')은 22곳 평균이 아니라 **풀 전체의 값**이다 —
+        # 수도권은 우리 모델에서 단일 수요 풀이고(psido='수도권', share=hh/sidohh),
+        # 스필오버 실측(수도권 20존 잔차 동조 0.7~0.9)이 그 전제를 뒷받침한다.
+        # 그래서 김포·평택의 여유가 서울의 부족을 실제로 흡수할 수 있다는 게 모델의
+        # 주장이고, 롤업 비율은 그 주장 그대로다(구성원 최악값으로 바꾸면 모델과
+        # 모순되고, 서울이 늘 심각해 수도권은 영구히 '매우 부족'이 되어 정보가 0이 된다).
+        # 다만 안이 극단적으로 갈린다는 사실(매우 부족 5 / 여유 4)은 숨기면 안 되므로
+        # 분포를 함께 적는다(2026-08-01 디자인 세션 지적).
+        import collections as _c
+        dist = _c.Counter(r['gr']['label'] for r in subs_rows)
+        dist_txt = ' · '.join('%s %d' % (lab, dist[lab])
+                              for _, lab, _, _ in GRADES if dist.get(lab))
         rows.append(
             '      <tr class="rollup"><td class="rk">—</td>'
-            '<td><a class="z" href="/zone/%s/">%s</a> <span class="sub">%d개 생활권 합계</span></td>'
-            '<td class="num" style="color:%s">%s</td><td><span class="tag %s">%s</span></td></tr>'
-            % (ROLLUP, ROLLUP, sub, gr['color'], signed(roll['tot']), gr['k'], gr['label']))
+            '<td><a class="z" href="/zone/%s/">%s</a> '
+            '<span class="sub">%d개 생활권 합계 · 안은 %s</span></td>'
+            '<td class="num" style="color:%s">%s<i class="pct">필요량의 %s</i></td>'
+            '<td><span class="tag %s">%s</span></td></tr>'
+            % (ROLLUP, ROLLUP, sub, dist_txt or '집계 없음', gr['color'], signed(roll['tot']),
+               ('%.0f%%' % abs(100 * roll['tot'] / roll['need4']) if roll.get('need4') else '·'),
+               gr['k'], gr['label']))
     ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",

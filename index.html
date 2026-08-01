@@ -160,7 +160,7 @@
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
 
-    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">단위: 세대 · 막대는 제곱근 비례 · 등급은 필요량 대비 비율</span></div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u">등급은 필요량 대비 비율 · 그 안은 세대수 큰 순 · 막대는 제곱근 비례</span></div></div>
     <div id="score-wrap" style="text-align:left"></div>
     <!-- 홈은 수도권을 1행으로 접은 요약(23행)이라, 개별 44곳 전체는 /zone/ 허브로 보낸다.
          두 화면의 그룹핑·정렬 규칙은 같다(등급 그룹 → 그룹 안 절대 세대수 순). -->
@@ -2430,6 +2430,21 @@ function renderHeroMap(){
   p.push('</svg>');
   el.innerHTML=p.join('');
 }
+/* 수도권 롤업 등급은 22곳 '평균'이 아니라 **풀 전체 비율**이다 — 수도권은 우리
+   모델에서 단일 수요 풀이라(psido='수도권', share=hh/sidohh) 그 값이 맞다. 김포·평택의
+   여유가 서울의 부족을 흡수할 수 있다는 게 모델의 주장이고, 스필오버 실측(수도권 20존
+   잔차 동조 0.7~0.9)이 그 전제를 받친다. 구성원 최악값으로 바꾸면 모델과 모순되고
+   서울이 늘 심각해 수도권이 영구히 '매우 부족'이 되어 정보가 0이 된다.
+   다만 안이 극단적으로 갈리는 사실(매우 부족 5 / 여유 4)은 숨기면 안 되므로 분포를 적는다.
+   ⚠️ tools/make_zone_pages.py build_hub의 dist_txt와 같은 형식(2026-08-01). */
+function capDist(zones){
+  const order=['g4','g3','g2','g1','g0'], cnt={};
+  zones.forEach(z=>{cnt[z.gr.k]=(cnt[z.gr.k]||0)+1;});
+  return order.filter(k=>cnt[k]).map(k=>{
+    const g=GRADES.find(x=>x[0]===k);
+    return (g?g[1]:k)+' '+cnt[k];
+  }).join(' · ')||'집계 없음';
+}
 function renderScoreSec(){
   const sec=document.getElementById('sec-score');if(!sec)return;
   const all=scCalc();
@@ -2467,7 +2482,7 @@ function renderScoreSec(){
         // ★(watch)는 2026-07-31 제거 — 투자 추천처럼 읽히는 오해 소지. ⚠(warn)만 유지.
         const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>':'<span class="sc-flag"></span>';
         const rr=u.gr.ratio||0;
-        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+(u.name==='수도권'?'<i class="sc-sub">'+u.zones.length+'개 생활권 합계</i>':'')+'</span>'+fb
+        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+(u.name==='수도권'?'<i class="sc-sub">'+u.zones.length+'개 생활권 합계 · 안은 '+capDist(u.zones)+'</i>':'')+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
           /* 세대수 아래 '필요량 대비 %'를 함께 적는다. 묶는 기준은 비율인데 큰 숫자로
              보이는 건 세대수뿐이라, 목포권 −2.3만이 수도권 −85.6만보다 위에 오는 게
