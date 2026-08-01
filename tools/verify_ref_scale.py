@@ -4,9 +4,14 @@
 배경: 재설계 대상은 공급 측(occupancy 준공실적 → HUB done_q)뿐이고, 수요 기준선
 '적정'(ADV.occupancy.ref[region], calc()가 refq로 읽는 기준표 상수)은 그대로 유지된다.
 이 스크립트는 HUB done_q의 분기 스케일이 그 적정 기준과 맞는지만 진단한다 —
-값을 고치지 않는 읽기 전용 도구다. 비율이 지역 간 ~일정하면 스케일 계수 하나로
-보정 가능하다는 뜻이고, 들쭉날쭉하면 단일 계수로는 부적합하다는 뜻이다.
-실제 보정 계수 적용/미적용 판단은 전량 시드 후 Task 5(순위검토)에서 확정한다.
+값을 고치지 않는 읽기 전용 도구다.
+
+판정 기준(2026-08-01 재정의): **안분 없는 존(share≈1, 광역시·제주)의 비율 평균이
+1.00 근처인가**. 이 비율(최근 3년 준공 ÷ 존 적정)은 곧 과잉/부족 신호 자체라 존마다
+흩어지는 게 정상이고, 척도 오류는 흩어짐이 아니라 치우침으로 나타난다. 안분 존은
+분모가 시도 적정×작은 몫이라 비율이 크게 흔들려(광명 share 0.011 → 2.61) 척도
+판정에 못 쓴다. 옛 기준(CV≥0.3이면 부적합)은 성립 불가능한 전제라 정상 상태에서도
+경고를 냈다 — 그 거짓 경고가 진짜 문제를 가릴 위험이 있어 바꿨다.
 
 사용:
   python tools/verify_ref_scale.py
@@ -33,18 +38,10 @@ SITE_ROOT = os.path.dirname(ROOT)                            # repo root
 sys.path.insert(0, ROOT)
 import update_adv_data as uad   # _hub_zone_map / _load_bdong_map 재사용 (Task 3)
 
-DATA_JS = os.path.join(SITE_ROOT, 'data.js')
 HUB_JSON = os.path.join(ROOT, 'data', 'hub_permits.json')
 
 RECENT_YEARS = 3   # calc()의 최근 3년(LB=12분기) 창과 맞춘다
 
-
-def load_adv():
-    """make_zone_pages.load()와 동일한 패턴으로 data.js에서 ADV 블록만 추출."""
-    t = io.open(DATA_JS, encoding='utf-8').read()
-    m = re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});\s*/\*ADV_DATA_END\*/', t, re.S)
-    assert m, 'data.js에서 ADV_DATA 블록을 찾을 수 없음'
-    return json.loads(m.group(1))
 
 
 def _recent_quarters(n_years):
@@ -83,26 +80,7 @@ def zone_done_avg(hp, z_of, n_years=RECENT_YEARS):
     return out
 
 
-def zone_region(zz):
-    """make_zone_pages.calc()와 동일한 규칙으로 시도(occupancy region)를 정한다."""
-    if zz.get('region') == '수도권':
-        return '수도권'
-    return zz.get('psido') or '수도권'
 
-
-def zone_refq(O, region):
-    """calc()와 동일: ref[region]이 없으면 band 중앙값으로 폴백."""
-    refq = (O.get('ref') or {}).get(region)
-    if refq:
-        return refq
-    band = (O.get('band') or {}).get(region)
-    return (sum(band) / 2) if band else None
-
-
-def zone_share(zz, sido_pop):
-    """calc()의 share = min(1, zone_pop/sido_pop) — refq(REGION 적정)를 zone-level로 맞추는 비율."""
-    pop = zz.get('pop') or 1
-    return min(1.0, pop / (sido_pop or pop or 1))
 
 
 def main():
@@ -116,28 +94,27 @@ def main():
               % (hp.get('meta', {}).get('mode'), len(hp.get('sgg', {}))))
         return 0
 
-    adv = load_adv()
-    LZ = adv['livezone']['zones']
-    O = adv['occupancy']
-    SP = adv['livezone'].get('sidopop') or {}
-    zmeta = {z['z']: z for z in LZ}
+    # 존 적정은 라이브 calc()가 내는 값(zrefq)을 그대로 쓴다 — 자체 계산을 두면
+    # 모델이 바뀔 때 조용히 어긋난다(2026-08-01: 수요 풀 재배선으로 부산·대구권 등의
+    # 존 적정이 refq×share에서 달라졌는데 이 도구만 옛 식을 써 평균이 1.12 vs 1.00으로
+    # 갈렸다). share도 calc()가 실은 세대수 기준이라 이 파일의 인구식은 이미 낡았다.
+    import make_zone_pages as mzp
+    adv, sts = mzp.load()
+    calc_rows = {r['z']['z']: r for r in mzp.calc(adv, sts)}
 
     rows = []
     skipped = []
     for z, (avg, nq) in zavg.items():
-        zz = zmeta.get(z)
-        if not zz:
+        cr = calc_rows.get(z)
+        if not cr:
             skipped.append((z, 'zone 이름이 livezone.zones에 없음'))
             continue
-        region = zone_region(zz)
-        refq = zone_refq(O, region)
-        if not refq:
-            skipped.append((z, 'refq(적정) 없음: region=%s' % region))
+        zrefq = cr.get('zrefq')
+        if not zrefq:
+            skipped.append((z, '존 적정(zrefq) 없음: region=%s' % cr.get('ps')))
             continue
-        share = zone_share(zz, SP.get(region))
-        # avg는 ZONE 준공실적, refq는 REGION 적정 — share를 곱해 zone-level 적정과 비교한다
-        # (calc()/running_shortage 호출부와 동일 원칙, Issue #5).
-        rows.append((z, region, avg, refq, share, avg / (refq * share) if share else float('inf'), nq))
+        region = cr.get('pool') or cr['ps']
+        rows.append((z, region, avg, cr['refq'], cr['share'], avg / zrefq, nq))
     rows.sort(key=lambda r: -r[2])
 
     if not rows:
@@ -155,21 +132,45 @@ def main():
         for z, why in skipped:
             print('스킵: %s — %s' % (z, why))
 
+    def _stat(vs):
+        n_ = len(vs)
+        if not n_:
+            return 0.0, 0.0, float('inf'), 0
+        m = sum(vs) / n_
+        sd_ = (sum((x - m) ** 2 for x in vs) / n_) ** 0.5
+        return m, sd_, (sd_ / m if m else float('inf')), n_
+
+    # ⚠️ 판정은 CV가 아니라 '안분 없는 존(share≈1)의 평균이 1에서 얼마나 벗어났나'로
+    # 한다(2026-08-01 재정의). 이 비율은 "최근 3년 실제 준공 ÷ 존 적정" — 즉 우리가
+    # 재려는 과잉/부족 신호 그 자체라, 지역 간 흩어지는 게 정상이다. 예전 기준(CV≥0.3
+    # → 척도 부적합)은 "모든 존이 적정에 비례해 지어야 한다"는 성립 불가능한 전제라
+    # 정상 상태에서도 매번 경고를 냈다(실측 CV 0.65).
+    # 척도가 어긋나면 흩어짐이 아니라 '치우침'으로 나타나고, 그건 안분 잡음이 안 섞인
+    # share≈1 존에서만 깨끗하게 보인다 — 안분 존은 분모(시도 적정×작은 몫)가 작아
+    # 비율이 크게 흔들린다(광명 share 0.011 → 비율 2.61, 고양 0.039 → 0.12).
     ratios = [r[5] for r in rows]
-    n = len(ratios)
-    mean = sum(ratios) / n
-    var = sum((x - mean) ** 2 for x in ratios) / n
-    sd = var ** 0.5
-    cv = (sd / mean) if mean else float('inf')
+    full = [r[5] for r in rows if r[4] >= 0.999]      # 안분 없음(광역시·제주 등)
+    part = [r[5] for r in rows if r[4] < 0.999]
+    mean, sd, cv, n = _stat(ratios)
+    fm, fsd, fcv, fn = _stat(full)
+    pm, psd, pcv, pn = _stat(part)
 
     print()
-    print('표본 %d개 존 — 비율 평균 %.2f · 표준편차 %.2f · 변동계수(CV=sd/mean) %.2f' % (n, mean, sd, cv))
-    if n < 5:
-        print('판단 보류: 표본이 너무 적음(<5개 존) — 전량 시드 후 재실행 필요')
-    elif cv < 0.3:
-        print('판단: 비율이 지역 간 비교적 일정함(CV<0.3) → 스케일 계수 하나(~%.2f)로 보정 가능해 보임' % mean)
+    print('%-22s %6s %6s %6s %4s' % ('구분', '평균', '표준편차', 'CV', 'n'))
+    print('%-22s %6.2f %6.2f %6.2f %4d' % ('전체', mean, sd, cv, n))
+    print('%-22s %6.2f %6.2f %6.2f %4d' % ('안분 없음(share=1)', fm, fsd, fcv, fn))
+    print('%-22s %6.2f %6.2f %6.2f %4d' % ('안분 있음(share<1)', pm, psd, pcv, pn))
+    print()
+    if fn < 4:
+        print('판단 보류: 안분 없는 존이 %d개뿐 — 척도를 깨끗하게 잴 표본이 부족하다' % fn)
+    elif abs(fm - 1.0) <= 0.15:
+        print('판단: 척도 정상 — 안분 없는 존 평균 %.2f (1.00 ±0.15 이내). '
+              '전체 CV %.2f는 존별 과잉/부족 차이(=재려는 신호)이지 척도 문제가 아니다.'
+              % (fm, cv))
     else:
-        print('판단: 비율이 지역 간 크게 벌어짐(CV>=0.3) → 단일 계수로는 부적합, 지역별 검토 필요')
+        print('판단: ⚠️ 척도 치우침 의심 — 안분 없는 존 평균이 %.2f로 1.00에서 %.0f%% 벗어났다. '
+              'HUB 준공과 적정(ref)이 다른 척도일 수 있으니 ref 산출 근거를 재확인할 것.'
+              % (fm, abs(fm - 1) * 100))
     return 0
 
 
