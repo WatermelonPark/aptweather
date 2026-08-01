@@ -81,12 +81,19 @@ def audit(path):
 
 
 def main():
-    pages = ['index.html', 'cycle/index.html', 'zone/index.html',
-             'privacy/index.html', 'burini-test/index.html', '404.html']
+    # 검사 대상은 자동 발견한다. 하드코딩 목록이던 시절 investor-test·redev-test·
+    # weekly·faq·지표 페이지 2종이 통째로 빠져 있었다(2026-08-01 발견) — 퀴즈 3종은
+    # 같은 위반을 갖고 있었는데 burini-test만 잡혔다. 새 페이지를 만들 때마다 목록
+    # 추가를 기억해야 하는 구조 자체가 함정이므로 없앤다.
+    SKIP = {'docs', 'drafts', 'review', 'share', 'tools', 'icons', 'logs',
+            'art_raw', 'node_modules'}   # 공개 페이지가 아닌 디렉터리
+    def top(p):
+        return p.replace('\\', '/').split('/')[0]
+    pages = ['index.html', '404.html']
+    pages += sorted(p for p in glob.glob('*/index.html') if top(p) not in SKIP)
     zones = sorted(glob.glob('zone/*/index.html'))
-    zones = [z for z in zones if z != 'zone/index.html']
     if zones:
-        pages.append(zones[0])          # 생활권은 템플릿 산출물이라 대표 1장
+        pages.append(zones[0])          # 생활권 45장은 템플릿 산출물이라 대표 1장
 
     print('%-26s %-4s %-5s %-4s %-4s %-4s %-7s %-4s %-5s %s'
           % ('페이지', '공유', '폰트', '800', 'UP', '자간', 'radius', '금색', '웜색', '장식'))
