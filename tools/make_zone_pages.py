@@ -539,13 +539,26 @@ footer a{color:var(--muted)}
 /* 막대 안 숫자·분기 라벨이 nowrap이라 칸이 줄지 못한다 — 16분기가 들어오면 폭이
    화면을 넘어 페이지 전체가 가로로 늘어났다(2026-08-01 모바일 지적). 칸 최소폭을
    주고 넘치면 이 상자 안에서만 가로로 스크롤시킨다. */
-.qchart{display:flex;align-items:flex-end;gap:5px;height:86px;overflow-x:auto;overflow-y:hidden;
- -webkit-overflow-scrolling:touch;scrollbar-width:thin}
-.q-col{flex:1 0 34px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
-/* 회색 막대는 '들어올 공급'이라는 뜻을 못 나른다. 사이트 컨벤션대로 공급=파랑. */
-.q-bar{width:100%;max-width:36px;background:#3a7bd5}
-.q-v{font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.q-l{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
+.qchart{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+/* 기준선을 얹으려면 막대들과 같은 좌표계가 필요하다 — 가로 스크롤 폭 전체를 덮도록
+   안쪽 래퍼를 두고 여기에 절대배치한다. */
+/* 왼쪽 눈금 자리 — 기준선 라벨이 막대를 가리지 않게 띄워 둔다(실측: 흰 배경
+   라벨이 막대 3개를 덮었다). 실제 차트의 y축 라벨 영역과 같은 역할. */
+.q-inner{position:relative;display:flex;align-items:flex-end;gap:4px;min-width:100%;
+ padding-top:2px;padding-left:50px}
+.q-col{flex:1 0 22px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+/* 회색 막대는 '들어올 공급'이라는 뜻을 못 나른다. 사이트 컨벤션대로 공급=파랑.
+   폭은 22px 칸에 16px — 예전 36px는 너무 뚱뚱해 한눈에 안 들어왔다(2026-08-02). */
+.q-bar{width:100%;max-width:16px;background:#3a7bd5}
+.q-v{font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:12px}
+.q-l{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px;line-height:12px}
+/* 분기 적정물량 기준선. 데이터가 아니라 잣대라 색은 중립(ink2) — 빨강을 쓰면
+   '부족' 데이터 색과 헷갈린다. 라벨은 선 위 오른쪽에 붙인다. */
+.q-ref{position:absolute;left:0;right:0;border-top:1px dashed var(--ink2);pointer-events:none}
+/* 라벨은 왼쪽 — 45존 중 37곳이 16분기라 가로 스크롤이 생기는데, 오른쪽에 두면
+   스크롤하기 전엔 보이지 않는다(2026-08-02 실측). 흰 배경으로 막대 위에 얹는다. */
+.q-ref i{position:absolute;left:0;bottom:-6px;font-style:normal;font-size:9.5px;
+ color:var(--ink2);white-space:nowrap}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .t-card{background:#fff;border:1px solid var(--line);padding:13px 8px 11px;text-align:center}
 .t-lab{font-size:12px;color:var(--ink);font-weight:600;line-height:1.35}
@@ -997,12 +1010,23 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             return ('%.1f만' % (v / 10000)) if v >= 10000 else format(v, ',')
         # 모든 막대 양식 동일 — 최대 분기 강조(외곽선·진한 색·굵은 숫자) 전부 제거
         # (2026-08-01 사용자). 어느 분기가 몰리는지는 아래 캡션 문장이 말해준다.
+        # 기준선(분기 적정물량 zrefq)을 함께 그린다 — 막대만 있으면 '많다/적다'를
+        # 잴 자가 없다. 눈금은 px로 고정한다: 적정선이 최대 막대보다 높을 수도 있어
+        # (공급 가뭄 지역) 축 상한을 둘 중 큰 값으로 잡아야 선이 화면 안에 남는다.
+        PLOT_H = 72          # 막대 영역 높이(px)
+        LABEL_H = 14         # 막대 아래 분기 라벨(.q-l) 높이 — 기준선 offset의 기준
+        qref = r.get('zrefq') or 0
+        scale = max(mxq, qref) or 1
         cols = ''.join(
             '<div class="q-col"><span class="q-v">%s</span>'
-            '<div class="q-bar" style="height:%.0f%%"></div>'
+            '<div class="q-bar" style="height:%dpx"></div>'
             '<span class="q-l">%s</span></div>' % (
-                qfmt(byq[q]), max(byq[q] / mxq * 72, 3), qlabel(q))
+                qfmt(byq[q]), max(int(round(byq[q] / scale * PLOT_H)), 2), qlabel(q))
             for q in qs)
+        if qref:
+            cols += ('<div class="q-ref" style="bottom:%dpx">'
+                     '<i>적정 %s</i></div>'
+                     % (LABEL_H + int(round(qref / scale * PLOT_H)), num(qref)))
         # 합계는 여기서만 보여준다 — 단지 목록(상위 N곳)과 헷갈리지 않게 '전체'로 명시.
         # ⚠️ ②'들어올 집'(conf 가중)과 여기 '전체'(원시 합)는 다른 값이다. 한 화면에
         # 인접해 있어 최대 36% 차이가 설명 없이 노출됐다(2026-08-01 리뷰 I1) —
@@ -1011,7 +1035,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
                        '<b style="color:var(--ink)">· 전체 %s세대</b>'
                        '<span style="color:var(--muted)"> · 먼 미래를 낮춰 반영하면 %s세대'
                        '(위 \'들어올 집\')</span></div>'
-                       '<div class="qchart">%s</div></div>'
+                       '<div class="qchart"><div class="q-inner">%s</div></div></div>'
                        % (num(sum(byq[q] for q in qs)), num(r['fsupw']), cols))
         # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
         qcap = ('가장 몰리는 분기는 %s — 그래도 필요량에는 못 미칩니다' % qlabel(peakq)) if r['tot'] > 0 else \
