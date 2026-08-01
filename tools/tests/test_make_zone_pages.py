@@ -271,3 +271,14 @@ def test_render_units_2sec_shows_no_total():
     html = M.render_units_2sec(units, TODAY)
     assert '1,000' not in html and '세대</span>' not in html
     assert '세대 큰 순 2곳' in html
+
+
+def test_render_units_2sec_escapes_quotes_in_name():
+    """단지명이 title="..." 속성에 들어가므로 따옴표를 이스케이프해야 한다 —
+    HUB 원자료에 '일신 "에일린의 뜰" 아파트'가 실재(2026-08-01 리뷰 M3)."""
+    ym = _ym_off(8) if '_ym_off' in globals() else '2027-03'
+    units = {'sched': [['일신 "에일린의 뜰" 아파트', 300, ym]], 'done': []}
+    html = M.render_units_2sec(units, TODAY)
+    assert 'title="일신 &quot;에일린의 뜰&quot; 아파트"' in html
+    # 속성이 조기 종료돼 깨진 마크업이 나오면 안 된다
+    assert 'title="일신 "' not in html

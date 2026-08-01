@@ -346,7 +346,10 @@ def render_units_2sec(units, today=None):
     done = list(units.get('done') or [])
     if not sched and not done:
         return ''
-    esc = lambda s: str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    # title="%s" 속성에 그대로 들어가므로 따옴표까지 이스케이프한다 — HUB 원자료에
+    # '일신 "에일린의 뜰" 아파트' 같은 단지명이 실재한다(2026-08-01 리뷰 M3).
+    esc = lambda s: (str(s).replace('&', '&amp;').replace('<', '&lt;')
+                     .replace('>', '&gt;').replace('"', '&quot;'))
 
     def months_out(ym):
         try:
@@ -786,7 +789,7 @@ def render_price_index(adv, zone, codes):
                      for (k, lab, col), _ in live)
     return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
             '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균 '
-            '· 최근값 100 기준 흐름 · <b>선 위에 마우스를 올리면 그 달 수치</b></p>'
+            '· 최근값 100 기준 흐름 · <b>그래프를 짚으면 그 달 수치</b></p>'
             '<div class="px-now">%s</div>'
             '<div class="px-lgs">%s</div>%s'
             '<div class="px-tip" hidden></div>'
@@ -863,11 +866,16 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     idx_html = pidx.get(nm, '') if pidx else ''
     # 2026-08-01 사용자: 결론부터 — 순부족 합계와 '재고처럼 쌓인다' 설명을
     # 근거 3줄 위(=섹션 맨 앞)로 올려 가시성을 높인다.
+    # 결론 문장은 부호에 따라 갈라야 한다 — 여유 존에 "부족은 재고처럼 쌓입니다"가
+    # 붙어 결론과 근거가 어긋났다(2026-08-01 리뷰 I3: 평택·제주 등 여유 7곳 전부).
+    wl_note = ('부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 '
+               '메워지지 않습니다.') if r['tot'] >= 0 else \
+              ('여유도 재고처럼 쌓입니다 — 몇 해 몰린 지역은 한 해 물량이 줄어도 '
+               '바로 해소되지 않습니다.')
     verdict_html = (
         '<div class="w-lead" style="border-color:%s">'
         '<div class="wl-sum" style="color:%s">%s</div>'
-        '<p class="wl-note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 '
-        '한 해 물량이 몰려도 메워지지 않습니다.</p></div>' % (gr['color'], gr['color'], sum_line))
+        '<p class="wl-note">%s</p></div>' % (gr['color'], gr['color'], sum_line, wl_note))
     why_html = (
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
         '%s'
@@ -930,10 +938,15 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
                 qfmt(byq[q]), max(byq[q] / mxq * 72, 3), qlabel(q))
             for q in qs)
         # 합계는 여기서만 보여준다 — 단지 목록(상위 N곳)과 헷갈리지 않게 '전체'로 명시.
+        # ⚠️ ②'들어올 집'(conf 가중)과 여기 '전체'(원시 합)는 다른 값이다. 한 화면에
+        # 인접해 있어 최대 36% 차이가 설명 없이 노출됐다(2026-08-01 리뷰 I1) —
+        # 가중 후 값을 괄호로 병기해 두 숫자를 잇는다.
         qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대) '
-                       '<b style="color:var(--ink)">· 전체 %s세대</b></div>'
+                       '<b style="color:var(--ink)">· 전체 %s세대</b>'
+                       '<span style="color:var(--muted)"> · 먼 미래를 낮춰 반영하면 %s세대'
+                       '(위 \'들어올 집\')</span></div>'
                        '<div class="qchart">%s</div></div>'
-                       % (num(sum(byq[q] for q in qs)), cols))
+                       % (num(sum(byq[q] for q in qs)), num(r['fsupw']), cols))
         # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
         qcap = ('가장 몰리는 분기는 %s — 그래도 필요량에는 못 미칩니다' % qlabel(peakq)) if r['tot'] > 0 else \
                ('입주가 가장 몰리는 %s 전후가 세입자·매수자에게 유리합니다' % qlabel(peakq))
@@ -993,7 +1006,8 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             ufut.append(u)
     ufut.sort(key=lambda u: (u[3], -u[2]))
     if ufut:
-        _esc = lambda s: str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        _esc = lambda s: (str(s).replace('&', '&amp;').replace('<', '&lt;')
+                          .replace('>', '&gt;').replace('"', '&quot;'))
         urows = ''.join(
             '<tr><td>%s</td><td class="uname" title="%s">%s</td>'
             '<td class="num">%s</td><td class="num">%s</td></tr>' % (
@@ -1112,7 +1126,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         '<details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">\n'
         '<div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>\n'
         '<div class="card"><b>부족이 곧 상승은 아니다</b><span>공급 부족은 가격을 밀어올리는 힘이지만, 금리·규제·수요 같은 다른 힘과 함께 작동합니다. 이 지표는 그중 <b>공급</b> 한 축만 정확히 보여줍니다.</span></div>\n'
-        '<div class="card"><b>절대량으로 비교한다</b><span>인구 대비 비율이 아니라 세대수 절대량이라, 시장이 큰 곳일수록 부족 규모도 크게 잡힙니다. 작은 지역의 가뭄은 순위에서 희석될 수 있습니다.</span></div>\n'
+        '<div class="card"><b>순위는 비율, 숫자는 절대량</b><span>등급과 순위는 그 지역이 4년간 필요한 양 대비 몇 %%가 모자라는지로 매깁니다. 그래서 작은 지역의 가뭄도 큰 도시와 나란히 비교됩니다. 화면에 보이는 세대수는 체감을 위한 절대량이라, 순위와 크기 순서가 다를 수 있습니다.</span></div>\n'
         '</div></details>')
     methodology_details_html = (
         origin_fold_html + calc_fold_html + compo_fold_html + caution_fold_html +
@@ -1227,6 +1241,8 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             'r.addEventListener("mouseenter",function(){show(i)});'
             'r.addEventListener("touchstart",function(){show(i)},{passive:true})});'
             'svg.addEventListener("mouseleave",hide);'
+            # 터치로 연 툴팁은 그래프 밖을 누르면 닫는다(모바일엔 mouseleave가 없다)
+            'document.addEventListener("touchstart",function(e){if(!svg.contains(e.target))hide()},{passive:true});'
             '})();</script>')
 
     title = '%s 아파트 공급 분석 — 준공·입주예정으로 본 %s | 아공맵' % (nm, tname)
@@ -1513,11 +1529,17 @@ def build_hub(pages, prd, today):
     live = sorted([r for r in pages if r['z']['z'] != ROLLUP],
                   key=lambda r: -(r['tot'] / r['need4'] if r['need4'] else 0))
     roll = next((r for r in pages if r['z']['z'] == ROLLUP), None)
+    # ⚠️ 표시 번호는 '비율 순위'여야 한다 — 존 페이지의 "생활권 44곳 중 N위"와
+    # 홈 히어로(mzRank)가 모두 비율 기준이라, 여기만 표시 순서대로 번호를 매기면
+    # 같은 존이 화면마다 다른 순위로 보인다(2026-08-01 리뷰 C1: 31/44곳 불일치,
+    # 서울권 허브 #1 vs 페이지 5위). live는 이미 비율 내림차순이므로 그 인덱스를 쓴다.
+    rank_by_ratio = {r['z']['z']: i + 1 for i, r in enumerate(live)}
     # 홈과 같은 언어: 5등급 그룹 헤더로 묶고, 그룹 안은 절대 세대수 순(2026-08-01).
     rows = []
     prev_gk = None
-    for i, r in enumerate(sorted(live, key=lambda x: (GRADE_ORDER.index(x['gr']['k']), -x['tot']))):
+    for r in sorted(live, key=lambda x: (GRADE_ORDER.index(x['gr']['k']), -x['tot'])):
         nm = r['z']['z']
+        i = rank_by_ratio[nm] - 1
         gr = r['gr']
         if gr['k'] != prev_gk:
             n_in = sum(1 for x in live if x['gr']['k'] == gr['k'])
