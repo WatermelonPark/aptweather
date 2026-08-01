@@ -74,12 +74,31 @@ footer a{color:var(--muted)}
  td.lbl{display:block;font-weight:600;color:var(--ink);font-size:14.5px;margin-bottom:7px}
  td.lbl .note{display:block;font-weight:400;margin-top:2px}
  td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:600;flex:none}
+ /* ⚠️ 위 스택 규칙은 열 많은 비교표를 위한 것이다. 단지 목록(.utable2)은 3열뿐이라
+    좁은 화면에서도 표로 읽히는데, 함께 스택되는 바람에 단지 하나가 3줄이 돼 목록이
+    세 배로 길어졌다(2026-08-01 모바일 지적 — PC는 1줄). 여기서만 표로 되돌린다. */
+ .utable2{display:table}
+ .utable2 thead{display:table-header-group}
+ .utable2 tbody{display:table-row-group}
+ .utable2 tr{display:table-row;border-bottom:0;padding:0}
+ .utable2 td{display:table-cell;padding:8px 9px;border-bottom:1px solid var(--line);
+  text-align:right;font-size:13px}
+ .utable2 tbody tr:last-child td{border-bottom:0}
+ .utable2 td:nth-child(1){text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .utable2 th:nth-child(1){width:50%}
+ .utable2 th:nth-child(2){width:22%}
+ .utable2 th:nth-child(3){width:28%}
 }
 .qwrap{background:#fff;border:1px solid var(--line);border-top:0;padding:12px 14px 10px}
 .qtitle{font-size:12px;color:var(--muted);margin-bottom:8px}
-.qchart{display:flex;align-items:flex-end;gap:5px;height:86px}
-.q-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
-.q-bar{width:100%;max-width:36px;background:#8fa3ab}
+/* 막대 안 숫자·분기 라벨이 nowrap이라 칸이 줄지 못한다 — 16분기가 들어오면 폭이
+   화면을 넘어 페이지 전체가 가로로 늘어났다(2026-08-01 모바일 지적). 칸 최소폭을
+   주고 넘치면 이 상자 안에서만 가로로 스크롤시킨다. */
+.qchart{display:flex;align-items:flex-end;gap:5px;height:86px;overflow-x:auto;overflow-y:hidden;
+ -webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.q-col{flex:1 0 34px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
+/* 회색 막대는 '들어올 공급'이라는 뜻을 못 나른다. 사이트 컨벤션대로 공급=파랑. */
+.q-bar{width:100%;max-width:36px;background:#3a7bd5}
 .q-v{font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .q-l{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -176,7 +195,7 @@ details.fold .dbody p{font-size:14px}
 
 </div></header>
 
-<section><div class="wrap"><h2>왜 이 판정인가</h2><div class="w-lead" style="border-color:#a93226"><div class="wl-sum" style="color:#a93226">순부족 50,505세대 = 밀린 것 + 필요 − 들어올 것</div><p class="wl-note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p></div><div class="why3"><div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>그동안 밀린 집<i>2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다(그래서 아래 ‘필요한 집’과 숫자가 같습니다)</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>수도권 세대의 4% = 화성권 몫 · 추정</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−3,543</b></div></div><div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3><p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균</p><div class="px-now"><span class="px-c">이번 주 매매 <b style="color:#a93226">+0.14%</b><i>2026-07-27</i></span><span class="px-c">이번 달 매매 <b style="color:#a93226">+1.74%</b><i>2026-06</i></span><span class="px-c">이번 달 전세 <b style="color:#a93226">+1.21%</b><i>2026-06</i></span></div></div></div></section>
+<section><div class="wrap"><h2>왜 이 판정인가</h2><div class="w-lead" style="border-color:#a93226"><div class="wl-sum" style="color:#a93226">순부족 50,505세대 = 밀린 것 + 필요 − 들어올 것</div><p class="wl-note">부족은 재고처럼 쌓입니다 — 몇 해 모자란 지역은 한 해 물량이 몰려도 메워지지 않습니다.</p></div><div class="why3"><div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>그동안 밀린 집<i>2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다(그래서 아래 ‘필요한 집’과 숫자가 같습니다)</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>수도권 세대의 4% = 화성권 몫 · 추정</i></span><b>+27,024</b></div><div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−3,543</b></div></div><div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3><p class="px-sub">한국부동산원 가격지수 · 생활권 평균</p><div class="px-now"><span class="px-c">매매 <b style="color:#a93226">+1.74%</b></span><span class="px-c">전세 <b style="color:#a93226">+1.21%</b></span><span class="px-c">월세 <b style="color:#a93226">+0.70%</b></span></div></div></div></section>
 <section><div class="wrap"><h2>언제 들어오나</h2><p class="note" style="margin-bottom:9px">앞으로 4년(16분기) 창 · 국토부 건축HUB 준공예정 실측</p><div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대) <b style="color:var(--ink)">· 전체 4,720세대</b><span style="color:var(--muted)"> · 먼 미래를 낮춰 반영하면 3,543세대(위 '들어올 집')</span></div><div class="qchart"><div class="q-col"><span class="q-v">1,247</span><div class="q-bar" style="height:44%"></div><span class="q-l">27Q1</span></div><div class="q-col"><span class="q-v">2,020</span><div class="q-bar" style="height:72%"></div><span class="q-l">28Q2</span></div><div class="q-col"><span class="q-v">1,453</span><div class="q-bar" style="height:52%"></div><span class="q-l">28Q3</span></div></div></div><p class="note" style="margin-top:9px">가장 몰리는 분기는 28Q2 — 그래도 필요량에는 못 미칩니다</p></div></section>
 <section><div class="wrap">
   <h2>앞으로 들어올 단지 <span class="ucnt">4년 내 · 세대 큰 순 3곳</span></h2>

@@ -160,10 +160,10 @@
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
     </div>
 
-    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u" id="sc-cap">등급은 필요량 대비 비율 · 그 안은 세대수 큰 순 · 막대는 제곱근 비례</span></div></div>
+    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u" id="sc-cap">모자란 세대수 큰 순 · 등급은 필요량 대비 비율 · 막대는 제곱근 비례</span></div></div>
     <div class="adv-tabs" role="tablist" aria-label="순위 정렬 기준">
-      <button id="scs-ratio" class="on" onclick="setScSort('ratio')">비율순</button>
-      <button id="scs-abs" onclick="setScSort('abs')">세대수순</button>
+      <button id="scs-abs" class="on" onclick="setScSort('abs')">세대수순</button>
+      <button id="scs-ratio" onclick="setScSort('ratio')">비율순</button>
     </div>
     <div id="score-wrap" style="text-align:left"></div>
     <!-- 홈은 수도권을 1행으로 접은 요약(23행)이라, 개별 44곳 전체는 /zone/ 허브로 보낸다.
@@ -2446,7 +2446,7 @@ function capDist(zones){
 }
 /* 순위표 정렬 모드. 홈에는 순번(#)이 없어서 정렬을 바꿔도 '몇 위'가 흔들리지 않는다
    — 번호가 붙는 /zone/ 허브는 zone_order() 하나를 따라야 하므로 여기 토글을 옮기지 말 것. */
-let SCSORT='ratio';
+let SCSORT='abs';   // 기본은 세대수순(2026-08-01 사용자 지정) — 큰 시장이 먼저 보인다
 function setScSort(m){
   if(SCSORT===m)return;
   SCSORT=m;

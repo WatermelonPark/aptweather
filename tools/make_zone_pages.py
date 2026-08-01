@@ -8,6 +8,7 @@ data.js의 ADV(livezone·occupancy·permits·bubble)와 STATS(전세가율·주�
 사용:  python tools/make_zone_pages.py         # 생성 + sitemap 갱신
 """
 import io, os, re, json, sys, datetime
+import html as html_mod
 from urllib.parse import quote
 
 # 같은 폴더의 update_adv_data(존 정의 단일 소스)를 임포트하기 위한 경로 — 모듈 로드
@@ -366,7 +367,7 @@ def render_units_2sec(units, today=None):
         return ''
     # title="%s" 속성에 그대로 들어가므로 따옴표까지 이스케이프한다 — HUB 원자료에
     # '일신 "에일린의 뜰" 아파트' 같은 단지명이 실재한다(2026-08-01 리뷰 M3).
-    esc = lambda s: (str(s).replace('&', '&amp;').replace('<', '&lt;')
+    esc = lambda s: (html_mod.unescape(str(s)).replace('&', '&amp;').replace('<', '&lt;')
                      .replace('>', '&gt;').replace('"', '&quot;'))
 
     def months_out(ym):
@@ -508,12 +509,31 @@ footer a{color:var(--muted)}
  td.lbl{display:block;font-weight:600;color:var(--ink);font-size:14.5px;margin-bottom:7px}
  td.lbl .note{display:block;font-weight:400;margin-top:2px}
  td[data-l]::before{content:attr(data-l);font-size:12.5px;color:var(--muted);font-weight:600;flex:none}
+ /* ⚠️ 위 스택 규칙은 열 많은 비교표를 위한 것이다. 단지 목록(.utable2)은 3열뿐이라
+    좁은 화면에서도 표로 읽히는데, 함께 스택되는 바람에 단지 하나가 3줄이 돼 목록이
+    세 배로 길어졌다(2026-08-01 모바일 지적 — PC는 1줄). 여기서만 표로 되돌린다. */
+ .utable2{display:table}
+ .utable2 thead{display:table-header-group}
+ .utable2 tbody{display:table-row-group}
+ .utable2 tr{display:table-row;border-bottom:0;padding:0}
+ .utable2 td{display:table-cell;padding:8px 9px;border-bottom:1px solid var(--line);
+  text-align:right;font-size:13px}
+ .utable2 tbody tr:last-child td{border-bottom:0}
+ .utable2 td:nth-child(1){text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .utable2 th:nth-child(1){width:50%}
+ .utable2 th:nth-child(2){width:22%}
+ .utable2 th:nth-child(3){width:28%}
 }
 .qwrap{background:#fff;border:1px solid var(--line);border-top:0;padding:12px 14px 10px}
 .qtitle{font-size:12px;color:var(--muted);margin-bottom:8px}
-.qchart{display:flex;align-items:flex-end;gap:5px;height:86px}
-.q-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
-.q-bar{width:100%;max-width:36px;background:#8fa3ab}
+/* 막대 안 숫자·분기 라벨이 nowrap이라 칸이 줄지 못한다 — 16분기가 들어오면 폭이
+   화면을 넘어 페이지 전체가 가로로 늘어났다(2026-08-01 모바일 지적). 칸 최소폭을
+   주고 넘치면 이 상자 안에서만 가로로 스크롤시킨다. */
+.qchart{display:flex;align-items:flex-end;gap:5px;height:86px;overflow-x:auto;overflow-y:hidden;
+ -webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.q-col{flex:1 0 34px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:100%}
+/* 회색 막대는 '들어올 공급'이라는 뜻을 못 나른다. 사이트 컨벤션대로 공급=파랑. */
+.q-bar{width:100%;max-width:36px;background:#3a7bd5}
 .q-v{font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .q-l{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -705,17 +725,21 @@ def render_price_index(adv, zone, codes):
     if not any(mo.values()) and not any(wk.values()):
         return ''
 
+    # 아래 그래프가 월간 매매·전세·월세 3계열이므로 숫자도 같은 3개로 맞춘다.
+    # 예전엔 주간매매+월간매매+월간전세를 섞어 놓아, 같은 '매매'가 두 기준으로 두 번
+    # 나오고 월세는 그래프에만 있었다(2026-08-01 사용자 지적).
+    # 기준 월은 세 칩이 공유하므로 칩마다 반복하지 않고 소제목에 한 번만 적는다 —
+    # '이번 달' 접두어도 뺐다. 모바일에서 줄바꿈이 과했던 주범.
     def chip(lab, ser):
         if not ser:
             return ''
-        p_, v = ser[-1]
+        _p, v = ser[-1]
         col = '#a93226' if v > 0 else ('#1a5276' if v < 0 else 'var(--muted)')
-        return ('<span class="px-c">%s <b style="color:%s">%+.2f%%</b>'
-                '<i>%s</i></span>' % (lab, col, v, p_))
+        return ('<span class="px-c">%s <b style="color:%s">%+.2f%%</b></span>'
+                % (lab, col, v))
 
-    now = ''.join([chip('이번 주 매매', wk.get('ma') or []),
-                   chip('이번 달 매매', mo.get('ma') or []),
-                   chip('이번 달 전세', mo.get('je') or [])])
+    now = ''.join([chip(lab, mo.get(k) or []) for k, lab, _c in SERIES])
+    _base = next((ser[-1][0] for k, _l, _c in SERIES for ser in [mo.get(k) or []] if ser), '')
 
     # ── 24개월 지수 흐름(마지막=100 기준 역산) ──
     # ⚠️ 계열마다 길이가 다를 수 있다(월세는 나중에 붙은 계열이라 짧을 수 있음).
@@ -739,7 +763,7 @@ def render_price_index(adv, zone, codes):
     live = [(SERIES[i], l) for i, l in enumerate(lines) if l]
     if not live:
         return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
-                '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균</p>'
+                '<p class="px-sub">한국부동산원 가격지수 · 생활권 평균</p>'
                 '<div class="px-now">%s</div></div>' % now)
 
     vals = [v for _, l in live for v in l if v is not None]
@@ -804,14 +828,15 @@ def render_price_index(adv, zone, codes):
               json.dumps(tip, ensure_ascii=False).replace("'", '&#39;'), ''.join(g)))
     legend = ''.join('<span class="px-lg"><i style="background:%s"></i>%s</span>' % (col, lab)
                      for (k, lab, col), _ in live)
+    # 소제목은 출처·기준만 남긴다. '그래프를 짚으면 그 달 수치'는 사용법 안내라 뺐다
+    # — 가이드 문구는 UI로 풀 문제다(디자인 원칙). 기준 월도 칩마다 반복하지 않고 여기 한 번.
     return ('<div class="pidx"><h3>이 지역 아파트값은 지금 어떤가</h3>'
-            '<p class="px-sub">한국부동산원 아파트 가격지수 변동률 · 이 생활권 시군구 평균 '
-            '· 최근값 100 기준 흐름 · <b>그래프를 짚으면 그 달 수치</b></p>'
+            '<p class="px-sub">한국부동산원 가격지수 · 생활권 평균 · %s · 최근값=100</p>'
             '<div class="px-now">%s</div>'
             '<div class="px-lgs">%s</div>%s'
             '<div class="px-tip" hidden></div>'
             '<a class="px-more" href="/#stats">전국 시황 통계 자세히 보기 →</a>'
-            '</div>' % (now, legend, svg))
+            '</div>' % (_base, now, legend, svg))
 
 def build_page(r, allrows, prd, today, punits=None, pidx=None):
     z = r['z']; nm = z['z']; ps = r['ps']
@@ -1021,7 +1046,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             ufut.append(u)
     ufut.sort(key=lambda u: (u[3], -u[2]))
     if ufut:
-        _esc = lambda s: (str(s).replace('&', '&amp;').replace('<', '&lt;')
+        # ⚠️ 원본(건축HUB)이 이미 '무등산자이&amp;어울림'처럼 실체참조로 들어온다.
+        # 그대로 escape하면 &amp;amp;가 돼 화면에 '&amp;'가 노출된다(2026-08-01 사용자 지적).
+        # unescape 후 escape하면 멱등이라 원본이 어느 쪽이든 한 번만 이스케이프된다.
+        _esc = lambda s: (html_mod.unescape(str(s)).replace('&', '&amp;').replace('<', '&lt;')
                           .replace('>', '&gt;').replace('"', '&quot;'))
         urows = ''.join(
             '<tr><td>%s</td><td class="uname" title="%s">%s</td>'
