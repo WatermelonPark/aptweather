@@ -8,6 +8,14 @@
 여기서는 배분 없이 기준표과 같은 단위로 산출해 직접 대조한다.
 수도권 = 서울+인천+경기 (기준표 표의 '수도권' 그대로).
 금리 급변동기는 제외한다.
+
+
+⚠️ 대체 경로(2026-08-01): 유실된 kapt.json(단지별 준공)·trade_raw.json(실거래)은
+재수집(21,641단지 개별 호출 + 실거래 전량)보다 **저장소에 이미 있는 더 나은 자료**로
+갈아타는 게 맞다 —
+  · 공급 = tools/data/hub_permits.json done_q (건축HUB 준공 실측, 시군구×분기, 659만 세대)
+  · 가격 = tools/cache/index_levels.json / zone_index.json (R-ONE 아파트 매매지수 레벨·저점)
+HUB는 사이트 공급과 동일 소스라 scale.json(K-apt↔호갱↔사이트 척도 환산)도 불필요해진다.
 """
 import io, os, sys, json, re, statistics, collections
 
@@ -21,9 +29,9 @@ DATA = os.path.join(HERE, 'data')
 # 실거래·단지 원자료 캐시라 아직 저장소에 없다 — 아래 안내대로 다시 만들어야 한다.
 REBUILD = {
     'rate_shock.json': 'python tools/rate_shock.py 로 재생성',
-    'kapt.json':       '공동주택 단지 목록 캐시 — 수집 스크립트 유실, 재작성 필요',
-    'trade_raw.json':  '국토부 실거래가 원자료 캐시 — 수집 스크립트 유실, 재작성 필요',
-    'lawd.json':       '법정동 코드 캐시 — tools/data/code_bdong.json에서 파생 가능',
+    'kapt.json':       '단지별 준공 — 재수집 대신 hub_permits.json done_q로 갈아탈 것(위 docstring)',
+    'trade_raw.json':  '실거래 원자료 — 재수집 대신 R-ONE 지수(cache/index_levels.json)로 갈아탈 것',
+    'lawd.json':       '법정동 코드 캐시 — tools/gen_lawd.py --write 로 재생성(복원 완료)',
 }
 
 
