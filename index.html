@@ -2469,7 +2469,12 @@ function renderScoreSec(){
         const rr=u.gr.ratio||0;
         return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+(u.name==='수도권'?'<i class="sc-sub">'+u.zones.length+'개 생활권 합계</i>':'')+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
-          +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)+'</span>'
+          /* 세대수 아래 '필요량 대비 %'를 함께 적는다. 묶는 기준은 비율인데 큰 숫자로
+             보이는 건 세대수뿐이라, 목포권 −2.3만이 수도권 −85.6만보다 위에 오는 게
+             모순처럼 읽혔다(2026-08-01 검수). 비율은 원래 title에만 있어 모바일에선
+             볼 방법이 아예 없었다. 두 잣대를 한 줄에 두면 순서가 설명된다. */
+          +'<span class="sc-val" style="color:'+u.gr.color+'">'+scFmt(u.tot)
+          +'<i class="sc-pct">필요량의 '+Math.round(Math.abs(rr)*100)+'%</i></span>'
           +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
       }).join('');
   }).join('');
