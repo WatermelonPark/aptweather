@@ -2368,8 +2368,10 @@ var ANCHOR=2010*4;
    running_shortage() 주석. ⚠️ 두 구현은 반드시 같이 고친다(max abs diff 0.0). */
 var DEFICIT_CAP=16;
 function runningShortage(done,sched,demol,refq,curQ,horizon){
-  horizon=horizon||16; var I=0, lo=-DEFICIT_CAP*refq;
-  for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.max(lo, I+((done[qk])||0)-((demol[qk])||0)-refq); }
+  /* 상하한 대칭 ±DEFICIT_CAP*refq(2026-08-02). 예전엔 아래로만 막혀 잉여가
+     2010년부터 16년치 쌓였다(김포권 -31,853) — '과거 4년' 문구가 한쪽만 참이었다. */
+  horizon=horizon||16; var I=0, cap=DEFICIT_CAP*refq;
+  for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.min(cap, Math.max(-cap, I+((done[qk])||0)-((demol[qk])||0)-refq)); }
   var demandSum=0, supplyWeighted=0;
   for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
   /* 분해값 포함 반환 — Python running_shortage(full=True) 미러. tot==demand-supplyw-inow */
