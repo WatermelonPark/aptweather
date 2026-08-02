@@ -221,7 +221,11 @@ def test_regression_representative_zones_have_required_h2_sections(tmp_path):
     for nm, html in pages.items():
         assert '왜 이 판정인가' in html, nm
         assert '언제 들어오나' in html, nm
-        assert '이 숫자의 한계' in html, nm
+        # 방법론 접힘 묶음의 제목. 2026-08-02에 '이 숫자의 한계' → '산출 방법과 한계'로
+        # 바뀌었다 — 면책 문구를 푸터 한 곳으로 모으면서 제목까지 지웠다가, 접힘 4개가
+        # 제목 없이 뜨는 회귀를 이 테스트가 잡아 되살린 것이다. 이름은 바뀌어도
+        # '이 묶음에 제목이 있다'는 보장은 유지한다.
+        assert '산출 방법과 한계' in html, nm
 
 
 def test_regression_outbound_zone_links_at_least_40(tmp_path):
