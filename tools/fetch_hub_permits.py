@@ -628,7 +628,21 @@ def save(out):
         json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True))
 
 
-def run(mode_full, only_codes, list_targets_only, reseed=False):
+def shard_keys(keys, shard):
+    """그룹 키를 정렬 후 modulo로 균등 분할 — (i, n), i는 1-based.
+
+    연속 블록이 아니라 인터리브(j % n)로 나눈다. 시군구마다 법정동 수가 크게
+    달라(경기 639 vs 세종 46) 블록으로 자르면 샤드 하나가 몇 배 무거워진다.
+    정렬 후 modulo면 시도가 섞여 어느 샤드나 비슷한 무게가 된다.
+
+    ⚠️ 이 규칙은 merge_hub_shards.py가 소유권을 재계산할 때 그대로 쓴다.
+    바꾸면 병합이 조용히 어긋나므로 두 곳을 반드시 같이 고칠 것.
+    """
+    i, n = shard
+    return [k for j, k in enumerate(sorted(keys)) if j % n == i - 1]
+
+
+def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
     groups, unresolved_names = build_targets()
 
     if list_targets_only:
@@ -668,6 +682,9 @@ def run(mode_full, only_codes, list_targets_only, reseed=False):
         if missing:
             print('WARN: --only 코드가 대상 집합에 없음:', missing)
         target_keys = [k for k in target_keys if k in wanted]
+    if shard:
+        target_keys = shard_keys(target_keys, shard)
+        print('[shard %d/%d] 대상 그룹 %d곳' % (shard[0], shard[1], len(target_keys)))
 
     if not mode_full and not cached_productive:
         print('WARN: productive_bjdong 캐시가 비어 있다. --full로 최초 1회 전량 수집이 필요하다.')
@@ -848,12 +865,27 @@ def main():
                      help='멸실(철거) 수집 모드 — ArchPmsHubService 철거멸실관리대장 엔드포인트. '
                           'meta["scanned_demol"]/productive_bjdong_demol로 준공(meta["scanned"])과 '
                           '완전히 독립적으로 추적하므로 준공 시딩 진행상황을 건드리지 않는다.')
+    ap.add_argument('--shard', default='',
+                    help='I/N 형태로 대상 그룹을 균등 분할(예: 2/6). 증분 전량이 GitHub '
+                         '러너 340분 캡을 넘겨 매달 타임아웃나는 걸 병렬 샤드로 푼다. '
+                         '결과는 tools/merge_hub_shards.py로 합친다.')
     args = ap.parse_args()
     only_codes = [c.strip() for c in args.only.split(',') if c.strip()] if args.only else None
+    shard = None
+    if args.shard:
+        try:
+            i, n = (int(x) for x in args.shard.split('/', 1))
+        except ValueError:
+            ap.error('--shard는 I/N 형태여야 한다(예: 2/6)')
+        if not (1 <= i <= n):
+            ap.error('--shard 범위 오류: 1 <= I <= N 이어야 한다')
+        shard = (i, n)
     if args.demol and not args.list_targets:
+        if shard:
+            ap.error('--shard는 준공 수집에만 쓴다(멸실은 대상이 작아 분할 불필요)')
         run_demol(args.full, only_codes, reseed=args.reseed)
     else:
-        run(args.full, only_codes, args.list_targets, reseed=args.reseed)
+        run(args.full, only_codes, args.list_targets, reseed=args.reseed, shard=shard)
 
 
 if __name__ == '__main__':

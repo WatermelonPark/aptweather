@@ -1104,3 +1104,29 @@ def test_aggregate_units_cap_is_per_stage():
     assert len(sched) == 60, 'sched가 옛 대단지에 밀리면 안 된다'
     # 각 stage 안에서는 세대 큰 순
     assert done[0][1] == 2059 and sched[0][1] == 159
+
+
+# ---------------------------------------------------------------------------
+# 샤드 분할 (2026-08-02) — merge_hub_shards.py가 같은 규칙으로 소유권을 재계산한다
+# ---------------------------------------------------------------------------
+
+def test_shard_keys_partition_is_exact():
+    """N개 샤드가 전체를 정확히 한 번씩 덮어야 한다 — 겹치면 병합이 덮어쓰고
+    빠지면 그 시군구가 영영 갱신 안 된다."""
+    keys = ['%05d' % i for i in range(148)]
+    for n in (1, 3, 6, 7):
+        parts = [F.shard_keys(keys, (i, n)) for i in range(1, n + 1)]
+        flat = [k for p in parts for k in p]
+        assert sorted(flat) == sorted(keys), 'n=%d 분할이 전체를 안 덮는다' % n
+        assert len(flat) == len(set(flat)), 'n=%d 샤드가 겹친다' % n
+        # 인터리브라 크기 차가 1을 넘지 않는다
+        assert max(map(len, parts)) - min(map(len, parts)) <= 1
+
+
+def test_shard_keys_is_order_independent():
+    """입력 순서가 달라도 같은 샤드가 나와야 한다(정렬 후 분할) — 수집기와 병합기가
+    서로 다른 경로로 키 목록을 만들어도 소유권이 갈리면 안 된다."""
+    keys = ['41110', '11110', '26110', '51110', '43110']
+    a = F.shard_keys(keys, (2, 3))
+    b = F.shard_keys(list(reversed(keys)), (2, 3))
+    assert a == b

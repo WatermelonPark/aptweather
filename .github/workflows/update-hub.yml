@@ -35,6 +35,15 @@ name: update-hub
 # meta.scanned 길이)을 보고 다시 트리거한다. 처음부터 완전히 다시 돌리려면(연 1회
 # 재구축 등) collector를 --full --reseed로 로컬/별도 실행해야 한다(이 워크플로의
 # workflow_dispatch에는 reseed 옵션을 노출하지 않음 — 실수로 전량 재시딩을 막기 위해).
+# 증분 6샤드 병렬 (2026-08-02): 증분은 --full과 달리 meta['scanned']를 건너뛰지
+# 않아 매번 생산적 법정동 2,646곳을 처음부터 전부 훑는다. 원천이 불안정한 날엔
+# 재시도가 붙어 340분을 넘긴다 — 8/2 실사고로 5시간 40분 돌다 서울 강동구에서
+# 타임아웃, 148곳 중 33곳만 갱신됐다. 그냥 재실행하면 항상 같은 순서로 처음부터
+# 도니 서울만 반복 갱신되고 나머지는 영영 안 돈다. 그래서 잡을 6샤드로 쪼갠다:
+# 샤드당 법정동 367~547곳(최악 1시간 남짓)이라 캡에 여유가 크고, 샤드마다 러너가
+# 달라 IP도 갈린다. 산출물은 artifact로 올려 merge 잡이 한 번만 커밋한다
+# (샤드가 각자 커밋하면 같은 파일에 6-way 경합). 소유권 규칙은
+# fetch_hub_permits.shard_keys()가 단일 출처고 merge_hub_shards.py가 재사용한다.
 on:
   schedule:
     - cron: '0 18 1 * *'   # 매월 2일 03:00 KST(=1일 18:00 UTC) — 증분 갱신.
@@ -54,20 +63,101 @@ permissions:
   contents: write
 
 jobs:
+  # 증분(정기 실행 · mode=incr): 6샤드 병렬. 샤드는 서로 다른 러너라 IP도 갈려
+  # 원천이 특정 IP를 느리게 물어도 전부가 같이 죽지 않는다.
   fetch:
+    if: ${{ github.event_name == 'schedule' || (inputs.mode || 'incr') == 'incr' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 350   # full 첫 시딩(~11~14시간) 대비. incr은 훨씬 짧게 끝난다.
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false      # 한 샤드가 죽어도 나머지는 계속 — merge가 알아서 뺀다
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: 건축HUB 수집 (${{ inputs.mode || 'incr' }})
-        # STEP-level 타임아웃(340<잡 350). 이걸 STEP에 두는 게 핵심:
-        # 잡 타임아웃(350)으로 잡이 통째 취소되면 아래 커밋 스텝이 안 돌아 진행분이 통째 소실된다.
-        # STEP 타임아웃이면 이 스텝만 '실패'하고 다음(커밋, if:always) 스텝이 돌아 진행분을 커밋한다.
+      - name: 건축HUB 증분 수집 (샤드 ${{ matrix.shard }}/6)
+        # STEP 타임아웃(340<잡 350)을 유지하는 이유는 예전과 같다: 잡이 통째
+        # 취소되면 아래 업로드가 안 돌아 진행분이 소실된다.
+        timeout-minutes: 340
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
+        run: |
+          if [ -z "$DATA_GO_KR_KEY" ]; then
+            echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
+          fi
+          python tools/fetch_hub_permits.py --shard ${{ matrix.shard }}/6
+
+      - name: 산출물 업로드
+        # if:always() — 340분에 끊겨도 그때까지 save()된 진행분을 올린다.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hub-shard-${{ matrix.shard }}
+          path: tools/data/hub_permits.json
+          retention-days: 3
+
+  # 샤드 산출물을 하나로 합쳐 한 번만 커밋한다. 샤드가 각자 커밋하면 같은 파일에
+  # 6-way 경합이 난다.
+  merge:
+    needs: fetch
+    if: always() && needs.fetch.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 샤드 내려받기
+        uses: actions/download-artifact@v4
+        with:
+          path: shards
+          pattern: hub-shard-*
+
+      - name: 병합
+        run: |
+          # 소유권은 위치(1..6)로 정해지므로 빠진 샤드 자리에는 베이스를 넣어
+          # 순서를 유지한다 — 그 샤드의 그룹은 기존 값이 그대로 남는다.
+          cp tools/data/hub_permits.json base.json
+          FILES=""
+          for i in 1 2 3 4 5 6; do
+            f="shards/hub-shard-$i/hub_permits.json"
+            if [ -f "$f" ]; then FILES="$FILES $f"
+            else echo "::warning::샤드 $i 산출물 없음 — 해당 그룹은 기존 값 유지"; FILES="$FILES base.json"; fi
+          done
+          python tools/merge_hub_shards.py --base base.json --out tools/data/hub_permits.json --shards $FILES
+
+      - name: 커밋 (hub_permits.json만 · data.js 재계산은 daily 워크플로가 담당)
+        run: |
+          git config user.name  "stats-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet -- tools/data/hub_permits.json; then
+            echo "변경 없음"; exit 0
+          fi
+          git add tools/data/hub_permits.json
+          git commit -m "data: HUB 월간 인허가/착공 갱신 (6샤드 병합)"
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
+            echo "push 재시도 $i"; sleep 5
+          done
+
+  # 전량 시딩(mode=full) / 멸실(mode=demol): 예전 그대로 단일 잡.
+  # --full은 meta['scanned']를 건너뛰며 재개하므로 샤딩 없이도 재트리거로 끝난다.
+  seed:
+    if: ${{ github.event_name != 'schedule' && (inputs.mode || 'incr') != 'incr' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 건축HUB 시딩 (${{ inputs.mode }})
         timeout-minutes: 340
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY || secrets.DATAGOKR }}
@@ -76,29 +166,23 @@ jobs:
             echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
           fi
           if [ "${{ inputs.mode }}" = "demol" ]; then
-            echo "멸실 전량 시딩(RESUMABLE, scanned_demol 별도) — 준공과 동일 인프라, 340분 STEP 타임아웃+커밋 if:always로 재개. mode=demol로 2~3회 재트리거하면 전량 완료. 준공(scanned)은 안 건드림."
+            echo "멸실 전량 시딩(RESUMABLE, scanned_demol 별도). 준공(scanned)은 안 건드림."
             python tools/fetch_hub_permits.py --demol --full
-          elif [ "${{ inputs.mode }}" = "full" ]; then
-            echo "전량 시딩 모드(RESUMABLE) — 약 11~14시간/12,000호출, 6시간 캡 초과라 이 실행은 340분 STEP 타임아웃에서 끊긴다. collector가 그룹마다 hub_permits.json을 save()하고, 끊겨도 아래 커밋 스텝(if:always)이 그 진행분을 push하므로 meta['scanned']가 origin에 남는다. mode=full로 2~3회 재트리거하면 이어서 전량 완료."
-            python tools/fetch_hub_permits.py --full
           else
-            echo "증분 모드(기본) — productive_bjdong 캐시만 재조회"
-            python tools/fetch_hub_permits.py
+            echo "전량 시딩(RESUMABLE) — 340분에 끊기면 mode=full로 재트리거하면 이어서 돈다."
+            python tools/fetch_hub_permits.py --full
           fi
 
-      - name: 커밋 (hub_permits.json만 · data.js 재계산은 daily 워크플로가 담당)
-        # if:always() — 수집 스텝이 340분 타임아웃으로 실패해도 그때까지의 진행분(scanned 포함)을 반드시 커밋·푸시.
-        # 이게 없으면 재개(meta['scanned'])가 무용지물이 된다(진행분이 origin에 안 남으므로).
+      - name: 커밋 (hub_permits.json만)
         if: always()
         run: |
           git config user.name  "stats-bot"
           git config user.email "actions@users.noreply.github.com"
           if git diff --quiet -- tools/data/hub_permits.json; then
-            echo "변경 없음"
-            exit 0
+            echo "변경 없음"; exit 0
           fi
           git add tools/data/hub_permits.json
-          git commit -m "data: HUB 월간 인허가/착공 갱신"
+          git commit -m "data: HUB 시딩 진행분"
           for i in 1 2 3; do
             git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
             echo "push 재시도 $i"; sleep 5
