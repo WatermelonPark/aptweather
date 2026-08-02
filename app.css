@@ -592,7 +592,9 @@
   }
   /* ===== 홈 허브 ===== */
   .home{padding:0 0 40px}
-  .home-hero{padding:56px 0 30px;text-align:center;position:relative;overflow:hidden}
+  /* 내 지역 카드를 순위표로 옮긴 뒤(2026-08-02 C안) 히어로 하단이 비어 아래
+     여백만 남았다 — 30 → 16으로 줄여 순위표를 끌어올린다. */
+  .home-hero{padding:56px 0 16px;text-align:center;position:relative;overflow:hidden}
   .hero-map{position:absolute;inset:-8% -3%;z-index:0;opacity:.34;pointer-events:none;
     -webkit-mask-image:radial-gradient(ellipse 70% 62% at 50% 44%,#000 34%,transparent 80%);
     mask-image:radial-gradient(ellipse 70% 62% at 50% 44%,#000 34%,transparent 80%)}
@@ -797,11 +799,41 @@ table.adv thead th:first-child{text-align:center}
 .hz-q{font-size:18px;font-weight:700;margin:0 0 6px}
 .hz-verdict{display:inline-block;text-align:center}
 .hz-head{display:flex;align-items:center;justify-content:center;gap:10px;font-size:22px;font-weight:700}
-.hz-desc{margin:5px 0 2px;font-weight:600}
+.hz-desc{margin:6px 0 0;font-weight:600}
 .hz-meta{color:var(--muted);font-size:12.5px;margin:0}
 .hz-links{margin:10px 0 0;display:flex;gap:16px;justify-content:center;align-items:center}
 .hz-links a{font-weight:700;text-decoration:underline}
+/* 내 지역 고정 행 — 순위표 맨 위(2026-08-02 C안). 히어로 카드를 걷어내고
+   순위 맥락 안에 둔다. 표 행과 붙어 보이도록 좌우 여백을 맞추고 아래만 띄운다. */
+.sc-mine{border:1px solid var(--line);border-left:3px solid var(--ink);
+ background:#fff;padding:11px 13px 12px;margin:0 0 10px}
+.sm-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sm-tag{font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 6px;border-radius:2px}
+.sm-name{font-size:16px;font-weight:700;color:var(--ink);text-decoration:none}
+.sm-name:hover{text-decoration:underline}
+.sm-rank{font-size:12px;color:var(--muted)}
+.sm-x{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;
+ width:30px;height:30px;border:0;background:none;color:var(--muted);cursor:pointer;border-radius:3px}
+.sm-x:hover{color:var(--ink);background:rgba(0,0,0,.05)}
+.sm-desc{margin:7px 0 0;font-size:14px;font-weight:600;color:var(--ink)}
+/* 재고 궤적 5칸 — 존 페이지 .seq와 같은 규칙(부족=빨강). 폭은 카드에 맞춰 좁게. */
+.hz-seq{display:flex;gap:5px;max-width:300px;margin:9px 0 0}
+.hz-c{flex:1 1 0;text-align:center}
+.hz-c i{display:block;height:6px;border-radius:2px;background:#cfd8d4}
+.hz-c.on i{background:#c0392b}
+.hz-c em{display:block;font-style:normal;font-size:10.5px;color:var(--muted);margin-top:3px}
+.hz-c.on em{color:var(--ink2);font-weight:600}
+/* 제목이 모바일에서 '남나' 한 글자만 넘어가 못생겼다 — 부제로 분리(2026-08-02). */
+.sec-sub{color:var(--muted);font-size:13.5px}
 .sc-lab .sc-sub{display:block;font-style:normal;font-size:10.5px;font-weight:400;color:var(--muted);line-height:1.3}
 .sc-more{display:block;text-align:center;margin:14px 0 4px;padding:10px;border:1px solid var(--line);
  background:#fff;font-weight:600;font-size:13.5px;color:var(--ink);text-decoration:none}
 .sc-more:hover{border-color:var(--ink)}
+
+/* 순위 섹션만 여백을 조인다(2026-08-02) — 홈 첫 화면에 순위 행이 더 들어오게.
+   .home-sec/.thead 전역 값은 다른 섹션 리듬이라 건드리지 않고 여기서만 좁힌다. */
+#sec-score{padding-top:22px}
+#sec-score h2{margin-bottom:4px}
+#sec-score .sc-key{margin-top:12px}
+#sec-score .thead{margin-top:18px}
+.sec-sub{margin:0 0 0}

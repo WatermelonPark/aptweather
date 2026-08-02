@@ -154,7 +154,8 @@
   </div></header>
 
   <section class="home-sec" id="sec-score"><div class="wrap">
-    <h2>전국 한눈에 — 어디가 모자라고 어디가 남나</h2>
+    <h2 class="h2-bal">전국 한눈에</h2>
+    <p class="sec-sub">어디가 모자라고 어디가 남나</p>
     <div class="sc-key">
       <div class="k-l"><b>+ 공급 과잉</b><i>하락 압력</i></div>
       <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
@@ -165,6 +166,11 @@
       <button id="scs-abs" class="on" onclick="setScSort('abs')">세대수순</button>
       <button id="scs-ratio" onclick="setScSort('ratio')">비율순</button>
     </div>
+    <!-- 내 지역은 히어로가 아니라 순위표 맨 위에 붙는다(2026-08-02 사용자 결정 C안).
+         히어로에 카드로 띄우면 반복해 볼 것도 아닌 정보가 첫 화면을 먹고 전국
+         순위가 밀렸다. 순위 맥락 안에 두면 "전국에서 내 동네가 어디쯤"이라는
+         원래 질문에 바로 답이 된다. -->
+    <div id="mine-row"></div>
     <div id="score-wrap" style="text-align:left"></div>
     <!-- 홈은 수도권을 1행으로 접은 요약(23행)이라, 개별 44곳 전체는 /zone/ 허브로 보낸다.
          두 화면의 그룹핑·정렬 규칙은 같다(등급 그룹 → 그룹 안 절대 세대수 순). -->
@@ -2445,6 +2451,13 @@ function scCalc(){
     // zdemol도 zdone과 동일하게 이미 zone-level 절대값(멸실 세대)이라 share를 곱하지 않는다.
     const _rs=invPath?runningShortage(zdone,zsched,zdemol,zrefq,curQ):null;
     const tot=_rs?_rs.tot:tot_fallback;
+    /* 재고 궤적 5칸(지금·1~4년 뒤). zsched 전량을 홈에 실어 보내면 44존×151분기라
+       페이로드가 감당이 안 된다 — 여기서 5개 값으로 접어서 넘긴다.
+       ⚠️ make_zone_pages.calc()의 r['seq']와 반드시 동치. */
+    const seq=[_rs?_rs.inow:0];
+    if(_rs){let _i=_rs.inow;
+      for(let k=1;k<=16;k++){_i+=((zsched[_qkey(curQ+k)])||0)-zrefq;if(k%4===0)seq.push(_i);}
+    }else{for(let k=0;k<4;k++)seq.push(0);}
     const need4=zrefq*16;
     let flag=null,lo=null,hi=null;
     const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
@@ -2452,7 +2465,8 @@ function scCalc(){
     return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,
             q0:z.q0,q1:z.q1,span:z.span,dA:dA,dB:dB,dC:dC,tot:tot,flag:flag,lo:lo,hi:hi,
             need:zrefq*H,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null,
-            need4:need4,inow:(_rs?_rs.inow:0),fsupw:(_rs?_rs.supplyw:0),gr:scGrade(tot,need4)};
+            need4:need4,inow:(_rs?_rs.inow:0),fsupw:(_rs?_rs.supplyw:0),seq:seq,
+            gr:scGrade(tot,need4)};
   }).filter(Boolean);
 }
 function renderHeroMap(){
@@ -2579,6 +2593,36 @@ function renderScoreSec(){
   }).join('');
   window.__SCZ=zones;
 }
+/* 순위표 맨 위 고정 행 — 내 지역(2026-08-02 C안). 순위표와 같은 맥락에 두어
+   '전국에서 내 동네가 어디쯤'이라는 질문에 바로 답하게 한다. 히어로는 비운다.
+   시점 문구·5칸 바 규칙은 존 페이지(make_zone_pages build_page)와 동일하다. */
+const MZ_SLAB=['지금','1년','2년','3년','4년'];
+function mzHeadline(seq,gdesc){
+  const sq=seq||[], sh=sq.map((v,i)=>v<0?i:-1).filter(i=>i>=0);
+  if(!sh.length||sh.length===sq.length)return gdesc;
+  const last=sq.length-1;
+  if(sh.indexOf(last)>=0&&sh.indexOf(0)<0)return MZ_SLAB[sh[0]]+' 뒤부터 모자라기 시작합니다';
+  if(sh.indexOf(last)<0&&sh.indexOf(0)>=0)return '지금은 모자라지만 '+MZ_SLAB[sh[sh.length-1]+1]+' 뒤 풀립니다';
+  return '시기에 따라 모자랐다 풀렸다 합니다';
+}
+function renderMyRow(row,rank,total){
+  const el=document.getElementById('mine-row'); if(!el)return;
+  if(!row){el.innerHTML='';return;}
+  const g=row.gr, sq=row.seq||[];
+  const bars=sq.map((v,i)=>'<span class="hz-c'+(v<0?' on':'')+'"><i></i><em>'+MZ_SLAB[i]+'</em></span>').join('');
+  el.innerHTML='<div class="sc-mine">'
+    +'<div class="sm-h"><span class="sm-tag">내 지역</span>'
+    +'<a class="sm-name" href="/zone/'+encodeURIComponent(row.z)+'/">'+row.z+'</a>'
+    +'<span class="sc-tier '+g.k+'">'+g.label+'</span>'
+    +'<span class="sm-rank">'+total+'곳 중 '+rank+'위</span>'
+    +'<button class="sm-x" title="지역 바꾸기" aria-label="내 지역 지우고 다시 고르기" '
+    +'onclick="mzClear();renderMyZone();track(\'myzone\',{action:\'change\',region:\''+row.z+'\'})">'
+    +'<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>'
+    +'</div>'
+    +'<p class="sm-desc">'+mzHeadline(sq,g.desc)+'</p>'
+    +'<div class="hz-seq">'+bars+'</div>'
+    +'</div>';
+}
 /* ── 내 지역 — 히어로 안에 렌더(2026-07-31: 스펙 관철 + 암묵 저장).
    localStorage agong_myzone은 존 페이지의 자동 기억 스크립트와 스키마 공유.
    순위는 비율(순부족/4년 필요량 = gr.ratio) 기준 — 등급·순위표와 같은 잣대. ── */
@@ -2597,30 +2641,24 @@ function renderMyZone(){
   const row=saved?zones.find(z=>z.z===saved.z):null;
   if(saved&&!row){mzClear();}          // 생활권 개편 등으로 사라진 존 → 첫 방문 상태
   if(row){
-    const rank=mzRank(zones,row.z), g=row.gr;
-    let diff='';
-    const justSaved=!!window.__MZ_JUST;   // 첫 저장 직후엔 last===방금값이라 diff가 무의미 — 억제
-    if(!justSaved&&saved.last&&typeof saved.last.tot==='number'&&saved.last.seen!==undefined){
-      const d=Math.round(row.tot-saved.last.tot);
-      if(d!==0)diff='<span class="mz-diff" style="color:'+(d>0?'#a93226':'#1a5276')+'">지난 방문보다 '
-        +(d>0?'부족 +':'부족 −')+Math.abs(d).toLocaleString()+'세대 '+(d>0?'▲':'▼')+'</span>';
-      else if(saved.last.seen!==new Date().toISOString().slice(0,10))
-        diff='<span class="mz-diff" style="color:var(--muted)">지난 방문과 같음</span>';
-      // 오늘 기록(존 페이지에서 방금 넘어온 경우)이면 '같음' 표시도 생략 — 정보가 없다
-    }
-    box.innerHTML='<div class="hz-verdict">'
-      +'<div class="hz-head"><b>'+row.z+'</b><span class="sc-tier '+g.k+'">'+g.label+'</span></div>'
-      +'<p class="hz-desc">'+g.desc+'</p>'
-      +'<p class="hz-meta">공급 부족 '+rank+'위 / '+zones.length+'곳 '+diff+'</p>'
-      +'<p class="hz-links"><a href="/zone/'+encodeURIComponent(row.z)+'/">자세히 보기 ›</a>'
-      +'<button class="mz-change" onclick="mzClear();renderMyZone();track(\'myzone\',{action:\'change\',region:\''+row.z+'\'})">지역 바꾸기</button></p>'
-      +'</div>';
+    const rank=mzRank(zones,row.z);
+    /* '지난 방문보다 −77,794세대' 표시는 2026-08-02에 뺐다 — 모델을 고칠 때마다
+       크게 흔들려 시장 변화로 오독된다. 되살리려면 값이 모델 변경분과 시장
+       변동분을 구분할 수 있어야 한다(지금은 못 한다). last는 계속 저장한다. */
+    /* 2026-08-02 C안: 내 지역은 히어로가 아니라 순위표 맨 위에 고정한다.
+       히어로 카드는 '반복해 볼 것도 아닌' 정보가 첫 화면을 먹는 구조였다.
+       여기서는 히어로를 비우고 renderMyRow()가 순위표 위에 그린다. */
+    box.style.display='none';
+    box.innerHTML='';
+    renderMyRow(row,rank,zones.length);
     window.__MZ_JUST=0;
     mzSet({z:row.z,savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
-           last:{tot:Math.round(row.tot),rank:rank,grade:g.label,seen:new Date().toISOString().slice(0,10)}});
+           last:{tot:Math.round(row.tot),rank:rank,grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
     return;
   }
   // 첫 방문 / 지역 바꾸기 / 폴백: 질문 + 시도 → 생활권 2단 선택기 + 전국 요약 한 줄
+  box.style.display='';           // 저장 상태에서 숨겨뒀던 히어로를 되돌린다
+  renderMyRow(null);              // 순위표 위 고정 행도 같이 걷는다
   const lack=zones.filter(z=>z.gr.k==='g4'||z.gr.k==='g3').length;
   const byps={};zones.forEach(z=>{(byps[z.psido]=byps[z.psido]||[]).push(z);});
   const sidos=regSort(Object.keys(byps));

@@ -336,6 +336,18 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         else:
             _rs = None
             tot = tot_fallback
+        # 재고 궤적 5칸(지금·1~4년 뒤). 존 페이지와 홈이 같은 값을 써야 하는데,
+        # zsched 전량(존당 151분기)을 홈 페이로드에 실을 수 없어 여기서 접는다.
+        # ⚠️ index.html scCalc()의 seq와 반드시 동치(check_dual_calc 대조 대상).
+        seq = [(_rs['inow'] if _rs else 0)]
+        if _rs:
+            _i = _rs['inow']
+            for k in range(1, 17):
+                _i += zsched.get(_qkey(cur_q + k), 0) - zrefq
+                if k % 4 == 0:
+                    seq.append(_i)
+        else:
+            seq += [0] * 4
         flag = None; lo = hi = None
         cv = (B.get('conv') or {}).get(ps)
         jr = last_of(J, ps) or None
@@ -355,7 +367,7 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
                         need4=need4, zrefq=zrefq, pool=pool, pshare=pshare,
                         inow=(_rs['inow'] if _rs else 0.0),
                         fsupw=(_rs['supplyw'] if _rs else 0.0),
-                        zsched=zsched,
+                        zsched=zsched, seq=seq,
                         gr=grade(tot, need4)))
     out.sort(key=lambda r: -r['tot'])
     return out
@@ -380,6 +392,9 @@ def make_capital(rows):
     # 롤업에서만 깨져 있었다. 합산 대상에 반드시 포함할 것.
     for k in ('need', 'dA', 'dB', 'dC', 'tot', 'fsup', 'need4', 'inow', 'fsupw', 'zrefq'):
         agg[k] = sum(c[k] for c in caps)
+    # 궤적도 시점별로 합산한다 — 빠뜨리면 롤업이 첫 구성원(서울권) 궤적을 물려받는다
+    # (zrefq를 빠뜨렸을 때와 같은 종류의 버그, 2026-08-02 6b6b5fc 참조).
+    agg['seq'] = [sum(c['seq'][i] for c in caps) for i in range(5)]
     # Fix I3+M4: ③ 타임라인이 ②와 같은 HUB sched 소스를 쓰려면 수도권 롤업도
     # 자기 zsched(원래 없음 — 수도권은 calc()의 개별 zone 루프를 안 돈다)를
     # 소속 생활권 합산으로 채워야 한다(분기별 세대수 합).
@@ -1021,20 +1036,9 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         rank_no = rk[0] if rk else 0
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
-    # 재고 궤적(지금·1~4년 뒤 부족 여부) — 계산은 여기서 한 번만 하고 히어로 문구와
-    # 아래 5칸 시퀀스가 같은 값을 쓴다. 둘이 갈리면 제목과 그림이 다른 말을 한다.
-    # today는 호출부에 따라 str일 수 있어(테스트) 날짜 연산에 못 쓴다 — 분기
-    # 차트(_curq)와 같은 방식으로 실제 오늘에서 뽑는다.
-    _seq_now = datetime.date.today()
-    cur_q_z = _seq_now.year * 4 + (_seq_now.month - 1) // 3
-    _zs = r.get('zsched') or {}
-    _q = r.get('zrefq') or 0
-    _I = r['inow']
-    _seq = [_I]
-    for _k in range(1, FUT_HORIZON + 1):
-        _I += _zs.get(_qkey(cur_q_z + _k), 0) - _q
-        if _k % 4 == 0:
-            _seq.append(_I)
+    # 재고 궤적(지금·1~4년 뒤 부족 여부)은 calc()가 r['seq']로 실어 보낸다 — 홈
+    # scCalc도 같은 5개 값을 쓴다(zsched 전량은 페이로드가 커서 못 보낸다).
+    _seq = r.get('seq') or [r['inow']] * 5
     _labs = ('지금', '1년', '2년', '3년', '4년')
     _short = [i for i, v in enumerate(_seq) if v < 0]
     # ⚠️ 부족 칸이 연속이라는 보장이 없다. 울산권처럼 ●●○○● 로 오가는 존이 있어
