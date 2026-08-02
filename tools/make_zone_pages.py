@@ -422,12 +422,11 @@ def render_units_2sec(units, today=None):
 
     "앞으로 들어올 단지"(sched)와 "최근 들어온 단지"(done) 2섹션.
 
-    ⚠️ 합계는 반드시 '목록 합계'로 라벨링한다(2026-08-02 사용자 요청으로 추가).
-    units는 수집기(fetch_hub_permits UNITS_CAP=40)가 시군구당 상위 40개만 담은
-    **부분집합**이라 존 전체 물량과 다르다 — 총량은 '언제 들어오나'
-    차트(permits.sched 전량)가 유일한 출처다. 라벨을 떼고 그냥 'N세대'로 쓰면
-    차트 총량과 나란히 놓였을 때 버그로 읽힌다(2026-08-01 실제 보고: 대구권
-    차트 55,693 vs 목록 15,020).
+    머리말 합계는 '총 N세대'다(2026-08-02 사용자 문구 확정). 이게 참이려면 units가
+    전량이어야 하는데, 같은 날 UNITS_CAP을 폐지해 그렇게 됐다 — units 세대 합 ==
+    done_q+sched_q 합이 정의상 성립한다(test_aggregate_keeps_every_unit_sorted_by_household).
+    ⚠️ 캡을 되살리면 이 문구가 즉시 거짓이 된다. 바로 위 '언제 들어오나' 차트의
+    총량과 나란히 놓여 있어 어긋나면 버그로 읽힌다(2026-08-01 대구권 55,693 vs 15,020).
 
     창은 UNIT_WINDOW: sched는 오늘~+48개월, done은 -48개월~오늘만 남긴다(예정일이
     이미 지난 sched 항목도 제외 — 스테일 데이터). 2026-07-31 사용자 결정으로
@@ -521,7 +520,7 @@ def render_units_2sec(units, today=None):
         rows = ''.join(sched_row(u) for u in sched)
         parts.append(
             '<section><div class="wrap">\n'
-            '  <h2>앞으로 들어올 단지 <span class="ucnt">4년 내 · 세대 큰 순 %d곳 · 목록 합계 %s세대</span></h2>\n'
+            '  <h2>앞으로 들어올 단지 <span class="ucnt">향후 4년 · %d개 단지 · 총 %s세대</span></h2>\n'
             '  <div class="ulist"><table class="utable2">\n'
             '    <thead><tr><th>단지명</th><th>세대수</th><th>준공예정</th></tr></thead>\n'
             '    <tbody>%s</tbody>\n'
@@ -531,7 +530,7 @@ def render_units_2sec(units, today=None):
         rows = ''.join(done_row(u) for u in done)
         parts.append(
             '<section><div class="wrap">\n'
-            '  <h2>최근 들어온 단지 <span class="ucnt">지난 4년 · 세대 큰 순 %d곳 · 목록 합계 %s세대</span></h2>\n'
+            '  <h2>최근 들어온 단지 <span class="ucnt">지난 4년 · %d개 단지 · 총 %s세대</span></h2>\n'
             '  <div class="ulist"><table class="utable2">\n'
             '    <thead><tr><th>단지명</th><th>세대수</th><th>준공</th></tr></thead>\n'
             '    <tbody>%s</tbody>\n'
@@ -632,8 +631,19 @@ footer a{color:var(--muted)}
 .q-col:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .q-col.on .q-bar{outline:1.5px solid var(--ink);outline-offset:1px}
 /* 누른 분기의 값 — 차트 위 한 줄에 띄운다(막대마다 숫자를 박으면 16칸에 안 들어간다) */
-.q-read{font-size:11.5px;color:var(--ink);font-weight:600;min-height:16px;margin:0 0 2px}
-.q-read span{color:var(--muted);font-weight:500}
+.seq{margin:0 0 14px}
+.seq-msg{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:7px}
+.seq-row{display:flex;gap:6px;max-width:320px}
+.seq-c{flex:1 1 0;text-align:center}
+.seq-c i{display:block;height:7px;border-radius:2px;background:#cfd8d4}
+.seq-c.on i{background:#c0392b}
+.seq-c span{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.seq-c.on span{color:var(--ink2);font-weight:600}
+.qwrap{position:relative}
+.q-tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;
+ border-radius:3px;font-size:12px;line-height:1.5;white-space:nowrap;z-index:3;transform:translate(-50%,-100%)}
+.q-tip b{font-weight:700}
+.q-tip span{color:#c4cec9;font-weight:400}
 /* 회색 막대는 '들어올 공급'이라는 뜻을 못 나른다. 사이트 컨벤션대로 공급=파랑.
    폭은 22px 칸에 16px — 예전 36px는 너무 뚱뚱해 한눈에 안 들어왔다(2026-08-02). */
 .q-bar{width:100%;max-width:13px;background:#3a7bd5}
@@ -900,8 +910,12 @@ def render_price_index(adv, zone, codes):
     lo, hi = min(vals), max(vals)
     pad = max((hi - lo) * 0.12, 0.4)
     lo, hi = lo - pad, hi + pad
-    W, H = 640.0, 200.0
-    L, R, T, B = 42.0, 10.0, 12.0, 24.0
+    # 축 여백·글자는 2026-08-02에 키웠다. viewBox 좌표라 화면에선 컨테이너 폭에
+    # 비례해 줄어든다 — 모바일에서 10px는 사실상 안 읽혔다. 라벨 폭이 늘어난 만큼
+    # 좌측(L)·하단(B) 여백도 같이 늘려야 잘리지 않는다.
+    W, H = 640.0, 214.0
+    L, R, T, B = 52.0, 10.0, 12.0, 30.0
+    AXF = 12.5           # 축 글자 크기(viewBox 단위)
     n = max(len(months), 2)
 
     def X(i):
@@ -911,25 +925,33 @@ def render_price_index(adv, zone, codes):
         return T + (H - T - B) * (1 - (v - lo) / (hi - lo))
 
     g = []
-    # y 그리드 3줄 + 라벨
+    # y 그리드 3줄 + 라벨. 지수 절대값(94, 101…)은 읽는 사람에게 의미가 없다 —
+    # 최근값=100 정규화라 (v-100)이 곧 '지금 대비 몇 %'다(2026-08-02 사용자 요청).
     for t in (0.0, 0.5, 1.0):
         v = lo + (hi - lo) * t
         y = Y(v)
         g.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#e6eae8"/>'
                  % (L, y, W - R, y))
-        g.append('<text x="%.1f" y="%.1f" font-size="10" fill="#8a969b" text-anchor="end">%.0f</text>'
-                 % (L - 6, y + 3.4, v))
+        g.append('<text x="%.1f" y="%.1f" font-size="%.1f" fill="#8a969b" text-anchor="end">%s</text>'
+                 % (L - 7, y + AXF * 0.34, AXF,
+                    ('%+.0f%%' % (v - 100)) if abs(v - 100) >= 0.5 else '0%'))
     # 100 기준선(현재 수준)
     if lo < 100 < hi:
         g.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#c4cec9" '
                  'stroke-dasharray="3 3"/>' % (L, Y(100), W - R, Y(100)))
-    # x 눈금: 1월과 마지막
+    # x 눈금: 반년 간격(1월·7월) + 마지막. 예전엔 1월만 찍어 2년 창에서 라벨이
+    # 두 개뿐이었다 — 어느 구간을 보고 있는지 가늠이 안 됐다.
+    last_i = len(months) - 1
     for i, m in enumerate(months):
-        if m.endswith('-01') or i == len(months) - 1:
-            g.append('<text x="%.1f" y="%.1f" font-size="10" fill="#8a969b" '
-                     'text-anchor="%s">%s</text>'
-                     % (X(i), H - 6, 'end' if i == len(months) - 1 else 'middle',
-                        m if m.endswith('-01') else m))
+        half = m.endswith('-01') or m.endswith('-07')
+        if not (half or i == last_i):
+            continue
+        # 마지막 라벨과 붙는 눈금은 건너뛴다(겹쳐 읽히면 둘 다 못 읽는다)
+        if half and i != last_i and (last_i - i) * (W - L - R) / max(n - 1, 1) < 46:
+            continue
+        g.append('<text x="%.1f" y="%.1f" font-size="%.1f" fill="#8a969b" '
+                 'text-anchor="%s">%s</text>'
+                 % (X(i), H - 8, AXF, 'end' if i == last_i else 'middle', m))
     for (k, lab, col), l in live:
         pts = ' '.join('%.1f,%.1f' % (X(i), Y(v))
                        for i, v in enumerate(l) if v is not None)
@@ -995,14 +1017,48 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         rank_no = rk[0] if rk else 0
     span = ('%s~%s' % (z.get('q0'), z.get('q1'))) if z.get('span') else '예정 없음'
 
+    # 재고 궤적(지금·1~4년 뒤 부족 여부) — 계산은 여기서 한 번만 하고 히어로 문구와
+    # 아래 5칸 시퀀스가 같은 값을 쓴다. 둘이 갈리면 제목과 그림이 다른 말을 한다.
+    # today는 호출부에 따라 str일 수 있어(테스트) 날짜 연산에 못 쓴다 — 분기
+    # 차트(_curq)와 같은 방식으로 실제 오늘에서 뽑는다.
+    _seq_now = datetime.date.today()
+    cur_q_z = _seq_now.year * 4 + (_seq_now.month - 1) // 3
+    _zs = r.get('zsched') or {}
+    _q = r.get('zrefq') or 0
+    _I = r['inow']
+    _seq = [_I]
+    for _k in range(1, FUT_HORIZON + 1):
+        _I += _zs.get(_qkey(cur_q_z + _k), 0) - _q
+        if _k % 4 == 0:
+            _seq.append(_I)
+    _labs = ('지금', '1년', '2년', '3년', '4년')
+    _short = [i for i, v in enumerate(_seq) if v < 0]
+    # ⚠️ 부족 칸이 연속이라는 보장이 없다. 울산권처럼 ●●○○● 로 오가는 존이 있어
+    # _labs[_short[-1]+1] 같은 접근은 IndexError를 낸다(2026-08-02 실제 크래시).
+    _last = len(_seq) - 1
+    _flip_late = _last in _short and 0 not in _short      # 여유 → 부족
+    _flip_early = _last not in _short and 0 in _short     # 부족 → 여유
+
     # ── ① 판정 히어로 — 5등급 배지 + 자연어 판정문 (2026-07-31 UX 재기획) ──
     # 저장 버튼 없음 — 2026-07-31 사용자 결정: 명시적 '저장' 대신 페이지를 보면
     # 조용히 기억(암묵 저장, 하단 save_js). 홈 히어로가 이 값을 읽는다.
+    # 문구는 등급(크기)만이 아니라 **시점**도 말한다(2026-08-02 사용자). 대구권은
+    # 등급이 '균형'인데 1년 뒤 부족으로 뒤집혀서, "필요한 만큼 들어오고 있습니다"가
+    # 바로 아래 시퀀스와 모순처럼 읽혔다. 전환이 있는 존만 갈아끼운다.
+    if 0 < len(_short) < len(_seq):
+        if _flip_late:
+            hero_desc = '%s 뒤부터 모자라기 시작합니다' % _labs[_short[0]]
+        elif _flip_early:
+            hero_desc = '지금은 모자라지만 %s 뒤 풀립니다' % _labs[_short[-1] + 1]
+        else:
+            hero_desc = '시기에 따라 모자랐다 풀렸다 합니다'
+    else:
+        hero_desc = gr['desc']
     hero_html = (
         '<span class="zg-badge" style="background:%s1a;color:%s">%s</span>\n'
         '<h1>%s, %s</h1>\n'
         '<p class="zg-cap">공급 기준 · %s 데이터 · %s</p>\n'
-        % (gr['color'], gr['color'], gr['label'], nm, gr['desc'], prd, ranktxt))
+        % (gr['color'], gr['color'], gr['label'], nm, hero_desc, prd, ranktxt))
 
     # ── ② 왜 이 판정인가 — 근거 3줄. 세 줄의 합이 히어로 순부족과 정확히 일치
     # (need4/inow/fsupw만 사용 — tot == need4 - fsupw - inow 항등식이 Task 1
@@ -1057,15 +1113,40 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         '<div class="w-lead" style="border-color:%s">'
         '<div class="wl-sum" style="color:%s">%s</div>'
         '<p class="wl-note">%s</p></div>' % (gr['color'], gr['color'], sum_line, wl_note))
+    # ── 재고 궤적 5칸 (2026-08-02 사용자 요청) ──────────────────────────────
+    # 순부족 하나로는 '얼마나'만 보이고 '언제'가 안 보인다. 지금/1·2·3·4년 뒤
+    # 재고 부호를 5칸으로 찍으면 같은 값이라도 모양이 갈린다 — 대구권은 지금
+    # 여유인데 1년 뒤 부족으로 뒤집히고(○●●●●), 화성권은 4년 내내 부족이다(●●●●●).
+    # ⚠️ 개수가 아니라 순서를 보여준다. 남양주(●●●○○ 해소)와 울산(●●○○● 출렁)은
+    # 부족 칸 수가 같지만 이야기가 정반대다 — 합치면 그 차이가 사라진다.
+    # ⚠️ 별(★)은 쓰지 않는다. 타깃이 내집 마련 실수요자라 ★는 '추천'으로 읽히는데,
+    # 여기서 칸이 차는 건 나쁜 소식이다.
+    # 계산(_seq/_short/_labs/_last/_flip_*)은 히어로 위에서 이미 끝났다 — 제목과
+    # 이 시퀀스가 같은 값을 써야 서로 다른 말을 하지 않는다.
+    if not _short:
+        _msg = '4년 내내 공급이 넉넉합니다'
+    elif len(_short) == len(_seq):
+        _msg = '4년 내내 부족합니다'
+    elif _flip_early:
+        _msg = '지금은 부족하지만 %s 뒤 풀립니다' % _labs[_short[-1] + 1]
+    elif _flip_late:
+        _msg = '%s 뒤부터 부족으로 바뀝니다' % _labs[_short[0]]
+    else:
+        _msg = '시기에 따라 부족과 여유를 오갑니다'
+    seq_html = (
+        '<div class="seq"><div class="seq-msg">%s</div><div class="seq-row">%s</div></div>'
+        % (_msg, ''.join(
+            '<div class="seq-c%s"><i></i><span>%s</span></div>'
+            % (' on' if v < 0 else '', _labs[i]) for i, v in enumerate(_seq))))
     why_html = (
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
-        '%s'
+        '%s%s'
         '<div class="why3">'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s</i></span><b>+%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 액면 그대로</i></span><b>−%s</b></div>'
         '</div>%s</div></section>' % (
-            verdict_html,
+            verdict_html, seq_html,
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
             # 롤업은 need_src가 이미 완결된 문장이라 '= X 몫' 꼬리를 붙이지 않는다
             # ("수도권 세대의 94% = 수도권 몫"이 자기참조로 읽혔다 — 2026-08-02).
@@ -1149,7 +1230,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         # 두 번 쓰면 오히려 다른 뜻으로 읽힌다. 어긋나면 그건 이제 진짜 버그다.
         qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대) '
                        '<b style="color:var(--ink)">· 전체 %s세대</b></div>'
-                       '<div class="q-read" data-qread></div>'
+                       '<div class="q-tip" hidden></div>'
                        '<div class="qchart"><div class="q-inner">%s</div></div></div>'
                        % (num(sum(qv.values())), cols))
         # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
@@ -1441,15 +1522,23 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             # 분기 막대 → 값 읽기. 누르면 그 분기 값을 차트 위 한 줄에 띄운다.
             # 기본은 물량이 가장 많은 분기를 미리 띄워 빈 줄이 안 보이게 한다.
             '<script>(function(){var wrap=document.querySelector(".qwrap");if(!wrap)return;'
-            'var out=wrap.querySelector("[data-qread]"),cols=wrap.querySelectorAll(".q-col");'
-            'if(!out||!cols.length)return;'
+            'var tip=wrap.querySelector(".q-tip"),cols=wrap.querySelectorAll(".q-col");'
+            'if(!tip||!cols.length)return;'
+            'function hide(){tip.hidden=true;cols.forEach(function(c){c.classList.remove("on")});}'
             'function show(b){cols.forEach(function(c){c.classList.toggle("on",c===b)});'
-            'out.innerHTML=b.dataset.q+" <span>입주 예정</span> "+b.dataset.v+"<span>세대</span>";}'
-            'cols.forEach(function(c){c.addEventListener("click",function(){show(c)});'
-            'c.addEventListener("mouseenter",function(){show(c)});});'
-            'var best=cols[0];cols.forEach(function(c){'
-            'if(parseInt(c.dataset.v.replace(/,/g,""),10)>parseInt(best.dataset.v.replace(/,/g,""),10))best=c;});'
-            'show(best);})();</script>'
+            'tip.innerHTML=b.dataset.q+" <span>입주 예정</span> <b>"+b.dataset.v+"</b><span>세대</span>";'
+            'tip.hidden=false;'
+            'var wr=wrap.getBoundingClientRect(),br=b.getBoundingClientRect();'
+            'var x=br.left-wr.left+br.width/2,y=br.top-wr.top-6;'
+            'tip.style.left="0px";tip.style.top="0px";'
+            'var tw=tip.offsetWidth;'
+            'x=Math.max(tw/2+2,Math.min(x,wr.width-tw/2-2));'
+            'tip.style.left=x+"px";tip.style.top=y+"px";}'
+            'cols.forEach(function(c){'
+            'c.addEventListener("click",function(){c.classList.contains("on")?hide():show(c)});'
+            'c.addEventListener("mouseenter",function(){show(c)});'
+            'c.addEventListener("focus",function(){show(c)});});'
+            'wrap.addEventListener("mouseleave",hide);})();</script>'
             '<script>(function(){var w=document.querySelector(".pidx");if(!w)return;'
             'var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");'
             'if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}'

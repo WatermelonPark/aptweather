@@ -261,22 +261,19 @@ def test_render_units_2sec_dedupes_same_project():
     ], 'done': []}
     html = M.render_units_2sec(units, TODAY)
     assert html.count('대구금호워터폴리스 D2블록</td>') == 1
-    assert '세대 큰 순 2곳' in html
+    # 접힌 중복은 개수·합계에서도 빠져야 한다(1334 두 번이 아니라 한 번)
+    assert '2개 단지 · 총 1,834세대' in html
 
 
-def test_render_units_2sec_total_is_labelled_as_list_sum():
-    """합계는 쓰되 반드시 '목록 합계'로 라벨링한다(2026-08-02 사용자 요청).
+def test_render_units_2sec_shows_count_and_total():
+    """머리말은 '향후 4년 · N개 단지 · 총 N세대'(2026-08-02 사용자 문구 확정).
 
-    목록은 수집기 캡(시군구당 40)이 걸린 부분집합이라 존 전체 물량과 다르다.
-    라벨을 떼고 그냥 'N세대'로 쓰면 '언제 들어오나' 차트의 총량과 나란히 놓였을
-    때 버그로 읽힌다(2026-08-01 대구권 차트 55,693 vs 목록 15,020 보고).
+    '총'이 참이려면 units가 전량이어야 한다 — UNITS_CAP 폐지로 그렇다. 캡을
+    되살리면 이 문구가 거짓이 되고 차트 총량과 어긋난 채 나란히 놓인다.
     """
     units = {'sched': [['오산더샵', 400, '2027-03'], ['오산자이', 600, '2028-01']], 'done': []}
     html = M.render_units_2sec(units, TODAY)
-    assert '목록 합계 1,000세대' in html
-    assert '세대 큰 순 2곳' in html
-    # 라벨 없는 맨 합계가 새어나가면 안 된다
-    assert '· 1,000세대' not in html
+    assert '향후 4년 · 2개 단지 · 총 1,000세대' in html
 
 
 def test_render_units_2sec_escapes_quotes_in_name():
