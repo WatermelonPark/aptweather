@@ -426,11 +426,18 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=EP):
 # 3. 그룹 단위 수집·집계
 # ---------------------------------------------------------------------------
 
-UNITS_CAP = 40   # 시군구당 단지 리스트 상한(세대 큰 순) — 원시 전량 보존 방지
-# 개수 캡은 이제 여기 한 곳뿐이다. 2026-07-31에 update_adv_data._zone_units()의
-# 존당 top-20 캡을 폐지하고 시간 창(UNIT_WINDOW=±48개월)으로 대체했다 — 세대순
-# 캡은 2005년 준공 대단지가 '최근 들어온 단지'를 밀고 들어오는 문제가 있었다.
-# 아래 stage별 분리 캡도 같은 계열의 수정이다(2026-08-01).
+UNITS_CAP = None   # 시군구당 단지 리스트 상한. None = 무제한(2026-08-02 사용자 결정)
+# 캡 폐지 이력: 2026-07-31 update_adv_data._zone_units()의 존당 top-20을 시간
+# 창(UNIT_WINDOW=±48개월)으로 대체 → 2026-08-01 여기 40개를 stage별로 분리 →
+# 2026-08-02 아예 폐지. 이유는 매번 같다: 개수로 자르면 목록 합계가 차트 총량과
+# 안 맞아 사용자가 버그로 읽는다(대구권 55,693 vs 15,020, 춘천권 2,852 vs 1,326).
+# 무제한이면 units 세대 합 == done_q+sched_q 합이라 두 숫자가 정의상 일치한다.
+#
+# ⚠️ 비용: 현재 캡 40에서 units 6,494개가 전체 세대의 57.8%만 덮는다. 무제한이면
+# 항목 수가 몇 배로 늘고 hub_permits.json(936KB)과 update_adv_data가 실어 보내는
+# adv['permits']['units'] 페이로드가 함께 커진다. 다음 수집 성공 후 실측해서
+# 배포 페이로드가 감당 못 할 크기면 '캡'이 아니라 **시간 창**으로 줄일 것 —
+# 개수 캡으로 되돌리면 합계 불일치가 그대로 돌아온다.
 
 
 def _aggregate(items):
@@ -463,10 +470,10 @@ def _aggregate(items):
             sched_q[sq] += n
             units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched'])
         # 둘 다 없으면 미정 — 미반영
-    # ⚠️ 캡을 stage별로 따로 건다(2026-08-01). 예전엔 done+sched를 섞어 세대 큰 순
-    # 상위 40개만 남겼는데, 큰 시군구는 옛 준공 대단지가 40칸을 다 차지해 '앞으로
-    # 들어올 단지' 목록이 비다시피 했다(춘천권 차트 5분기 중 목록엔 2곳만).
-    # done/sched 각각 UNITS_CAP개면 존 페이지 두 섹션이 모두 채워진다.
+    # 세대 큰 순 정렬 + stage별 분리는 유지한다(화면이 done/sched 2섹션이라).
+    # UNITS_CAP=None이면 `[:None]`이 전체 슬라이스라 컷 없이 그대로 통과한다 —
+    # 캡을 되살릴 일이 생겨도 이 구조는 그대로 쓰면 된다(2026-08-01 stage별 분리는
+    # 옛 준공 대단지가 40칸을 다 차지해 '앞으로 들어올 단지'가 비던 문제의 수정).
     units.sort(key=lambda u: -u[1])
     kept = ([u for u in units if u[3] == 'done'][:UNITS_CAP]
             + [u for u in units if u[3] == 'sched'][:UNITS_CAP])

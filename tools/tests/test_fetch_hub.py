@@ -158,16 +158,25 @@ def test_aggregate_classifies_latest_stage_once():
                                     ['', 100, '2024-03', 'done']])
 
 
-def test_aggregate_caps_units_at_top_40_by_household():
+def test_aggregate_keeps_every_unit_sorted_by_household():
+    """캡 폐지(2026-08-02): 단지를 하나도 버리지 않는다.
+
+    개수로 자르면 존 페이지의 '목록 합계'가 차트 총량과 안 맞아 사용자가 버그로
+    읽는다(대구권 55,693 vs 15,020, 춘천권 2,852 vs 1,326). 무제한이면 units의
+    세대 합이 done_q+sched_q 합과 정의상 같아진다 — 아래에서 그것도 확인한다.
+    """
     items = []
     for i in range(50):
         items.append({'mgmHsrgstPk': 'K%d' % i, 'purpsCdNm': '공동주택',
                        'totHhldCnt': str(100 + i), 'useInsptDay': '20240310',
                        'useInsptSchedDay': '', 'bldNm': '단지%d' % i})
     done_q, sched_q, units = F._aggregate(items)
-    assert len(units) == F.UNITS_CAP
+    assert F.UNITS_CAP is None, '캡을 되살리려면 합계 불일치 문제부터 풀 것'
+    assert len(units) == 50
     assert units[0][1] == 149   # 세대 최댓값(100+49)이 먼저
     assert all(units[i][1] >= units[i + 1][1] for i in range(len(units) - 1))
+    # 목록 세대 합 == 분기 집계 세대 합
+    assert sum(u[1] for u in units) == sum(done_q.values()) + sum(sched_q.values())
 
 
 # ---------------------------------------------------------------------------
@@ -1089,7 +1098,9 @@ def test_aggregate_units_cap_is_per_stage():
     _dq, _sq, units = F._aggregate(items)
     done = [u for u in units if u[3] == 'done']
     sched = [u for u in units if u[3] == 'sched']
-    assert len(done) == F.UNITS_CAP, 'done이 캡만큼 남아야 한다'
-    assert len(sched) == F.UNITS_CAP, 'sched가 옛 대단지에 밀리면 안 된다'
+    # 캡 폐지(2026-08-02) 후에도 stage 분리는 유지 — 화면이 done/sched 2섹션이라
+    # 정렬이 stage 안에서 닫혀야 한다. 캡을 되살릴 때 이 구조가 그대로 쓰인다.
+    assert len(done) == 60, 'done 전량이 남아야 한다'
+    assert len(sched) == 60, 'sched가 옛 대단지에 밀리면 안 된다'
     # 각 stage 안에서는 세대 큰 순
     assert done[0][1] == 2059 and sched[0][1] == 159
