@@ -2,7 +2,7 @@ import sys, os, datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import make_zone_pages as M
 
-def test_running_shortage_buffer_and_decay():
+def test_running_shortage_buffer_no_decay():
     # cur_q 기준 미래 1분기 sched 부족, 과거 준공으로 재고 버퍼
     cur = 2026*4 + 2                       # 2026Q3 인덱스(년*4+분기-1)
     done = {'2025Q1': 400}                 # 과거 준공
@@ -13,13 +13,14 @@ def test_running_shortage_buffer_and_decay():
     # -1600에서 멈춘다. 2025Q1에 max(-1600, -1600+400-100) = -1300으로 회복하고,
     # 2025Q2~2026Q3(6분기) 동안 -1400,-1500,-1600, 이후 하한 유지 → I_now = -1600.
     s = M.running_shortage(done, sched, {}, refq, cur, horizon=4)
-    # 미래수요 Σconf*refq = (1.0+0.95+0.9+0.85)*100 = 370; s = 370 - (-1600) = 1970
-    assert s == 1970.0, f"Expected s == 1970.0, got {s}"
+    # 2026-08-02 감쇠 폐지: 미래수요 Σconf*refq에서 conf≡1.0이라 4*100 = 400.
+    # (옛 감쇠에선 (1.0+0.95+0.9+0.85)*100 = 370이었다.) s = 400 - (-1600) = 2000
+    assert s == 2000.0, f"Expected s == 2000.0, got {s}"
 
     # 최근 준공의 재고 버퍼가 부족을 경감하는지 검증
     # 2026Q2에 400 → max(-1600,-1600+400-100) = -1300, 2026Q3에 -1400 → I_now = -1400
     s_recent = M.running_shortage({'2026Q2': 400}, {}, {}, refq, cur, horizon=4)
-    assert s_recent == 1770.0, f"Expected s_recent == 1770.0, got {s_recent}"
+    assert s_recent == 1800.0, f"Expected s_recent == 1800.0, got {s_recent}"
     assert s_recent < s, f"Expected recent buffer to reduce shortage: {s_recent} < {s}"
 
 def test_running_shortage_deficit_cap():
@@ -82,25 +83,24 @@ def test_running_shortage_demol_reduces_inventory():
         "멸실을 반영하면 재고(I_now)가 줄어 순부족(s)이 더 커야 한다(+100)")
     assert s_near - s_near_no_demol == 100.0
 
-def test_running_shortage_weight_demand_false():
-    # Issue #4 B안(스펙 원문): 수요는 비가중(Σrefq), 공급만 conf 가중(Σconf*sched).
-    # A안(가중, 기본값)과 다른 산식임을 손계산으로 증명 — done={}이라 I_now는 두 안
-    # 모두 하한 -DEFICIT_CAP*refq = -1600으로 같아, 차이는 순수하게 미래 항에서만 온다.
+def test_running_shortage_ab_agree_without_decay():
+    # Issue #4의 A안/B안은 conf가 있을 때만 갈렸다. 감쇠 폐지(2026-08-02)로
+    # conf≡1.0이 되면서 Σconf*(refq-s) == Σrefq - Σconf*s 가 항등식이 된다.
+    # 이 테스트는 그 동치를 못박는다 — 둘이 갈리면 conf가 되살아났다는 뜻이다.
+    # done={}이라 I_now는 하한 -DEFICIT_CAP*refq = -1600으로 같아, 차이가 생긴다면
+    # 그건 순수하게 미래 항에서 온다.
     cur = 2026*4 + 2                       # 2026Q3
     refq = 100
     sched = {'2026Q4': 40, '2027Q1': 60, '2027Q2': 20, '2027Q3': 0}
     CAP = M.DEFICIT_CAP * refq             # 1600
-    # conf(1..4) = 1.0, 0.95, 0.9, 0.85
-    # A안: Σ conf(k)*(refq-sched) = 1.0*60 + 0.95*40 + 0.9*80 + 0.85*100
-    #     = 60 + 38 + 72 + 85 = 255 → s = 255 + 1600 = 1855
+    # A안: Σ (refq-sched) = 60 + 40 + 80 + 100 = 280 → s = 280 + 1600 = 1880
     s_a = M.running_shortage({}, sched, {}, refq, cur, horizon=4, weight_demand=True)
-    assert s_a == 255.0 + CAP, f"Expected s_a == {255.0 + CAP}, got {s_a}"
-    # B안: Σrefq - Σ conf(k)*sched = 400 - (1.0*40 + 0.95*60 + 0.9*20 + 0.85*0)
-    #     = 400 - (40 + 57 + 18 + 0) = 400 - 115 = 285 → s = 285 + 1600 = 1885
+    assert s_a == 280.0 + CAP, f"Expected s_a == {280.0 + CAP}, got {s_a}"
+    # B안: Σrefq - Σsched = 400 - (40 + 60 + 20 + 0) = 400 - 120 = 280 → 같은 값
     s_b = M.running_shortage({}, sched, {}, refq, cur, horizon=4, weight_demand=False)
-    assert s_b == 285.0 + CAP, f"Expected s_b == {285.0 + CAP}, got {s_b}"
-    assert s_b != s_a, "A안과 B안은 서로 다른 산식이어야 한다"
-    # 기본값(weight_demand 생략)은 A안과 동치 — 라이브 산식이 안 바뀌었는지 확인
+    assert s_b == 280.0 + CAP, f"Expected s_b == {280.0 + CAP}, got {s_b}"
+    assert s_b == s_a, "감쇠가 없으면 A안과 B안은 같아야 한다 — 갈리면 conf 부활"
+    # 기본값(weight_demand 생략)은 A안 경로 — 라이브 산식이 안 바뀌었는지 확인
     s_default = M.running_shortage({}, sched, {}, refq, cur, horizon=4)
     assert s_default == s_a
 

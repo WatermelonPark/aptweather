@@ -45,12 +45,38 @@ def _qkey(idx):
 
 
 def _conf(k):
-    """신뢰가중: k=미래 몇 분기 뒤(1..). 1분기 뒤 1.0 → 20분기(5년) 뒤 0으로 선형 감쇠."""
-    return max(0.0, 1.0 - ((k - 1) / 4.0) * 0.2)
+    """미래 공급 가중: 액면 그대로(1.0). k=미래 몇 분기 뒤(1..).
+
+    ⚠️ 2026-08-02 감쇠 폐지. 되살리려면 아래를 먼저 반박할 것 —
+    tools/tests/test_make_zone_pages.py::test_conf_is_flat이 이 값을 잠그고 있다.
+
+    옛 값은 1.0 - (k-1)/20 (16분기 뒤 0.25, 16분기 평균 0.625)이었다. 근거가
+    코드·커밋 어디에도 없었고(DEFICIT_CAP과 달리 검증 도구도 문서도 없음),
+    다음 세 가지가 확인되면서 폐지했다.
+
+    ① 비대칭: 수요는 16분기 전부 100%(Σrefq)인데 공급만 평균 62.5%로 깎여
+       순부족이 구조적으로 부풀었다. 전국 미래 예정 1,375,145 → 901,085세대.
+       빼고 재보니 44존 중 등급 12곳·순위 27곳이 바뀌었다(부산·대전세종은 부호 반전).
+    ② 실측: HUB 원시 레코드의 useInsptSchedDay(예정) vs useInsptDay(실제)를
+       쌍으로 잰 결과(춘천·평택·강남 등, n=215) 중앙값 지연 0개월·평균 +1.4개월,
+       86%가 ±2개월 안. 허가·착공을 통과한 물량은 **지연될 뿐 사라지지 않는다** —
+       감쇠(물량 소거)가 아니라 시점 이동이 맞는 모델이다.
+    ③ 장기 구간은 방향까지 반대: 미래 파이프라인은 +14분기까지 두께가 거의
+       평평하고 +15~16에서만 꺾인다. 그 꺾임은 '아직 등록 안 된 물량'이라
+       이미 과소계상인데, 옛 conf는 바로 거기를 0.30·0.25로 또 깎았다.
+
+    한계도 같이 남긴다: 준공 건의 43%는 예정일 자체가 없어 표본에서 빠졌고,
+    hub_permits.json 스냅샷이 1주치뿐이라 DEFICIT_CAP처럼 예측력 백테스트를
+    돌리지 못했다. 1년쯤 쌓이면 실현율을 직접 재서 곡선으로 대체할 수 있다.
+    그때도 '감쇠'가 아니라 '시점 이동'이 먼저 검토돼야 한다.
+    """
+    return 1.0
 
 
 ANCHOR = 2010 * 4  # 2010Q1
-FUT_HORIZON = 16  # 4년(기준표 3년룰 + 준공예정 실측 ~4년); conf가 3~4년차를 낮게 가중
+FUT_HORIZON = 16  # 4년(기준표 3년룰 + 준공예정 실측 ~4년). conf 폐지(2026-08-02) 후
+                  # 먼 미래에 대한 유보는 오직 이 지평선으로만 표현한다 — "4년을 보되
+                  # 마지막 해는 4분의 1만 센다"보다 "몇 년까지 보는가" 하나가 정직하다.
 DEFICIT_CAP = 16  # 부족(음수 재고) 누적 상한 = 적정물량 몇 분기치까지 쌓이게 둘지(4년)
 
 # ── 등급 판정 (2026-07-31 UX 재기획) ─────────────────────────────
@@ -109,7 +135,13 @@ def grade(tot, need4):
     return {'k': g[0], 'label': g[1], 'color': g[2], 'desc': g[3], 'ratio': r}
 
 
-def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=True, full=False):
+def running_shortage(done, sched, demol, refq, cur_q, horizon=FUT_HORIZON,
+                     weight_demand=True, full=False):
+    # 기본 horizon은 FUT_HORIZON(16)이다. 예전 기본값은 20이었는데, 그때는 conf가
+    # k=21에서 0이 돼 루프가 알아서 끊겼기 때문에 티가 안 났다. conf 폐지(2026-08-02)로
+    # 그 브레이크가 사라져 기본값이 그대로 드러난다 — 20이면 수요를 4분기치 더 세서
+    # 순부족이 부풀었다. 라이브(calc)는 원래 horizon=16을 명시로 넘기고 JS 미러도
+    # ||16이라 영향은 없었지만, 기본값이 둘이면 언젠가 갈린다.
     """준공 기반 러닝재고 순부족.
 
     I_now = 2010Q1부터 현재분기까지 매 분기 max(-DEFICIT_CAP*refq, 재고+준공-멸실-refq)로
@@ -134,6 +166,10 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=20, weight_demand=
       순부족 = Σ_{k=1..horizon} refq  -  Σ_{k=1..horizon} conf(k)*sched(cur_q+k) - I_now.
     두 안 모두 refq는 호출측이 이미 zone-level(적정*share)로 넘긴 값이어야 한다.
     양수=부족(발산 막대 오른쪽), 음수=과잉.
+
+    ⚠️ conf 폐지(2026-08-02, _conf 참조) 이후 두 안은 **수치가 같다** — conf≡1.0이면
+    Σconf*(refq-s) == Σrefq - Σconf*s. 분기를 남겨둔 건 conf를 되살릴 경우를 위한
+    골격일 뿐이니, "A안/B안 중 뭘 쓰지" 같은 판단은 지금 필요 없다(라이브는 B안).
     """
     # M1: full(분해값 반환)은 항등식 tot == demand - supplyw - inow 성립을 전제로
     # 문서화돼 있는데, 그 항등식은 weight_demand=False(B안)에서만 성립한다(A안은
@@ -977,7 +1013,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         '<div class="why3">'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s = %s 몫 · 추정</i></span><b>+%s</b></div>'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 먼 미래는 낮춰 반영</i></span><b>−%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 액면 그대로</i></span><b>−%s</b></div>'
         '</div>%s</div></section>' % (
             verdict_html,
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
@@ -1034,36 +1070,35 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         LABEL_H = 14         # 막대 아래 분기 라벨(.q-l) 높이 — 기준선 offset의 기준
         qref = r.get('zrefq') or 0
         scale = max(mxq, qref) or 1
-        # 색 농도 = 신뢰가중 _conf(k). 먼 분기일수록 옅다 — 캡션의 '먼 미래는 낮춰
-        # 반영'을 글이 아니라 그림으로 보여준다(1분기 뒤 1.0 → 16분기 뒤 0.25).
+        # 막대 농도는 균일하다. 예전엔 _conf(k)를 농도에 실어 '먼 분기일수록 옅게'
+        # 그렸는데, conf 폐지(2026-08-02)로 먼 분기를 덜 세지 않으니 옅게 그리면
+        # 화면이 모델에 없는 감쇠를 말하게 된다. 같은 값은 같은 농도로 그린다.
         # 분기 라벨은 연초(Q1)와 첫 칸만 — 16개를 다 쓰면 겹쳐서 못 읽는다.
         # 막대 위 숫자는 16칸에 다 못 넣는다 → 누르면(모바일)·올리면(PC) 값을 띄운다.
         # data-*에 값을 실어두고 아래 스크립트가 읽는다.
         cols = ''.join(
             '<button type="button" class="q-col" data-q="%s" data-v="%s" '
-            'aria-label="%s %s세대"><div class="q-bar" style="height:%dpx;opacity:%.2f"></div>'
+            'aria-label="%s %s세대"><div class="q-bar" style="height:%dpx"></div>'
             '<span class="q-l">%s</span></button>' % (
                 qlabel(q), num(qv[q]), qlabel(q), num(qv[q]),
                 int(round(qv[q] / scale * PLOT_H)),
-                max(_conf(k), 0.25),
                 # 연초(Q1)만 — 첫 칸을 억지로 붙이면 바로 옆 Q1과 겹쳐 못 읽는다
                 qlabel(q) if q.endswith('Q1') else '')
-            for k, q in enumerate(qs, 1))
+            for q in qs)
         if qref:
             cols += ('<div class="q-ref" style="bottom:%dpx">'
                      '<i>적정 %s</i></div>'
                      % (LABEL_H + int(round(qref / scale * PLOT_H)), num(qref)))
         # 합계는 여기서만 보여준다 — 단지 목록(상위 N곳)과 헷갈리지 않게 '전체'로 명시.
-        # ⚠️ ②'들어올 집'(conf 가중)과 여기 '전체'(원시 합)는 다른 값이다. 한 화면에
-        # 인접해 있어 최대 36% 차이가 설명 없이 노출됐다(2026-08-01 리뷰 I1) —
-        # 가중 후 값을 괄호로 병기해 두 숫자를 잇는다.
+        # 2026-08-01 리뷰 I1은 ②'들어올 집'(당시 conf 가중)과 여기 '전체'(원시 합)가
+        # 최대 36% 어긋나 보인다는 지적이었고, 그때는 가중 후 값을 괄호로 병기해 이었다.
+        # conf 폐지(2026-08-02)로 두 값이 같아져 병기가 불필요해졌다 — 같은 숫자를
+        # 두 번 쓰면 오히려 다른 뜻으로 읽힌다. 어긋나면 그건 이제 진짜 버그다.
         qchart_html = ('<div class="qwrap"><div class="qtitle">분기별 입주 예정 물량 (세대) '
-                       '<b style="color:var(--ink)">· 전체 %s세대</b>'
-                       '<span style="color:var(--muted)"> · 먼 미래를 낮춰 반영하면 %s세대'
-                       '(위 \'들어올 집\')</span></div>'
+                       '<b style="color:var(--ink)">· 전체 %s세대</b></div>'
                        '<div class="q-read" data-qread></div>'
                        '<div class="qchart"><div class="q-inner">%s</div></div></div>'
-                       % (num(sum(qv.values())), num(r['fsupw']), cols))
+                       % (num(sum(qv.values())), cols))
         # ── ③ 언제 들어오나 — qchart_html 재사용, 최대 분기 강조 + 한 줄 캡션
         qcap = ('가장 몰리는 분기는 %s — 그래도 필요량에는 못 미칩니다' % qlabel(peakq)) if r['tot'] > 0 else \
                ('입주가 가장 몰리는 %s 전후가 세입자·매수자에게 유리합니다' % qlabel(peakq))

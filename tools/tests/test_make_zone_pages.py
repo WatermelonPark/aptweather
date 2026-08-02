@@ -282,3 +282,38 @@ def test_render_units_2sec_escapes_quotes_in_name():
     assert 'title="일신 &quot;에일린의 뜰&quot; 아파트"' in html
     # 속성이 조기 종료돼 깨진 마크업이 나오면 안 된다
     assert 'title="일신 "' not in html
+
+
+# ---------------------------------------------------------------------------
+# 미래 공급 신뢰감쇠 폐지 (2026-08-02) — 잠금
+# ---------------------------------------------------------------------------
+
+def test_conf_is_flat():
+    """_conf는 지평선 전 구간에서 1.0이어야 한다.
+
+    옛 감쇠(1-(k-1)/20)는 근거가 없었고 수요만 100%인 비대칭 탓에 순부족을
+    구조적으로 부풀렸다(등급 12/44곳이 이 상수 하나에 좌우됐다). 되살리려면
+    make_zone_pages._conf docstring의 반증 3건을 먼저 반박할 것.
+    """
+    for k in range(1, M.FUT_HORIZON + 1):
+        assert M._conf(k) == 1.0, 'k=%d에서 감쇠가 되살아났다' % k
+
+
+def test_running_shortage_counts_future_supply_at_face_value():
+    """감쇠가 없으므로 미래 공급은 액면 그대로 순부족에서 빠진다."""
+    cur = M.ANCHOR                      # 과거 재고 루프를 1분기로 짧게
+    sched = {M._qkey(cur + k): 100 for k in range(1, M.FUT_HORIZON + 1)}
+    r = M.running_shortage({}, sched, {}, refq=100, cur_q=cur,
+                           weight_demand=False, full=True)
+    assert r['supplyw'] == 100 * M.FUT_HORIZON   # 가중 없이 전량
+    assert r['demand'] == 100 * M.FUT_HORIZON
+    assert r['tot'] == r['demand'] - r['supplyw'] - r['inow']
+
+
+def test_zone_page_copy_has_no_decay_claim():
+    """화면 카피가 모델에 없는 감쇠를 말하면 안 된다."""
+    import io
+    src = io.open(M.__file__.replace('.pyc', '.py'), encoding='utf-8').read()
+    body = src.split('def _conf', 1)[1].split('\n    """', 2)[-1]  # docstring 제외
+    assert '먼 미래는 낮춰 반영' not in body
+    assert '먼 미래를 낮춰 반영하면' not in body
