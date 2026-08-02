@@ -3,15 +3,18 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import make_zone_pages as M
 
 def test_grade_cuts_and_boundaries():
-    # 컷: (1.5, 1.0, 0.5, -0.5), 경계는 상위 등급 포함(>=)
+    # 컷: (1.5, 1.0, 0.5, 0.0), 경계는 상위 등급 포함(>=)
     assert M.grade(150, 100)['k'] == 'g4'      # 정확히 150% -> 매우 부족
     assert M.grade(149, 100)['k'] == 'g3'
     assert M.grade(100, 100)['k'] == 'g3'      # 정확히 100% -> 부족
     assert M.grade(99, 100)['k'] == 'g2'
     assert M.grade(50, 100)['k'] == 'g2'       # 정확히 50% -> 다소 부족
     assert M.grade(49, 100)['k'] == 'g1'
-    assert M.grade(-50, 100)['k'] == 'g1'      # 정확히 -50% -> 균형
-    assert M.grade(-51, 100)['k'] == 'g0'      # 그 미만 -> 공급 여유
+    # 2026-08-02: 마지막 컷 -0.5 → 0. 실질(물가차감) 손익분기가 비율 0이라,
+    # 0 미만은 '균형'이 아니라 '공급 여유'다(옛 컷은 실질 -0.60% 구간까지 균형이라 불렀다).
+    assert M.grade(0, 100)['k'] == 'g1'        # 정확히 0% -> 균형
+    assert M.grade(-1, 100)['k'] == 'g0'       # 그 미만 -> 공급 여유
+    assert M.grade(-50, 100)['k'] == 'g0'
     assert M.grade(0, 0)['k'] == 'g1'          # need4=0 방어: ratio 0 -> 균형
 
 def test_grade_labels_and_colors():
