@@ -391,10 +391,12 @@ def render_units_2sec(units, today=None):
 
     "앞으로 들어올 단지"(sched)와 "최근 들어온 단지"(done) 2섹션.
 
-    ⚠️ 합계(N세대)를 쓰지 않는다. units는 수집기(fetch_hub_permits UNITS_CAP=40)가
-    시군구당 상위 40개만 담은 **부분집합**이라 존 전체 물량과 다르다 — 총량은
-    '언제 들어오나' 차트(permits.sched 전량)가 유일한 출처다. 두 숫자를 나란히
-    보이면 안 맞는다(2026-08-01 실제 보고: 대구권 차트 55,693 vs 목록 15,020).
+    ⚠️ 합계는 반드시 '목록 합계'로 라벨링한다(2026-08-02 사용자 요청으로 추가).
+    units는 수집기(fetch_hub_permits UNITS_CAP=40)가 시군구당 상위 40개만 담은
+    **부분집합**이라 존 전체 물량과 다르다 — 총량은 '언제 들어오나'
+    차트(permits.sched 전량)가 유일한 출처다. 라벨을 떼고 그냥 'N세대'로 쓰면
+    차트 총량과 나란히 놓였을 때 버그로 읽힌다(2026-08-01 실제 보고: 대구권
+    차트 55,693 vs 목록 15,020).
 
     창은 UNIT_WINDOW: sched는 오늘~+48개월, done은 -48개월~오늘만 남긴다(예정일이
     이미 지난 sched 항목도 제외 — 스테일 데이터). 2026-07-31 사용자 결정으로
@@ -477,27 +479,33 @@ def render_units_2sec(units, today=None):
         return ('<tr><td class="uname" title="%s">%s</td><td class="num">%s</td>'
                 '<td class="num">%s</td></tr>' % (esc(name), esc(name), num(hh), label))
 
+    # 합계 표기(2026-08-02 사용자 요청). 이 값은 **이 목록에 보이는 단지들의 합**이지
+    # 존 전체 물량이 아니다 — units는 수집기가 시군구당 상위 UNITS_CAP개만 담은
+    # 부분집합이라 차트(permits.sched 전량)와 다르다. 그래서 '목록 합계'로 못박아
+    # 쓴다. 예전엔 이 차이 때문에 합계를 아예 안 썼는데(대구권 차트 55,693 vs 목록
+    # 15,020), 숫자를 숨기면 사용자가 직접 더해보고 같은 혼란을 겪는다 — 라벨로 푼다.
+    hh_sum = lambda us: sum((u[1] or 0) for u in us)
     parts = []
     if sched:
         rows = ''.join(sched_row(u) for u in sched)
         parts.append(
             '<section><div class="wrap">\n'
-            '  <h2>앞으로 들어올 단지 <span class="ucnt">4년 내 · 세대 큰 순 %d곳</span></h2>\n'
+            '  <h2>앞으로 들어올 단지 <span class="ucnt">4년 내 · 세대 큰 순 %d곳 · 목록 합계 %s세대</span></h2>\n'
             '  <div class="ulist"><table class="utable2">\n'
             '    <thead><tr><th>단지명</th><th>세대수</th><th>준공예정</th></tr></thead>\n'
             '    <tbody>%s</tbody>\n'
             '  </table></div>\n'
-            '</div></section>\n' % (len(sched), rows))
+            '</div></section>\n' % (len(sched), num(hh_sum(sched)), rows))
     if done:
         rows = ''.join(done_row(u) for u in done)
         parts.append(
             '<section><div class="wrap">\n'
-            '  <h2>최근 들어온 단지 <span class="ucnt">지난 4년 · 세대 큰 순 %d곳</span></h2>\n'
+            '  <h2>최근 들어온 단지 <span class="ucnt">지난 4년 · 세대 큰 순 %d곳 · 목록 합계 %s세대</span></h2>\n'
             '  <div class="ulist"><table class="utable2">\n'
             '    <thead><tr><th>단지명</th><th>세대수</th><th>준공</th></tr></thead>\n'
             '    <tbody>%s</tbody>\n'
             '  </table></div>\n'
-            '</div></section>\n' % (len(done), rows))
+            '</div></section>\n' % (len(done), num(hh_sum(done)), rows))
     return ''.join(parts)
 
 
@@ -974,16 +982,28 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     # 보였다. → 과거→미래 시간순으로 재배열하고 각 줄에 [과거]/[앞으로 4년] 시간
     # 칩을 달아 방향을 명시한다. 서사: "이미 이만큼 밀렸는데, 앞으로 이만큼 더
     # 필요하고, 들어올 건 이것뿐".
-    b_lab, b_sub = ('그동안 밀린 집', '2010년부터 쌓인 부족 · 실측') if backlog >= 0 \
+    # ⚠️ 부족과 재고는 누적 한도가 다르다(2026-08-02 사용자 지적). running_shortage의
+    # I = max(lo, I + done - demol - refq)는 아래로만 -DEFICIT_CAP*refq(4년치)로 막혀
+    # 있고 위로는 안 막혀 있다. 즉 '밀린 집'(음수 재고)은 아무리 오래 밀려도 최대
+    # 4년치까지만 표시되는데 "2010년부터 쌓인"이라고 쓰면 16년치처럼 읽힌다.
+    # 반대로 '쌓인 집'(양수 재고)은 상한이 없어 2010년부터가 사실 그대로다.
+    b_lab, b_sub = ('그동안 밀린 집', '과거 누적 · 최대 4년치 · 실측') if backlog >= 0 \
               else ('그동안 쌓인 집', '2010년부터 남은 재고 · 실측')
     if backlog >= 0 and abs(backlog - r['need4']) < 1:
-        b_sub = ('2010년부터 쌓인 부족 · 실측 · 4년치 상한 도달 — 실제로는 더 밀렸습니다'
+        b_sub = ('과거 누적 · 4년치 상한 도달 — 실제로는 더 밀렸습니다'
                  '(그래서 아래 ‘필요한 집’과 숫자가 같습니다)')
     # 필요한 집 출처: 풀 소속 존은 풀 이름·구성·풀 내 세대 비중으로 표기.
     if r.get('pool'):
         need_src = '%s 풀(%s) 세대의 %d%%' % (
             r['pool'], '·'.join(m[:-1] for m in POOLS[r['pool']]),
             round((r['pshare'] or 0) * 100))
+    elif nm == ps:
+        # 롤업(수도권)은 자기 자신이 시도라 "수도권 세대의 94%"가 자기참조로 읽힌다
+        # (2026-08-02 사용자 지적). 롤업의 share는 '배분 비중'이 아니라 구성원
+        # 생활권들이 시도 세대를 얼마나 덮는지의 **커버리지**다 — 나머지는 어느
+        # 생활권에도 편입되지 않은 시군구다. 그 뜻대로 다시 쓴다.
+        need_src = '생활권 %d곳 합계 · %s 세대의 %d%% 포함 · 추정' % (
+            len(r.get('subs') or []), ps, round(r['share'] * 100))
     else:
         need_src = '%s 세대의 %d%%' % (ps, round(r['share'] * 100))
     if r['tot'] < 0:
@@ -1012,12 +1032,15 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         '%s'
         '<div class="why3">'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s = %s 몫 · 추정</i></span><b>+%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s</i></span><b>+%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 액면 그대로</i></span><b>−%s</b></div>'
         '</div>%s</div></section>' % (
             verdict_html,
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
-            need_src, nm, num(r['need4']),
+            # 롤업은 need_src가 이미 완결된 문장이라 '= X 몫' 꼬리를 붙이지 않는다
+            # ("수도권 세대의 94% = 수도권 몫"이 자기참조로 읽혔다 — 2026-08-02).
+            need_src if nm == ps else ('%s = %s 몫 · 추정' % (need_src, nm)),
+            num(r['need4']),
             num(r['fsupw']),
             idx_html))
 

@@ -264,13 +264,19 @@ def test_render_units_2sec_dedupes_same_project():
     assert '세대 큰 순 2곳' in html
 
 
-def test_render_units_2sec_shows_no_total():
-    """목록은 수집기 캡(시군구당 40)이 걸린 부분집합이라 합계를 쓰지 않는다 —
-    총량은 '언제 들어오나' 차트가 유일한 출처(2026-08-01 수치 불일치 보고)."""
+def test_render_units_2sec_total_is_labelled_as_list_sum():
+    """합계는 쓰되 반드시 '목록 합계'로 라벨링한다(2026-08-02 사용자 요청).
+
+    목록은 수집기 캡(시군구당 40)이 걸린 부분집합이라 존 전체 물량과 다르다.
+    라벨을 떼고 그냥 'N세대'로 쓰면 '언제 들어오나' 차트의 총량과 나란히 놓였을
+    때 버그로 읽힌다(2026-08-01 대구권 차트 55,693 vs 목록 15,020 보고).
+    """
     units = {'sched': [['오산더샵', 400, '2027-03'], ['오산자이', 600, '2028-01']], 'done': []}
     html = M.render_units_2sec(units, TODAY)
-    assert '1,000' not in html and '세대</span>' not in html
+    assert '목록 합계 1,000세대' in html
     assert '세대 큰 순 2곳' in html
+    # 라벨 없는 맨 합계가 새어나가면 안 된다
+    assert '· 1,000세대' not in html
 
 
 def test_render_units_2sec_escapes_quotes_in_name():
