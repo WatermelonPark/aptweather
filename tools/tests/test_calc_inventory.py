@@ -2,97 +2,80 @@ import sys, os, datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import make_zone_pages as M
 
-def test_running_shortage_buffer_no_decay():
-    # cur_q 기준 미래 1분기 sched 부족, 과거 준공으로 재고 버퍼
-    cur = 2026*4 + 2                       # 2026Q3 인덱스(년*4+분기-1)
-    done = {'2025Q1': 400}                 # 과거 준공
-    sched = {'2026Q4': 0}                  # 미래 공급 0
-    refq = 100
-    # 2026-07-31: 재고 하한이 0 → -DEFICIT_CAP*refq(=-1600)로 바뀌었다.
-    # I_now: 앵커(2010Q1)~2025Q1 직전까지 준공이 없어 분기마다 -100씩 쌓이다 16분기째
-    # -1600에서 멈춘다. 2025Q1에 max(-1600, -1600+400-100) = -1300으로 회복하고,
-    # 2025Q2~2026Q3(6분기) 동안 -1400,-1500,-1600, 이후 하한 유지 → I_now = -1600.
-    s = M.running_shortage(done, sched, {}, refq, cur, horizon=4)
-    # 2026-08-02 감쇠 폐지: 미래수요 Σconf*refq에서 conf≡1.0이라 4*100 = 400.
-    # (옛 감쇠에선 (1.0+0.95+0.9+0.85)*100 = 370이었다.) s = 400 - (-1600) = 2000
-    assert s == 2000.0, f"Expected s == 2000.0, got {s}"
+def test_running_shortage_window_counts_only_last_4y():
+    """과거 재고는 최근 BACKLOG_WINDOW분기(4년)만 0에서 누적한다(2026-08-02).
 
-    # 최근 준공의 재고 버퍼가 부족을 경감하는지 검증
-    # 2026Q2에 400 → max(-1600,-1600+400-100) = -1300, 2026Q3에 -1400 → I_now = -1400
-    s_recent = M.running_shortage({'2026Q2': 400}, {}, {}, refq, cur, horizon=4)
-    assert s_recent == 1800.0, f"Expected s_recent == 1800.0, got {s_recent}"
-    assert s_recent < s, f"Expected recent buffer to reduce shortage: {s_recent} < {s}"
-
-def test_running_shortage_deficit_cap():
-    # 2026-07-31: 재고 하한이 0 → -DEFICIT_CAP*refq. 부족도 쌓이되 4년치가 상한이다.
-    # (옛 max(0,·)는 만성부족 존의 재고를 늘 0에 붙여 "이번 분기부터 모자란 곳"과
-    #  "16년째 모자란 곳"을 구분하지 못했다 — 서울권 재고>0 분기가 6%뿐이었다.)
-    cur = 2026*4 + 2
+    앵커(2010Q1)+상한 방식에서 창 방식으로 바꿨다. 창 안이면 언제 준공됐든
+    같은 값이고, 창 밖이면 아예 안 세는 게 핵심 — 예전엔 상한에 눌려 옛 준공이
+    조용히 사라지거나 남거나 했다.
+    """
+    cur = 2026 * 4 + 2                     # 2026Q3 → 창 = 2022Q4~2026Q3
     refq = 100
-    # 과거 준공 전무 → 앵커부터 매 분기 -refq, DEFICIT_CAP분기에서 하한 도달 후 고정
-    s = M.running_shortage({}, {}, {}, refq, cur, horizon=4)
+    # 준공 전무: I_now = -16*100 = -1600, 미래수요 4*100 = 400 → 2000
+    assert M.running_shortage({}, {}, {}, refq, cur, horizon=4) == 2000.0
+
+    # 창 안(2025Q1)에 400 준공 → I_now = 400-1600 = -1200 → 1600
+    s_in = M.running_shortage({'2025Q1': 400}, {}, {}, refq, cur, horizon=4)
+    assert s_in == 1600.0, s_in
+
+    # 창 안이면 시점은 무관하다 — 2026Q2도 같은 값
+    s_late = M.running_shortage({'2026Q2': 400}, {}, {}, refq, cur, horizon=4)
+    assert s_late == s_in
+
+    # 창 밖(2022Q3, 창 시작 한 분기 전)은 아예 안 센다
+    s_out = M.running_shortage({'2022Q3': 400}, {}, {}, refq, cur, horizon=4)
+    assert s_out == 2000.0, s_out
+    assert s_out > s_in, '창 안 준공만 부족을 줄여야 한다'
+
+
+def test_running_shortage_window_bounds_deficit_structurally():
+    """창이 곧 상한이다 — 별도 클램프 없이 부족은 16*refq를 넘지 못한다.
+
+    옛 DEFICIT_CAP이 하던 일을 구조가 대신하므로 파라미터가 하나 줄었다.
+    """
+    cur = 2026 * 4 + 2
+    refq = 100
     fut = sum(M._conf(k) * refq for k in range(1, 5))
-    assert s == fut + M.DEFICIT_CAP * refq, (
-        f"I_now가 정확히 -DEFICIT_CAP*refq에서 멈춰야 한다 (got s={s})")
-    assert s > 0
+    s = M.running_shortage({}, {}, {}, refq, cur, horizon=4)
+    assert s == fut + M.BACKLOG_WINDOW * refq
 
-    # 하한이 refq에 비례하는지 — refq를 2배로 하면 하한도 2배
+    # refq에 비례
     s2 = M.running_shortage({}, {}, {}, refq * 2, cur, horizon=4)
-    assert s2 == fut * 2 + M.DEFICIT_CAP * refq * 2
+    assert s2 == fut * 2 + M.BACKLOG_WINDOW * refq * 2
 
-    # 앵커에서 DEFICIT_CAP분기밖에 안 지난 시점이면 아직 하한에 안 닿는다(=하한이
-    # 무조건 걸리는 상수가 아니라 실제로 굴러가는 값인지 확인)
-    near = M.ANCHOR + 3                       # 앵커 포함 4분기만 경과
-    s_near = M.running_shortage({}, {}, {}, refq, near, horizon=4)
-    assert s_near == fut + 4 * refq, f"4분기치(-400)만 쌓여야 한다 (got {s_near})"
+    # 창은 cur_q에만 걸리고 ANCHOR와 무관하다(앵커 방식의 잔재가 없는지)
+    old = M.running_shortage({}, {}, {}, refq, M.ANCHOR + 3, horizon=4)
+    assert old == fut + M.BACKLOG_WINDOW * refq
 
 
 def test_running_shortage_demol_reduces_inventory():
-    # 멸실 보정: 순공급=준공−멸실. 과거 2025Q1에 준공 400 + 멸실 100 → 재고에 실린
-    # 순증은 300세대뿐이어야 한다(기준표: 재건축 준공은 순공급을 부풀린다).
-    cur = 2026 * 4 + 2                     # 2026Q3
+    """멸실은 재고를 그만큼 정확히 줄인다 — 창 방식엔 하한 포화가 없다.
+
+    앵커+하한 시절엔 오래된 존이 하한에 붙어 멸실 유무가 상쇄돼 보였다.
+    """
+    cur = 2026 * 4 + 2
     refq = 100
     done = {'2025Q1': 400}
-    demol = {'2025Q1': 100}
-    sched = {'2026Q4': 0}
-    # I_now(멸실 있음): 앵커~2024Q4에 하한 -1600 도달. 2025Q1에
-    # max(-1600, -1600+400-100-100) = -1400, 이후 2025Q2~2026Q3(6분기) -100씩 →
-    # -1500, -1600, 이후 하한 유지 → I_now = -1600.
-    # (증거용 대조군) 멸실 없으면: 2025Q1에 -1300 → -1400 → -1500 → -1600 → 하한 유지.
-    # 두 경로 모두 cur_q(2026Q3)까지 하한으로 수렴하므로, 이 손계산으로는 s와
-    # s_no_demol이 같아진다. 재고가 하한에 안 닿은 구간(cur을 앞당겨)을 별도 검증한다.
-    s = M.running_shortage(done, sched, demol, refq, cur, horizon=4)
-    s_no_demol = M.running_shortage(done, sched, {}, refq, cur, horizon=4)
-    assert s == s_no_demol, (
-        "이 시나리오는 cur_q까지 재고가 완전 소진되므로 멸실 유무와 무관하게 같다")
+    s = M.running_shortage(done, {}, {'2025Q1': 100}, refq, cur, horizon=4)
+    s_no = M.running_shortage(done, {}, {}, refq, cur, horizon=4)
+    assert s - s_no == 100.0, (s, s_no)
+    assert s > s_no, '멸실을 반영하면 재고가 줄어 순부족이 커야 한다'
 
-    # 하한에 안 닿은 시점(cur을 done 직후로 당김)에서는 멸실이 I_now를 정확히
-    # 줄여야 한다: done 400, demol 100 in 2025Q1, refq=100, cur=2025Q1
-    # → I_now = max(-1600, -1600+400-100-100) = -1400 (멸실 없으면 -1300).
-    cur_near = 2025 * 4 + 0                # 2025Q1
-    fut = 0.0
-    for k in range(1, 5):
-        w = M._conf(k)
-        fut += w * refq
-    s_near = M.running_shortage(done, sched, demol, refq, cur_near, horizon=4)
-    s_near_no_demol = M.running_shortage(done, sched, {}, refq, cur_near, horizon=4)
-    assert s_near == fut + 1400.0, f"Expected s_near == {fut + 1400.0}, got {s_near}"
-    assert s_near_no_demol == fut + 1300.0, (
-        f"Expected s_near_no_demol == {fut + 1300.0}, got {s_near_no_demol}")
-    assert s_near > s_near_no_demol, (
-        "멸실을 반영하면 재고(I_now)가 줄어 순부족(s)이 더 커야 한다(+100)")
-    assert s_near - s_near_no_demol == 100.0
+    # 창 밖 멸실은 무시된다
+    s_out = M.running_shortage(done, {}, {'2022Q3': 100}, refq, cur, horizon=4)
+    assert s_out == s_no
+
 
 def test_running_shortage_ab_agree_without_decay():
     # Issue #4의 A안/B안은 conf가 있을 때만 갈렸다. 감쇠 폐지(2026-08-02)로
     # conf≡1.0이 되면서 Σconf*(refq-s) == Σrefq - Σconf*s 가 항등식이 된다.
     # 이 테스트는 그 동치를 못박는다 — 둘이 갈리면 conf가 되살아났다는 뜻이다.
-    # done={}이라 I_now는 하한 -DEFICIT_CAP*refq = -1600으로 같아, 차이가 생긴다면
+    # done={}이라 I_now는 하한 -BACKLOG_WINDOW*refq = -1600으로 같아, 차이가 생긴다면
     # 그건 순수하게 미래 항에서 온다.
     cur = 2026*4 + 2                       # 2026Q3
     refq = 100
     sched = {'2026Q4': 40, '2027Q1': 60, '2027Q2': 20, '2027Q3': 0}
-    CAP = M.DEFICIT_CAP * refq             # 1600
+    CAP = M.BACKLOG_WINDOW * refq             # 1600
     # A안: Σ (refq-sched) = 60 + 40 + 80 + 100 = 280 → s = 280 + 1600 = 1880
     s_a = M.running_shortage({}, sched, {}, refq, cur, horizon=4, weight_demand=True)
     assert s_a == 280.0 + CAP, f"Expected s_a == {280.0 + CAP}, got {s_a}"
@@ -107,7 +90,7 @@ def test_running_shortage_ab_agree_without_decay():
 
 def test_running_shortage_b_horizon16_hand_verified():
     # B4 결정(2026-07-25, 기준표 「기본의 기본 3」 근거): B안(weight_demand=False) +
-    # 4년 지평(horizon=16). done={} → I_now는 하한 -DEFICIT_CAP*refq = -800으로
+    # 4년 지평(horizon=16). done={} → I_now는 하한 -BACKLOG_WINDOW*refq = -800으로
     # 단순화되고, sched는 미래 1분기(k=1)에만 넣어 나머지 15분기는 공급 0으로 둔다.
     cur = 2026 * 4 + 2                     # 2026Q3
     refq = 50
@@ -116,7 +99,7 @@ def test_running_shortage_b_horizon16_hand_verified():
     # demand_sum = 16*refq = 800 (conf(k)>0 for all k=1..16, break never hits)
     # supply_weighted = conf(1)*50 = 1.0*50 = 50 (k=2..16의 sched=0이라 기여 없음)
     # fut = 800 - 50 = 750; I_now = -800 → s = 750 + 800 = 1550
-    assert s == 750.0 + M.DEFICIT_CAP * refq, f"Expected s == 1550.0, got {s}"
+    assert s == 750.0 + M.BACKLOG_WINDOW * refq, f"Expected s == 1550.0, got {s}"
 
 
 def test_calc_live_path_uses_b_and_horizon16():
@@ -155,8 +138,8 @@ def test_calc_live_path_uses_b_and_horizon16():
     assert r['inv_path'] is True
     expected = M.running_shortage({}, {sched_key: 50}, {}, 100 * 0.5, cur_q,
                                    horizon=16, weight_demand=False)
-    # refq = 100*share(0.5) = 50 → 미래항 750 + 하한 DEFICIT_CAP*50 = 800 → 1550
-    assert r['tot'] == expected == 750.0 + M.DEFICIT_CAP * 50
+    # refq = 100*share(0.5) = 50 → 미래항 750 + 하한 BACKLOG_WINDOW*50 = 800 → 1550
+    assert r['tot'] == expected == 750.0 + M.BACKLOG_WINDOW * 50
 
 
 def test_calc_demol_not_share_scaled():

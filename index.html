@@ -656,7 +656,7 @@ const DS_LABEL={매매지수:'매매 실거래지수',전세지수:'전세 실�
   규모별:'규모별 동향',
   인허가:'인허가',착공:'착공',분양:'신규 분양',준공:'준공',미분양:'미분양',
   금리:'CD금리',보급률:'주택보급률',
-  아파트건설:'아파트 건설(연도별)',주택멸실:'주택 멸실',노후주택30년:'30년이상 노후아파트',
+  아파트건설:'아파트 건설(연도별)',주택멸실:'주택 멸실',아파트멸실:'아파트 멸실',노후주택30년:'30년이상 노후아파트',
   리드타임:'착공·준공 리드타임'};
 const DS_COLOR={매매지수:'#e0564a',전세지수:'#a98be0',전세가율:'#2c7a5b',인허가:'#e8a33b',
   착공:'#3a7bd5',분양:'#3f7d8c',준공:'#7b5ea8',미분양:'#8a6a4a',
@@ -667,8 +667,11 @@ const DS_COLOR={매매지수:'#e0564a',전세지수:'#a98be0',전세가율:'#2c7
    담긴 전세가율·주택멸실이 앞으로 튀어나와, 기본 선택인 매매지수가 3번째에
    놓인다(모바일에서 선택 칩이 화면 밖). 가격→공급→주거여건→금리 순으로 고정. */
 // 공급 파이프라인 순서대로: 인허가→착공→분양→준공→미분양(분양의 잔량)
+// '아파트멸실'은 러닝재고(준공−멸실−적정)가 실제로 쓰는 계열이라 준공 옆에 둔다.
+// '주택멸실'(계, 단독 포함)은 표시용으로 남긴다 — 둘은 값이 크게 다르므로
+// (2024 전국 85,069호 vs 아파트분) 라벨로 구분되게 나란히 세운다.
 const DS_ORDER=['매매지수','전세지수','전세가율','규모별','인허가','착공','분양','준공','미분양',
-  '아파트건설','노후주택30년','주택멸실','보급률','금리','리드타임'];
+  '아파트건설','노후주택30년','아파트멸실','주택멸실','보급률','금리','리드타임'];
 let ST={ds:'매매지수',reg:null,years:0,aux:new Set()};
 let statChartObj=null;
 
@@ -2363,15 +2366,15 @@ function _qkey(i){return Math.floor(i/4)+'Q'+(i%4+1);}
    전체 근거는 make_zone_pages.py _conf() docstring. ⚠️ 두 구현은 같이 고친다. */
 function _conf(k){return 1.0;}
 var ANCHOR=2010*4;
-/* 재고 하한 = -DEFICIT_CAP*refq. 부족도 4년치까지 쌓인다(옛 max(0,·)는 만성부족 존의
-   재고를 늘 0에 붙여 정보를 죽였다 — 서울권 재고>0 분기 6%). 근거는 tools/make_zone_pages.py
+/* 과거 재고를 몇 분기 거슬러 볼지(4년). 옛 DEFICIT_CAP(누적 상한)을 대체 —
+   창이 곧 상한이라 클램프가 필요 없다. 근거·예측력 비교는 make_zone_pages.py
    running_shortage() 주석. ⚠️ 두 구현은 반드시 같이 고친다(max abs diff 0.0). */
-var DEFICIT_CAP=16;
+var BACKLOG_WINDOW=16;
 function runningShortage(done,sched,demol,refq,curQ,horizon){
-  /* 상하한 대칭 ±DEFICIT_CAP*refq(2026-08-02). 예전엔 아래로만 막혀 잉여가
-     2010년부터 16년치 쌓였다(김포권 -31,853) — '과거 4년' 문구가 한쪽만 참이었다. */
-  horizon=horizon||16; var I=0, cap=DEFICIT_CAP*refq;
-  for(var i=ANCHOR;i<=curQ;i++){ var qk=_qkey(i); I=Math.min(cap, Math.max(-cap, I+((done[qk])||0)-((demol[qk])||0)-refq)); }
+  /* 최근 4년만 0에서 누적(2026-08-02). 2010 앵커 방식은 상한이 값만 묶고 기억은
+     안 지워 '과거 4년' 문구가 사실과 달랐다. 창이 예측력도 더 낫다(8Q 0.144→0.167). */
+  horizon=horizon||16; var I=0;
+  for(var i=curQ-BACKLOG_WINDOW+1;i<=curQ;i++){ var qk=_qkey(i); I+=((done[qk])||0)-((demol[qk])||0)-refq; }
   var demandSum=0, supplyWeighted=0;
   for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
   /* 분해값 포함 반환 — Python running_shortage(full=True) 미러. tot==demand-supplyw-inow */

@@ -45,8 +45,8 @@ def js_side():
     qkey = grab(r'function _qkey\(i\)\{[^}]*\}', '_qkey')
     conf = grab(r'function _conf\(k\)\{[^}]*\}', '_conf')
     anchor = grab(r'var ANCHOR=[^;\n]*;', 'ANCHOR')
-    # 재고 하한(부족 누적 상한). 함수 밖 상수라 여기서 같이 떼와야 ReferenceError가 안 난다.
-    cap = grab(r'var DEFICIT_CAP=[^;\n]*;', 'DEFICIT_CAP')
+    # 과거 재고 창(분기). 함수 밖 상수라 여기서 같이 떼와야 ReferenceError가 안 난다.
+    cap = grab(r'var BACKLOG_WINDOW=[^;\n]*;', 'BACKLOG_WINDOW')
     sgrade = grab(r'var GRADE_CUTS=.*?\nfunction scGrade\([^)]*\)\{.*?\n\}', 'scGrade')
     rsh = grab(r'function runningShortage\([^)]*\)\{.*?\n\}', 'runningShortage')
     data = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()

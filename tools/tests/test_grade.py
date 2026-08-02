@@ -31,7 +31,7 @@ def test_running_shortage_full_breakdown():
     assert set(d) == {'tot', 'inow', 'demand', 'supplyw'}
     assert d['demand'] == 16 * refq                      # 800
     assert d['supplyw'] == 50.0                          # conf(1)*50
-    assert d['inow'] == -M.DEFICIT_CAP * refq            # 하한 -800
+    assert d['inow'] == -M.BACKLOG_WINDOW * refq            # 하한 -800
     assert d['tot'] == d['demand'] - d['supplyw'] - d['inow'] == 1550.0
     # full 생략 시 기존과 동일한 float
     s = M.running_shortage({}, sched, {}, refq, cur, horizon=16, weight_demand=False)
