@@ -584,7 +584,7 @@ button.cta.sub{border:1.5px solid var(--ink)}
 .zlist{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
 .zlist a{font-size:12.5px;font-weight:600;text-decoration:none;color:var(--ink2);background:#fff;
  border:1px solid var(--line);border-radius:3px;padding:5px 9px}
-.note{font-size:12.5px;color:var(--muted);line-height:1.8}
+.note{font-size:13.5px;color:var(--muted);line-height:1.75}
 footer{padding:26px 0 40px;text-align:center;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
 footer a{color:var(--muted)}
 .disc{font-size:12px;color:var(--muted);line-height:1.75;margin-top:14px}
@@ -676,7 +676,11 @@ details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold .dbody{padding:2px 16px 15px}
 details.fold .dbody p{font-size:14px}
 @media(max-width:420px){.t-val{font-size:14.5px}.trio{gap:6px}}
-.ucnt{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:4px}
+/* 제목 옆 인라인이면 '향후 4년 · 29개 단지 · 총 29,184세대'가 h2 안에서 어색하게
+   접힌다(2026-08-02 사용자). 아래 줄로 내리면 구조적으로 다른 섹션의 .note
+   부제와 같은 역할이 되므로 크기·색도 .note에 맞춘다 — 키우려면 .note와 함께. */
+.ucnt{display:block;font-size:13.5px;color:var(--muted);font-weight:400;
+ line-height:1.75;margin:5px 0 0}
 .ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
 .utable{border:0;table-layout:fixed;width:100%;font-size:13.5px}
 .utable thead th{position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;white-space:nowrap}
@@ -1535,10 +1539,16 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
             'x=Math.max(tw/2+2,Math.min(x,wr.width-tw/2-2));'
             'tip.style.left=x+"px";tip.style.top=y+"px";}'
             'cols.forEach(function(c){'
-            'c.addEventListener("click",function(){c.classList.contains("on")?hide():show(c)});'
-            'c.addEventListener("mouseenter",function(){show(c)});'
+            # 터치는 합성 mouseenter가 click보다 먼저 온다 — click을 토글로 두면
+            # 첫 탭이 show 직후 hide로 상쇄돼 두 번 눌러야 했다(2026-08-02 실기기).
+            # click은 무조건 show, hover는 마우스 포인터일 때만.
+            'c.addEventListener("click",function(e){e.stopPropagation();show(c)});'
+            'c.addEventListener("pointerenter",function(e){'
+            'if(!e.pointerType||e.pointerType==="mouse")show(c);});'
             'c.addEventListener("focus",function(){show(c)});});'
-            'wrap.addEventListener("mouseleave",hide);})();</script>'
+            'wrap.addEventListener("mouseleave",hide);'
+            'document.addEventListener("click",function(e){'
+            'if(!wrap.contains(e.target))hide();});})();</script>'
             '<script>(function(){var w=document.querySelector(".pidx");if(!w)return;'
             'var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");'
             'if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}'
