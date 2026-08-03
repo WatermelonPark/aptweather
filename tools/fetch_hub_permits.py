@@ -348,6 +348,25 @@ def classify_response(body):
     return 'data'
 
 
+class QuotaExhausted(Exception):
+    """일일 호출 한도 소진 — 이번 회차는 더 진행해도 의미가 없다."""
+
+
+# 연속으로 이만큼 한도초과가 나오면 회차를 접는다. 한 페이지가 MAX_RETRY(4)회를
+# 쓰므로 3개 법정동이 연달아 통째로 막힌 상태에 해당한다 — 일시적 스파이크와
+# 진짜 소진을 가르는 선.
+QUOTA_ABORT_STRIKES = 12
+_quota_strikes = {'n': 0}
+
+
+def _is_quota_error(code, msg):
+    """data.go.kr의 일일 한도초과 응답인가. code 22 / LIMITED_NUMBER... / 한글 메시지."""
+    if str(code).strip() == '22':
+        return True
+    m = (msg or '').upper()
+    return 'LIMITED_NUMBER_OF_SERVICE_REQUESTS' in m or '요청제한' in (msg or '')
+
+
 def _extract_error_info(body):
     """오류 XML에서 코드/메시지 추출(로그 출력용). 봉투 형식이 두 가지라 순서대로 탐색."""
     b = body or ''
@@ -403,8 +422,19 @@ def fetch_page(sigungu, bjdong, page, endpoint=EP):
             code, msg = _extract_error_info(body)
             print('WARN %s/%s p%d 시도%d/%d: API 오류 응답(code=%s msg=%s) — 재시도'
                   % (sigungu, bjdong, page, attempt + 1, MAX_RETRY, code, msg))
+            # 일일 한도가 소진되면 남은 시간 내내 모든 호출이 같은 오류로
+            # 재시도만 반복한다(2026-08-03: 340분 캡까지 헛돌다 타임아웃).
+            # 데이터가 망가지진 않지만(한도초과는 error라 clobber 방지가 걸린다)
+            # 러너 시간을 통째로 버리므로 회차를 깨끗하게 접는다.
+            if _is_quota_error(code, msg):
+                _quota_strikes['n'] += 1
+                if _quota_strikes['n'] >= QUOTA_ABORT_STRIKES:
+                    raise QuotaExhausted(
+                        '일일 호출 한도 소진(code=%s msg=%s) — 연속 %d회'
+                        % (code, msg, _quota_strikes['n']))
         time.sleep(PACE)
         if cls not in ('empty', 'error'):
+            _quota_strikes['n'] = 0      # 정상 응답이 오면 카운터 리셋
             return body, cls
         time.sleep(PACE * (attempt + 1))   # 추가 backoff
     if cls == 'error':
@@ -874,8 +904,17 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
             print('[%d/%d] %s(%s) %d개 법정동 수집 시작 (경과 %ds)'
                   % (n_done, len(target_keys), key, group['name'],
                      sum(len(b) for b in group['bjdong'].values()), int(elapsed)))
-            done_q, sched_q, units, productive, had_unresolved_error = fetch_group(
-                group, only_bjdong=None if mode_full else cached_productive)
+            try:
+                done_q, sched_q, units, productive, had_unresolved_error = fetch_group(
+                    group, only_bjdong=None if mode_full else cached_productive)
+            except QuotaExhausted as e:
+                # 남은 시간을 헛돌지 않고 접는다. 여기까지의 진행분은 그룹마다
+                # save()로 이미 파일에 있고, 이 그룹은 기록되지 않았으므로
+                # 다음 회차가 온전히 다시 시도한다. exit code는 0으로 둔다 —
+                # 워크플로의 업로드/커밋 스텝이 진행분을 거둬가야 하기 때문.
+                print('[ABORT quota] %s(%s)에서 중단: %s' % (key, group['name'], e))
+                print('일일 한도가 풀린 뒤 같은 모드로 다시 트리거하면 이어서 돈다.')
+                break
             if had_unresolved_error:
                 # Important: 지속 장애(인증/쿼터/레이트리밋 등) 중에 그룹의
                 # 일부 법정동만 실패해도, 그 부분합으로 out['sgg'][key]를
@@ -975,8 +1014,12 @@ def run_demol(mode_full, only_codes, reseed=False):
             print('[%d/%d][demol] %s(%s) %d개 법정동 수집 시작 (경과 %ds)'
                   % (n_done, len(target_keys), key, group['name'],
                      sum(len(b) for b in group['bjdong'].values()), int(elapsed)))
-            demol_q, productive, had_unresolved_error = fetch_group_demol(
-                group, only_bjdong=None if mode_full else cached_productive_demol)
+            try:
+                demol_q, productive, had_unresolved_error = fetch_group_demol(
+                    group, only_bjdong=None if mode_full else cached_productive_demol)
+            except QuotaExhausted as e:
+                print('[ABORT quota][demol] %s(%s)에서 중단: %s' % (key, group['name'], e))
+                break
             if had_unresolved_error:
                 # 준공 쪽과 동일한 clobber 방지 정책: 지속 장애로 부분합만
                 # 나온 회차는 기존 demol_q를 덮어쓰지 않는다.

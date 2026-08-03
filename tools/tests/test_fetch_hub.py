@@ -764,6 +764,92 @@ def test_fetch_page_logs_error_on_exhausted_empty_retries(monkeypatch, capsys):
     assert 'ERROR' in out and '빈 응답' in out
 
 
+# ---------------------------------------------------------------------------
+# 일일 한도 소진 회로차단(2026-08-03): 한도가 소진되면 남은 시간 내내 모든
+# 호출이 같은 오류로 재시도만 반복한다 — 데이터는 안 망가지지만(한도초과는
+# error라 clobber 방지가 걸린다) 러너 340분을 통째로 버린다.
+# ---------------------------------------------------------------------------
+
+QUOTA_XML = ('<OpenAPI_ServiceResponse><cmmMsgHeader>'
+             '<returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg>'
+             '<returnReasonCode>22</returnReasonCode>'
+             '</cmmMsgHeader></OpenAPI_ServiceResponse>')
+
+
+def _reset_strikes():
+    F._quota_strikes['n'] = 0
+
+
+def test_is_quota_error_recognizes_code_and_messages():
+    assert F._is_quota_error('22', '')
+    assert F._is_quota_error('', 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR')
+    assert F._is_quota_error('', '서비스 요청제한 횟수 초과 에러')
+    assert not F._is_quota_error('30', 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR')
+
+
+def test_quota_exhaustion_raises_after_sustained_strikes(monkeypatch):
+    _reset_strikes()
+    monkeypatch.setattr(F, '_curl_get', lambda s, b, p, endpoint=F.EP: QUOTA_XML)
+    monkeypatch.setattr(F, 'PACE', 0)
+    import pytest
+    with pytest.raises(F.QuotaExhausted):
+        for _ in range(10):                     # 한 페이지가 MAX_RETRY회를 쓴다
+            F.fetch_page('11200', '10100', 1)
+    _reset_strikes()
+
+
+def test_quota_strikes_reset_on_any_successful_response(monkeypatch):
+    """일시적 스파이크로 회차를 접으면 안 된다 — 정상 응답이 오면 초기화."""
+    _reset_strikes()
+    bodies = [QUOTA_XML, QUOTA_XML, QUOTA_XML,
+              '<response><header><resultCode>00</resultCode></header><body>'
+              '<items/><totalCount>0</totalCount></body></response>']
+    seq = {'i': 0}
+
+    def fake(s, b, p, endpoint=F.EP):
+        v = bodies[min(seq['i'], len(bodies) - 1)]
+        seq['i'] += 1
+        return v
+
+    monkeypatch.setattr(F, '_curl_get', fake)
+    monkeypatch.setattr(F, 'PACE', 0)
+    body, cls = F.fetch_page('11200', '10100', 1)
+    assert cls == 'no_data_xml'
+    assert F._quota_strikes['n'] == 0
+    _reset_strikes()
+
+
+def test_run_stops_cleanly_on_quota_exhaustion_preserving_progress(tmp_path, monkeypatch, capsys):
+    """한도 소진이면 남은 그룹을 헛돌지 않고 접되, 이미 저장된 진행분은 지킨다.
+
+    exit code로 죽으면 워크플로의 업로드/커밋 스텝이 진행분을 못 거둔다 —
+    그래서 예외가 아니라 break로 끝낸다.
+    """
+    _reset_strikes()
+    fake_groups = {
+        '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+                   'bjdong': {'41370': ['11300']}, 'legacy': None},
+        '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+                   'bjdong': {'48120': ['10100']}, 'legacy': None},
+    }
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': []},
+              'sgg': {}, 'productive_bjdong': []}
+    calls = []
+
+    def fetch_group_stub(group, only_bjdong=None):
+        calls.append(group['name'])
+        if group['name'] == '오산시':
+            return {'2024Q1': 5}, {}, [], ['4137011300'], False
+        raise F.QuotaExhausted('일일 호출 한도 소진(code=22) — 연속 12회')
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub)
+    assert calls == ['오산시', '창원시']
+    assert result['sgg']['41370']['done_q'] == {'2024Q1': 5}   # 한도 전 진행분 보존
+    assert '48120' not in result['sgg']                        # 실패 그룹은 안 씀
+    assert '[ABORT quota]' in capsys.readouterr().out
+    _reset_strikes()
+
+
 def test_fetch_bjdong_all_pages_no_error_on_clean_no_data(monkeypatch):
     monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page, endpoint=F.EP: ('', 'no_data_xml'))
     items, had_error = F.fetch_bjdong_all_pages('41370', '11300')

@@ -59,6 +59,10 @@ on:
           - reseed
           - full
           - demol
+      shards:
+        description: '돌릴 샤드 번호(JSON 배열). 기본 전체. 재시딩은 일일 API 한도 때문에 하루 2개씩 나눠 돈다 — 예: [1,2] 오늘, [3,4] 내일, [5,6] 모레'
+        type: string
+        default: '[1,2,3,4,5,6]'
 
 permissions:
   contents: write
@@ -77,7 +81,10 @@ jobs:
     strategy:
       fail-fast: false      # 한 샤드가 죽어도 나머지는 계속 — merge가 알아서 뺀다
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        # 소유권은 언제나 6분할 고정이다(--shard i/6). 여기서 고르는 건 "이번
+        # 회차에 어느 샤드를 돌릴지"일 뿐 — 안 돈 샤드의 그룹은 merge가
+        # 베이스 값으로 그대로 두므로 나눠 돌려도 데이터가 어긋나지 않는다.
+        shard: ${{ fromJSON(inputs.shards || '[1,2,3,4,5,6]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
