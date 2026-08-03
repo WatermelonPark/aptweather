@@ -87,7 +87,47 @@ def dedupe(items, key='mgmHsrgstPk'):
         seen[k] = it
     return list(seen.values())
 
-def apt_records(items):
+# 이중등재 접기(2026-08-03 감사)에서 무시할 필드.
+#   mgmHsrgstPk — 관리대장 키. **'단지' 키가 아니다.** 같은 사업이 서로 다른 PK로
+#     두 번 적재된 사례가 전국적으로 확인됐다(아래 참고).
+#   rnum — 응답 안의 행번호(페이지네이션 부산물). 데이터가 아니다.
+DUP_IGNORE_FIELDS = ('mgmHsrgstPk', 'rnum')
+
+def collapse_dup_registrations(items, ignore=DUP_IGNORE_FIELDS):
+    """PK·행번호를 뺀 모든 필드가 같은 레코드를 하나로 접는다.
+
+    근거(2026-08-03 원시 대조, 4개 시군구 28개 중복그룹): 같은 사업이 지번·
+    세대수·연면적·인허가일·준공(예정)일·레코드생성일까지 **전 필드가 동일한 채**
+    PK만 다르게 두 번 등재돼 있다 — HUB 적재/이관이 만든 시스템성 중복이다.
+    관측된 세 변형 전부 이 규칙 하나로 접힌다:
+      · PK 인접 연번        1000...220546 / 1000...220547 (제물포역 3,497세대)
+      · 신·구 PK 체계 혼재  1000...099016 / 1044100006146 (달서 본리동 589세대)
+      · 접수기관 접두 상이  1044100004684 / 1049100009042 (대구 학정역 1,098세대)
+    미래 준공예정 중복 174건 중 173건이 정확히 ×2인 것도 이 패턴과 정합한다.
+
+    ⚠️ 일부러 좁게 잡았다. 같은 사업이 **호별·동별 대장으로 쪼개져** 각 대장에
+    단지 총세대수가 복제된 유형(신림현대 1,634세대 × 56개 호별 대장, block/lot에
+    동·호수가 들어 있음)은 block·lot·apprvDay가 서로 달라 여기서 접히지 않는다 —
+    그건 지번 단위 사업 계상으로 따로 풀 문제다(감사 ③단계).
+
+    ⚠️ 멸실(demol_records)에는 적용하지 않는다. 같은 패턴이 있는지 아직 실측하지
+    않았고, 현재 멸실 값의 대부분은 API가 아니라 벌크파일 백필분이라 여기서
+    바꾸면 검증 안 된 변경이 순부족에 흘러든다.
+    """
+    seen = {}
+    for it in items:
+        sig = tuple(sorted(
+            (k, v.strip() if isinstance(v, str) else v)
+            for k, v in it.items() if k not in ignore))
+        seen.setdefault(sig, it)
+    return list(seen.values())
+
+def apt_records(items, collapse=True):
+    """공동주택·세대>0 → PK dedupe → 이중등재 접기.
+
+    collapse=False는 접기 전후 건수를 비교해 로그를 남기는 호출자
+    (fetch_group)를 위한 것이다. 집계 경로는 항상 기본값(True)을 쓴다.
+    """
     def ok(it):
         if (it.get('purpsCdNm') or '').strip() != '공동주택':
             return False
@@ -95,7 +135,8 @@ def apt_records(items):
             return int(float(it.get('totHhldCnt') or 0)) > 0
         except (TypeError, ValueError):
             return False
-    return dedupe([it for it in items if ok(it)])
+    out = dedupe([it for it in items if ok(it)])
+    return collapse_dup_registrations(out) if collapse else out
 
 def demol_records(items):
     """철거멸실관리대장(ArchPmsHubService/getApDemolExtngMgmRgstInfo) 원시

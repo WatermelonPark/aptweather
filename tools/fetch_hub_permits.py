@@ -265,10 +265,52 @@ def build_targets():
 # 2. HTTP 호출·XML 파싱 (curl subprocess, 페이싱·재시도)
 # ---------------------------------------------------------------------------
 
+def _json_body(body):
+    """응답이 JSON이면 dict로, 아니면 None. 포맷 판정 한 곳에서만 파싱한다."""
+    try:
+        d = json.loads(body)
+    except ValueError:
+        return None
+    return d if isinstance(d, dict) else None
+
+
+def _json_items(d):
+    """JSON 응답 dict -> item 리스트(0건이면 []).
+
+    data.go.kr JSON은 items가 세 형태로 온다: 0건이면 `"items":""`(빈 문자열),
+    1건이면 `"items":{"item":{...}}`(dict), 여러 건이면 `"item":[...]`(list).
+    셋 다 리스트로 정규화한다.
+    """
+    body = (d or {}).get('body')
+    if not isinstance(body, dict):
+        return []
+    items = body.get('items')
+    if isinstance(items, list):
+        item = items
+    elif isinstance(items, dict):
+        item = items.get('item')
+    else:
+        item = None          # "" 또는 None = 0건
+    if item is None:
+        return []
+    if isinstance(item, dict):
+        item = [item]
+    return [x for x in item if isinstance(x, dict)]
+
+
 def classify_response(body):
     """'empty'(재시도 대상) | 'no_data_json'(파라미터 누락형, 정상 무재시도) |
     'no_data_xml'(진짜 0건, 정상 무재시도) | 'error'(인증/쿼터 등 오류, 재시도+로그
     대상) | 'data'.
+
+    ⚠️ 함정(2026-08-03 실사고): 원천이 예고 없이 **기본 응답 포맷을 XML에서
+    JSON으로 바꿨다**. 예전 이 함수는 '{'로 시작하면 무조건 no_data_json
+    (파라미터 누락형 무자료)으로 봤기 때문에, 실데이터가 든 JSON 응답을
+    통째로 버리면서 error도 아니어서 clobber 방지 경로마저 타지 않았다 —
+    08-02 재시딩에서 부산 8개 구의 준공/준공예정이 0으로 소거된 채 라이브에
+    배포됐다. 이제 JSON도 내용으로 판정한다(파라미터 누락형은 body에 items
+    키 자체가 없다는 점으로 계속 구분). 1차 방어는 _curl_get의 _type=xml이고,
+    이건 그게 또 무시될 때를 위한 2차 방어다.
 
     함정(Finding 1): data.go.kr의 인증/쿼터 오류 응답(SERVICE KEY IS NOT
     REGISTERED ERROR, LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR 등)도
@@ -285,7 +327,17 @@ def classify_response(body):
     if len(b) == 0:
         return 'empty'
     if b.startswith('{'):
-        return 'no_data_json'
+        d = _json_body(b)
+        if d is None:
+            return 'error'          # JSON처럼 시작했는데 파싱 불가 = 예상 밖 포맷
+        if _json_items(d):
+            return 'data'
+        jb = d.get('body')
+        if not isinstance(jb, dict) or 'items' not in jb:
+            # {"body":{}} — bjdongCd 누락 등 호출 자체가 잘못된 형태(기존 계약 유지)
+            return 'no_data_json'
+        code = str((d.get('header') or {}).get('resultCode', '')).strip()
+        return 'no_data_xml' if code == '00' else 'error'
     if '<item>' not in b:
         if ('<cmmMsgHeader>' in b or 'returnReasonCode' in b or 'returnAuthMsg' in b):
             return 'error'
@@ -308,12 +360,17 @@ def _extract_error_info(body):
 
 
 def _curl_get(sigungu, bjdong, page, endpoint=EP):
+    # _type=xml (2026-08-03): 원천이 기본 응답 포맷을 XML->JSON으로 바꿔도
+    # 예전 XML을 그대로 돌려주는 파라미터다(실측 확인). 이걸 안 붙이면 08-02
+    # 사고(부산 8개 구 소거)가 재현된다 — classify_response의 JSON 처리는
+    # 2차 방어일 뿐, 1차 방어는 여기서 포맷을 못박는 것이다.
     cmd = ['curl', '-sS', '-G', endpoint,
            '--data-urlencode', 'serviceKey=%s' % KEY,
            '--data-urlencode', 'sigunguCd=%s' % sigungu,
            '--data-urlencode', 'bjdongCd=%s' % bjdong,
            '--data-urlencode', 'numOfRows=%d' % NUM_ROWS,
-           '--data-urlencode', 'pageNo=%d' % page]
+           '--data-urlencode', 'pageNo=%d' % page,
+           '--data-urlencode', '_type=xml']
     try:
         # Windows에서 text=True 기본 인코딩은 로케일(cp949)이라, curl이 뱉는
         # UTF-8 한글(bldNm/platPlc 등)을 디코딩하다 UnicodeDecodeError로 죽는다.
@@ -357,16 +414,34 @@ def fetch_page(sigungu, bjdong, page, endpoint=EP):
     return body, cls
 
 
-def parse_items(xml):
+def parse_items(body):
+    """XML/JSON 어느 포맷이든 item 리스트(값은 항상 문자열)로.
+
+    JSON 값은 숫자로 오지만(mgmHsrgstPk: 10568, totHhldCnt: 0) 전부 문자열로
+    정규화한다 — 그래야 dedupe/집계/이중등재 접기가 포맷과 무관하게 똑같이
+    동작한다(같은 대장이 포맷에 따라 다른 키로 갈리는 일이 없다)."""
+    b = (body or '').lstrip()
+    if b.startswith('{'):
+        return [{k: ('' if v is None else str(v)) for k, v in it.items()}
+                for it in _json_items(_json_body(b))]
     items = []
-    for blk in re.findall(r'<item>(.*?)</item>', xml, re.S):
+    for blk in re.findall(r'<item>(.*?)</item>', b, re.S):
         d = {t: v for t, v in re.findall(r'<(\w+)>([^<]*)</\1>', blk)}
         items.append(d)
     return items
 
 
-def parse_total_count(xml):
-    m = re.search(r'<totalCount>(\d+)</totalCount>', xml)
+def parse_total_count(body):
+    b = (body or '').lstrip()
+    if b.startswith('{'):
+        jb = (_json_body(b) or {}).get('body')
+        if not isinstance(jb, dict):
+            return None
+        try:
+            return int(jb.get('totalCount'))
+        except (TypeError, ValueError):
+            return None
+    m = re.search(r'<totalCount>(\d+)</totalCount>', b)
     return int(m.group(1)) if m else None
 
 
@@ -441,7 +516,7 @@ UNITS_CAP = None   # 시군구당 단지 리스트 상한. None = 무제한(2026
 
 
 def _aggregate(items):
-    """apt_records(공동주택·세대>0·PK dedupe) → 단지 최신단계 1회 분류.
+    """apt_records(공동주택·세대>0·PK dedupe·이중등재 접기) → 단지 최신단계 1회 분류.
     준공(useInsptDay) 있으면 done_q, 없고 준공예정(useInsptSchedDay) 있으면 sched_q,
     둘 다 없으면 미정(어디에도 안 감). 착공/인허가는 점수에 직접 안 쓴다.
 
@@ -544,6 +619,14 @@ def fetch_group(group, only_bjdong=None):
             if H.apt_records(items):
                 productive.append(full)
             all_items.extend(items)
+    # 이중등재 접기 규모를 그룹마다 남긴다(2026-08-03 감사). 무인 실행 로그에서
+    # "이번 재시딩이 실제로 무엇을 얼마나 걷어냈는지"를 사후에 확인할 수 있어야
+    # 한다 — 조용히 줄어든 숫자는 버그와 구별이 안 된다.
+    n_raw = len(H.apt_records(all_items, collapse=False))
+    n_kept = len(H.apt_records(all_items))
+    if n_raw != n_kept:
+        print('  이중등재 접기: 대장 %d건 -> %d건 (%d건 제거)'
+              % (n_raw, n_kept, n_raw - n_kept))
     done_q, sched_q, units = _aggregate(all_items)
     return done_q, sched_q, units, productive, had_unresolved_error
 

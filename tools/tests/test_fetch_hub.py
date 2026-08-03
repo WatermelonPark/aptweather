@@ -18,6 +18,98 @@ def test_classify_json_no_data_param_missing():
     assert F.classify_response('{"body":{},"header":{"resultCode":"00","resultMsg":"NORMAL SERVICE"}}') == 'no_data_json'
 
 
+# ---------------------------------------------------------------------------
+# 2026-08-03 실사고 회귀: 원천이 기본 응답 포맷을 XML->JSON으로 바꿨는데
+# 분류기가 '{'로 시작하면 무조건 no_data_json(무자료)로 봐서 실데이터를 조용히
+# 버렸다 — error가 아니라 clobber 방지도 안 타서 부산 8개 구 준공/준공예정이
+# 0으로 소거된 채 라이브에 배포됐다.
+# ---------------------------------------------------------------------------
+
+JSON_WITH_DATA = ('{"header":{"resultCode":"00","resultMsg":"NORMAL SERVICE"},'
+                  '"body":{"items":{"item":['
+                  '{"rnum":1,"platPlc":"인천광역시 미추홀구 숭의동 5-17번지",'
+                  '"mgmHsrgstPk":105616,"bldNm":"수봉아파트","purpsCdNm":"공동주택",'
+                  '"totHhldCnt":52,"useInsptDay":"20070404","useInsptSchedDay":" "},'
+                  '{"rnum":2,"platPlc":"인천광역시 미추홀구 숭의동 18번지",'
+                  '"mgmHsrgstPk":1000000000000000063855,"bldNm":"숭의3 아파트",'
+                  '"purpsCdNm":"공동주택","totHhldCnt":736,"useInsptDay":" ",'
+                  '"useInsptSchedDay":"20300930"}]},'
+                  '"numOfRows":100,"pageNo":1,"totalCount":157}}')
+
+JSON_ZERO_ROWS = ('{"header":{"resultCode":"00","resultMsg":"NORMAL SERVICE"},'
+                  '"body":{"items":"","numOfRows":100,"pageNo":1,"totalCount":0}}')
+
+
+def test_classify_json_with_items_is_data_not_no_data():
+    # 핵심 회귀: 실데이터가 든 JSON을 무자료로 버리면 안 된다.
+    assert F.classify_response(JSON_WITH_DATA) == 'data'
+
+
+def test_classify_json_zero_rows_is_normal_no_data():
+    assert F.classify_response(JSON_ZERO_ROWS) == 'no_data_xml'
+
+
+def test_classify_json_error_result_code_is_error():
+    body = '{"header":{"resultCode":"04","resultMsg":"HTTP ERROR"},"body":{"items":""}}'
+    assert F.classify_response(body) == 'error'
+
+
+def test_classify_malformed_json_is_error_not_silent_no_data():
+    assert F.classify_response('{"body": truncated...') == 'error'
+
+
+def test_parse_items_reads_json_and_stringifies_values():
+    # 숫자로 오는 JSON 값(PK/세대수)을 문자열로 정규화해야 XML 경로와 dedupe·
+    # 집계·이중등재 접기가 동일하게 동작한다.
+    items = F.parse_items(JSON_WITH_DATA)
+    assert len(items) == 2
+    assert items[0]['mgmHsrgstPk'] == '105616'
+    assert items[0]['totHhldCnt'] == '52'
+    assert items[1]['mgmHsrgstPk'] == '1000000000000000063855'
+    assert items[1]['purpsCdNm'] == '공동주택'
+
+
+def test_parse_items_json_single_item_is_dict_not_list():
+    # data.go.kr JSON은 1건일 때 item을 리스트가 아니라 dict로 준다.
+    body = ('{"header":{"resultCode":"00"},"body":{"items":{"item":'
+            '{"mgmHsrgstPk":1,"purpsCdNm":"공동주택","totHhldCnt":10}},"totalCount":1}}')
+    items = F.parse_items(body)
+    assert len(items) == 1 and items[0]['totHhldCnt'] == '10'
+
+
+def test_parse_items_json_zero_rows_is_empty_list():
+    assert F.parse_items(JSON_ZERO_ROWS) == []
+
+
+def test_parse_total_count_reads_json_total_count():
+    assert F.parse_total_count(JSON_WITH_DATA) == 157
+    assert F.parse_total_count(JSON_ZERO_ROWS) == 0
+    assert F.parse_total_count('{"body":{}}') is None
+
+
+def test_json_response_aggregates_same_as_xml():
+    # 포맷이 뭐든 집계 결과가 같아야 한다(포맷 전환이 수치를 흔들면 안 됨).
+    done_q, sched_q, units = F._aggregate(F.parse_items(JSON_WITH_DATA))
+    assert done_q == {'2007Q2': 52}
+    assert sched_q == {'2030Q3': 736}
+
+
+def test_curl_get_forces_xml_format(monkeypatch):
+    # 1차 방어: _type=xml을 빼면 08-02 사고가 재현된다.
+    seen = {}
+
+    class FakeResult:
+        stdout = '<response/>'
+
+    def fake_run(cmd, **kw):
+        seen['cmd'] = cmd
+        return FakeResult()
+
+    monkeypatch.setattr(F.subprocess, 'run', fake_run)
+    F._curl_get('28177', '10100', 1)
+    assert '_type=xml' in seen['cmd']
+
+
 def test_classify_xml_zero_rows_is_normal_no_data():
     xml = ('<response><header><resultCode>00</resultCode></header><body>'
            '<items/><numOfRows>10</numOfRows><pageNo>1</pageNo><totalCount>0</totalCount>'
@@ -156,6 +248,26 @@ def test_aggregate_classifies_latest_stage_once():
     # 저장 순서는 stage별 묶음(done 먼저) — 화면 순서는 렌더러가 날짜로 다시 정한다.
     assert sorted(units) == sorted([['', 200, '2029-11', 'sched'],
                                     ['', 100, '2024-03', 'done']])
+
+
+def test_aggregate_counts_dual_registered_project_once():
+    """PK만 다른 이중등재는 세대수를 두 번 세면 안 된다(2026-08-03 감사).
+
+    실측 사례(제물포역 3,497세대): pk 220546/220547이 지번·연면적·예정일까지
+    전 필드가 같은 채 두 번 등재돼 있어, 예전 집계는 sched에 6,994를 넣었다 —
+    미래공급 과대 = 순부족 과소평가.
+    """
+    def rec(pk, rnum):
+        return {'mgmHsrgstPk': pk, 'rnum': rnum, 'purpsCdNm': '공동주택',
+                'bldNm': '제물포역 북측 도심 공공주택 복합지구 공동주택',
+                'platPlc': '인천광역시 미추홀구 도화동 94-1번지',
+                'totHhldCnt': '3497', 'totArea': '576352.0556',
+                'useInsptDay': '', 'useInsptSchedDay': '20310930'}
+
+    done_q, sched_q, units = F._aggregate([rec('1000000000000000220546', '3'),
+                                           rec('1000000000000000220547', '4')])
+    assert sched_q == {'2031Q3': 3497}     # 6994가 아니라 3497
+    assert len(units) == 1                 # 목록에도 한 번만
 
 
 def test_aggregate_keeps_every_unit_sorted_by_household():
