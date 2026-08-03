@@ -417,3 +417,26 @@ def test_start_lead_copy_does_not_claim_beyond_horizon():
     # 리드타임 수치는 LEADTIME/리포트와 어긋나면 안 된다 — 자체 재측정은 금지
     # (시도 패널 상관은 인허가→준공 24개월 같은 불가능한 값을 낸다).
     assert '2년 반' not in card and '30개월' not in card
+
+
+def test_hero_desc_never_contradicts_sequence():
+    """히어로 문구와 5칸 시퀀스가 정면 충돌하면 안 된다(2026-08-03).
+
+    멸실 배선으로 재고가 여유→부족으로 뒤집히며 '균형 등급 + 4년 내내 부족'
+    조합이 7곳 생겼는데, 균형 desc('필요한 만큼 들어오고 있습니다')가 바로 아래
+    '4년 내내 부족합니다'와 충돌했다. 전 구간 부족이면 등급이 균형·여유라도
+    부족을 인정하는 문구여야 한다.
+    """
+    import io as _io, re as _re
+    import make_zone_pages as _M
+    adv, sts = _M.load()
+    rows = _M.calc(adv, sts)
+    targets = [r for r in rows
+               if (r.get('seq') and all(v < 0 for v in r['seq'])
+                   and r['gr']['k'] in ('g1', 'g0'))]
+    assert targets, '이 조합이 사라졌다면 테스트 전제를 다시 확인할 것'
+    for r in targets[:3]:
+        html = _io.open('zone/%s/index.html' % r['z']['z'], encoding='utf-8').read()
+        h1 = _re.search(r'<h1>([^<]*)</h1>', html).group(1)
+        assert '필요한 만큼 들어오고 있습니다' not in h1, r['z']['z'] + ': 시퀀스와 충돌'
+        assert '부족' in h1, r['z']['z'] + ': 전 구간 부족인데 히어로가 침묵'

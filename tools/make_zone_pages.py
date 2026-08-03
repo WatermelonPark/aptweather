@@ -1177,6 +1177,16 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
             hero_desc = '지금은 모자라지만 %s 뒤 풀립니다' % _labs[_short[-1] + 1]
         else:
             hero_desc = '시기에 따라 모자랐다 풀렸다 합니다'
+    elif len(_short) == len(_seq) and gr['k'] in ('g1', 'g0'):
+        # 4년 내내 마이너스인데 등급은 균형/여유인 경우(2026-08-03 실측 7곳:
+        # 대구·여순광·김포·의정부·구미·안동·창원). 둘 다 사실이다 — 크기는 등급
+        # 밴드 안이지만 부호는 계속 부족이다. 그런데 균형 desc가 '필요한 만큼
+        # 들어오고 있습니다'라 바로 아래 '4년 내내 부족합니다'와 정면 충돌한다.
+        # 멸실 배선(7ea036b)으로 재고가 여유→부족으로 뒤집히며 생긴 조합이다.
+        hero_desc = '크게 모자라진 않지만 4년 내내 조금씩 부족합니다'
+    elif not _short and gr['k'] in ('g4', 'g3', 'g2'):
+        # 반대 조합 방어 — 현재 해당 존은 없지만 데이터가 바뀌면 생길 수 있다.
+        hero_desc = '지금 재고는 남지만 앞으로 필요량에는 못 미칩니다'
     else:
         hero_desc = gr['desc']
     hero_html = (
