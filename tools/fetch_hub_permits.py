@@ -521,9 +521,19 @@ def _aggregate(items):
     둘 다 없으면 미정(어디에도 안 감). 착공/인허가는 점수에 직접 안 쓴다.
 
     Task 7: done_q/sched_q 분류와 함께 단지 단위 raw 목록도 축적한다
-    (`units`: [bldNm, 세대, 'YYYY-MM', 'done'|'sched']) — 존 상세페이지의
+    (`units`: [bldNm, 세대, 'YYYY-MM', 'done'|'sched', platPlc]) — 존 상세페이지의
     "앞으로 들어올 물량"/"최근 들어온 물량" 리스트 렌더용. 원시 전량이 아니라
-    세대 큰 순 상위 UNITS_CAP개로 잘라 hub_permits.json 비대화를 막는다."""
+    세대 큰 순 상위 UNITS_CAP개로 잘라 hub_permits.json 비대화를 막는다.
+
+    5번째 원소 platPlc(지번, 2026-08-03 추가)는 화면용이 아니라 **감사용**이다.
+    같은 사업이 호별·동별 대장으로 쪼개진 채 각 대장에 단지 총세대수가 복제된
+    유형(원주 봉화산 e-편한세상 690세대 x 105개 대장, 신림현대 1,634세대 x 56개)은
+    이름·세대수만으로는 '진짜 별개 단지'와 구별할 수 없다 — 지번이 있어야
+    사업 단위로 묶을 수 있다. 저장해두면 그 수정을 재수집 없이 이 파일에서
+    소급 적용할 수 있다(UNITS_CAP=None이라 units 세대 합 == done_q+sched_q 합이므로
+    분기 집계를 units로부터 다시 만들 수 있다).
+    ⚠️ 배포 페이로드는 안 커진다 — update_adv_data._zone_units가 클라이언트로
+    보낼 때 [이름, 세대, 연월] 3개만 다시 조립한다(지번은 서버측 파일에만 남는다)."""
     done_q = collections.defaultdict(int)
     sched_q = collections.defaultdict(int)
     units = []
@@ -535,15 +545,16 @@ def _aggregate(items):
         if n <= 0:
             continue
         name = r.get('bldNm') or ''
+        plat = (r.get('platPlc') or '').strip()
         dq = H.to_quarter(r.get('useInsptDay'))
         if dq:
             done_q[dq] += n
-            units.append([name, n, H.to_yearmonth(r.get('useInsptDay')), 'done'])
+            units.append([name, n, H.to_yearmonth(r.get('useInsptDay')), 'done', plat])
             continue
         sq = H.to_quarter(r.get('useInsptSchedDay'))
         if sq:
             sched_q[sq] += n
-            units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched'])
+            units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched', plat])
         # 둘 다 없으면 미정 — 미반영
     # 세대 큰 순 정렬 + stage별 분리는 유지한다(화면이 done/sched 2섹션이라).
     # UNITS_CAP=None이면 `[:None]`이 전체 슬라이스라 컷 없이 그대로 통과한다 —

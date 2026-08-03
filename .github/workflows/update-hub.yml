@@ -96,9 +96,9 @@ jobs:
           fi
           if [ "${{ inputs.mode }}" = "reseed" ]; then
             echo "전량 재시딩(샤드 ${{ matrix.shard }}/6). scanned는 유지하고 reseed_done으로 재개한다."
-            python tools/fetch_hub_permits.py --full --reseed --shard ${{ matrix.shard }}/6
+            python -u tools/fetch_hub_permits.py --full --reseed --shard ${{ matrix.shard }}/6
           else
-            python tools/fetch_hub_permits.py --shard ${{ matrix.shard }}/6
+            python -u tools/fetch_hub_permits.py --shard ${{ matrix.shard }}/6
           fi
 
       - name: 산출물 업로드
@@ -177,10 +177,10 @@ jobs:
           fi
           if [ "${{ inputs.mode }}" = "demol" ]; then
             echo "멸실 전량 시딩(RESUMABLE, scanned_demol 별도). 준공(scanned)은 안 건드림."
-            python tools/fetch_hub_permits.py --demol --full
+            python -u tools/fetch_hub_permits.py --demol --full
           else
             echo "전량 시딩(RESUMABLE) — 340분에 끊기면 mode=full로 재트리거하면 이어서 돈다."
-            python tools/fetch_hub_permits.py --full
+            python -u tools/fetch_hub_permits.py --full
           fi
 
       - name: 커밋 (hub_permits.json만)

@@ -230,7 +230,8 @@ def test_aggregate_filters_apt_only_and_classifies_by_stage():
     # 단독주택(PK-B)은 apt_records에서 제외되어야 함
     assert done_q == {'2024Q1': 832}
     assert sched_q == {}
-    assert units == [['오산자이', 832, '2024-03', 'done']]
+    # units 5번째 원소는 지번(감사용) — 화면 페이로드에는 안 나간다(_zone_units가 3개만 재조립).
+    assert units == [['오산자이', 832, '2024-03', 'done', '경기도 오산시 세교동 123-4번지']]
 
 
 def test_aggregate_classifies_latest_stage_once():
@@ -246,8 +247,8 @@ def test_aggregate_classifies_latest_stage_once():
     assert sched == {'2029Q4': 200}
     # 세대 큰 순 정렬(B=200 sched 먼저) — bldNm 필드가 픽스처에 없어 빈 문자열
     # 저장 순서는 stage별 묶음(done 먼저) — 화면 순서는 렌더러가 날짜로 다시 정한다.
-    assert sorted(units) == sorted([['', 200, '2029-11', 'sched'],
-                                    ['', 100, '2024-03', 'done']])
+    assert sorted(units) == sorted([['', 200, '2029-11', 'sched', ''],
+                                    ['', 100, '2024-03', 'done', '']])
 
 
 def test_aggregate_counts_dual_registered_project_once():
@@ -849,10 +850,11 @@ def test_fetch_group_collects_units_across_bjdong(monkeypatch):
     group = {'name': '오산시', 'sido': '경기', 'members': ['41370'],
              'bjdong': {'41370': ['11300']}, 'legacy': None}
     items = [{'mgmHsrgstPk': 'X', 'purpsCdNm': '공동주택', 'totHhldCnt': '300',
-              'useInsptDay': '20240310', 'useInsptSchedDay': '', 'bldNm': '오산자이'}]
+              'useInsptDay': '20240310', 'useInsptSchedDay': '', 'bldNm': '오산자이',
+              'platPlc': '경기도 오산시 세교동 55번지'}]
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: (items, False))
     done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
-    assert units == [['오산자이', 300, '2024-03', 'done']]
+    assert units == [['오산자이', 300, '2024-03', 'done', '경기도 오산시 세교동 55번지']]
 
 
 def _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub):

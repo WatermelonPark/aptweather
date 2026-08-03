@@ -122,6 +122,29 @@ def test_hub_derive_injects_units_sorted_and_capped(tmp_path, monkeypatch):
     assert u['sched'] == [['오산더샵', 400, _ym_off(8)], ['오산센트럴', 500, _ym_off(21)]]
 
 
+def test_hub_derive_drops_audit_only_jibun_from_client_payload(monkeypatch):
+    """units 5번째 원소(지번)는 서버측 감사용 — 배포 페이로드로 새면 안 된다.
+
+    지번은 호별·동별 대장 중복을 사업 단위로 묶기 위해 2026-08-03에 수집기가
+    저장하기 시작한 값이다. 단지마다 30자 남짓이라 그대로 흘려보내면 존
+    페이지 페이로드가 눈에 띄게 커진다. 4원소 옛 항목도 계속 읽혀야 한다.
+    """
+    adv = {'permits': {}}
+    hp = {'meta': {'activate': True, 'scanned': ['41370'], 'unresolved_legacy': []},
+          'sgg': {'41370': {
+              'name': '오산시', 'done_q': {}, 'sched_q': {},
+              'units': [
+                  ['신단지', 300, _ym_off(-4), 'done', '경기도 오산시 세교동 123-4번지'],
+                  ['옛단지', 200, _ym_off(-8), 'done'],   # 지번 없던 시절 항목
+              ]}}}
+    monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
+    monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
+    U.hub_derive(adv)
+    done = adv['permits']['units']['오산권']['done']
+    assert all(len(u) == 3 for u in done), '지번이 클라이언트 페이로드로 새고 있다'
+    assert sorted(u[0] for u in done) == ['신단지', '옛단지']
+
+
 def test_hub_derive_units_window_no_count_cap(monkeypatch):
     # 캡 없음 + 시간 창. 창은 2026-08-03부터 **분기 단위**(차트 sched_q와 동일:
     # cur_q+1..cur_q+16) — 월 창(±48개월)이던 시절 경계가 어긋나 부천대장지구
