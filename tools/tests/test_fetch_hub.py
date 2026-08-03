@@ -271,6 +271,47 @@ def test_aggregate_counts_dual_registered_project_once():
     assert len(units) == 1                 # 목록에도 한 번만
 
 
+def test_aggregate_counts_per_dong_registrations_once_per_project():
+    """호별 대장 N개가 단지 총세대수를 복제해도 재고는 한 번만 잡혀야 한다.
+
+    실측(신림현대 1,634세대·14개 동): block=동번호·lot=호수가 다른 대장 수십 개가
+    각각 totHhldCnt=1,634를 달고 있다. PK 기준 dedupe도, PK만 다른 완전 복제
+    접기도 이걸 못 막는다 — 실질 필드가 서로 다르기 때문이다.
+    """
+    plat = '서울특별시 관악구 신림동 1694번지'
+
+    def rec(pk, block, lot):
+        return {'mgmHsrgstPk': pk, 'purpsCdNm': '공동주택', 'bldNm': '신림현대아파트',
+                'platPlc': plat, 'totHhldCnt': '1634', 'block': block, 'lot': lot,
+                'useInsptDay': '19930520', 'useInsptSchedDay': ''}
+
+    items = [rec('102%d' % i, '10%d' % (i % 12 + 1), '%d' % (100 + i)) for i in range(20)]
+    done_q, sched_q, units = F._aggregate(items)
+    assert sum(done_q.values()) == 1634       # 20 x 1,634 = 32,680이 아니라 1,634
+    assert len(units) == 1
+
+
+def test_aggregate_units_sum_always_matches_quarter_totals():
+    """목록 세대 합 == 분기 집계 합. 접기를 넣어도 이 항등식은 유지돼야 한다.
+
+    이 둘이 어긋나면 존 페이지의 '총 N세대'와 차트 총량이 달라져 사용자가
+    버그로 읽는다(UNITS_CAP 폐지의 원래 이유). 이제는 분기 집계를 접은 뒤의
+    units에서 만들기 때문에 정의상 같다.
+    """
+    plat = '경기도 오산시 세교동 1번지'
+    items = [
+        {'mgmHsrgstPk': 'A', 'purpsCdNm': '공동주택', 'totHhldCnt': '300', 'platPlc': plat,
+         'useInsptDay': '20240310', 'useInsptSchedDay': '', 'block': '101'},
+        {'mgmHsrgstPk': 'B', 'purpsCdNm': '공동주택', 'totHhldCnt': '300', 'platPlc': plat,
+         'useInsptDay': '20240315', 'useInsptSchedDay': '', 'block': '102'},
+        {'mgmHsrgstPk': 'C', 'purpsCdNm': '공동주택', 'totHhldCnt': '500', 'platPlc': plat + '2',
+         'useInsptDay': '', 'useInsptSchedDay': '20300930'},
+    ]
+    done_q, sched_q, units = F._aggregate(items)
+    assert sum(u[1] for u in units) == sum(done_q.values()) + sum(sched_q.values())
+    assert sum(done_q.values()) == 300 and sum(sched_q.values()) == 500
+
+
 def test_aggregate_keeps_every_unit_sorted_by_household():
     """캡 폐지(2026-08-02): 단지를 하나도 버리지 않는다.
 

@@ -85,6 +85,76 @@ def test_collapse_treats_blank_and_space_as_same():
     assert len(H.collapse_dup_registrations(items)) == 1
 
 
+# ---------------------------------------------------------------------------
+# 사업 단위 계상 — 호별·동별 대장에 단지 총세대수가 복제된 유형(F2).
+# 외부 실측: 봉화산 e편한세상(원주 단계동) 690세대 · 신림현대(관악) 1,634세대·14개동.
+# ---------------------------------------------------------------------------
+
+BONG = '강원특별자치도 원주시 단계동 1234번지'
+
+
+def test_collapse_by_project_folds_replicated_complex_total():
+    # 대장 105개가 각각 단지 총세대수 690을 달고 있는 실제 형태.
+    units = [['봉화산 e-편한세상', 690, '2004-11', 'done', BONG] for _ in range(99)]
+    units += [['봉화산e-편한세상', 690, '2004-12', 'done', BONG] for _ in range(3)]
+    out = H.collapse_units_by_project(units)
+    assert len(out) == 1
+    assert sum(u[1] for u in out) == 690          # 72,450이 아니라 실제 690
+    assert out[0][2] == '2004-11'                 # 최빈 연월(소수 이설 대장에 안 밀림)
+    assert out[0][0] == '봉화산 e-편한세상'        # 최빈 표기
+
+
+def test_collapse_by_project_keeps_genuinely_different_sizes_at_same_jibun():
+    """같은 지번이라도 세대수가 다르면 진짜 동별 분할 — 합산돼야 한다.
+
+    세대수를 키에 넣는 이유가 이것이다. 지번만으로 접으면 동별로 규모가 다른
+    단지의 물량이 통째로 사라진다.
+    """
+    units = [['A동', 60, '2020-01', 'done', BONG],
+             ['B동', 80, '2020-01', 'done', BONG],
+             ['C동', 100, '2020-01', 'done', BONG]]
+    out = H.collapse_units_by_project(units)
+    assert sum(u[1] for u in out) == 240
+
+
+def test_collapse_by_project_prefers_done_over_sched():
+    # 이미 준공된 단지를 미래공급으로도 세면 재고·미래공급 이중계상이 된다.
+    units = [['신림현대', 1634, '2006-11', 'sched', BONG],
+             ['신림현대', 1634, '1993-05', 'done', BONG],
+             ['신림현대', 1634, '2007-02', 'sched', BONG]]
+    out = H.collapse_units_by_project(units)
+    assert len(out) == 1
+    assert out[0][3] == 'done' and out[0][2] == '1993-05'
+
+
+def test_collapse_by_project_leaves_units_without_jibun_untouched():
+    # 지번은 2026-08-03부터 수집한다 — 없는 항목을 근거 없이 접으면 안 된다.
+    units = [['옛항목', 500, '2019-03', 'done'],
+             ['옛항목', 500, '2019-04', 'done', '   ']]
+    out = H.collapse_units_by_project(units)
+    assert len(out) == 2
+    assert sum(u[1] for u in out) == 1000
+
+
+def test_collapse_by_project_is_idempotent():
+    """두 번 접어도 값이 같아야 한다.
+
+    재시딩 도중 코드가 갱신되면 일부 시군구는 수집기가 이미 접은 상태로,
+    나머지는 대장 그대로 저장된다 — 소급 스크립트(rebuild_hub_projects)가 그
+    섞인 파일에 다시 돌아도 이미 접힌 쪽을 망가뜨리면 안 된다.
+    """
+    units = [['봉화산 e-편한세상', 690, '2004-11', 'done', BONG] for _ in range(5)]
+    once = H.collapse_units_by_project(units)
+    twice = H.collapse_units_by_project(once)
+    assert once == twice
+
+
+def test_collapse_by_project_separates_different_jibun():
+    units = [['1단지', 500, '2020-01', 'done', BONG],
+             ['2단지', 500, '2020-01', 'done', BONG.replace('1234', '5678')]]
+    assert len(H.collapse_units_by_project(units)) == 2
+
+
 def test_apt_records_applies_collapse_by_default_and_can_opt_out():
     items = [_reg('1000000000000000220546', rnum='3'),
              _reg('1000000000000000220547', rnum='4')]

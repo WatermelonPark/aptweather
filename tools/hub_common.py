@@ -122,6 +122,54 @@ def collapse_dup_registrations(items, ignore=DUP_IGNORE_FIELDS):
         seen.setdefault(sig, it)
     return list(seen.values())
 
+def collapse_units_by_project(units):
+    """units([이름, 세대, 'YYYY-MM', stage, 지번]) -> **사업 단위** 1건씩.
+
+    같은 사업이 호별·동별·부속동 대장으로 쪼개진 채 각 대장에 단지 총세대수가
+    복제돼 있다(2026-08-03 감사). 대장을 그대로 합산하면 단지 하나가 수십 번
+    계상된다 — 외부 실측으로 확정한 사례:
+      · 봉화산 e편한세상(원주 단계동) 실제 690세대 -> 105개 대장 = 72,450세대
+        (원주시 전체 재고의 51%)
+      · 신림현대(관악 신림동) 실제 1,634세대·14개 동 -> 53개 대장 = 약 86,600세대
+        (대장마다 block=동번호·lot=호수가 다른 호별 등기)
+      · 원주 명륜동 847-4의 '경비실' 대장이 세대수 280을 그대로 달고 있음
+    [[collapse_dup_registrations]](PK만 다른 완전 복제)로는 이들이 안 접힌다 —
+    block/lot/인허가일이 서로 달라 '실질 필드가 다른' 별개 레코드로 보이기 때문이다.
+
+    키는 (지번, 세대수)다. 세대수를 키에 넣는 게 핵심 안전장치다: 한 지번에
+    동별 대장이 **서로 다른 세대수**로 올라와 있으면(진짜 동별 분할) 각각
+    살아남아 정상적으로 합산되고, **같은 세대수**가 반복될 때만 접힌다 —
+    그건 단지 총세대수가 복제된 신호다.
+
+    남길 1건을 고르는 규칙:
+      · done이 하나라도 있으면 done을 남긴다(수집기의 '단지 최신단계 1회 분류'를
+        사업 단위로 올린 것 — 이미 준공된 단지를 미래공급으로도 세면 이중계상).
+      · 연월은 최빈값, 동률이면 이른 쪽. 리모델링·대수선으로 뒤늦게 붙은 소수
+        대장이 원래 준공 시점을 밀어내지 않게 한다.
+      · 이름은 최빈 비어있지 않은 값(표기 흔들림 흡수, 화면 표시용).
+
+    ⚠️ 지번이 빈 항목은 접지 않고 그대로 둔다 — 판단 근거가 없는데 접으면
+    서로 다른 사업을 뭉갤 수 있다(지번은 2026-08-03부터 수집한다).
+    """
+    out = []
+    groups = {}
+    for u in units:
+        plat = (u[4] if len(u) > 4 else '') or ''
+        if not plat.strip():
+            out.append(u)          # 판단 불가 — 원본 유지
+            continue
+        groups.setdefault((plat.strip(), u[1]), []).append(u)
+    for (plat, n), us in groups.items():
+        stage = 'done' if any(x[3] == 'done' for x in us) else us[0][3]
+        same = [x for x in us if x[3] == stage]
+        yms = [x[2] for x in same if x[2]]
+        ym = sorted(set(yms), key=lambda y: (-yms.count(y), y))[0] if yms else None
+        names = [x[0] for x in same if (x[0] or '').strip()]
+        name = max(set(names), key=lambda v: (names.count(v), -len(v))) if names else (same[0][0] or '')
+        out.append([name, n, ym, stage, plat])
+    return out
+
+
 def apt_records(items, collapse=True):
     """공동주택·세대>0 → PK dedupe → 이중등재 접기.
 

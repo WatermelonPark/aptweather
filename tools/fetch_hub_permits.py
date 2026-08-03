@@ -534,8 +534,6 @@ def _aggregate(items):
     분기 집계를 units로부터 다시 만들 수 있다).
     ⚠️ 배포 페이로드는 안 커진다 — update_adv_data._zone_units가 클라이언트로
     보낼 때 [이름, 세대, 연월] 3개만 다시 조립한다(지번은 서버측 파일에만 남는다)."""
-    done_q = collections.defaultdict(int)
-    sched_q = collections.defaultdict(int)
     units = []
     for r in H.apt_records(items):
         try:
@@ -548,14 +546,24 @@ def _aggregate(items):
         plat = (r.get('platPlc') or '').strip()
         dq = H.to_quarter(r.get('useInsptDay'))
         if dq:
-            done_q[dq] += n
             units.append([name, n, H.to_yearmonth(r.get('useInsptDay')), 'done', plat])
             continue
         sq = H.to_quarter(r.get('useInsptSchedDay'))
         if sq:
-            sched_q[sq] += n
             units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched', plat])
         # 둘 다 없으면 미정 — 미반영
+    # 사업 단위 계상(2026-08-03): 호별·동별 대장에 단지 총세대수가 복제된 것을
+    # (지번, 세대수)로 접는다. 상세는 hub_common.collapse_units_by_project.
+    units = H.collapse_units_by_project(units)
+    # 분기 집계는 접은 뒤의 units에서 만든다 — 예전엔 루프에서 따로 더해서, 목록과
+    # 차트가 다른 모집단을 볼 수 있었다. 지금은 정의상 units 세대 합 == done_q+sched_q 합.
+    done_q = collections.defaultdict(int)
+    sched_q = collections.defaultdict(int)
+    for u in units:
+        q = H.to_quarter(u[2])
+        if not q:
+            continue
+        (done_q if u[3] == 'done' else sched_q)[q] += u[1]
     # 세대 큰 순 정렬 + stage별 분리는 유지한다(화면이 done/sched 2섹션이라).
     # UNITS_CAP=None이면 `[:None]`이 전체 슬라이스라 컷 없이 그대로 통과한다 —
     # 캡을 되살릴 일이 생겨도 이 구조는 그대로 쓰면 된다(2026-08-01 stage별 분리는
