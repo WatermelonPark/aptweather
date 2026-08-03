@@ -411,6 +411,12 @@ def fetch_page(sigungu, bjdong, page, endpoint=EP):
         code, msg = _extract_error_info(body)
         print('ERROR %s/%s p%d: 재시도(%d회) 소진 — API 오류 지속(code=%s msg=%s), 0건으로 기록하지 않음'
               % (sigungu, bjdong, page, MAX_RETRY, code, msg))
+    elif cls == 'empty':
+        # 빈 응답(연결 끊김·타임아웃)도 재시도를 다 쓰면 '수집 실패'다. 예전엔
+        # 아무 로그도 안 남아서, 원천이 조용히 연결을 끊는 구간을 사후에
+        # 알아볼 방법이 없었다(2026-08-03 실사고 — 아래 fetch_bjdong_all_pages 참고).
+        print('ERROR %s/%s p%d: 재시도(%d회) 소진 — 빈 응답 지속(연결 끊김/타임아웃), 0건으로 기록하지 않음'
+              % (sigungu, bjdong, page, MAX_RETRY))
     return body, cls
 
 
@@ -486,7 +492,16 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=EP):
         if cls == 'no_data_json' and log is not None:
             log.append('WARN %s/%s p%d: 파라미터 누락형 무자료 응답(호출 확인 필요)'
                         % (sigungu, bjdong, page))
-        if cls == 'error':
+        if cls in ('error', 'empty'):
+            # 🚨 'empty'(빈 응답)도 반드시 수집 실패로 올린다(2026-08-03 실사고).
+            # 예전엔 'error'만 had_error로 쳤다. 그런데 재시도를 다 쓰고도 빈
+            # 응답만 오면 fetch_page가 ('', 'empty')를 돌려주고, 여기서 그냥
+            # break해 '이 법정동은 0건'과 똑같은 결과가 됐다 — had_error=False라
+            # clobber 방지도 안 타서 run()이 그 그룹을 0으로 확정 저장했다.
+            # 실제 피해: 6샤드 재시딩 중 원천이 레이트리밋으로 연결을 끊기
+            # 시작하자 서울 성동구·서초구·강서구·도봉구, 대구 북구, 인천 계양구
+            # 7개 그룹 390,997세대가 '깨끗하게 스캔된 0'으로 기록돼 커밋됐다.
+            # 빈 응답은 "데이터가 없다"가 아니라 "답을 못 받았다"이다.
             had_error = True
         # no_data_xml(진짜 0건) / no_data_json / 재시도 소진(empty, error) 모두
         # 더 페이지 없음으로 종료. 'error'가 재시도 끝까지 안 풀린 경우 이미

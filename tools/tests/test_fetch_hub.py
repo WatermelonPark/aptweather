@@ -729,6 +729,41 @@ def test_fetch_bjdong_all_pages_reports_had_error_on_retry_exhaustion(monkeypatc
     assert had_error is True
 
 
+def test_fetch_bjdong_all_pages_reports_had_error_on_persistent_empty_response(monkeypatch):
+    """🚨 회귀(2026-08-03 실사고): 빈 응답도 '수집 실패'다.
+
+    원천이 레이트리밋으로 연결을 끊기 시작하면 curl이 빈 문자열을 돌려주고
+    fetch_page는 재시도를 다 쓴 뒤 ('', 'empty')를 반환한다. 예전엔 'error'만
+    had_error로 쳐서, 이게 '이 법정동은 0건'과 구별 없이 통과했다 — clobber
+    방지도 안 타서 서울 성동구·서초구 등 7개 그룹 390,997세대가 '깨끗하게
+    스캔된 0'으로 확정 저장·커밋됐다.
+    """
+    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page, endpoint=F.EP: ('', 'empty'))
+    items, had_error = F.fetch_bjdong_all_pages('11200', '10100')
+    assert items == []
+    assert had_error is True, '빈 응답을 0건으로 통과시키면 안 된다'
+
+
+def test_fetch_group_marks_error_when_every_bjdong_times_out(monkeypatch):
+    # 그룹 전체가 빈 응답이면 결과를 신뢰하면 안 된다 — run()이 기존 값을 지키도록.
+    group = {'name': '성동구', 'sido': '서울', 'members': ['11200'],
+             'bjdong': {'11200': ['10100', '10200']}, 'legacy': None}
+    monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page, endpoint=F.EP: ('', 'empty'))
+    done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
+    assert had_unresolved_error is True
+    assert done_q == {} and sched_q == {}
+
+
+def test_fetch_page_logs_error_on_exhausted_empty_retries(monkeypatch, capsys):
+    # 조용히 실패하면 사후에 원인을 못 찾는다 — 실제로 그래서 로그가 텅 비어 있었다.
+    monkeypatch.setattr(F, '_curl_get', lambda sigungu, bjdong, page, endpoint=F.EP: '')
+    monkeypatch.setattr(F, 'PACE', 0)
+    body, cls = F.fetch_page('11200', '10100', 1)
+    assert cls == 'empty'
+    out = capsys.readouterr().out
+    assert 'ERROR' in out and '빈 응답' in out
+
+
 def test_fetch_bjdong_all_pages_no_error_on_clean_no_data(monkeypatch):
     monkeypatch.setattr(F, 'fetch_page', lambda sigungu, bjdong, page, endpoint=F.EP: ('', 'no_data_xml'))
     items, had_error = F.fetch_bjdong_all_pages('41370', '11300')
