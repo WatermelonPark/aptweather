@@ -248,6 +248,14 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
     LZ, O, P, B = adv['livezone'], adv['occupancy'], adv['permits'], adv.get('bubble') or {}
     J = (sts.get('전세가율') or {}).get('series') or {}
     DM = (sts.get('주택멸실') or {}).get('series') or {}
+    # 아파트멸실(KOSIS DT_MLTM_5416 itm=아파트, 시도 연간) — 러닝재고의 멸실 항.
+    # HUB 철거멸실관리대장은 2020년에서 끊겨(전 기간 누적 189,939 < KOSIS 2024
+    # 한 해 85,069) 4년 창(2022Q4~) 안이 전부 0이었다 — 재건축으로 사라진 집이
+    # 재고에 그대로 남아 부족이 과소평가됐다(2026-08-03 배선). '주택멸실'(계)을
+    # 쓰면 안 된다: 단독이 절반이라 아파트 재고에서 과대 차감된다.
+    ADM = sts.get('아파트멸실') or {}
+    ADM_DATES = ADM.get('dates') or []
+    ADM_SER = ADM.get('series') or {}
     # 적정물량 안분 잣대 — 2026-07-31 인구 -> 주민등록세대수. 아파트 수요는 사람 수보다
     # 가구 수에 가깝고 1인가구 증가를 반영한다. data.js는 hh/sidohh를 항상 실으므로
     # 폴백 없음. ⚠️ index.html scCalc()와 산식이 같아야 한다(이중구현 미러).
@@ -314,7 +322,25 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         tot_fallback = W[0] * dA + W[1] * dC + W[2] * dB
         zdone = (P.get('done') or {}).get(z['z']) or {}
         zsched = (P.get('sched') or {}).get(z['z']) or {}
-        zdemol = (P.get('demol') or {}).get(z['z']) or {}
+        # 멸실: 시도 연간 아파트멸실 × 세대 비중(share) ÷ 4분기 균등. 창의 마지막
+        # 두 해(2025~26)는 아직 미발표라 최근 3개년 평균을 이월한다(사용자 결정).
+        # ⚠️ share는 시도 안분 비중(풀 재배선 전 값) — 멸실은 행정 통계라 시도
+        # 잣대가 맞다. running_shortage 계약대로 zone-level 절대값을 만들어 넘긴다.
+        # ⚠️ index.html scCalc()와 반드시 동치(이중구현 미러 — check_dual_calc 대조).
+        # 계열이 없으면(구버전 data.js) 옛 HUB demol로 폴백 — 사실상 창 안 0이다.
+        zdemol = {}
+        _adv_ = ADM_SER.get(ps)
+        if _adv_ and ADM_DATES:
+            _ym = {ADM_DATES[i]: _adv_[i] for i in range(len(ADM_DATES))
+                   if i < len(_adv_) and _adv_[i] is not None}
+            _tail = [v for _, v in sorted(_ym.items())][-3:]
+            _avg3 = (sum(_tail) / len(_tail)) if _tail else 0.0
+            for _k in range(BACKLOG_WINDOW):
+                _qi = cur_q - _k
+                _ann = _ym.get(str(_qi // 4), _avg3)
+                zdemol[_qkey(_qi)] = _ann * share / 4.0
+        else:
+            zdemol = (P.get('demol') or {}).get(z['z']) or {}
         inv_path = bool(zdone) or bool(zsched)
         # done/sched가 있는 존만 러닝재고 산식(신모델)을 쓴다. 없는 존(비완결·inactive)은
         # pre-HUB 산식(dA/dB/dC 가중합)을 그대로 유지 — activate 게이트 전엔 전 존이 이 경로.

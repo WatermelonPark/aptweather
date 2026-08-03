@@ -2444,7 +2444,19 @@ function scCalc(){
     if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}
     const tot_fallback=0.55*dA+0.35*dC+0.10*dB;
     const zdone=(P.done&&P.done[z.z])||{}, zsched=(P.sched&&P.sched[z.z])||{};
-    const zdemol=(P.demol&&P.demol[z.z])||{};
+    /* 멸실: KOSIS 아파트멸실(시도 연간)×share÷4분기. 2025~26은 최근 3개년 평균
+       이월. HUB demol은 2020년에서 끊겨 창 안이 전부 0이었다(2026-08-03 배선).
+       ⚠️ make_zone_pages.py calc()와 반드시 동치 — 계열 없으면 HUB 폴백. */
+    let zdemol={};
+    const _adm=(typeof STATS!=='undefined'&&STATS['아파트멸실'])||null;
+    if(_adm&&_adm.series&&_adm.series[ps]&&_adm.dates){
+      const _ym={};_adm.dates.forEach((y,i)=>{const v=_adm.series[ps][i];if(v!=null)_ym[y]=v;});
+      const _ys=Object.keys(_ym).sort(), _tail=_ys.slice(-3).map(y=>_ym[y]);
+      const _avg3=_tail.length?_tail.reduce((a,b)=>a+b,0)/_tail.length:0;
+      for(let _k=0;_k<BACKLOG_WINDOW;_k++){const _qi=curQ-_k;
+        const _ann=(_ym[String(Math.floor(_qi/4))]!=null)?_ym[String(Math.floor(_qi/4))]:_avg3;
+        zdemol[_qkey(_qi)]=_ann*share/4;}
+    }else{zdemol=(P.demol&&P.demol[z.z])||{};}
     const invPath=!!(Object.keys(zdone).length||Object.keys(zsched).length);
     // zdone/zsched는 ZONE 실적, refq는 REGION 적정 — share를 곱해 zone-level 적정으로 맞춘다
     // (tools/make_zone_pages.py calc()와 반드시 동치, dA/dB/dC와 동일 원칙).
