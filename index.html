@@ -2369,6 +2369,18 @@ function scGrade(tot,need4){
   for(var i=0;i<GRADE_CUTS.length;i++){if(r>=GRADE_CUTS[i]){g=GRADES[i];break;}}
   return {k:g[0],label:g[1],color:g[2],desc:g[3],ratio:r};
 }
+/* 화면에 나열하는 표준 순서 — 등급 그룹 → 그룹 안은 절대 세대수 큰 순.
+   ⚠️ tools/make_zone_pages.py zone_order()와 반드시 동치(미러).
+   홈 순위표·/zone/ 허브·존 페이지의 "N위"가 모두 이 하나의 순서를 써야 한다.
+   2026-08-04 감사 전까지 홈 '내 지역' 카드의 mzRank만 gr.ratio 단독 내림차순이라
+   44곳 중 38곳이 존 페이지와 다른 순위를 보였고(서울권 홈 7위 vs 존 페이지 2위),
+   두 화면이 같은 localStorage 키에 서로 다른 정의의 rank를 덮어썼다. */
+var GORDER=['g4','g3','g2','g1','g0'];
+function zoneOrder(rows){
+  return rows.slice().sort(function(a,b){
+    return (GORDER.indexOf(a.gr.k)-GORDER.indexOf(b.gr.k))||(b.tot-a.tot);
+  });
+}
 /* 러닝재고 순부족 — tools/make_zone_pages.py calc()/running_shortage()와 반드시 동치(미러). 정규화 금지.
    B안(weight_demand=False)+horizon 16(4년) 고정 — 기준표 「기본의 기본 3」 근거(2026-07-25 확정).
    수요는 비가중(Σrefq), 공급도 액면 그대로(Σsched) — calc()의 fut_weighted(A안) 분기는 여기 없다. */
@@ -2571,7 +2583,8 @@ function renderScoreSec(){
   Object.keys(agg).forEach(k=>{const u=agg[k];u.need4=u.zones.reduce((s,z)=>s+(z.need4||0),0);u.gr=scGrade(u.tot,u.need4);});
   const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.tot-a.tot);
   const mx=Math.max.apply(null,units.map(u=>Math.abs(u.tot)))||1;
-  const GORDER=['g4','g3','g2','g1','g0'];
+  /* GORDER는 위(scGrade 옆)에서 한 번만 정의한다 — 여기에 사본을 두면 등급이 늘거나
+     순서가 바뀔 때 한쪽만 고쳐진다. zoneOrder도 같은 상수를 쓴다. */
   /* 한 행을 그리는 곳은 하나뿐이어야 한다 — 정렬 모드가 둘이라고 템플릿을 복제하면
      한쪽만 고쳐져 두 모드가 어긋난다(같은 실수가 홈↔허브에서 이미 났었다). */
   const scRow=(u)=>{
@@ -2690,7 +2703,9 @@ function mzGet(){try{const d=JSON.parse(localStorage.getItem(MYZONE_KEY));return
 function mzSet(d){try{localStorage.setItem(MYZONE_KEY,JSON.stringify(d));}catch(e){}}
 function mzClear(){try{localStorage.removeItem(MYZONE_KEY);}catch(e){}}
 function mzRank(zones,nm){
-  return zones.slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0)).findIndex(z=>z.z===nm)+1;
+  /* 존 페이지·허브와 같은 잣대(zoneOrder = 등급군 → 절대 세대수)로 매긴다.
+     예전엔 gr.ratio 단독 정렬이라 같은 존이 화면마다 다른 'N위'로 보였다. */
+  return zoneOrder(zones).findIndex(z=>z.z===nm)+1;
 }
 function renderMyZone(){
   const box=document.getElementById('hero-zone');
