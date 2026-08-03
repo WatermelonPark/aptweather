@@ -123,19 +123,26 @@ def test_hub_derive_injects_units_sorted_and_capped(tmp_path, monkeypatch):
 
 
 def test_hub_derive_units_window_no_count_cap(monkeypatch):
-    # 2026-07-31: top-20 캡 폐지, 시간 창(±48개월)으로 전환 — 창 안이면 개수 제한 없이
-    # 전부 들어가고, 창 밖(과거 준공·먼 미래 예정)은 제외된다.
+    # 캡 없음 + 시간 창. 창은 2026-08-03부터 **분기 단위**(차트 sched_q와 동일:
+    # cur_q+1..cur_q+16) — 월 창(±48개월)이던 시절 경계가 어긋나 부천대장지구
+    # 656세대(2030-09)가 차트에만 있고 목록에서 빠졌다. 현재 분기도 차트처럼
+    # 제외되므로, 오프셋 +1~+12개월 중 현재 분기에 떨어지는 단지는 빠질 수 있다.
     adv = {'permits': {}}
+    import datetime as _dt
+    _t = _dt.date.today(); _cq = _t.year * 4 + (_t.month - 1) // 3
+    def _q(ym): return int(ym[:4]) * 4 + (int(ym[5:7]) - 1) // 3
     units = [['단지%d' % i, 100 + i, _ym_off((i % 12) + 1), 'sched'] for i in range(30)]
-    units.append(['먼미래단지', 999, _ym_off(60), 'sched'])   # +48개월 밖 — 제외
-    units.append(['옛날단지', 888, _ym_off(-100), 'done'])    # -48개월 밖 — 제외
+    expect = sum(1 for u in units if _cq < _q(u[2]) <= _cq + 16)
+    units.append(['먼미래단지', 999, _ym_off(60), 'sched'])   # +16분기 밖 — 제외
+    units.append(['옛날단지', 888, _ym_off(-100), 'done'])    # -16분기 밖 — 제외
     hp = {'meta': {'activate': True, 'scanned': ['41370'], 'unresolved_legacy': []},
           'sgg': {'41370': {'name': '오산시', 'done_q': {}, 'sched_q': {}, 'units': units}}}
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
     zu = adv['permits']['units']['오산권']
-    assert len(zu['sched']) == 30                     # 창 안 30개 전부 (캡 없음)
+    assert len(zu['sched']) == expect                 # 분기 창 안 전부 (캡 없음)
+    assert expect >= 27                               # 캡이 부활하면 여기서 걸린다
     assert '먼미래단지' not in [u[0] for u in zu['sched']]
     assert zu['done'] == []                           # 옛날단지 제외
 

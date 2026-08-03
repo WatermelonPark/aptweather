@@ -1225,20 +1225,25 @@ def _zone_units(hp, z_of, complete, today=None):
     통과시키되(미정 표기용) 리스트 맨 뒤로 보낸다.
     """
     import collections, datetime
-    # 수집기(fetch_hub_permits.py UNITS_CAP=40)가 시군구당 상위 40개 슈퍼셋을
-    # 이미 저장한다 — 여기서는 개수 캡 없이 시간 창만 적용한다.
-    UNIT_WINDOW = 48
+    # 수집기는 전량을 저장한다(UNITS_CAP 폐지) — 여기서는 시간 창만 적용한다.
+    # ⚠️ 창은 **분기 단위**다(2026-08-03). 예전 월 창(오늘±48개월)은 분기 창인
+    # 차트(sched_q, cur_q+1..+16)와 경계가 어긋났다: 부천대장지구 A-10BL 656세대
+    # (2030-09)가 차트의 2030Q3에는 들어가는데 월 창(~2030-08)에서 잘려, 존 페이지
+    # '총 N세대'가 차트와 656 차이 났다. 하류(render_units_2sec)와 동일한
+    # 분기 인덱스 비교를 쓴다.
+    HQ = 16                                     # ±16분기(4년)
     _t = today or datetime.date.today()
+    _cq = _t.year * 4 + (_t.month - 1) // 3
 
-    def _mo(ym):
+    def _q(ym):
         try:
-            return (int(ym[:4]) - _t.year) * 12 + (int(ym[5:7]) - _t.month)
+            return int(ym[:4]) * 4 + (int(ym[5:7]) - 1) // 3
         except (TypeError, ValueError, IndexError):
             return None
 
     def _in_win(u, lo, hi):
-        m = _mo(u[2]) if u[2] else None
-        return True if m is None else (lo <= m <= hi)
+        q = _q(u[2]) if u[2] else None
+        return True if q is None else (lo < q - _cq <= hi) if hi > 0 else (lo < q - _cq <= hi)
     raw_sched = collections.defaultdict(list)
     raw_done = collections.defaultdict(list)
     for cd, v in hp.get('sgg', {}).items():
@@ -1255,8 +1260,8 @@ def _zone_units(hp, z_of, complete, today=None):
                 raw_done[z].append([name, hh, ym])
     out = {}
     for z in set(raw_sched) | set(raw_done):
-        sched = [u for u in raw_sched.get(z, []) if _in_win(u, 0, UNIT_WINDOW)]
-        done = [u for u in raw_done.get(z, []) if _in_win(u, -UNIT_WINDOW, 0)]
+        sched = [u for u in raw_sched.get(z, []) if _in_win(u, 0, HQ)]
+        done = [u for u in raw_done.get(z, []) if _in_win(u, -HQ, 0)]
         sched.sort(key=lambda u: u[2] or '9999-99')          # 준공예정 오름차순, 결측은 맨 뒤
         done.sort(key=lambda u: u[2] or '0000-00', reverse=True)  # 준공 내림차순, 결측은 맨 뒤
         out[z] = {'sched': sched, 'done': done}

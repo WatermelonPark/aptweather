@@ -255,18 +255,24 @@ def test_regression_near_section_present_with_real_data(tmp_path):
         assert '주변과 비교하면' in html, '%s: 주변 카드가 비었다' % nm
 
 
-def test_render_units_2sec_dedupes_same_project():
-    """같은 단지가 동·블록별 별도 PK로 두 번 오면(대구금호워터폴리스 D2블록 사례)
-    화면에선 한 줄로 접는다."""
+def test_render_units_2sec_folds_same_project_without_dropping():
+    """같은 (이름·세대·연월) 두 건은 한 줄로 접되 세대수를 **합산**한다(2026-08-03).
+
+    예전엔 한 건을 버렸는데, 차트(sched_q)는 두 건을 다 세므로 목록 합계가
+    차트와 어긋났다 — 대구권 18건 12,441세대 증발. 두 줄 노출도, 합계 불일치도
+    신뢰를 깎는다는 사용자 판단에 따라 '합쳐서 한 줄 + ×N 표기'로 간다.
+    """
     units = {'sched': [
         ['대구금호워터폴리스 D2블록', 1334, '2028-10'],
-        ['대구금호워터폴리스 D2블록', 1334, '2028-10'],   # 중복
+        ['대구금호워터폴리스 D2블록', 1334, '2028-10'],   # 동·블록 분리 등록
         ['다른단지', 500, '2028-10'],
     ], 'done': []}
     html = M.render_units_2sec(units, TODAY)
-    assert html.count('대구금호워터폴리스 D2블록</td>') == 1
-    # 접힌 중복은 개수·합계에서도 빠져야 한다(1334 두 번이 아니라 한 번)
-    assert '2개 단지 · 총 1,834세대' in html
+    assert html.count('대구금호워터폴리스 D2블록') >= 1
+    assert '×2' in html                     # 접힘 표기
+    assert '2,668' in html                  # 1334×2 합산 세대
+    # 총계는 차트와 같은 셈법: 1334+1334+500
+    assert '2개 단지 · 총 3,168세대' in html
 
 
 def test_render_units_2sec_shows_count_and_total():

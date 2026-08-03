@@ -496,39 +496,49 @@ def render_units_2sec(units, today=None):
     sched = [u for u in sched if in_future(u)]
     done = [u for u in done if in_past(u)]
     # 같은 단지가 동·블록별로 따로 등록돼 PK가 갈리는 경우가 있다(예: 대구금호워터폴리스
-    # D2블록 ×2) — 화면에선 (이름, 세대, 연월)이 같으면 한 줄로 접는다.
-    def _dedupe(us):
-        seen, out = set(), []
+    # D2블록 ×2). 예전엔 (이름, 세대, 연월)이 같으면 한 건을 **버렸는데**, 그러면
+    # 목록 합계가 차트(sched_q 전량 합산)와 어긋난다 — 대구권에서 18건 12,441세대가
+    # 증발했다(2026-08-03). 두 줄로 보여도 신뢰가 깎이고 합계가 안 맞아도 깎인다는
+    # 사용자 판단에 따라, 버리지 않고 **합쳐서 한 줄**로 만든다: 세대수는 합산하고
+    # ×N 표기를 남긴다. 진짜 이중등록이든 별개 블록이든 모델(sched_q)은 이미 둘 다
+    # 세고 있으므로, 목록도 둘 다 세는 것이 모델·차트와 유일하게 일관된 선택이다.
+    def _fold(us):
+        seen, out = {}, []
         for u in us:
             k = (u[0], u[1], u[2] if len(u) > 2 else None)
             if k in seen:
+                f = seen[k]
+                f[1] += u[1]        # 세대 합산
+                f[3] += 1           # 접힌 건수
                 continue
-            seen.add(k)
-            out.append(u)
+            f = [u[0], u[1], u[2] if len(u) > 2 else None, 1]
+            seen[k] = f
+            out.append(f)
         return out
-    sched, done = _dedupe(sched), _dedupe(done)
+    sched, done = _fold(sched), _fold(done)
     if not sched and not done:
         return ''
 
+    def _row(u, suffix_fmt, none_label):
+        name, hh, ym = u[0], u[1], u[2]
+        n = u[3] if len(u) > 3 else 1
+        label = (suffix_fmt % ym.replace('-', '.')) if ym else none_label
+        # 접힌 건은 ×N을 붙이고 세대수는 합산값이다 — title에 이유를 남겨 "같은
+        # 단지가 왜 한 줄에 세대수가 두 배냐"는 오독을 막는다.
+        fold = (' <i class="ux" title="같은 이름·시기로 %d건 등록(동·블록 분리 등) — 세대수는 합계">×%d</i>'
+                % (n, n)) if n > 1 else ''
+        return ('<tr><td class="uname" title="%s">%s%s</td><td class="num">%s</td>'
+                '<td class="num">%s</td></tr>' % (esc(name), esc(name), fold, num(hh), label))
+
     def sched_row(u):
-        name, hh = u[0], u[1]
-        ym = u[2] if len(u) > 2 else None
-        label = ('%s 예정' % ym.replace('-', '.')) if ym else '미정'
-        return ('<tr><td class="uname" title="%s">%s</td><td class="num">%s</td>'
-                '<td class="num">%s</td></tr>' % (esc(name), esc(name), num(hh), label))
+        return _row(u, '%s 예정', '미정')
 
     def done_row(u):
-        name, hh = u[0], u[1]
-        ym = u[2] if len(u) > 2 else None
-        label = ('%s 준공' % ym.replace('-', '.')) if ym else '준공일 미상'
-        return ('<tr><td class="uname" title="%s">%s</td><td class="num">%s</td>'
-                '<td class="num">%s</td></tr>' % (esc(name), esc(name), num(hh), label))
+        return _row(u, '%s 준공', '준공일 미상')
 
-    # 합계 표기(2026-08-02 사용자 요청). 이 값은 **이 목록에 보이는 단지들의 합**이지
-    # 존 전체 물량이 아니다 — units는 수집기가 시군구당 상위 UNITS_CAP개만 담은
-    # 부분집합이라 차트(permits.sched 전량)와 다르다. 그래서 '목록 합계'로 못박아
-    # 쓴다. 예전엔 이 차이 때문에 합계를 아예 안 썼는데(대구권 차트 55,693 vs 목록
-    # 15,020), 숫자를 숨기면 사용자가 직접 더해보고 같은 혼란을 겪는다 — 라벨로 푼다.
+    # 머리말 '총 N세대'는 접기(_fold)가 합산 방식이라 차트 총량과 정의상 같다 —
+    # UNITS_CAP 폐지(전량 수집) + 버리지 않는 접기, 두 조건이 모두 필요하다.
+    # 어느 하나라도 되돌리면 두 숫자가 어긋난 채 나란히 놓인다.
     hh_sum = lambda us: sum((u[1] or 0) for u in us)
     parts = []
     if sched:
@@ -694,6 +704,8 @@ details.fold .dbody p{font-size:14px}
 /* 제목 옆 인라인이면 '향후 4년 · 29개 단지 · 총 29,184세대'가 h2 안에서 어색하게
    접힌다(2026-08-02 사용자). 아래 줄로 내리면 구조적으로 다른 섹션의 .note
    부제와 같은 역할이 되므로 크기·색도 .note에 맞춘다 — 키우려면 .note와 함께. */
+.ux{font-style:normal;font-size:11px;color:var(--muted);font-weight:600;
+ background:#eef1ef;border-radius:2px;padding:1px 4px;margin-left:4px;cursor:help}
 .ucnt{display:block;font-size:13.5px;color:var(--muted);font-weight:400;
  line-height:1.75;margin:5px 0 0}
 .ulist{max-height:396px;overflow-y:auto;background:#fff;border:1px solid var(--line)}
