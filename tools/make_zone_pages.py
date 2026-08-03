@@ -854,15 +854,20 @@ details.fold .dbody p{font-size:14px}
    스크린리더와 검색엔진은 계속 읽고, 툴팁도 이 텍스트를 그대로 띄운다. */
 .why3{position:relative}
 .why3 .w-sub{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-/* ⚠️ 색은 --ink2 이상으로. 처음 --line(#c4cec9)으로 칠했더니 지면(#f4f6f5) 대비가
-   1.49:1이라 사실상 안 보였다(2026-08-04 사용자 "배경색이랑 너무 비슷해서 안 보여").
-   UI 컨트롤 최소 대비는 3:1이고 --ink2는 6.17:1이다. 여기서 더 흐리지 말 것. */
-.why3 .w-i{position:relative;border:0;background:none;padding:0 0 0 5px;margin:0;cursor:pointer;
- font:inherit;font-size:13px;line-height:1;color:var(--ink2);vertical-align:1px}
+/* ⚠️ 흐리게 만들지 말 것. 처음엔 ⓘ 글리프를 --line(#c4cec9)으로 칠했다가 지면
+   (#f4f6f5) 대비 1.49:1로 사실상 안 보였고(2026-08-04), --ink2 글리프(6.17:1)로
+   올렸는데도 약하다는 피드백에 채운 원으로 바꿨다. 면이 있어야 작은 컨트롤이 눈에
+   걸린다 — 흰 i / 먹색 원은 7.4:1이고, 원 자체가 지면 대비 6.17:1이다.
+   radius 50%는 audit_design 허용값(원형 예외)이라 radius 2값 원칙과 충돌하지 않는다. */
+.why3 .w-i{position:relative;border:0;cursor:pointer;font:inherit;
+ display:inline-flex;align-items:center;justify-content:center;
+ width:15px;height:15px;margin-left:6px;padding:0;border-radius:50%;
+ background:var(--ink2);color:#fff;font-size:10.5px;font-weight:700;line-height:1;
+ vertical-align:-2px;font-style:italic;font-family:Georgia,'Times New Roman',serif}
 /* 글리프는 17x12라 그대로 두면 터치 최소선(32px)에 한참 못 미친다. 레이아웃을
    흔들지 않고 히트 영역만 넓히려면 의사요소로 덮는다(margin 음수는 flex를 흔든다). */
 .why3 .w-i::after{content:'';position:absolute;left:-9px;right:-9px;top:-12px;bottom:-12px}
-.why3 .w-i:hover,.why3 .w-i.on{color:var(--ink)}
+.why3 .w-i:hover,.why3 .w-i.on{background:var(--ink)}
 .why3 .w-i:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:50%}
 .w-tip{position:absolute;background:var(--ink);color:#fff;padding:7px 10px;border-radius:3px;
  font-size:12px;line-height:1.5;z-index:4;max-width:min(260px,86%);transform:translate(-50%,-100%);
@@ -1297,13 +1302,13 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
         # 읽어야 할 라벨·숫자와 경쟁했다. 텍스트는 DOM에 그대로 두고(.w-sub는 시각적
         # 으로만 숨김) 스크린리더·검색엔진은 계속 읽는다 — 지우는 게 아니라 접는 것.
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s'
-        '<button type="button" class="w-i" aria-label="설명 보기">ⓘ</button>'
+        '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
         '<span class="w-sub">%s</span></span><b>%s%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집'
-        '<button type="button" class="w-i" aria-label="설명 보기">ⓘ</button>'
+        '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
         '<span class="w-sub">%s</span></span><b>+%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
-        '<button type="button" class="w-i" aria-label="설명 보기">ⓘ</button>'
+        '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
         '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>−%s</b></div>'
         '<div class="w-tip" hidden></div>'
         '</div>%s</div></section>' % (
