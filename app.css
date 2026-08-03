@@ -832,6 +832,12 @@ table.adv thead th:first-child{text-align:center}
 
 /* 순위 섹션만 여백을 조인다(2026-08-02) — 홈 첫 화면에 순위 행이 더 들어오게.
    .home-sec/.thead 전역 값은 다른 섹션 리듬이라 건드리지 않고 여기서만 좁힌다. */
+/* 접힘 안내 — 행과 같은 폭·높이로 목록 흐름에 얹는다(2026-08-03 롤업 폐지). */
+.sc-gap{display:flex;align-items:center;justify-content:center;gap:6px;
+ padding:11px 8px;font-size:13px;color:var(--muted);text-decoration:none;
+ border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+ background:repeating-linear-gradient(135deg,transparent,transparent 6px,rgba(0,0,0,.02) 6px,rgba(0,0,0,.02) 12px)}
+.sc-gap:hover{color:var(--ink)}
 #sec-score{padding-top:22px}
 #sec-score h2{margin-bottom:4px}
 #sec-score .sc-key{margin-top:12px}

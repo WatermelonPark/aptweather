@@ -172,8 +172,9 @@
          원래 질문에 바로 답이 된다. -->
     <div id="mine-row"></div>
     <div id="score-wrap" style="text-align:left"></div>
-    <!-- 홈은 수도권을 1행으로 접은 요약(23행)이라, 개별 44곳 전체는 /zone/ 허브로 보낸다.
-         두 화면의 그룹핑·정렬 규칙은 같다(등급 그룹 → 그룹 안 절대 세대수 순). -->
+    <!-- 2026-08-03: 수도권 롤업 폐지 후 홈도 44곳 개별이다. 다만 목록이 2,022px가
+         돼 양끝(가장 모자란 14 + 가장 남는 5)만 남기고 가운데를 접는다 — 접힘 줄과
+         이 버튼이 모두 /zone/ 허브로 보낸다. 두 화면의 정렬 규칙은 같다. -->
     <a class="sc-more" href="/zone/" onclick="track('home_cta',{to:'zone_hub'})">전체 44개 지역 보기 →</a>
     <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
     <div id="score-map" style="text-align:left"></div>
@@ -2532,9 +2533,16 @@ function renderScoreSec(){
   const zones=all;
   const f=v=>v==null?'·':Math.round(v).toLocaleString();
   // ── 리스트: 수도권 통합 + 비수도권 생활권 ──
+  /* 2026-08-03: 수도권 롤업 폐지. 서울·인천·경기 20곳을 행정구역 그대로 개별
+     행으로 세운다. 롤업은 안에서 상계가 일어나 화성권(+1.58 매우 부족)이
+     평택(-1.73)·양주(-2.80)에 묻혔고, 서울권도 인천의 여유에 눌려 한 등급
+     내려갔다(단독 +1.03 부족 → 롤업 +0.52 다소 부족). 경기 20곳을 한 줄로
+     접는 안도 재봤지만 같은 상계가 그대로 재현돼(부족 12곳 +198,672 vs 여유
+     8곳 -104,636 → +0.28 균형) 채택하지 않았다.
+     agg 구조 자체는 남긴다 — zones 배열을 쓰는 하류(capDist 등)와 호환. */
   const agg={};
   zones.forEach(z=>{
-    const k=z.region==='수도권'?'수도권':z.z;
+    const k=z.z;
     const u=agg[k]||(agg[k]={name:k,region:z.region,psido:z.psido,pop:0,supply:0,dA:0,dB:0,dC:0,tot:0,need:0,zones:[],flag:z.flag,lo:z.lo,hi:z.hi,loan:z.loan,pv:z.pv,dY:z.dY});
     u.pop+=z.pop;u.supply+=z.supply;u.dA+=z.dA;u.dB+=z.dB;u.dC+=z.dC;u.tot+=z.tot;u.need+=z.need;u.zones.push(z);
   });
@@ -2559,7 +2567,7 @@ function renderScoreSec(){
         // ★(watch)는 2026-07-31 제거 — 투자 추천처럼 읽히는 오해 소지. ⚠(warn)만 유지.
         const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>':'<span class="sc-flag"></span>';
         const rr=u.gr.ratio||0;
-        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+(u.name==='수도권'?' · '+u.zones.length+'개 생활권 합계':'')+'"><span class="sc-lab">'+u.name+(u.name==='수도권'?'<i class="sc-sub">'+u.zones.length+'개 생활권 합계 · 안은 '+capDist(u.zones)+'</i>':'')+'</span>'+fb
+        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+'"><span class="sc-lab">'+u.name+'</span>'+fb
           +'<div class="sc-track">'+bar+'</div>'
           /* 값은 '지금 정렬 기준' 하나만 보여준다. 둘을 같이 적으면 칸이 밀리고
              어느 쪽으로 줄 세운 건지 오히려 헷갈린다(2026-08-01 사용자 지적).
@@ -2578,16 +2586,35 @@ function renderScoreSec(){
      등급 경계가 곧 비율 구간이므로 비율 내림차순이면 그룹도 저절로 이어진다. */
   const ordered = SCSORT==='abs' ? units
                                  : units.slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
+  /* 수도권 롤업을 걷어내 44행이 되면서 목록이 2,022px(모바일 2.5화면)가 됐다.
+     양끝만 남긴다 — 섹션 제목이 '어디가 모자라고 어디가 남나'라 여유 쪽을
+     통째로 자르면 절반의 질문이 사라진다. 가운데를 접고 허브로 보낸다. */
+  const HEAD=14, TAIL=5;
+  const gap=(n)=>'<a class="sc-gap" href="/zone/" data-t="zone_hub_gap">'
+    +'가운데 '+n+'곳 접힘 · 전체 보기 ›</a>';
   const wrap=document.getElementById('score-wrap');
-  wrap.innerHTML = SCSORT==='abs'
-    ? units.map(scRow).join('')            // units는 이미 tot 내림차순
-    : GORDER.map(gk=>{
-        const list=ordered.filter(u=>u.gr.k===gk);
-        if(!list.length)return '';
-        const g=list[0].gr;
-        return '<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
-          +list.map(scRow).join('');
-      }).join('');
+  if(SCSORT==='abs'){
+    // units는 이미 tot 내림차순 — 앞은 가장 모자란 곳, 뒤는 가장 남는 곳.
+    const n=units.length;
+    wrap.innerHTML = (n<=HEAD+TAIL+1)
+      ? units.map(scRow).join('')
+      : units.slice(0,HEAD).map(scRow).join('')+gap(n-HEAD-TAIL)
+        +units.slice(n-TAIL).map(scRow).join('');
+  }else{
+    // 비율순은 등급 그룹 머리를 유지한다 — 그룹째 접으면 등급 분포가 안 보인다.
+    let left=HEAD+TAIL, hidden=0, html='';
+    GORDER.forEach(gk=>{
+      const list=ordered.filter(u=>u.gr.k===gk);
+      if(!list.length)return;
+      const g=list[0].gr, take=Math.max(0,Math.min(list.length,left));
+      html+='<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
+        +list.slice(0,take).map(scRow).join('');
+      hidden+=list.length-take; left-=take;
+    });
+    wrap.innerHTML = html + (hidden?gap(hidden):'');
+  }
+  wrap.querySelectorAll('.sc-gap').forEach(a=>a.addEventListener('click',()=>{
+    track('home_cta',{to:a.dataset.t});}));
   const cap=document.getElementById('sc-cap');
   if(cap)cap.textContent = SCSORT==='abs'
     ? '모자란 세대수 큰 순 · 막대는 제곱근 비례'

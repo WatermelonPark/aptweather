@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v52'; // 내 지역을 순위표 상단 고정으로 이동 + 재고 궤적 5칸
+const VERSION = 'v53'; // 수도권 롤업 폐지(44곳 개별) + 양끝 접힘
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
