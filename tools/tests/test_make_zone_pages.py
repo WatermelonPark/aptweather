@@ -330,3 +330,34 @@ def test_zone_page_copy_has_no_decay_claim():
     body = src.split('def _conf', 1)[1].split('\n    """', 2)[-1]  # docstring 제외
     assert '먼 미래는 낮춰 반영' not in body
     assert '먼 미래를 낮춰 반영하면' not in body
+
+
+# ---------------------------------------------------------------------------
+# 서울 확산 관계 공시 (2026-08-03) — 방향성만, 시차 길이는 쓰지 않는다
+# ---------------------------------------------------------------------------
+
+def test_seoul_sync_table_is_evidence_gated():
+    """유의성 통과 6곳만 실린다 — 늘리려면 순열검정을 다시 돌릴 것."""
+    assert set(M.SEOUL_SYNC) == {'성남권', '광명권', '용인권', '남양주권', '인천권', '부천권'}
+    assert set(M.SEOUL_SYNC.values()) == {'co', 'lag'}
+    # 서울권 자신은 들어가면 안 된다(자기 자신과의 관계는 무의미)
+    assert '서울권' not in M.SEOUL_SYNC
+
+
+def test_seoul_sync_copy_never_states_a_lag_length():
+    """시차 길이(개월/분기)를 화면 문구에 쓰면 안 된다 — 최적 L이 창마다 흔들리고
+    전반 0 → 후반 7로 계통 이동해 상수로 굳히면 곧 틀린 말이 된다.
+
+    검사 대상은 실제 렌더된 페이지의 '서울과의 관계' 문단이다. 소스 전체를 훑으면
+    다른 섹션의 '3~4년 뒤 입주' 같은 무관한 문구까지 걸린다.
+    """
+    import io as _io, re as _re
+    html = _io.open('zone/인천권/index.html', encoding='utf-8').read()
+    m = _re.search(r'<b>서울과의 관계</b>.*?</p>', html, _re.S)
+    assert m, '확산권 존에 서울 관계 문단이 없다'
+    para = m.group(0)
+    assert '뒤이어' in para
+    for pat in (r'1년\s*반', r'\d+\s*개월', r'\d+\s*분기', r'\d+\s*년\s*(뒤|후)'):
+        assert not _re.search(pat, para), '시차 길이를 공시하고 있다: ' + pat
+    # 유의하지 않은 존에는 문단 자체가 없어야 한다
+    assert '서울과의 관계' not in _io.open('zone/화성권/index.html', encoding='utf-8').read()
