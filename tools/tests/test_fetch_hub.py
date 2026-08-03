@@ -1130,3 +1130,17 @@ def test_shard_keys_is_order_independent():
     a = F.shard_keys(keys, (2, 3))
     b = F.shard_keys(list(reversed(keys)), (2, 3))
     assert a == b
+
+
+def test_should_refresh_group_true_for_legacy_gu_cached_under_old_codes():
+    """부천 사각지대 회귀 방지(2026-08-03). fetch_group은 옛 구코드(41192/94/96)로
+    팬아웃해 조회하므로 productive_bjdong도 옛 코드로 저장되는데, 문지기가 대표
+    코드(41190)로만 교집합을 보면 항상 공집합 → --full 시딩이 멀쩡해도 증분이
+    매달 부천을 건너뛰었다. legacy_codes까지 팬아웃해 검사해야 한다."""
+    group_bjdong = {'41190': ['10100', '10200']}
+    legacy = {'legacy_codes': ['41192', '41194', '41196'], 'enumerable': True}
+    cached = {'4119210100', '4119410200'}          # 옛 코드로만 저장돼 있음
+    assert F.should_refresh_group('41190', group_bjdong, cached, False,
+                                  legacy=legacy) is True
+    # legacy 정보를 안 넘기면(옛 버그 재현) 여전히 False — 인자 전달을 잊으면 잡힌다
+    assert F.should_refresh_group('41190', group_bjdong, cached, False) is False

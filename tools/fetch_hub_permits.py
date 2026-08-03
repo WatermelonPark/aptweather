@@ -582,7 +582,7 @@ def fetch_group_demol(group, only_bjdong=None):
     return demol_q, productive, had_unresolved_error
 
 
-def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
+def should_refresh_group(key, group_bjdong, cached_productive, mode_full, legacy=None):
     """기본(증분) 모드에서 이 그룹을 갱신해도 되는지 판정(순수, 네트워크 없음).
 
     Finding 2: 기본 모드는 그룹 소속 법정동 중 cached_productive에 있는 것만
@@ -594,10 +594,19 @@ def should_refresh_group(key, group_bjdong, cached_productive, mode_full):
     소수만 seed된 상태에서 인자 없이(기본모드) 실행하면 나머지 대부분이 이렇게
     오염된다 — 이 함수는 그런 그룹을 걸러 out['sgg'][key]를 건드리지 않게 한다.
     --full/--only는 실제로 전량(또는 지정 그룹 전량)을 스캔하므로 항상 True.
+
+    legacy(2026-08-03): 부천처럼 옛 구코드 그룹은 fetch_group이 옛 코드로
+    팬아웃해 조회하므로 productive_bjdong도 옛 코드(41192/94/96 + bjdong)로
+    저장된다. 대표 코드(41190)로만 교집합을 보면 항상 공집합이라 이 문지기가
+    부천을 매달 돌려보냈다 — --full 시딩이 멀쩡히 끝났는데도 증분에서 영영
+    갱신이 안 되는 사각지대였다. fetch_group과 같은 팬아웃으로 검사한다.
     """
     if mode_full:
         return True
     group_bjdong_flat = {member_cd + b for member_cd, bs in group_bjdong.items() for b in bs}
+    if legacy and legacy.get('legacy_codes'):
+        all_b = {b for bs in group_bjdong.values() for b in bs}
+        group_bjdong_flat |= {lc + b for lc in legacy['legacy_codes'] for b in all_b}
     return bool(group_bjdong_flat & cached_productive)
 
 
@@ -708,7 +717,8 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
             # 그룹 하나 재스캔은 무해). --reseed는 이 스킵을 무시하고 진짜
             # 처음부터 전량을 다시 돈다(연 1회 등 의도적 재구축용).
             print('[RESUME skip] %s(%s) 이미 스캔 완료' % (key, group['name']))
-        elif not should_refresh_group(key, group['bjdong'], cached_productive, mode_full):
+        elif not should_refresh_group(key, group['bjdong'], cached_productive, mode_full,
+                                      legacy=group.get('legacy')):
             # Finding 2: 기본(증분) 모드에서 아직 한 번도 스캔된 적 없는 그룹은
             # 건드리지 않는다. 그냥 fetch_group을 불러버리면 only_bjdong으로
             # 넘긴 cached_productive와 이 그룹 소속 법정동이 하나도 안 겹쳐
