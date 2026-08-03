@@ -854,12 +854,15 @@ details.fold .dbody p{font-size:14px}
    스크린리더와 검색엔진은 계속 읽고, 툴팁도 이 텍스트를 그대로 띄운다. */
 .why3{position:relative}
 .why3 .w-sub{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* ⚠️ 색은 --ink2 이상으로. 처음 --line(#c4cec9)으로 칠했더니 지면(#f4f6f5) 대비가
+   1.49:1이라 사실상 안 보였다(2026-08-04 사용자 "배경색이랑 너무 비슷해서 안 보여").
+   UI 컨트롤 최소 대비는 3:1이고 --ink2는 6.17:1이다. 여기서 더 흐리지 말 것. */
 .why3 .w-i{position:relative;border:0;background:none;padding:0 0 0 5px;margin:0;cursor:pointer;
- font:inherit;font-size:12px;line-height:1;color:var(--line);vertical-align:1px}
+ font:inherit;font-size:13px;line-height:1;color:var(--ink2);vertical-align:1px}
 /* 글리프는 17x12라 그대로 두면 터치 최소선(32px)에 한참 못 미친다. 레이아웃을
    흔들지 않고 히트 영역만 넓히려면 의사요소로 덮는다(margin 음수는 flex를 흔든다). */
 .why3 .w-i::after{content:'';position:absolute;left:-9px;right:-9px;top:-12px;bottom:-12px}
-.why3 .w-i:hover,.why3 .w-i.on{color:var(--ink2)}
+.why3 .w-i:hover,.why3 .w-i.on{color:var(--ink)}
 .why3 .w-i:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:50%}
 .w-tip{position:absolute;background:var(--ink);color:#fff;padding:7px 10px;border-radius:3px;
  font-size:12px;line-height:1.5;z-index:4;max-width:min(260px,86%);transform:translate(-50%,-100%);
