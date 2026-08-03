@@ -2387,7 +2387,17 @@ function runningShortage(done,sched,demol,refq,curQ,horizon){
   /* 최근 4년만 0에서 누적(2026-08-02). 2010 앵커 방식은 상한이 값만 묶고 기억은
      안 지워 '과거 4년' 문구가 사실과 달랐다. 창이 예측력도 더 낫다(8Q 0.144→0.167). */
   horizon=horizon||16; var I=0;
-  for(var i=curQ-BACKLOG_WINDOW+1;i<=curQ;i++){ var qk=_qkey(i); I+=((done[qk])||0)-((demol[qk])||0)-refq; }
+  /* 진행 중인 분기는 done이 구조적으로 0에 가깝다(수집기가 사용승인일 찍힌 단지만
+     done으로 분류하는데 그 등록이 분기 중엔 거의 안 올라온다 — 2026Q3 실측 전국
+     done 0 / sched 80,063세대). 그런데 그 분기의 수요(refq)는 온전히 차감돼 순부족이
+     부풀었다(2026-08-04 감사). 미래 루프는 k=1부터라 sched[curQ]를 영영 안 읽으므로
+     여기서 되돌린다. done/sched는 단지 단위로 배타라 이중계상이 아니다.
+     ⚠️ make_zone_pages.running_shortage와 동치(미러). */
+  for(var i=curQ-BACKLOG_WINDOW+1;i<=curQ;i++){
+    var qk=_qkey(i), sup=((done[qk])||0);
+    if(i===curQ) sup+=((sched[qk])||0);
+    I+=sup-((demol[qk])||0)-refq;
+  }
   var demandSum=0, supplyWeighted=0;
   for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
   /* 분해값 포함 반환 — Python running_shortage(full=True) 미러. tot==demand-supplyw-inow */
@@ -2419,13 +2429,20 @@ function scCalc(){
      ⚠️ tools/make_zone_pages.py POOLS·사전 패스와 반드시 동치(미러). */
   const POOLS={'동남권':['부산권','김해권','창원권'],'대구권역':['대구권','구미권']};
   const POOL_OF={};Object.keys(POOLS).forEach(p=>POOLS[p].forEach(zn=>POOL_OF[zn]=p));
+  /* 존이 대표 시도에서 차지하는 세대 비중. ⚠️ make_zone_pages.zone_share와 동치(미러).
+     예전엔 Math.min(1,·)로 잘랐는데, 이웃 시도를 낀 생활권 넷(부산권+양산 /
+     대구권+경산·칠곡 / 광주권+나주·담양·화순·장성 / 대전세종권+세종·계룡)은
+     hh가 대표 시도 세대수를 넘어(1.10~1.26) 수요만 잘리고 공급은 전량 계상됐다
+     — 구조적으로 '공급 여유' 쪽으로 기울었다(2026-08-04 감사). 클램프 제거 =
+     세대당 적정률(refq/SH)을 존 전체 세대에 적용 = 공급 집계 범위와 단위 일치. */
+  const zoneShare=(z,ps)=>z.hh/(SH[ps]||z.hh||1);
   const poolRef={},poolHh={};
   LZ.zones.forEach(zz=>{
     const p=POOL_OF[zz.z];if(!p)return;
     const ps_=zz.region==='수도권'?'수도권':(zz.psido||'수도권');
     const band_=O.band&&O.band[ps_];
     const ref_=(O.ref&&O.ref[ps_])||(band_?(band_[0]+band_[1])/2:null);if(!ref_)return;
-    poolRef[p]=(poolRef[p]||0)+ref_*Math.min(1,zz.hh/(SH[ps_]||zz.hh||1));
+    poolRef[p]=(poolRef[p]||0)+ref_*zoneShare(zz,ps_);
     poolHh[p]=(poolHh[p]||0)+zz.hh;
   });
   return LZ.zones.map(z=>{
@@ -2433,7 +2450,7 @@ function scCalc(){
     const oi=O.regions.indexOf(ps); if(oi<0)return null;
     const band=O.band&&O.band[ps];
     const refq=(O.ref&&O.ref[ps])||(band?(band[0]+band[1])/2:null); if(!refq)return null;
-    const share=Math.min(1,z.hh/(SH[ps]||z.hh||1));
+    const share=zoneShare(z,ps);
     // 존 적정(zrefq): 기본은 시도 안분, 풀 소속 존은 풀 배분액을 세대 비중으로(미러).
     let zrefq=refq*share;
     const pool=POOL_OF[z.z];

@@ -160,6 +160,26 @@ GRADES = (
 )
 
 
+def zone_share(z, ps, SH):
+    """존이 대표 시도(ps)에서 차지하는 세대 비중. 존 적정 = refq × 이 값.
+
+    ⚠️ scCalc()의 share 계산과 반드시 동치(미러).
+
+    예전엔 min(1.0, ·)로 잘랐다. 그런데 생활권 넷은 이웃 시도 시군구를 포함한다 —
+    부산권(+양산), 대구권(+경산·칠곡), 광주권(+나주·담양·화순·장성),
+    대전세종권(+세종·계룡). 이 존들은 hh가 대표 시도 세대수를 넘어(1.10~1.26)
+    클램프에 걸렸고, 넘친 만큼의 **수요만 버려지고 그 시군구의 공급(준공·준공예정)은
+    전량 계상**됐다(2026-08-04 감사). 공급은 다 세고 수요는 자르니 구조적으로
+    '공급 여유' 쪽으로 기울었다 — 광주권은 그 때문에 부호까지 뒤집혀 있었다.
+
+    클램프를 없앤 것은 곧 '세대당 적정률(refq/SH)을 존 전체 세대에 적용한다'는
+    뜻이고, 공급 집계 범위(존 전체)와 단위가 맞는다. 이웃 시군구의 적정률을 대표
+    시도 것으로 대신 쓰는 근사는 남지만, 그건 존 단위 refq가 없어서지 잘라서
+    해결할 문제가 아니다.
+    """
+    return z['hh'] / (SH.get(ps) or z['hh'] or 1)
+
+
 def grade(tot, need4):
     r = (tot / need4) if need4 else 0.0
     for cut, g in zip(GRADE_CUTS, GRADES):
@@ -231,7 +251,20 @@ def running_shortage(done, sched, demol, refq, cur_q, horizon=FUT_HORIZON,
     I = 0.0
     for idx in range(cur_q - BACKLOG_WINDOW + 1, cur_q + 1):
         qk = _qkey(idx)
-        I += done.get(qk, 0) - demol.get(qk, 0) - refq
+        sup = done.get(qk, 0)
+        if idx == cur_q:
+            # 진행 중인 분기는 done이 구조적으로 0에 가깝다 — 수집기가 사용승인일
+            # (useInsptDay)이 찍힌 단지만 done으로 분류하는데 그 등록이 분기 중에는
+            # 거의 안 올라오기 때문이다(2026Q3 실측: 전국 done 0 · sched 80,063세대).
+            # 그런데 이 분기의 수요(refq)는 아래에서 온전히 차감된다 — 한 분기치
+            # 수요를 빈 공급과 맞대어 순부족이 그만큼 부풀었다(2026-08-04 감사).
+            # 미래 루프는 k=1부터라 sched[cur_q]를 영영 읽지 않으므로, 여기서
+            # 되돌린다. done과 sched는 단지 단위로 배타(사용승인일 유무로 분류)라
+            # 더해도 이중계상이 아니고, cur_q는 이 루프에만 등장해 중복도 없다.
+            # (창 안 '지난 분기의 sched'(예정일이 지났는데 미승인)를 재고로 볼지는
+            #  별개의 모델 판단이라 손대지 않는다 — 여기선 판단 여지가 없는 것만.)
+            sup += sched.get(qk, 0)
+        I += sup - demol.get(qk, 0) - refq
     I_now = I
     fut_weighted = 0.0
     demand_sum = 0.0
@@ -304,7 +337,7 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         ref_ = (O.get('ref') or {}).get(ps_) or (sum(band_) / 2 if band_ else None)
         if not ref_:
             continue
-        pool_ref[p] = pool_ref.get(p, 0.0) + ref_ * min(1.0, zz['hh'] / (SH.get(ps_) or zz['hh'] or 1))
+        pool_ref[p] = pool_ref.get(p, 0.0) + ref_ * zone_share(zz, ps_, SH)
         pool_hh[p] = pool_hh.get(p, 0.0) + zz['hh']
     out = []
     for z in LZ['zones']:
@@ -316,7 +349,7 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         refq = (O.get('ref') or {}).get(ps) or (sum(band) / 2 if band else None)
         if not refq:
             continue
-        share = min(1.0, z['hh'] / (SH.get(ps) or z['hh'] or 1))
+        share = zone_share(z, ps, SH)
         # 존 적정(zrefq): 기본은 시도 안분, 풀 소속 존은 풀 배분액을 세대 비중으로.
         zrefq = refq * share
         pool = POOL_OF.get(z['z'])
