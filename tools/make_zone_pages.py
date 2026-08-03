@@ -417,6 +417,50 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
     return out
 
 
+def start_lead(sts, adv, ps, cur_q, yrs=3):
+    """시도 착공 최근 yrs년 합 vs 적정물량 — 준공예정 지평선 밖을 보는 선행지표.
+
+    왜 필요한가: 모델의 미래 항은 준공예정(sched) 16분기뿐인데, 그건 **이미 착공된**
+    물량이다. 착공이 멈춰서 생기는 공급 절벽은 3~4년 뒤 준공에 나타나므로 창 밖에
+    있다. 대구권 실측(2026-08-03): 착공이 2021년 29,403호 → 2023년 872호로 무너졌는데
+    순부족은 '균형'이었다.
+
+    실측 근거(금리 잔잔 구간, 향후 16분기 물가차감 실질 상승률, n=688):
+      모델 부족비율 단독      +0.303
+      착공 부족비율 단독      +0.319
+      둘 사이 상관            +0.244   ← 겹치지 않는다
+      편상관(착공|모델 통제)  +0.265   ← 착공이 더하는 독립 정보
+      합산                    +0.392
+    즉 착공은 모델이 못 보는 것을 본다. 다만 **순부족 산식에는 넣지 않는다** — 시도
+    단위라 존 해상도가 없고, 넣으면 이중계상(착공→준공예정) 위험이 있다. 화면에만
+    별도 지표로 세운다.
+
+    반환: (최근 yrs년 착공 합, 같은 기간 적정, 비율%) 또는 None.
+    """
+    S = (sts or {}).get('착공') or {}
+    ser = (S.get('series') or {}).get(ps)
+    dates = S.get('dates') or []
+    ref = ((adv.get('occupancy') or {}).get('ref') or {}).get(ps)
+    if not ser or not dates or not ref:
+        return None
+    byq = {}
+    for i, d in enumerate(dates):
+        v = ser[i] if i < len(ser) else None
+        if v is None:
+            continue
+        try:
+            y, m = int(d[:4]), int(d[5:7])
+        except (ValueError, IndexError):
+            continue
+        byq[y * 4 + (m - 1) // 3] = byq.get(y * 4 + (m - 1) // 3, 0.0) + v
+    ks = [j for j in range(cur_q - yrs * 4 + 1, cur_q + 1) if j in byq]
+    if len(ks) < yrs * 4 - 2:          # 최근 분기 결측 2개까지만 허용
+        return None
+    got = sum(byq[j] for j in ks)
+    due = ref * len(ks)
+    return got, due, (100.0 * got / due if due else 0.0)
+
+
 def make_capital(rows):
     """수도권 16개 생활권을 하나로 합친 unit — 홈 순위표와 같은 기준."""
     caps = [r for r in rows if r['z']['region'] == '수도권']
@@ -700,6 +744,11 @@ footer a{color:var(--muted)}
 .q-col:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .q-col.on .q-bar{outline:1.5px solid var(--ink);outline-offset:1px}
 /* 누른 분기의 값 — 차트 위 한 줄에 띄운다(막대마다 숫자를 박으면 16칸에 안 들어간다) */
+.lead-box{margin:14px 0 0;padding:12px 14px;border:1px solid var(--line);
+ border-left:3px solid var(--ink2);background:#fff}
+.lead-box>b{display:block;font-size:14px;color:var(--ink);margin-bottom:5px}
+.lead-box p{font-size:14px;margin:0 0 6px}
+.lead-box p.note{margin:0}
 .seq{margin:0 0 14px}
 .seq-msg{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:7px}
 .seq-row{display:flex;gap:6px;max-width:320px}
@@ -1065,7 +1114,7 @@ def render_price_index(adv, zone, codes):
             '<a class="px-more" href="/#stats">전국 시황 통계 자세히 보기 →</a>'
             '</div>' % (_base, now, legend, svg))
 
-def build_page(r, allrows, prd, today, punits=None, pidx=None):
+def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
     z = r['z']; nm = z['z']; ps = r['ps']
     gr = r['gr']
     tname, tcol = gr['label'], gr['color']
@@ -1305,12 +1354,17 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
         qcap = ''
     cap_line = ('앞으로 4년(16분기) 창 · 국토부 건축HUB 준공예정 실측' if hub_sched
                 else '앞으로 %s분기 · 입주예정 단지 실측' % r['fq'])
+    # 착공 선행지표 — 준공예정 창(4년) 밖을 보는 유일한 신호. 순부족에는 안 넣는다.
+    # 계산은 호출부(main)가 시도별로 한 번만 하고(plead) 여기선 꺼내 쓴다 —
+    # build_page는 sts/adv를 받지 않는다(pidx와 같은 패턴).
+    lead_html = (plead or {}).get(ps, '')
     timeline_html = (
         '<section><div class="wrap"><h2>언제 들어오나</h2>'
         '<p class="note" style="margin-bottom:9px">%s</p>'
-        '%s%s</div></section>' % (
+        '%s%s%s</div></section>' % (
             cap_line, qchart_html,
-            ('<p class="note" style="margin-top:9px">%s</p>' % qcap) if qcap else ''))
+            ('<p class="note" style="margin-top:9px">%s</p>' % qcap) if qcap else '',
+            lead_html))
 
     # ── 인포그래픽: 기여 3카드 (가중 반영, 합계 = tot = 히어로 숫자) ──
     def tcard(lab, sub_, contrib, w):
@@ -2052,12 +2106,41 @@ def main():
     pages = list(rows)
     zcodes = zone_sgg_codes(adv)
     pidx = {z: render_price_index(adv, z, cs) for z, cs in zcodes.items()}
+    # 착공 선행지표 카드 — 시도 단위 통계라 시도별로 한 번만 만든다.
+    _lq = datetime.date.today()
+    _lcq = _lq.year * 4 + (_lq.month - 1) // 3
+    plead = {}
+    for _ps in {r['ps'] for r in rows}:
+        _sl = start_lead(sts, adv, _ps, _lcq)
+        if not _sl:
+            continue
+        _got, _due, _pct = _sl
+        # 컷은 실측 분포에 맞춘다(2026-08-03, 12개 시도): 20·32·32·37·57·63·70·
+        # 71·75·85·107·131%. 중앙값이 70% 근처라 70/130으로 자르면 열에 여덟이
+        # 한 덩어리로 뭉친다. 절반 미만 / 적정 미달 / 적정 이상 3단으로 나눈다.
+        if _pct < 50:
+            _msg = ('지난 3년 착공이 적정의 <b>%d%%</b>에 그쳤습니다 — 절반도 안 됩니다. '
+                    '착공은 3~4년 뒤 입주로 이어지므로 <b>위 4년 일정 이후</b>에 공급 '
+                    '절벽이 올 수 있습니다.' % round(_pct))
+        elif _pct < 95:
+            _msg = ('지난 3년 착공이 적정의 <b>%d%%</b>로 미달입니다. 착공은 3~4년 뒤 '
+                    '입주로 이어지므로 <b>위 4년 일정 이후</b>의 공급도 넉넉하진 '
+                    '않겠습니다.' % round(_pct))
+        else:
+            _msg = ('지난 3년 착공이 적정의 <b>%d%%</b>입니다. 4년 일정 이후에도 물량이 '
+                    '계속 들어올 것으로 보입니다.' % round(_pct))
+        plead[_ps] = (
+            '<div class="lead-box"><b>4년 그 다음은 — 착공으로 미리 보기</b>'
+            '<p>%s</p>'
+            '<p class="note">%s 착공 실측 %s호 · 같은 기간 적정 %s호. 착공은 시도 '
+            '단위 통계라 생활권별로 나눈 값이 아닙니다 — 방향을 보는 참고 지표입니다.</p>'
+            '</div>' % (_msg, _ps, num(_got), num(_due)))
     names, lastmods, nchanged = [], {}, 0
     for r in pages:
         nm = r['z']['z']
         d = os.path.join(outdir, nm)
         os.makedirs(d, exist_ok=True)
-        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx), old_pages.get(nm, ''), today)
+        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx, plead), old_pages.get(nm, ''), today)
         io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
         names.append(nm)
         lastmods[nm] = lm

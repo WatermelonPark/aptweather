@@ -361,3 +361,37 @@ def test_seoul_sync_copy_never_states_a_lag_length():
         assert not _re.search(pat, para), '시차 길이를 공시하고 있다: ' + pat
     # 유의하지 않은 존에는 문단 자체가 없어야 한다
     assert '서울과의 관계' not in _io.open('zone/화성권/index.html', encoding='utf-8').read()
+
+
+# ---------------------------------------------------------------------------
+# 착공 선행지표 (2026-08-03) — 준공예정 창 밖을 보는 별도 지표
+# ---------------------------------------------------------------------------
+
+def test_start_lead_computes_ratio_against_reference():
+    sts = {'착공': {'dates': ['2024.01', '2024.04', '2024.07', '2024.10'],
+                    'series': {'대구': [100, 100, 100, 100]}}}
+    adv = {'occupancy': {'ref': {'대구': 200}}}
+    cur = 2024 * 4 + 3                      # 2024Q4
+    got, due, pct = M.start_lead(sts, adv, '대구', cur, yrs=1)
+    assert got == 400 and due == 800 and abs(pct - 50.0) < 1e-9
+
+
+def test_start_lead_returns_none_when_series_missing():
+    adv = {'occupancy': {'ref': {'대구': 200}}}
+    assert M.start_lead({}, adv, '대구', 2024 * 4 + 3) is None
+    assert M.start_lead({'착공': {'dates': [], 'series': {}}}, adv, '대구', 2024 * 4 + 3) is None
+    # ref가 없으면(시도 미등록) 비율을 만들 수 없다
+    sts = {'착공': {'dates': ['2024.01'], 'series': {'대구': [100]}}}
+    assert M.start_lead(sts, {'occupancy': {'ref': {}}}, '대구', 2024 * 4 + 3) is None
+
+
+def test_start_lead_is_not_wired_into_shortage():
+    """선행지표는 화면 전용 — 순부족(tot) 산식에 절대 들어가면 안 된다.
+
+    시도 단위라 존 해상도가 없고, 착공→준공예정 경로로 이중계상 위험이 있다.
+    running_shortage의 인자는 done/sched/demol/refq뿐임을 시그니처로 못박는다.
+    """
+    import inspect
+    params = list(inspect.signature(M.running_shortage).parameters)
+    assert params[:5] == ['done', 'sched', 'demol', 'refq', 'cur_q']
+    assert not any('start' in p or '착공' in p for p in params)
