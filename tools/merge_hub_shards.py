@@ -33,6 +33,9 @@ def merge(base, shard_files):
     out.setdefault('sgg', {})
     out.setdefault('meta', {})
     scanned = set(out['meta'].get('scanned') or [])
+    # 재시딩 캠페인 진행분도 scanned와 같은 소유권 규칙으로 합친다 — 이게 빠지면
+    # 샤드가 캡에 걸려 재트리거될 때마다 자기 그룹을 처음부터 다시 돈다.
+    reseed_done = set(out['meta'].get('reseed_done') or [])
     productive = set(out.get('productive_bjdong') or [])
     stats = []
     for i, path in enumerate(shard_files, 1):
@@ -49,9 +52,12 @@ def merge(base, shard_files):
         # 물려받은 남의 키가 그대로 들어 있어, 통째로 합치면 이번에 실패한 그룹까지
         # '깨끗하게 스캔 완료'로 표시돼 다음 --full이 그 그룹을 영영 건너뛴다.
         scanned |= (set((d.get('meta') or {}).get('scanned') or []) & owned)
+        reseed_done |= (set((d.get('meta') or {}).get('reseed_done') or []) & owned)
         productive |= set(d.get('productive_bjdong') or [])
         stats.append((i, len(owned), took))
     out['meta']['scanned'] = sorted(scanned)
+    if reseed_done:
+        out['meta']['reseed_done'] = sorted(reseed_done)
     out['productive_bjdong'] = sorted(productive)
     return out, stats
 

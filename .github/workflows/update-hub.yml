@@ -51,11 +51,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: '수집 모드 (full=준공 전량 시딩 · demol=멸실 전량 시딩(재개가능, scanned_demol 별도) · incr=증분, 기본)'
+        description: '수집 모드 (full=준공 전량 시딩 · reseed=전량 재시딩(6샤드, 라이브 무중단) · demol=멸실 전량 시딩(재개가능, scanned_demol 별도) · incr=증분, 기본)'
         type: choice
         default: incr
         options:
           - incr
+          - reseed
           - full
           - demol
 
@@ -65,8 +66,12 @@ permissions:
 jobs:
   # 증분(정기 실행 · mode=incr): 6샤드 병렬. 샤드는 서로 다른 러너라 IP도 갈려
   # 원천이 특정 IP를 느리게 물어도 전부가 같이 죽지 않는다.
+  # mode=reseed도 같은 6샤드 잡을 쓴다. --full --reseed로 전량을 다시 훑되
+  # meta['scanned']는 건드리지 않으므로(진행 추적은 meta['reseed_done']) 재시딩
+  # 며칠 동안 hub_derive의 존 완결성 게이트가 계속 열려 있다 — 라이브가 pre-HUB로
+  # 되돌아가지 않는다. 샤드가 340분에 끊겨도 재트리거하면 reseed_done부터 이어서 돈다.
   fetch:
-    if: ${{ github.event_name == 'schedule' || (inputs.mode || 'incr') == 'incr' }}
+    if: ${{ github.event_name == 'schedule' || (inputs.mode || 'incr') == 'incr' || inputs.mode == 'reseed' }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -79,7 +84,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 건축HUB 증분 수집 (샤드 ${{ matrix.shard }}/6)
+      - name: 건축HUB 수집 (${{ inputs.mode || 'incr' }} · 샤드 ${{ matrix.shard }}/6)
         # STEP 타임아웃(340<잡 350)을 유지하는 이유는 예전과 같다: 잡이 통째
         # 취소되면 아래 업로드가 안 돌아 진행분이 소실된다.
         timeout-minutes: 340
@@ -89,7 +94,12 @@ jobs:
           if [ -z "$DATA_GO_KR_KEY" ]; then
             echo "::error::DATA_GO_KR_KEY/DATAGOKR 시크릿이 비어 있음"; exit 1
           fi
-          python tools/fetch_hub_permits.py --shard ${{ matrix.shard }}/6
+          if [ "${{ inputs.mode }}" = "reseed" ]; then
+            echo "전량 재시딩(샤드 ${{ matrix.shard }}/6). scanned는 유지하고 reseed_done으로 재개한다."
+            python tools/fetch_hub_permits.py --full --reseed --shard ${{ matrix.shard }}/6
+          else
+            python tools/fetch_hub_permits.py --shard ${{ matrix.shard }}/6
+          fi
 
       - name: 산출물 업로드
         # if:always() — 340분에 끊겨도 그때까지 save()된 진행분을 올린다.
@@ -139,7 +149,7 @@ jobs:
             echo "변경 없음"; exit 0
           fi
           git add tools/data/hub_permits.json
-          git commit -m "data: HUB 월간 인허가/착공 갱신 (6샤드 병합)"
+          git commit -m "data: HUB ${{ inputs.mode || 'incr' }} 갱신 (6샤드 병합)"
           for i in 1 2 3; do
             git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
             echo "push 재시도 $i"; sleep 5
@@ -148,7 +158,7 @@ jobs:
   # 전량 시딩(mode=full) / 멸실(mode=demol): 예전 그대로 단일 잡.
   # --full은 meta['scanned']를 건너뛰며 재개하므로 샤딩 없이도 재트리거로 끝난다.
   seed:
-    if: ${{ github.event_name != 'schedule' && (inputs.mode || 'incr') != 'incr' }}
+    if: ${{ github.event_name != 'schedule' && (inputs.mode || 'incr') != 'incr' && inputs.mode != 'reseed' }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:

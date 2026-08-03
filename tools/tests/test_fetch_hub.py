@@ -1009,6 +1009,96 @@ def test_reseed_forces_rescan_of_already_scanned_groups(tmp_path, monkeypatch):
     assert result['meta']['scanned'] == ['41370']
 
 
+# ---------------------------------------------------------------------------
+# 재시딩 캠페인 재개(2026-08-03): --reseed는 라이브 게이트(meta['scanned'])를
+# 건드리지 않으므로 진행 재개를 meta['reseed_done']이 담당한다. 이게 없으면
+# 340분 캡에 걸린 샤드를 재트리거할 때마다 자기 그룹을 처음부터 다시 돈다.
+# ---------------------------------------------------------------------------
+
+RESEED_GROUPS = {
+    '41370': {'name': '오산시', 'sido': '경기', 'members': ['41370'],
+              'bjdong': {'41370': ['11300']}, 'legacy': None},
+    '48120': {'name': '창원시', 'sido': '경남', 'members': ['48120'],
+              'bjdong': {'48120': ['10100']}, 'legacy': None},
+}
+
+
+def test_reseed_records_progress_without_touching_live_scanned_gate(tmp_path, monkeypatch):
+    # 핵심 제약: 재시딩 며칠 동안 meta['scanned']가 줄면 hub_derive의 존 완결성
+    # 게이트가 닫혀 라이브가 통째로 pre-HUB로 되돌아간다. scanned는 그대로 두고
+    # 진행분만 reseed_done에 쌓여야 한다.
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [],
+                        'scanned': ['41370', '48120']},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 5}, 'sched_q': {}},
+                      '48120': {'name': '창원시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
+              'productive_bjdong': ['4137011300']}
+
+    def fetch_group_stub(group, only_bjdong=None):
+        return {'2024Q1': 42}, {}, [], [], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, RESEED_GROUPS, seeded,
+                                 fetch_group_stub, reseed=True)
+    assert set(result['meta']['scanned']) == {'41370', '48120'}       # 게이트 그대로
+    assert set(result['meta']['reseed_done']) == {'41370', '48120'}   # 진행분 기록
+
+
+def test_reseed_resumes_from_campaign_progress_on_retrigger(tmp_path, monkeypatch, capsys):
+    # 41370은 이번 캠페인에서 이미 재스캔 완료 -> 재트리거에서 건너뛰고
+    # 48120만 이어서 돈다(캡에 걸려 죽은 샤드를 다시 던지는 상황).
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [],
+                        'scanned': ['41370', '48120'], 'reseed_done': ['41370']},
+              'sgg': {'41370': {'name': '오산시', 'done_q': {'2024Q1': 42}, 'sched_q': {}},
+                      '48120': {'name': '창원시', 'done_q': {'2024Q1': 5}, 'sched_q': {}}},
+              'productive_bjdong': []}
+
+    called = []
+
+    def fetch_group_stub(group, only_bjdong=None):
+        called.append(group['name'])
+        return {'2024Q1': 77}, {}, [], [], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, RESEED_GROUPS, seeded,
+                                 fetch_group_stub, reseed=True)
+    assert called == ['창원시']                                        # 41370은 재호출 안 됨
+    assert result['sgg']['41370']['done_q'] == {'2024Q1': 42}         # 이번 캠페인 값 보존
+    assert result['sgg']['48120']['done_q'] == {'2024Q1': 77}
+    assert '[RESEED skip] 41370' in capsys.readouterr().out
+
+
+def test_reseed_starts_fresh_campaign_when_previous_one_completed(tmp_path, monkeypatch, capsys):
+    # 지난 캠페인이 전량 완료된 상태로 새 --reseed가 들어오면 전부 skip돼
+    # 아무것도 안 도는 함정이 있다 — 자기 초기화로 새 캠페인을 연다.
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [],
+                        'scanned': ['41370', '48120'],
+                        'reseed_done': ['41370', '48120']},
+              'sgg': {}, 'productive_bjdong': []}
+
+    called = []
+
+    def fetch_group_stub(group, only_bjdong=None):
+        called.append(group['name'])
+        return {'2024Q1': 1}, {}, [], [], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, RESEED_GROUPS, seeded,
+                                 fetch_group_stub, reseed=True)
+    assert sorted(called) == ['오산시', '창원시']
+    assert '초기화하고 새 캠페인 시작' in capsys.readouterr().out
+    assert set(result['meta']['reseed_done']) == {'41370', '48120'}
+
+
+def test_plain_full_does_not_write_reseed_done(tmp_path, monkeypatch):
+    # --reseed 없는 평범한 --full은 캠페인 키를 만들지 않는다(무관한 실행이
+    # 캠페인 진행 상태를 조용히 바꾸면 안 된다).
+    seeded = {'meta': {'fetched': '', 'mode': 'full', 'unresolved_legacy': [], 'scanned': []},
+              'sgg': {}, 'productive_bjdong': []}
+
+    def fetch_group_stub(group, only_bjdong=None):
+        return {'2024Q1': 1}, {}, [], [], False
+
+    result = _run_with_stub_full(tmp_path, monkeypatch, RESEED_GROUPS, seeded, fetch_group_stub)
+    assert 'reseed_done' not in result['meta']
+
+
 def _run_with_stub_full(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub, reseed=False):
     monkeypatch.setattr(F, 'build_targets', lambda: (fake_groups, []))
     monkeypatch.setattr(F, 'KEY', 'dummy-key')

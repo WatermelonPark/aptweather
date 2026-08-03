@@ -766,6 +766,19 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
     # should_refresh_group과 별개로, 스킵 로그가 "아직 스캔 안 함"과 "스캔은
     # 했는데 진짜 0건"을 구분하는 데 쓴다(Minor).
     scanned = set(out['meta'].get('scanned', []))
+    # 재시딩 캠페인 진행 추적(2026-08-03). --reseed는 scanned를 무시하고 전량을
+    # 다시 도는데, 그것만으로는 러너 340분 캡에 걸려 죽은 샤드를 재트리거할 때
+    # 처음부터 다시 돌게 된다(--full의 RESUME이 scanned에 의존하는데 --reseed는
+    # 바로 그 scanned를 무시하기 때문). 그렇다고 scanned를 비우면 hub_derive의
+    # 존 완결성 게이트가 닫혀 재시딩 며칠간 라이브가 통째로 pre-HUB로 되돌아간다.
+    # 그래서 진행 추적만 별도 키로 분리한다: scanned는 라이브 게이트용으로 그대로
+    # 두고(148 유지), 이 캠페인에서 실제로 다시 스캔한 그룹만 여기에 쌓는다.
+    reseed_done = set(out['meta'].get('reseed_done', []))
+    if mode_full and reseed and set(groups) <= reseed_done:
+        # 지난 캠페인이 전량 완료된 상태에서 새 --reseed가 들어왔다 — 그대로 두면
+        # 전부 skip돼 아무것도 안 도니 여기서 캠페인을 새로 연다(자기 초기화).
+        print('[RESEED] 이전 캠페인이 전량 완료 상태 — reseed_done 초기화하고 새 캠페인 시작')
+        reseed_done = set()
 
     target_keys = list(groups.keys())
     if only_codes:
@@ -789,6 +802,11 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
         if group['legacy'] and not group['legacy']['enumerable']:
             print('[SKIP legacy] %s(%s): code_bdong.json에 법정동 없음 — unresolved_legacy 기록' % (key, group['name']))
             unresolved_legacy.add(key)
+        elif mode_full and reseed and key in reseed_done:
+            # 이번 재시딩 캠페인에서 이미 다시 스캔한 그룹 — 샤드가 캡에 걸려
+            # 재트리거돼도 여기서부터 이어서 돈다(scanned는 라이브 게이트용이라
+            # --reseed가 무시하므로 진행 재개는 이 키가 담당한다).
+            print('[RESEED skip] %s(%s) 이번 캠페인에서 이미 재스캔 완료' % (key, group['name']))
         elif mode_full and not reseed and key in scanned:
             # Fix pass(resumability): GitHub 호스티드 러너는 6시간 하드 캡이라
             # --full 전량(약 11~14시간)이 한 번의 워크플로 실행으로 안 끝난다.
@@ -847,6 +865,8 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
                 out['sgg'][key] = new_entry
                 cached_productive.update(productive)
                 scanned.add(key)   # 깨끗하게 스캔 완료 — never-scanned/scanned-zero 구분용 기록
+                if reseed:
+                    reseed_done.add(key)   # 캠페인 진행분(샤드 재트리거 재개용)
                 # apply_legacy_gu_fix로 enumerable=True가 된 legacy 그룹(부천 등)이
                 # 실제로 스캔에 성공하면, 예전 실행이 남긴 unresolved_legacy 잔존
                 # 마킹을 지운다 — 안 지우면 hub_derive가 이 시군구를 계속 존
@@ -856,6 +876,8 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
         out['productive_bjdong'] = sorted(cached_productive)
         out['meta']['unresolved_legacy'] = sorted(unresolved_legacy)
         out['meta']['scanned'] = sorted(scanned)
+        if mode_full and reseed:
+            out['meta']['reseed_done'] = sorted(reseed_done)
         out['meta']['fetched'] = str(datetime.date.today())
         out['meta']['mode'] = 'full' if mode_full else 'incr'
         save(out)   # 체크포인트: 그룹 하나 끝날 때마다 저장(스킵 포함)
