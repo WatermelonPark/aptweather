@@ -47,6 +47,7 @@ SKIPPED = []           # 원천 조회 실패로 판정하지 못한 계열
 GRACE_WEEKLY = 9
 GRACE_MONTHLY = 50     # 매월 15일경 전월분 발표
 GRACE_BASIC = 100      # 인허가·착공·준공이 약 2개월 지연(정상 최대 ~95일)
+GRACE_HUB = 45         # update-hub는 월 1회(매월 1일) — 한 번 걸러도 알아채는 선
 
 
 def get_json(url):
@@ -55,7 +56,7 @@ def get_json(url):
 
 
 def live_adv_stats():
-    """라이브 data.js(ADV) + data-rest.json(STATS)."""
+    """라이브 data.js(ADV) + data-rest.json·data-size.json(STATS)."""
     txt = urllib.request.urlopen(
         urllib.request.Request(SITE + '/data.js', headers=UA), timeout=60
     ).read().decode('utf-8', 'replace')
@@ -65,7 +66,40 @@ def live_adv_stats():
         sys.exit(1)
     adv = json.loads(m.group(1))
     stats = (get_json(SITE + '/data-rest.json') or {}).get('STATS') or {}
+    # 2026-08-01 split_data가 '규모별'(186KB)을 data-size.json으로 분리하면서
+    # rest에서 빠졌다. 여기서 합치지 않으면 아래 `if '규모별' in stats` 게이트가
+    # 영영 안 걸려 감시가 조용히 꺼진다(2026-08-04 감사에서 실제로 꺼져 있었음).
+    # 지연 로드 파일이 늘어나면 이 목록에도 추가할 것.
+    for lazy in ('/data-size.json',):
+        try:
+            stats.update((get_json(SITE + lazy) or {}).get('STATS') or {})
+        except Exception as e:
+            print('  경고: %s 조회 실패 (%s) — 그 계열 감시는 이번 회차 건너뜀'
+                  % (lazy, str(e)[:40]))
     return adv, stats
+
+
+def live_hub_meta():
+    """라이브 tools/data/hub_permits.json의 meta(수집 시점)."""
+    return (get_json(SITE + '/tools/data/hub_permits.json') or {}).get('meta') or {}
+
+
+def check_age(label, stamp, grace):
+    """수집 시점 도장(YYYY-MM-DD)이 grace일보다 오래됐으면 실패 사유를 반환.
+
+    원천 대조(check)와 달리 '언제 마지막으로 받아왔나'만 본다 — 건축HUB는 원천에
+    '최신 시점' 질의가 없고, 있어도 일일 쿼터를 감시가 축내면 안 된다.
+    """
+    if not stamp:
+        return '%s: 수집 시점 도장이 없음' % label
+    age = age_days(stamp)
+    if age is None:
+        return '%s: 수집 시점 해석 불가(%s)' % (label, stamp)
+    if age > grace:
+        print('  %-12s %-12s %s일  실패 (grace %d일)' % (label, stamp, age, grace))
+        return '%s(마지막 수집 %s, 경과 %s일 > %d일)' % (label, stamp, age, grace)
+    print('  %-12s %-12s %s일' % (label, stamp, age))
+    return None
 
 
 def rone_latest(tbl, cycle):
@@ -227,6 +261,22 @@ def main():
         fails.append(check(name, last,
                            lambda c=cfg: kosis_latest(c['org'], c['tbl'], c['objn'], 'Y'),
                            None))
+
+    # 간판 지표(순부족)의 공급·재고 입력이 통째로 여기서 온다. update-hub가 실패하거나
+    # (쿼터 소진·타임아웃·push 실패) hub_permits.json이 옛 시점에 굳어도 예전엔
+    # 아무 신호가 없었다 — 다음 정기 실행이 한 달 뒤라 최대 두 달까지 조용히 정지했다
+    # (2026-08-04 감사). 월 1회 실행이므로 한 번 걸러도 알아채도록 grace를 45일로 둔다.
+    print('[건축HUB — 원천 건축HUB(수집 시점 기준)]')
+    try:
+        hm = live_hub_meta()
+        fails.append(check_age('HUB준공', hm.get('fetched'), GRACE_HUB))
+        fails.append(check_age('HUB멸실', hm.get('fetched_demol'), GRACE_HUB))
+        if not hm.get('activate'):
+            # activate=false면 라이브 스코어가 pre-HUB로 되돌아간 것이다. 의도한
+            # 롤백일 수 있으나 조용히 그 상태로 굳는 것을 막는다.
+            fails.append('HUB activate=false — 라이브 스코어가 pre-HUB 산식으로 돌아가 있음')
+    except Exception as e:
+        fails.append('HUB 메타 조회 실패(%s) — hub_permits.json 배포 확인 필요' % str(e)[:60])
 
     # 커버리지 가드: 라이브에 있는데 위에서 한 번도 대조 안 한 계열을 잡는다.
     # 분양·미분양이 SUPPLY_CONF에 있다는 이유로 몇 주간 감시 밖에 있었다 — 사람이
