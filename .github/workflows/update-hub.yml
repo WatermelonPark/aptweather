@@ -157,10 +157,21 @@ jobs:
           fi
           git add tools/data/hub_permits.json
           git commit -m "data: HUB ${{ inputs.mode || 'incr' }} 갱신 (6샤드 병합)"
+          # ⚠️ 루프 마지막이 sleep이면 3회 다 실패해도 스텝이 exit 0 — 수집분 유실이
+          # 초록 체크로 은폐된다(2026-08-04 감사). HUB는 다음 정기 실행이 한 달 뒤라
+          # 유실 비용이 특히 크다(최대 350분 수집분 + 재시딩 진행분).
+          pushed=0
           for i in 1 2 3; do
-            git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
+            if git pull --rebase -X theirs origin main && git push; then
+              echo "푸시 완료"; pushed=1; break
+            fi
+            git rebase --abort 2>/dev/null || true
             echo "push 재시도 $i"; sleep 5
           done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::push 3회 모두 실패 — 이번 수집분이 러너와 함께 유실된다."
+            exit 1
+          fi
 
   # 전량 시딩(mode=full) / 멸실(mode=demol): 예전 그대로 단일 잡.
   # --full은 meta['scanned']를 건너뛰며 재개하므로 샤딩 없이도 재트리거로 끝난다.
@@ -200,7 +211,18 @@ jobs:
           fi
           git add tools/data/hub_permits.json
           git commit -m "data: HUB 시딩 진행분"
+          # ⚠️ 루프 마지막이 sleep이면 3회 다 실패해도 스텝이 exit 0 — 수집분 유실이
+          # 초록 체크로 은폐된다(2026-08-04 감사). HUB는 다음 정기 실행이 한 달 뒤라
+          # 유실 비용이 특히 크다(최대 350분 수집분 + 재시딩 진행분).
+          pushed=0
           for i in 1 2 3; do
-            git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
+            if git pull --rebase -X theirs origin main && git push; then
+              echo "푸시 완료"; pushed=1; break
+            fi
+            git rebase --abort 2>/dev/null || true
             echo "push 재시도 $i"; sleep 5
           done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::push 3회 모두 실패 — 이번 수집분이 러너와 함께 유실된다."
+            exit 1
+          fi

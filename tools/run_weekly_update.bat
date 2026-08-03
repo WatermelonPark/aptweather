@@ -135,9 +135,14 @@ rem 커밋 대상이 아니고, 실패해도 통계 갱신을 막지 않는다.
 python tools\make_naver_post.py
 if errorlevel 1 echo WARN: make_naver_post failed - naver draft not generated
 
-git diff --quiet data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
+rem NOTE: this list must cover every file the steps above write.
+rem split_data.py emits 5 files (core/trend/rest/sgg/size) and
+rem make_indicator_pages.py emits jeonse-ratio/ and moveins/.
+rem A file missing here is silently never deployed (2026-08-04 audit:
+rem data-sgg.json and data-size.json were absent from every list).
+git diff --quiet data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json index.html share\weekly-map.png zone sitemap.xml jeonse-ratio moveins
 if errorlevel 1 (
-  git add data.js data-core.js data-rest.json data-trend.json index.html share\weekly-map.png zone sitemap.xml
+  git add data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json index.html share\weekly-map.png zone sitemap.xml jeonse-ratio moveins
   if errorlevel 1 (
     echo ERROR: git add failed
     exit /b 14

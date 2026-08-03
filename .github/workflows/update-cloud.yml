@@ -102,6 +102,8 @@ jobs:
             data-core.js
             data-rest.json
             data-trend.json
+            data-sgg.json
+            data-size.json
             .stats_changed
           retention-days: 1
           if-no-files-found: ignore
@@ -148,15 +150,45 @@ jobs:
             exit 0
           fi
           echo "채택: $SRC (최신 주간/월간 보유 산출물)"
+          # split_data.py가 내는 5파일을 모두 옮긴다. data-sgg/data-size가 빠지면
+          # checkout된 옛 파일이 그대로 남아 '지연 로드만 몇 주 묵는' 부분배포가 된다
+          # (2026-08-04 감사: 두 파일은 어떤 목록에도 없어 사람이 손으로만 커밋돼 왔다).
           cp "$SRC/data.js" "$SRC/data-core.js" "$SRC/data-rest.json" "$SRC/data-trend.json" .
+          for f in data-sgg.json data-size.json; do
+            [ -f "$SRC/$f" ] && cp "$SRC/$f" . || echo "::warning::$f 산출물 없음(구 러너?) — 기존 파일 유지"
+          done
           # 정적 페이지(zone·지표)는 data.js를 구워 만들므로 새 데이터로 재생성해
           # 함께 커밋한다. 로컬 스케줄러가 꺼진 PC-less 체제에선 여기가 유일한
           # 재생성 지점. 생성기는 stdlib만 쓰고(러너 기본 python3), 날짜를 데이터
           # 시점에서 유도하므로 데이터가 같으면 diff도 없다. 실패해도 데이터
           # 커밋은 막지 않는다(::warning만, 다음 회차 재시도).
+          # ── 검증 게이트 ────────────────────────────────────────────────
+          # PC-less 체제에선 이 워크플로가 유일한 배포 경로다. 예전엔 여기에 검증이
+          # 전혀 없어서, 한쪽 구현만 고친 커밋이 들어와도 옛 산식으로 존 페이지를
+          # 구워 그대로 배포했다(홈 순위표와 /zone/ 상세가 다른 숫자를 표시).
+          # 그래서 생성 '전에' 두 가지를 막는다:
+          #   1) pytest — 코드가 깨진 채로 페이지를 굽지 않는다
+          #   2) check_dual_calc — Python calc()와 JS scCalc()가 갈라진 채 배포하지 않는다
+          # 둘 중 하나라도 실패하면 아무것도 커밋하지 않고 잡을 red로 만든다.
+          # (데이터 갱신은 하루 밀리지만, 틀린 숫자가 조용히 나가는 것보다 낫다.
+          #  실패는 GitHub 알림으로 사람에게 전달된다.)
+          python3 -m pip install --quiet pytest || true
+          if ! python3 -m pytest tools/tests/ -q; then
+            echo "::error::pytest 실패 — 배포 중단(코드 회귀). 데이터는 커밋하지 않는다."
+            exit 1
+          fi
+          if ! python3 tools/check_dual_calc.py; then
+            echo "::error::이중구현 미러 불일치 — 배포 중단. calc()(Python)와 scCalc()(JS)가 갈라졌다."
+            exit 1
+          fi
+          echo "검증 통과 — 페이지 생성으로 진행"
+          # ───────────────────────────────────────────────────────────────
           python3 tools/make_zone_pages.py      || echo "::warning::make_zone_pages 실패 — 데이터만 커밋"
           python3 tools/make_indicator_pages.py || echo "::warning::make_indicator_pages 실패 — 데이터만 커밋"
-          TARGETS="data.js data-core.js data-rest.json data-trend.json zone sitemap.xml jeonse-ratio moveins"
+          # 공유 카드(og:image)도 여기서 재생성한다 — 로컬 배치가 멈추면 /weekly/의
+          # 카카오·트위터 미리보기가 옛 주차 지도에 고정된 채 '이번 주'로 배포된다.
+          python3 tools/make_weekly_share.py    || echo "::warning::make_weekly_share 실패 — 공유 카드 유지"
+          TARGETS="data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json zone sitemap.xml jeonse-ratio moveins share"
           git add -A -- $TARGETS
           if git diff --cached --quiet; then
             echo "변경 없음"
@@ -167,8 +199,19 @@ jobs:
           git commit -m "데이터 자동 갱신 (클라우드 冗長)"
           # 경합 대비 pull --rebase 후 push. rebase에서 'theirs'가 우리 커밋이라
           # 충돌 시 방금 받은 최신 데이터가 이긴다.
+          # ⚠️ 루프 마지막 명령이 sleep이면 3회 모두 실패해도 스텝이 exit 0으로 끝나
+          # 커밋 유실이 초록 체크로 은폐된다(2026-08-04 감사). pushed 플래그로 판정한다.
+          pushed=0
           for i in 1 2 3; do
-            git pull --rebase -X theirs origin main && git push && { echo "푸시 완료"; break; }
+            if git pull --rebase -X theirs origin main && git push; then
+              echo "푸시 완료"; pushed=1; break
+            fi
+            # rebase가 중간 상태로 남으면 다음 회차도 연쇄 실패한다 — 정리 후 재시도.
+            git rebase --abort 2>/dev/null || true
             echo "push 재시도 $i"; sleep 5
           done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::push 3회 모두 실패 — 이 회차 커밋이 러너와 함께 유실된다."
+            exit 1
+          fi
 
