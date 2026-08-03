@@ -400,9 +400,10 @@ def test_start_lead_is_not_wired_into_shortage():
 def test_start_lead_copy_does_not_claim_beyond_horizon():
     """착공 카드가 '4년 창 밖'을 예고한다고 말하면 안 된다(2026-08-03 정정).
 
-    리드타임 실측: 착공→준공 30개월, 인허가→준공 24개월, 인허가→착공 0개월.
-    즉 착공도 인허가도 16분기 창 **안**으로 떨어진다 — 창 밖을 보는 계열은 없다.
-    카드의 역할은 창 안에서 준공예정이 못 담은 물량을 교차검증하는 것이다.
+    리드타임은 사이트 단일 출처(LEADTIME · /cycle/)를 따른다: 착공→준공 과거
+    27개월 → 최근 37개월, 인허가→착공 거의 동시. 즉 착공도 인허가도 16분기 창
+    **안**으로 떨어진다 — 창 밖을 보는 계열은 없다. 카드의 역할은 창 안에서
+    준공예정이 못 담은 물량을 교차검증하는 것이다.
     """
     import io as _io, re as _re
     html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
@@ -413,3 +414,6 @@ def test_start_lead_copy_does_not_claim_beyond_horizon():
     for bad in ('4년 그 다음', '4년 일정 이후', '3~4년 뒤 입주', '이후에 공급 절벽'):
         assert bad not in card, '창 밖을 예고하고 있다: ' + bad
     assert '교차검증' in card
+    # 리드타임 수치는 LEADTIME/리포트와 어긋나면 안 된다 — 자체 재측정은 금지
+    # (시도 패널 상관은 인허가→준공 24개월 같은 불가능한 값을 낸다).
+    assert '2년 반' not in card and '30개월' not in card
