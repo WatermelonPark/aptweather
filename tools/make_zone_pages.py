@@ -1438,7 +1438,6 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None):
     # 16장이 인바운드 링크 1개짜리 고아가 됐다 — 검색 수요가 가장 큰 페이지들이
     # 링크 자산을 가장 적게 받는 역전이었다.
     nav = '<a href="/zone/"><b>전체 생활권</b></a>'
-    nav += '<a href="/zone/수도권/">수도권</a>' if nm != '수도권' else ''
     nav += ''.join('<a href="/zone/%s/">%s</a>' % (x['z']['z'], x['z']['z'])
                    for x in allrows if x['z']['z'] != nm)
 
@@ -1880,7 +1879,7 @@ footer a{color:var(--muted)}
 <section><div class="wrap">
   <h2>전국 생활권 44곳</h2>
   <p>홈 순위표와 <b>같은 기준</b>(등급으로 묶고, 그 안은 세대수 큰 순)으로 나열합니다.
-    홈은 수도권을 1행으로 합쳐 보여주고, 여기서는 44곳을 개별로 폅니다.<br>
+    홈은 양끝(가장 모자란 곳·가장 남는 곳)만 보여주고, 여기서는 44곳을 모두 폅니다.<br>
     생활권 이름을 누르면 판정 근거(밀린 것·필요한 집·들어올 집)와 분기별 입주 일정,
     그 지역 아파트값 흐름까지 볼 수 있습니다.</p>
   <table>
@@ -1930,45 +1929,13 @@ def build_hub(pages, prd, today):
     sitemap은 발견은 시켜주지만 링크 가치를 전달하지 않는다.
     """
     # 입주예정 0은 '자료 없음'이 아니라 그냥 0이다(3c897f7 확정). 전부 순위에 넣는다.
-    # 다만 수도권은 16개 생활권을 묶은 상위 단위라 개별 생활권과 같은 순위표에
-    # 넣으면 이중 계상이 되고, 그 아래 행이 상세 페이지와 1씩 어긋난다.
-    # 홈(index.html)이 이미 쓰는 방식대로 순위 밖 소계로 분리한다.
-    ROLLUP = '수도권'
-    # 정렬 = zone_order(표준 순서) — 홈·존 페이지 "N위"와 같은 하나의 기준.
-    live = zone_order([r for r in pages if r['z']['z'] != ROLLUP])
-    roll = next((r for r in pages if r['z']['z'] == ROLLUP), None)
-    # ⚠️ 표시 번호는 '비율 순위'여야 한다 — 존 페이지의 "생활권 44곳 중 N위"와
-    # 홈 히어로(mzRank)가 모두 비율 기준이라, 여기만 표시 순서대로 번호를 매기면
-    # 같은 존이 화면마다 다른 순위로 보인다(2026-08-01 리뷰 C1: 31/44곳 불일치,
-    # 서울권 허브 #1 vs 페이지 5위). live는 이미 비율 내림차순이므로 그 인덱스를 쓴다.
-    # live가 이미 표준 순서라 '#'은 그대로 1..44 순차이고, 존 페이지의 "N위"와 같은 값.
+    # 수도권 롤업 행 폐지(2026-08-03). 예전엔 순위 밖 소계로 끼워 넣었는데,
+    # 롤업 안에서 상계가 일어나 서울권 등급을 눌러(단독 +1.03 부족 → 롤업 +0.52
+    # 다소 부족) 홈·허브에서 함께 걷어냈다. 이제 44곳 개별만 선다.
+    # 정렬 = zone_order(표준 순서) — 홈·존 페이지 'N위'와 같은 하나의 기준.
+    live = zone_order(pages)
     rows = []
     prev_gk = None
-    # 롤업 행은 루프 전에 만들어 두고, 자기 등급 머리 아래에 끼워 넣는다.
-    roll_html = None
-    if roll is not None:
-        _gr = roll['gr']
-        subs_rows = [x for x in pages if x['z'].get('region') == '수도권'
-                     and x['z']['z'] != ROLLUP]
-        sub = len(roll['z'].get('subs') or []) or len(subs_rows) or 16
-        # ⚠️ 롤업 등급(비율 1.20 '부족')은 22곳 평균이 아니라 **풀 전체의 값**이다 —
-        # 수도권은 우리 모델에서 단일 수요 풀이고(psido='수도권', share=hh/sidohh),
-        # 스필오버 실측(수도권 20존 잔차 동조 0.7~0.9)이 그 전제를 뒷받침한다.
-        # 구성원 최악값으로 바꾸면 모델과 모순되고, 서울이 늘 심각해 수도권은 영구히
-        # '매우 부족'이 되어 정보가 0이 된다. 다만 안이 극단적으로 갈린다는 사실은
-        # 숨기면 안 되므로 분포를 함께 적는다.
-        import collections as _c
-        dist = _c.Counter(x['gr']['label'] for x in subs_rows)
-        dist_txt = ' · '.join('%s %d' % (lab, dist[lab])
-                              for _, lab, _, _ in GRADES if dist.get(lab))
-        roll_html = (
-            '      <tr class="rollup"><td class="rk">—</td>'
-            '<td><a class="z" href="/zone/%s/">%s</a> '
-            '<span class="sub">%d개 생활권 합계 · 안은 %s</span></td>'
-            '<td class="num" style="color:%s">%s</td>'
-            '<td><span class="tag %s">%s</span></td></tr>'
-            % (ROLLUP, ROLLUP, sub, dist_txt or '집계 없음', _gr['color'],
-               signed_u(roll['tot']), _gr['k'], _gr['label']))
     for i, r in enumerate(live):
         nm = r['z']['z']
         gr = r['gr']
@@ -1977,19 +1944,11 @@ def build_hub(pages, prd, today):
             rows.append('      <tr class="ghead"><td colspan="4" style="color:%s">%s '
                         '<i>%d곳</i></td></tr>' % (gr['color'], gr['label'], n_in))
             prev_gk = gr['k']
-            # 롤업은 자기 등급 머리 바로 아래. 예전엔 루프 밖에서 append해 등급과
-            # 무관하게 표 맨 끝(45번째)에 붙었다 — 그룹핑이 깨져 보였다(2026-08-01).
-            # 합계라 절대값이 그룹 최대이므로 그룹 안 세대수 순서와도 맞는다.
-            if roll_html and roll and roll['gr']['k'] == gr['k']:
-                rows.append(roll_html)
-                roll_html = None
         rows.append(
             '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
             '<td class="num" style="color:%s">%s</td>'
             '<td><span class="tag %s">%s</span></td></tr>'
             % (i + 1, nm, nm, gr['color'], signed_u(r['tot']), gr['k'], gr['label']))
-    if roll_html:      # 등급 머리를 못 만난 방어 경로(이론상 없음)
-        rows.append(roll_html)
     ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",
@@ -2058,15 +2017,11 @@ def main():
                 os.remove(fp)
             if os.path.isdir(os.path.join(outdir, d)) and not os.listdir(os.path.join(outdir, d)):
                 os.rmdir(os.path.join(outdir, d))
-    cap = make_capital(rows)
-    pages = list(rows) + ([cap] if cap else [])
-    # 존별 시세 지수 HTML 사전(수도권 합계는 소속 존 코드 합집합)
+    # 수도권 롤업 폐지(2026-08-03) — 안에서 상계가 일어나 서울권이 한 등급
+    # 내려가고 화성권(매우 부족)이 통째로 묻혔다. 행정구역대로 개별만 세운다.
+    # make_capital()은 make_naver_post 등 다른 소비자가 있어 함수는 남긴다.
+    pages = list(rows)
     zcodes = zone_sgg_codes(adv)
-    if cap:
-        agg_codes = sorted({c for sub in (cap['z'].get('subs') or []) for c in zcodes.get(sub, [])}
-                           or {c for z in rows if z['z']['region'] == '수도권'
-                               for c in zcodes.get(z['z']['z'], [])})
-        zcodes[cap['z']['z']] = agg_codes
     pidx = {z: render_price_index(adv, z, cs) for z, cs in zcodes.items()}
     names, lastmods, nchanged = [], {}, 0
     for r in pages:
