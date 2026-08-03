@@ -76,3 +76,33 @@ def test_rebuild_orders_units_done_first_then_by_size():
     stages = [u[3] for u in new['units']]
     assert stages == ['done', 'done', 'sched']
     assert [u[1] for u in new['units'] if u[3] == 'done'] == [700, 50]
+
+
+def test_truncated_units_are_detected():
+    """units가 done_q+sched_q를 대표하지 못하면 잘림으로 판정한다."""
+    # 실제 사고 모양: UNITS_CAP=40 시절 수집분 — units는 40개로 잘렸는데
+    # done_q는 잘리기 전 전량을 담고 있다.
+    units = [['단지%d' % i, 100, '2020-01', 'done', OTHER + str(i)] for i in range(40)]
+    e = _entry(units, {'2020Q1': 76222})            # units 합 4,000 != 76,222
+    t = R.entry_truncation(e)
+    assert t is not None
+    assert t[0] == 76222 - 4000
+    # 온전한 항목은 잘림으로 보지 않는다.
+    ok = _entry(units, {'2020Q1': 4000})
+    assert R.entry_truncation(ok) is None
+    # units가 아예 없는 옛 스키마도 잘림이 아니다(판단 근거 없음 → 그대로 둠).
+    assert R.entry_truncation({'name': 'x', 'done_q': {'2020Q1': 10}}) is None
+
+
+def test_rebuild_entry_refuses_truncated_and_preserves_totals():
+    """잘린 항목은 재계산하지 않고 원본을 그대로 돌려준다.
+
+    이 가드가 없으면 부산 4개 구(강서·해운대·북·사상)의 46,345세대가 조용히
+    사라졌다(2026-08-04 감사). 재수집으로만 복구되므로 회귀를 테스트로 고정한다.
+    """
+    units = [['단지%d' % i, 100, '2020-01', 'done', OTHER + str(i)] for i in range(40)]
+    e = _entry(units, {'2020Q1': 76222})
+    new, folded, d_drop, s_drop = R.rebuild_entry(e)
+    assert new is e                      # 원본 그대로
+    assert sum(new['done_q'].values()) == 76222
+    assert (folded, d_drop, s_drop) == (0, 0, 0)

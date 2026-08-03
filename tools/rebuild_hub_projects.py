@@ -36,14 +36,44 @@ import hub_common as H  # noqa: E402
 DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'hub_permits.json')
 
 
+def entry_truncation(entry):
+    """units가 done_q+sched_q를 온전히 대표하는가. 대표하면 None, 아니면 (차이, 설명).
+
+    이 도구의 전제는 'units 세대 합 == done_q+sched_q 합'이다(모듈 docstring 참조).
+    그 전제가 깨진 항목에서 done_q를 units로부터 다시 만들면 **잘려 나간 만큼이
+    조용히 사라진다**. UNITS_CAP=40 시절에 수집된 항목이 정확히 그 상태다
+    (2026-08-04 감사: 부산 4개 구 — 강서·해운대·북·사상 — 합계 46,345세대가
+    지워질 뻔했고, 로그에서는 정당한 접기 감소와 같은 컬럼에 섞여 구분되지 않았다).
+    """
+    units = entry.get('units') or []
+    if not units:
+        return None
+    q_sum = (sum((entry.get('done_q') or {}).values())
+             + sum((entry.get('sched_q') or {}).values()))
+    u_sum = sum(u[1] for u in units)
+    # 막아야 하는 건 '재계산하면 줄어드는' 방향뿐이다(q_sum > u_sum = units가 잘렸다).
+    # 반대 방향(q_sum < u_sum)은 done_q가 덜 기록된 상태이고 재계산이 이를 올려
+    # 바로잡으므로 손실이 아니다 — 여기서 막으면 정상 복구까지 막는다.
+    if q_sum <= u_sum:
+        return None
+    return (q_sum - u_sum,
+            'units 합 %s < done_q+sched_q 합 %s (%s개 units, 차 %s세대)'
+            % (format(u_sum, ','), format(q_sum, ','), len(units),
+               format(q_sum - u_sum, ',')))
+
+
 def rebuild_entry(entry):
     """sgg 항목 하나 -> (새 항목, 접힌 대장 수, 재고 감소, 미래공급 감소).
 
     done_q/sched_q는 접은 뒤의 units에서 다시 만든다. 원래 항목에 units가 없으면
-    (아주 옛 스키마) 판단 근거가 없으므로 그대로 둔다.
+    (아주 옛 스키마) 판단 근거가 없으므로 그대로 둔다. units가 잘려 있는 항목도
+    그대로 둔다(entry_truncation 참조) — 호출측이 걸러 보내는 것을 전제하지 않고
+    여기서도 한 번 더 막는다.
     """
     units = entry.get('units')
     if not units:
+        return entry, 0, 0, 0
+    if entry_truncation(entry):
         return entry, 0, 0, 0
     kept = H.collapse_units_by_project(units)
     done_q = collections.defaultdict(int)
@@ -70,6 +100,8 @@ def main():
     ap.add_argument('--out', default=None, help='생략하면 제자리 갱신')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--top', type=int, default=15)
+    ap.add_argument('--allow-truncated', action='store_true',
+                    help='units가 잘린 항목을 건너뛰고 나머지만 재계산(기본은 중단)')
     args = ap.parse_args()
 
     d = json.load(io.open(args.path, encoding='utf-8-sig'))
@@ -84,6 +116,32 @@ def main():
     if n_plat == 0:
         print('지번이 하나도 없다 — 지번 수집(2026-08-03) 이후 재시딩된 파일이어야 한다. 중단.')
         return 2
+
+    # ── 안전장치: 잘린 units를 가진 항목을 먼저 걸러낸다 ──────────────────
+    # 전역 게이트(지번 보유 0건)만으로는 '일부 항목만 옛 캡으로 잘린' 상태를 못 잡는다.
+    trunc = []
+    for k, e in d.get('sgg', {}).items():
+        t = entry_truncation(e)
+        if t:
+            trunc.append((t[0], k, e.get('name'), t[1]))
+    if trunc:
+        trunc.sort(reverse=True)
+        print()
+        print('⚠️ units가 done_q+sched_q를 대표하지 못하는 항목 %d개 (합계 %s세대)'
+              % (len(trunc), format(sum(x[0] for x in trunc), ',')))
+        for diff, k, nm, why in trunc:
+            print('   %-8s %-10s %s' % (k, nm, why))
+        print('   → 이 항목들은 UNITS_CAP 시절 수집분으로 units가 잘려 있다.')
+        print('     그대로 재계산하면 위 세대수가 조용히 사라진다.')
+        if not args.allow_truncated:
+            print()
+            print('중단했다. 해결 방법 둘 중 하나:')
+            print('  1) 해당 시군구를 재시딩해 units를 온전히 받은 뒤 다시 실행')
+            print('     python tools/fetch_hub_permits.py --full --only <코드>')
+            print('  2) 그 항목만 건너뛰고 나머지를 재계산: --allow-truncated')
+            return 3
+        print('   --allow-truncated — 위 항목은 원본 그대로 두고 나머지만 재계산한다.')
+        print()
 
     rows = []
     tot_d = tot_s = tot_fold = 0
