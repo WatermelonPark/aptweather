@@ -2669,13 +2669,23 @@ function renderScoreSec(){
    '전국에서 내 동네가 어디쯤'이라는 질문에 바로 답하게 한다. 히어로는 비운다.
    시점 문구·5칸 바 규칙은 존 페이지(make_zone_pages build_page)와 동일하다. */
 const MZ_SLAB=['지금','1년','2년','3년','4년'];
-function mzHeadline(seq,gdesc){
+function mzHeadline(seq,gdesc,gk){
   const sq=seq||[], sh=sq.map((v,i)=>v<0?i:-1).filter(i=>i>=0);
-  if(!sh.length||sh.length===sq.length)return gdesc;
   const last=sq.length-1;
-  if(sh.indexOf(last)>=0&&sh.indexOf(0)<0)return MZ_SLAB[sh[0]]+' 뒤부터 모자라기 시작합니다';
-  if(sh.indexOf(last)<0&&sh.indexOf(0)>=0)return '지금은 모자라지만 '+MZ_SLAB[sh[sh.length-1]+1]+' 뒤 풀립니다';
-  return '시기에 따라 모자랐다 풀렸다 합니다';
+  if(sh.length&&sh.length<sq.length){
+    if(sh.indexOf(last)>=0&&sh.indexOf(0)<0)return MZ_SLAB[sh[0]]+' 뒤부터 모자라기 시작합니다';
+    if(sh.indexOf(last)<0&&sh.indexOf(0)>=0)return '지금은 모자라지만 '+MZ_SLAB[sh[sh.length-1]+1]+' 뒤 풀립니다';
+    return '시기에 따라 모자랐다 풀렸다 합니다';
+  }
+  /* 아래 두 분기는 make_zone_pages build_page의 hero_desc에만 있고 여기엔 빠져 있었다
+     (2026-08-04 감사). 그 결과 홈 카드가 5칸을 전부 '부족'으로 칠해 놓고 문장은
+     '필요한 만큼 들어오고 있습니다'를 출력했다 — 같은 지역의 존 페이지는 제대로
+     '크게 모자라진 않지만 4년 내내 조금씩 부족합니다'라고 썼다. ⚠️ 정본은 Python. */
+  if(sh.length===sq.length&&sq.length&&(gk==='g1'||gk==='g0'))
+    return '크게 모자라진 않지만 4년 내내 조금씩 부족합니다';
+  if(!sh.length&&(gk==='g4'||gk==='g3'||gk==='g2'))
+    return '지금 재고는 남지만 앞으로 필요량에는 못 미칩니다';
+  return gdesc;
 }
 function renderMyRow(row,rank,total){
   const el=document.getElementById('mine-row'); if(!el)return;
@@ -2691,7 +2701,7 @@ function renderMyRow(row,rank,total){
     +'onclick="mzClear();renderMyZone();track(\'myzone\',{action:\'change\',region:\''+row.z+'\'})">'
     +'<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>'
     +'</div>'
-    +'<p class="sm-desc">'+mzHeadline(sq,g.desc)+'</p>'
+    +'<p class="sm-desc">'+mzHeadline(sq,g.desc,g.k)+'</p>'
     +'<div class="hz-seq">'+bars+'</div>'
     +'</div>';
 }
