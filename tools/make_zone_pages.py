@@ -141,6 +141,42 @@ GRADE_CUTS = (1.5, 1.0, 0.5, 0.0)
 GRADE_ORDER = ('g4', 'g3', 'g2', 'g1', 'g0')
 
 
+SEQ_LABS = ('지금', '1년', '2년', '3년', '4년')
+
+
+def hero_line(seq, gr):
+    """5칸 재고 궤적(seq)과 등급으로 만드는 판정 문장.
+
+    ⚠️ index.html mzHeadline()과 반드시 동치(이중구현 미러). check_dual_calc가 대조한다.
+
+    문구는 등급(크기)만이 아니라 **시점**도 말한다(2026-08-02 사용자). 대구권은
+    등급이 '균형'인데 1년 뒤 부족으로 뒤집혀서 "필요한 만큼 들어오고 있습니다"가
+    바로 아래 시퀀스와 모순처럼 읽혔다. 전환이 있는 존만 갈아끼운다.
+
+    ⚠️ 부족 칸이 연속이라는 보장이 없다. 울산권처럼 ●●○○● 로 오가는 존이 있어
+    labs[short[-1]+1] 같은 접근은 IndexError를 낸다(2026-08-02 실제 크래시).
+    """
+    seq = seq or []
+    short = [i for i, v in enumerate(seq) if v < 0]
+    last = len(seq) - 1
+    if 0 < len(short) < len(seq):
+        if last in short and 0 not in short:            # 여유 → 부족
+            return '%s 뒤부터 모자라기 시작합니다' % SEQ_LABS[short[0]]
+        if last not in short and 0 in short:            # 부족 → 여유
+            return '지금은 모자라지만 %s 뒤 풀립니다' % SEQ_LABS[short[-1] + 1]
+        return '시기에 따라 모자랐다 풀렸다 합니다'
+    if seq and len(short) == len(seq) and gr['k'] in ('g1', 'g0'):
+        # 4년 내내 마이너스인데 등급은 균형/여유(2026-08-04 실측 8곳: 강릉·구미·
+        # 김포·성남·안동·여순광·의정부·창원). 둘 다 사실이다 — 크기는 등급 밴드
+        # 안이지만 부호는 계속 부족이다. 그런데 균형 desc가 '필요한 만큼 들어오고
+        # 있습니다'라 바로 아래 '4년 내내 부족합니다'와 정면 충돌한다.
+        return '크게 모자라진 않지만 4년 내내 조금씩 부족합니다'
+    if not short and gr['k'] in ('g4', 'g3', 'g2'):
+        # 반대 조합 방어 — 현재 해당 존은 없지만 데이터가 바뀌면 생길 수 있다.
+        return '지금 재고는 남지만 앞으로 필요량에는 못 미칩니다'
+    return gr['desc']
+
+
 def zone_order(rows):
     """화면에 나열하는 표준 순서 — 등급(비율) 그룹 → 그룹 안은 절대 세대수 큰 순.
 
@@ -1210,10 +1246,9 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
     # 재고 궤적(지금·1~4년 뒤 부족 여부)은 calc()가 r['seq']로 실어 보낸다 — 홈
     # scCalc도 같은 5개 값을 쓴다(zsched 전량은 페이로드가 커서 못 보낸다).
     _seq = r.get('seq') or [r['inow']] * 5
-    _labs = ('지금', '1년', '2년', '3년', '4년')
+    # 아래 타임라인 섹션(_msg)도 같은 값을 쓴다 — 판정문 자체는 hero_line()이 만든다.
+    _labs = SEQ_LABS
     _short = [i for i, v in enumerate(_seq) if v < 0]
-    # ⚠️ 부족 칸이 연속이라는 보장이 없다. 울산권처럼 ●●○○● 로 오가는 존이 있어
-    # _labs[_short[-1]+1] 같은 접근은 IndexError를 낸다(2026-08-02 실제 크래시).
     _last = len(_seq) - 1
     _flip_late = _last in _short and 0 not in _short      # 여유 → 부족
     _flip_early = _last not in _short and 0 in _short     # 부족 → 여유
@@ -1221,28 +1256,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
     # ── ① 판정 히어로 — 5등급 배지 + 자연어 판정문 (2026-07-31 UX 재기획) ──
     # 저장 버튼 없음 — 2026-07-31 사용자 결정: 명시적 '저장' 대신 페이지를 보면
     # 조용히 기억(암묵 저장, 하단 save_js). 홈 히어로가 이 값을 읽는다.
-    # 문구는 등급(크기)만이 아니라 **시점**도 말한다(2026-08-02 사용자). 대구권은
-    # 등급이 '균형'인데 1년 뒤 부족으로 뒤집혀서, "필요한 만큼 들어오고 있습니다"가
-    # 바로 아래 시퀀스와 모순처럼 읽혔다. 전환이 있는 존만 갈아끼운다.
-    if 0 < len(_short) < len(_seq):
-        if _flip_late:
-            hero_desc = '%s 뒤부터 모자라기 시작합니다' % _labs[_short[0]]
-        elif _flip_early:
-            hero_desc = '지금은 모자라지만 %s 뒤 풀립니다' % _labs[_short[-1] + 1]
-        else:
-            hero_desc = '시기에 따라 모자랐다 풀렸다 합니다'
-    elif len(_short) == len(_seq) and gr['k'] in ('g1', 'g0'):
-        # 4년 내내 마이너스인데 등급은 균형/여유인 경우(2026-08-03 실측 7곳:
-        # 대구·여순광·김포·의정부·구미·안동·창원). 둘 다 사실이다 — 크기는 등급
-        # 밴드 안이지만 부호는 계속 부족이다. 그런데 균형 desc가 '필요한 만큼
-        # 들어오고 있습니다'라 바로 아래 '4년 내내 부족합니다'와 정면 충돌한다.
-        # 멸실 배선(7ea036b)으로 재고가 여유→부족으로 뒤집히며 생긴 조합이다.
-        hero_desc = '크게 모자라진 않지만 4년 내내 조금씩 부족합니다'
-    elif not _short and gr['k'] in ('g4', 'g3', 'g2'):
-        # 반대 조합 방어 — 현재 해당 존은 없지만 데이터가 바뀌면 생길 수 있다.
-        hero_desc = '지금 재고는 남지만 앞으로 필요량에는 못 미칩니다'
-    else:
-        hero_desc = gr['desc']
+    hero_desc = hero_line(_seq, gr)
     hero_html = (
         '<span class="zg-badge" style="background:%s1a;color:%s">%s</span>\n'
         '<h1>%s, %s</h1>\n'
