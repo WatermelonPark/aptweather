@@ -1174,9 +1174,22 @@ def _load_bdong_map():
     for i in range(len(d['시도명'])):
         k = str(i); era = d['말소일자'][k]
         if not (era is None or (isinstance(era, float) and math.isnan(era))): continue
+        cd_i = str(d['시군구코드'][k])
         nm = d['시군구명'][k]
-        if not isinstance(nm, str) or not nm: continue
-        out.setdefault(str(d['시군구코드'][k]), (d['시도명'][k], nm))
+        if not isinstance(nm, str) or not nm:
+            # 단층제 시도(세종)는 시군구 계층이 없어 시군구명이 통째로 비어 있다.
+            # 그래도 36110은 실재하는 시군구급 코드이고 건축HUB도 이 코드로 수집한다.
+            # 여기서 버리면 z_of에 안 들어가고 hub_derive의 `if not z: continue`가
+            # 한 시도를 통째로 소거한다 — 2026-08-04 감사에서 세종 준공 93,177세대·
+            # 준공예정 43,834세대가 그렇게 사라지고 있었다(scanned에는 남아 있어
+            # 완결성 게이트도 '148/148 완결'로 통과했다).
+            # 시도 합계행(시군구코드가 '000'으로 끝남: 11000·36000·41000…)만 제외하고,
+            # 이름은 시도명으로 채운다 — zone_of가 (시도,'*') 규칙을 먼저 보므로
+            # 이름 자체는 매칭에 쓰이지 않는다.
+            if cd_i.endswith('000'):
+                continue
+            nm = LZ_SIDO_FULL.get(d['시도명'][k]) or d['시도명'][k]
+        out.setdefault(cd_i, (d['시도명'][k], nm))
     # 강원 원주/춘천/강릉권 51xxx 보정(hub_common.GANGWON_CODE_FIX) — code_bdong.json이
     # 신 코드 행을 아예 갖고 있지 않아, fetch_hub_permits.apply_gangwon_fix와 동일하게
     # 42xxx 항목을 51xxx로 옮겨(같은 시도/이름) _hub_zone_map이 새 코드를 존으로 해석할
@@ -1345,12 +1358,31 @@ def hub_derive(adv):
     done = collections.defaultdict(lambda: collections.defaultdict(int))
     sched = collections.defaultdict(lambda: collections.defaultdict(int))
     demol = collections.defaultdict(lambda: collections.defaultdict(int))
+    # 존 매핑이 없는 코드는 버릴 수밖에 없지만, '버렸다'를 조용히 넘기면 한 시도가
+    # 통째로 사라져도 아무 신호가 없다(2026-08-04 감사: 세종 36110이 그렇게 소거됐고,
+    # scanned에는 남아 있어 완결성 게이트도 '완결'로 통과했다 — 게이트는 members
+    # 부분집합 검사인데 매핑 실패한 코드는 애초에 members가 아니기 때문).
+    # 그래서 '데이터를 가졌는데 매핑이 없는 코드'를 모아 경고한다.
+    orphan = []
     for cd, v in hp.get('sgg', {}).items():
         z = z_of.get(cd)
-        if not z: continue
+        if not z:
+            n_tot = (sum((v.get('done_q') or {}).values())
+                     + sum((v.get('sched_q') or {}).values())
+                     + sum((v.get('demol_q') or {}).values()))
+            if n_tot:
+                orphan.append((n_tot, cd, v.get('name') or '?'))
+            continue
         for q, n in v.get('done_q', {}).items(): done[z][q] += n
         for q, n in v.get('sched_q', {}).items(): sched[z][q] += n
         for q, n in v.get('demol_q', {}).items(): demol[z][q] += n
+    if orphan:
+        orphan.sort(reverse=True)
+        print('hub_derive ⚠️ 존 매핑이 없어 버려진 시군구 %d개 (합계 %s세대) — '
+              '_load_bdong_map/_hub_zone_map 확인 필요'
+              % (len(orphan), format(sum(o[0] for o in orphan), ',')))
+        for n_tot, cd, nm in orphan[:10]:
+            print('   %s %s: %s세대' % (cd, nm, format(n_tot, ',')))
     # 완결성 게이트(Fix C1): 존의 모든 멤버를 각자의 fold 대표(rep) 코드로 환산한
     # 뒤, 그 rep 전원이 scanned일 때만 방출. hp['sgg']/scanned 키는 원시 구 코드가
     # 아니라 항상 rep이므로(수집기가 그렇게 저장), rep 환산 없이 원시 코드로
