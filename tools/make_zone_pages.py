@@ -1206,11 +1206,11 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
     # 필요하고, 들어올 건 이것뿐".
     # 창 방식(2026-08-02)이라 '지난 4년'이 문자 그대로 참이다 — 4년 전 0에서 시작해
     # 준공-멸실-적정을 그대로 더한 값이다. '최대 4년치' 같은 완곡한 표현이 필요 없다.
-    b_lab, b_sub = ('그동안 밀린 집', '지난 4년 누적 · 실측') if backlog >= 0 \
-              else ('그동안 쌓인 집', '지난 4년 누적 · 실측')
-    if backlog >= 0 and abs(backlog - r['need4']) < 1:
-        b_sub = ('과거 누적 · 4년치 상한 도달 — 실제로는 더 밀렸습니다'
-                 '(그래서 아래 ‘필요한 집’과 숫자가 같습니다)')
+    b_lab, b_sub = ('그동안 모자란 집', '지난 4년 · 준공 − 멸실 − 필요량') if backlog >= 0 \
+              else ('그동안 남은 집', '지난 4년 · 준공 − 멸실 − 필요량')
+    # (2026-08-04 삭제) '4년치 상한 도달 — 실제로는 더 밀렸습니다' 분기는 DEFICIT_CAP
+    # 시절의 완곡 표현이었다. 창 방식(2026-08-02)으로 바뀐 뒤 44존 전부 해당 없음이라
+    # 죽은 코드였고, 남겨두면 '밀린'이라는 옛 어휘가 화면에 되살아난다.
     # 필요한 집 출처: 풀 소속 존은 풀 이름·구성·풀 내 세대 비중으로 표기.
     if r.get('pool'):
         need_src = '%s 풀(%s) 세대의 %d%%' % (
@@ -1230,9 +1230,9 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
     if r['tot'] < 0:
         sum_line = '여유 %s세대' % num(-r['tot'])
     elif backlog >= 0:
-        sum_line = '순부족 %s세대 = 밀린 것 + 필요 − 들어올 것' % num(r['tot'])
+        sum_line = '순부족 %s세대 = 모자란 것 + 필요 − 지어질 것' % num(r['tot'])
     else:
-        sum_line = '순부족 %s세대 = 필요 − 쌓인 것 − 들어올 것' % num(r['tot'])
+        sum_line = '순부족 %s세대 = 필요 − 남은 것 − 지어질 것' % num(r['tot'])
     # 이 지역 시세 지수(주간·월간) — '왜 이 판정인가' 하단에 붙인다(2026-08-01).
     # 공급 판정 바로 다음에 실제 가격이 어떻게 움직이는지를 보여줘 검증 가능하게.
     idx_html = pidx.get(nm, '') if pidx else ''
@@ -1279,7 +1279,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
         '<div class="why3">'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s</i></span><b>+%s</b></div>'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>들어올 집<i>준공예정 실측 · 액면 그대로</i></span><b>−%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집<i>준공예정 실측 · 액면 그대로</i></span><b>−%s</b></div>'
         '</div>%s</div></section>' % (
             verdict_html, seq_html,
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
@@ -1852,7 +1852,7 @@ function shareZone(){
   var nm='%(nm)s';
   var u=location.origin+location.pathname+'?utm_source=zone_share&utm_medium=viral&utm_campaign=zone';
   var t=nm+' 아파트 공급 분석 — 아공맵';
-  var x=nm+'에 필요한 집과 앞으로 들어올 집, 국가 통계로 확인해보세요.';
+  var x=nm+'에 필요한 집과 앞으로 지어질 집, 국가 통계로 확인해보세요.';
   try{gtag('event','share',{content_type:'zone',method:navigator.share?'web_share':'copy',zone:nm});}catch(e){}
   if(navigator.share){navigator.share({title:t,text:x,url:u}).catch(function(){});return;}
   var b=document.querySelector('.zshare button');
@@ -1985,7 +1985,7 @@ footer a{color:var(--muted)}
   <h2>전국 생활권 44곳</h2>
   <p>홈 순위표와 <b>같은 기준</b>(등급으로 묶고, 그 안은 세대수 큰 순)으로 나열합니다.
     홈은 양끝(가장 모자란 곳·가장 남는 곳)만 보여주고, 여기서는 44곳을 모두 폅니다.<br>
-    생활권 이름을 누르면 판정 근거(밀린 것·필요한 집·들어올 집)와 분기별 입주 일정,
+    생활권 이름을 누르면 판정 근거(모자란 것·필요한 집·지어질 집)와 분기별 입주 일정,
     그 지역 아파트값 흐름까지 볼 수 있습니다.</p>
   <table>
     <thead><tr><th>#</th><th>생활권</th><th class="num">누적 순부족</th><th>판정</th></tr></thead>
