@@ -1,12 +1,12 @@
 # 준공 기반 러닝재고 순부족 모델 Implementation Plan
 
-> ## ✅ 실행 완료 + go-live (2026-07-31 활성화 · 2026-08-01 검증)
+> ## ✅ 실행 완료 + go-live (2026-07-31 활성화 · 2026-08-03 검증)
 >
 > Task 1~8 산출물이 모두 실재하고, 계획서상 "시드·검토 후 활성화"까지 **실제로 수행됨** —
 > `tools/data/hub_permits.json`의 `meta.activate=true`로 준공 기반 러닝재고가 **라이브 스코어**다.
 > 되돌리려면 `meta.activate`를 제거/`false`로 커밋하면 다음 daily부터 구모델로 복귀한다.
 >
-> **검증 근거(2026-08-01 실측)**: `running_shortage()`·`hub_derive()`·`done_q`/`sched_q` 버킷·
+> **검증 근거(2026-08-03 실측)**: `running_shortage()`·`hub_derive()`·`done_q`/`sched_q` 버킷·
 > `verify_rankdiff.py`·`verify_ref_scale.py`·`test_calc_inventory.py`·JS 미러 `runningShortage()`·
 > 존 단지목록 2섹션 전부 실재. `pytest tools/tests/` **140 passed**,
 > `check_dual_calc.py` **생활권 44곳 전원 일치**(dA·dB·dC·tot·need4·grade).

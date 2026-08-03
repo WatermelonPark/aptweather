@@ -167,7 +167,7 @@ done_q 데이터 없음 — 전량 시드 후 재실행 (hub_permits.json은 현
 4가지 케이스)와 `zone_region`/`zone_refq`(calc() 규칙 미러링 — 수도권 강제, psido 폴백, ref 없으면
 band 중앙값)를 검증. `python tools/test_verify_ref_scale.py` → 3개 테스트 모두 통과.
 
-~~**남은 일 (Task 5로 이월)**~~ → **해소됨(2026-07-31~08-01)**. 위 스모크는 전량 시드 이전
+~~**남은 일 (Task 5로 이월)**~~ → **해소됨(2026-07-31~08-03)**. 위 스모크는 전량 시드 이전
 기록이다. 이후 전량 시드가 끝나(148/148, `done_q` 145곳) 판단이 확정됐다:
 
 - **판정 기준이 바뀌었다(커밋 2e8df19)**: 애초 계획한 **CV(변동계수) < 0.3** 기준은 폐기.
@@ -188,7 +188,7 @@ band 중앙값)를 검증. `python tools/test_verify_ref_scale.py` → 3개 테�
 
 > ### ✅ 이 절차는 2026-07-31 실제로 완료됐다 (아래는 실행 기록 + 재실행 매뉴얼)
 >
-> **현재 상태(2026-08-01 실측)**: `meta.activate = **true**` — 준공 기반 러닝재고가
+> **현재 상태(2026-08-03 실측)**: `meta.activate = **true**` — 준공 기반 러닝재고가
 > **라이브 스코어**다. (a) 전량 시드 완료(`meta.scanned` 148/148, `sgg` 148항목,
 > `done_q` 보유 145곳), (b) 검토 통과, (c) 활성화까지 모두 끝났다.
 >
@@ -197,7 +197,7 @@ band 중앙값)를 검증. `python tools/test_verify_ref_scale.py` → 3개 테�
 > 준공예정 49,449세대 / 중구 28110 준공 8,285세대·준공예정 26,792세대). 검단·영종 신도시
 > 물량이 빠진 게 아니므로 이 3곳의 0을 결측으로 처리하지 말 것.
 >
-> **건강도(2026-08-01)**: `pytest tools/tests/` 140 passed · `check_dual_calc.py` 생활권
+> **건강도(2026-08-03)**: `pytest tools/tests/` 140 passed · `check_dual_calc.py` 생활권
 > 44곳 전원 일치(dA·dB·dC·tot·need4·grade) · 라이브 배포 최신.
 >
 > **되돌리기(롤백)**: `meta.activate`를 제거하거나 `false`로 커밋 → 다음 daily

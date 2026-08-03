@@ -1,12 +1,12 @@
 # 건축HUB 시군구 실측 통합 Implementation Plan
 
-> ## ✅ 실행 완료 (2026-07-31 라이브 활성화 · 2026-08-01 검증)
+> ## ✅ 실행 완료 (2026-07-31 라이브 활성화 · 2026-08-03 검증)
 >
 > 건축HUB 수집기가 가동 중이며 **전국 148개 시군구 그룹 전량 시드 완료**(`meta.scanned` 148/148,
 > `sgg` 148항목). 후속 계획 [2026-07-24-junggong-running-inventory.md](2026-07-24-junggong-running-inventory.md)가
 > 이 수집기를 준공/준공예정 버킷으로 교체해 라이브 스코어로 승격시켰다(`meta.activate=true`).
 >
-> **검증 근거(2026-08-01 실측)**: `fetch_hub_permits.py`·`hub_common.py`·`code_bdong.json`·
+> **검증 근거(2026-08-03 실측)**: `fetch_hub_permits.py`·`hub_common.py`·`code_bdong.json`·
 > `update-hub.yml`/`hub-probe.yml`·`hub_pilot_notes.md` 전부 실재, 시드 148곳.
 >
 > ⚠️ 아래 체크박스는 단계별 실행 로그가 아니라 **산출물 실측 검증에 근거해 사후 표기**한 것이다.

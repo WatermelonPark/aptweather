@@ -1,10 +1,10 @@
 # 홈·존 페이지 UX 재기획 구현 계획
 
-> ## ✅ 실행 완료 · 배포됨 (2026-08-01 검증)
+> ## ✅ 실행 완료 · 배포됨 (2026-08-03 검증)
 >
 > Task 1~6 산출물이 모두 실재하고 **라이브 사이트에 반영 완료**(origin/main과 라이브 index.html 해시 일치).
 >
-> **검증 근거(2026-08-01 실측)**: `tools/tests/test_grade.py`·`GRADE_CUTS`(Python)·`scGrade()`(JS 미러)·
+> **검증 근거(2026-08-03 실측)**: `tools/tests/test_grade.py`·`GRADE_CUTS`(Python)·`scGrade()`(JS 미러)·
 > `check_dual_calc`의 등급 대조·지역 선택기(`agong_myzone` localStorage)·`sw.js` 버전 전부 실재.
 > `pytest tools/tests/` **140 passed**, 미러 검증 **44곳 전원 일치**(등급 `grade` 포함).
 >
