@@ -850,7 +850,20 @@ details.fold .dbody p{font-size:14px}
 .zg-badge{display:inline-block;padding:5px 12px;font-weight:700;font-size:14px;border-radius:2px}
 .zg-cap{color:var(--muted);font-size:12px;margin:6px 0 0}
 .why3 .w-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
-.why3 .w-lab i{display:block;font-style:normal;color:var(--muted);font-size:11.5px}
+/* 출처·산식은 ⓘ 뒤로. .w-sub는 지우는 게 아니라 시각적으로만 숨긴다 —
+   스크린리더와 검색엔진은 계속 읽고, 툴팁도 이 텍스트를 그대로 띄운다. */
+.why3{position:relative}
+.why3 .w-sub{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.why3 .w-i{position:relative;border:0;background:none;padding:0 0 0 5px;margin:0;cursor:pointer;
+ font:inherit;font-size:12px;line-height:1;color:var(--line);vertical-align:1px}
+/* 글리프는 17x12라 그대로 두면 터치 최소선(32px)에 한참 못 미친다. 레이아웃을
+   흔들지 않고 히트 영역만 넓히려면 의사요소로 덮는다(margin 음수는 flex를 흔든다). */
+.why3 .w-i::after{content:'';position:absolute;left:-9px;right:-9px;top:-12px;bottom:-12px}
+.why3 .w-i:hover,.why3 .w-i.on{color:var(--ink2)}
+.why3 .w-i:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:50%}
+.w-tip{position:absolute;background:var(--ink);color:#fff;padding:7px 10px;border-radius:3px;
+ font-size:12px;line-height:1.5;z-index:4;max-width:min(260px,86%);transform:translate(-50%,-100%);
+ pointer-events:none}
 .why3 .w-tag{display:inline-block;font-style:normal;font-size:10.5px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:1px 7px;margin-right:8px;vertical-align:2px;white-space:nowrap}
 .why3 .w-sum{padding:11px 0 0;font-weight:700}
 .w-lead{border-left:3px solid;padding:2px 0 2px 14px;margin:0 0 18px}
@@ -1277,9 +1290,19 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
         '%s%s'
         '<div class="why3">'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s<i>%s</i></span><b>%s%s</b></div>'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집<i>%s</i></span><b>+%s</b></div>'
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집<i>준공예정 실측 · 액면 그대로</i></span><b>−%s</b></div>'
+        # 출처·산식은 ⓘ로 접는다(2026-08-04 사용자). 세 줄 밑에 늘 깔려 있어 정작
+        # 읽어야 할 라벨·숫자와 경쟁했다. 텍스트는 DOM에 그대로 두고(.w-sub는 시각적
+        # 으로만 숨김) 스크린리더·검색엔진은 계속 읽는다 — 지우는 게 아니라 접는 것.
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s'
+        '<button type="button" class="w-i" aria-label="설명 보기">ⓘ</button>'
+        '<span class="w-sub">%s</span></span><b>%s%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집'
+        '<button type="button" class="w-i" aria-label="설명 보기">ⓘ</button>'
+        '<span class="w-sub">%s</span></span><b>+%s</b></div>'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
+        '<button type="button" class="w-i" aria-label="설명 보기">ⓘ</button>'
+        '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>−%s</b></div>'
+        '<div class="w-tip" hidden></div>'
         '</div>%s</div></section>' % (
             verdict_html, seq_html,
             b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
@@ -1700,6 +1723,29 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
             'wrap.addEventListener("mouseleave",hide);'
             'document.addEventListener("click",function(e){'
             'if(!wrap.contains(e.target))hide();});})();</script>'
+            # 게이지 ⓘ — .q-col과 같은 규칙(click은 무조건 show, hover는 마우스만).
+            # 터치에서 합성 mouseenter가 click보다 먼저 와 토글이 상쇄되는 함정 회피.
+            '<script>(function(){var w3=document.querySelector(".why3");if(!w3)return;'
+            'var tip=w3.querySelector(".w-tip"),btns=w3.querySelectorAll(".w-i");'
+            'if(!tip||!btns.length)return;'
+            'function hide(){tip.hidden=true;btns.forEach(function(b){b.classList.remove("on")});}'
+            'function show(b){var sub=b.parentNode.querySelector(".w-sub");if(!sub)return;'
+            'btns.forEach(function(x){x.classList.toggle("on",x===b)});'
+            'tip.textContent=sub.textContent;tip.hidden=false;'
+            'var wr=w3.getBoundingClientRect(),br=b.getBoundingClientRect();'
+            'tip.style.left="0px";tip.style.top="0px";'
+            'var tw=tip.offsetWidth;'
+            'var x=br.left-wr.left+br.width/2,y=br.top-wr.top-6;'
+            'x=Math.max(tw/2+2,Math.min(x,wr.width-tw/2-2));'
+            'tip.style.left=x+"px";tip.style.top=y+"px";}'
+            'btns.forEach(function(b){'
+            'b.addEventListener("click",function(e){e.stopPropagation();show(b)});'
+            'b.addEventListener("pointerenter",function(e){'
+            'if(!e.pointerType||e.pointerType==="mouse")show(b);});'
+            'b.addEventListener("focus",function(){show(b)});});'
+            'w3.addEventListener("mouseleave",hide);'
+            'document.addEventListener("click",function(e){'
+            'if(!w3.contains(e.target))hide();});})();</script>'
             '<script>(function(){var w=document.querySelector(".pidx");if(!w)return;'
             'var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");'
             'if(!svg||!tip)return;var d;try{d=JSON.parse(svg.getAttribute("data-tip"))}catch(e){return}'
