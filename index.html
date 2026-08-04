@@ -659,7 +659,12 @@ const AUXLINES={
   '전세지수':[{y:2021,m:9,t:'2021 정점',c:'#e0564a'},{y:2023,m:1,t:'2023 입주장',c:'#3aa17e'}],
   '금리':[{y:2021,m:6,t:'금리 바닥',c:'#3aa17e'},{y:2022,m:11,t:'금리 정점',c:'#e0564a'}],
   '착공':[{y:2022,m:1,t:'착공 급감',c:'#e0564a'}],
-  '아파트건설':[{y:1988,m:12,t:'88올림픽~ 급증 시작',c:'#e0564a'},{y:1995,m:12,t:'공급 정점',c:'#9a7000'}],
+  // 준공연도 + 40년 = 재건축 연한 도래 시점. 축은 준공연도라 도래 연도를 라벨에
+  // 병기한다(실측: 1988년 16.2만 → 2028년 / 1992년 38.1만 → 2032년 / 1995년 43.0만
+  // → 2035년). 40년차 도래는 '헐릴 물량'이 아니라 후보 재고다 — 실현 비율은 별개.
+  '아파트건설':[{y:1988,m:12,t:'88올림픽 급증 · 40년차 2028',c:'#e0564a'},
+    {y:1992,m:12,t:'38만 돌파 · 40년차 2032',c:'#b5651d'},
+    {y:1995,m:12,t:'정점 43만 · 40년차 2035',c:'#9a7000'}],
 };
 const DS_LABEL={매매지수:'매매 실거래지수',전세지수:'전세 실거래지수',전세가율:'전세가율',
   규모별:'규모별 동향',
@@ -805,11 +810,14 @@ function drawStat(){
         ctx.save();ctx.strokeStyle=l.c;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
         ctx.beginPath();ctx.moveTo(x,ya.top);ctx.lineTo(x,ya.bottom);ctx.stroke();
         ctx.setLineDash([]);ctx.fillStyle=l.c;ctx.font='700 10px '+FONT;
-        // 인접 라벨과 겹치면 한 줄 아래로
-        let ty=ya.top+11, near=drawn.some(dx=>Math.abs(dx-x)<70);
-        if(near)ty=ya.top+25;
+        // 인접 라벨과 겹치면 빈 줄을 찾을 때까지 내린다. 예전엔 2행 고정이라
+        // 보조선이 3개 이상 붙어 있으면(아파트건설 1988/1992/1995) 3번째가
+        // 2번째 위에 그대로 겹쳐 찍혔다.
+        let row=0;
+        while(drawn.some(d=>d.row===row&&Math.abs(d.x-x)<70))row++;
+        const ty=ya.top+11+row*14;
         ctx.textAlign=x>xa.right-50?'right':'left';
-        ctx.fillText(' '+l.t,x,ty);drawn.push(x);ctx.restore();
+        ctx.fillText(' '+l.t,x,ty);drawn.push({x:x,row:row});ctx.restore();
       });
     }}]
   });
