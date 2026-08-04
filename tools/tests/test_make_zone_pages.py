@@ -440,3 +440,35 @@ def test_hero_desc_never_contradicts_sequence():
         h1 = _re.search(r'<h1>([^<]*)</h1>', html).group(1)
         assert '필요한 만큼 들어오고 있습니다' not in h1, r['z']['z'] + ': 시퀀스와 충돌'
         assert '부족' in h1, r['z']['z'] + ': 전 구간 부족인데 히어로가 침묵'
+
+
+# ---------------------------------------------------------------------------
+# 노후 재고(재건축 압력) 카드 (2026-08-04) — 참고 수치, 순부족 산식 밖
+# ---------------------------------------------------------------------------
+
+def test_aged_stock_maps_capital_zones_to_real_sido():
+    """수도권 존은 ps가 '수도권'인데 노후 계열은 서울·경기·인천으로 나뉜다.
+    존 이름으로 실제 시도를 잡지 않으면 22곳이 통째로 빠진다."""
+    adv, sts = M.load()
+    rows = M.calc(adv, sts)
+    got = [r['z']['z'] for r in rows if M.aged_stock(sts, adv, r)]
+    assert len(got) == len(rows), '산출 못 한 존: %s' % (set(r['z']['z'] for r in rows) - set(got))
+    for z in ('서울권', '인천권', '고양권'):
+        assert z in got
+
+
+def test_aged_stock_not_wired_into_shortage():
+    """노후 재고는 화면 전용 — 실현율이 0~59%로 흩어져 계수를 곱할 근거가 없다."""
+    import inspect
+    src = inspect.getsource(M.calc)
+    assert 'aged_stock' not in src, 'calc()가 노후 재고를 쓰고 있다'
+    assert '노후주택30년' not in src
+
+
+def test_aged_stock_card_discloses_uncertainty():
+    import io as _io, re as _re
+    html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
+    cards = _re.findall(r'<div class="lead-box">.*?</div>', html, _re.S)
+    card = next((c for c in cards if '재건축 압력' in c), None)
+    assert card, '노후 재고 카드가 없다'
+    assert '알 수 없습니다' in card and '순부족 계산에는' in card

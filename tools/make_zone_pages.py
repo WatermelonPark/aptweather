@@ -493,6 +493,43 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
     return out
 
 
+def aged_stock(sts, adv, r):
+    """30년 넘은 아파트 재고(시도) → 존 안분. 개발 압력의 크기를 보여주는 참고 수치.
+
+    ⚠️ 순부족 산식에 넣지 않는다. 노후 재고는 '앞으로 헐릴 물량'이 아니다 —
+    30년차 도래 대비 실제 멸실 실현율을 실측하면 중앙값 7.7%에 0~59%로 흩어진다
+    (서울 2017년 57.0% vs 2022년 2.7%, 광주 2016년 59.2% vs 2024년 0.0%).
+    재건축은 노후도가 아니라 사업성·정책·조합 진행에 좌우되므로 어떤 계수를
+    곱해도 근거가 없다. 그래서 곱하지 않고 원수치만 보여준다.
+
+    미래 멸실을 모델에 넣으려면 관리처분인가·이주 통계 같은 실제 파이프라인이
+    필요하다. 40년차 도래 물량으로 기계적 추정하는 안도 검토했으나 데이터가
+    없다: 지역별 준공은 2010년부터고(DT_MLTM_5373), 1970년부터 있는
+    DT_MLTM_692는 축이 주체별(국가·지자체·주공·민간)이라 지역이 없다.
+    KOSIS 경과연수 구분도 '20~30년 미만'/'30년 이상' 두 칸뿐이라 40년차가 없다.
+
+    ⚠️ 시도 매핑 주의: 수도권 존은 r['ps']가 '수도권'인데 노후 계열은 서울·경기·
+    인천으로 나뉜다. 존 이름으로 실제 시도를 잡는다(그러지 않으면 22곳이 통째로
+    빠진다 — 2026-08-04 실측).
+
+    반환: (안분 재고, 4년 필요량 대비 배수) 또는 None.
+    """
+    N = (sts or {}).get('노후주택30년') or {}
+    ser = N.get('series') or {}
+    ps = r['ps']
+    if ps == '수도권':
+        z = r['z']['z']
+        ps = '서울' if z == '서울권' else ('인천' if z == '인천권' else '경기')
+    v = ser.get(ps)
+    if not v or v[-1] is None:
+        return None
+    tot = ((adv.get('livezone') or {}).get('sidohh') or {}).get(ps)
+    if not tot or not r.get('need4'):
+        return None
+    old = v[-1] * min(1.0, r['z']['hh'] / tot)
+    return old, old / r['need4']
+
+
 def start_lead(sts, adv, ps, cur_q, yrs=3):
     """시도 착공 최근 yrs년 합 vs 적정물량 — 준공예정의 교차검증 지표.
 
@@ -1223,7 +1260,7 @@ def render_price_index(adv, zone, codes):
             '<a class="px-more" href="/#stats">전국 시황 통계 자세히 보기 →</a>'
             '</div>' % (_base, now, legend, svg))
 
-def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
+def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged=None):
     z = r['z']; nm = z['z']; ps = r['ps']
     gr = r['gr']
     tname, tcol = gr['label'], gr['color']
@@ -1465,13 +1502,27 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
     # 계산은 호출부(main)가 시도별로 한 번만 하고(plead) 여기선 꺼내 쓴다 —
     # build_page는 sts/adv를 받지 않는다(pidx와 같은 패턴).
     lead_html = (plead or {}).get(ps, '')
+    # 30년 넘은 아파트 재고 — 개발(재건축) 압력의 크기. 순부족에는 안 들어간다.
+    aged_html = ''
+    _ag = paged if paged is not None else None
+    if _ag:
+        _old, _mul = _ag
+        aged_html = (
+            '<div class="lead-box"><b>재건축 압력 — 30년 넘은 아파트</b>'
+            '<p>이 지역에 준공 30년이 넘은 아파트가 <b>%s호</b> 쌓여 있습니다 — '
+            '앞으로 4년간 필요한 집의 <b>%.1f배</b>입니다.</p>'
+            '<p class="note">이 중 얼마가 언제 헐릴지는 알 수 없습니다. 30년차 도래 '
+            '대비 실제 철거 비율은 실측하면 0~59%%로 흩어져(중앙값 8%%) 재건축이 '
+            '노후도보다 사업성·정책에 좌우되기 때문입니다. 그래서 순부족 계산에는 '
+            '넣지 않았습니다. 시도 통계를 세대 비중으로 나눈 참고 수치입니다.</p>'
+            '</div>' % (num(_old), _mul))
     timeline_html = (
         '<section><div class="wrap"><h2>언제 들어오나</h2>'
         '<p class="note" style="margin-bottom:9px">%s</p>'
         '%s%s%s</div></section>' % (
             cap_line, qchart_html,
             ('<p class="note" style="margin-top:9px">%s</p>' % qcap) if qcap else '',
-            lead_html))
+            lead_html + aged_html))
 
     # ── 인포그래픽: 기여 3카드 (가중 반영, 합계 = tot = 히어로 숫자) ──
     def tcard(lab, sub_, contrib, w):
@@ -2273,7 +2324,7 @@ def main():
         nm = r['z']['z']
         d = os.path.join(outdir, nm)
         os.makedirs(d, exist_ok=True)
-        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx, plead), old_pages.get(nm, ''), today)
+        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx, plead, aged_stock(sts, adv, r)), old_pages.get(nm, ''), today)
         io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
         names.append(nm)
         lastmods[nm] = lm
