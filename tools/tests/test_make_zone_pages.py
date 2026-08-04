@@ -541,3 +541,24 @@ def test_future_demolition_limit_disclosed():
     for p in ('index.html', 'zone/서울권/index.html'):
         h = _io.open(p, encoding='utf-8').read()
         assert '헐릴 집' in h, '%s에 미래 멸실 한계 공시가 없다' % p
+
+
+def test_zone_page_does_not_overwrite_pinned_myzone():
+    """홈에서 고른 '내 지역'이 존 페이지 방문으로 덮이면 안 된다.
+    A권을 고르고 B권 페이지를 한 번 보면 B권이 돼 있던 버그(2026-08-05)."""
+    import io as _io, re as _re
+    html = _io.open('zone/성남권/index.html', encoding='utf-8').read()
+    m = _re.search(r'<script>try\{var _mz=.*?</script>', html, _re.S)
+    assert m, '내 지역 저장 스크립트가 없다'
+    js = m.group(0)
+    assert 'if(!(_mz&&_mz.pinned))' in js, 'pinned 가드가 없다 — 명시적 선택을 덮어쓴다'
+    assert js.index('if(!(_mz&&_mz.pinned))') < js.index('localStorage.setItem'), \
+        '가드가 setItem보다 뒤에 있다'
+
+
+def test_home_marks_explicit_choice_as_pinned():
+    import io as _io, re as _re
+    html = _io.open('index.html', encoding='utf-8').read()
+    m = _re.search(r'function mzSave\(nm\)\{.*?\n\}', html, _re.S)
+    assert m, 'mzSave가 없다'
+    assert 'pinned:1' in m.group(0), '홈 선택기가 pinned를 안 남긴다'

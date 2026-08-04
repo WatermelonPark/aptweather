@@ -2775,7 +2775,11 @@ function mzPick(btn,ps){
 function mzSave(nm){
   const zones=window.__SCZ||[],row=zones.find(z=>z.z===nm);
   if(!row)return;
-  mzSet({z:nm,savedAt:new Date().toISOString().slice(0,10),
+  /* pinned=명시적 선택. 존 페이지의 암묵 저장은 이 표시가 있으면 z를 안 건드린다
+     — 없던 시절엔 A권을 고르고 B권 페이지를 한 번 보면 내 지역이 B권으로 바뀌었다
+     (2026-08-05). 키 하나에 '고른 지역'과 '마지막 본 지역' 두 의미가 얹혀 있던 게
+     원인이고, 이 플래그가 둘을 가른다. */
+  mzSet({z:nm,pinned:1,savedAt:new Date().toISOString().slice(0,10),
          last:{tot:Math.round(row.tot),rank:mzRank(zones,nm),grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
   window.__MZ_JUST=1;
   renderMyZone();track('myzone',{action:'save',region:nm});

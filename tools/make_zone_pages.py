@@ -1810,16 +1810,24 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # 같은 존을 다시 보면 last(지난 방문 기록)를 보존해 홈의 diff 표시가 살아있게 하고,
     # 다른 존이면 이 페이지의 빌드 시점 값으로 last를 초기화한다(엉뚱한 diff 방지).
     # 수도권 합계 페이지는 선택 가능한 존이 아니라 기억하지 않는다.
+    #
+    # ⚠️ pinned가 있으면 z를 건드리지 않는다(2026-08-05 버그 수정). 예전엔 조건 없이
+    # 덮어써서, 홈에서 A권을 고른 뒤 B권 페이지를 한 번 보고 돌아오면 내 지역이 B권이
+    # 돼 있었다. 키 하나에 '사용자가 고른 지역'(홈 선택기)과 '마지막으로 본 지역'
+    # (이 스크립트) 두 의미가 얹혀 있던 게 원인이다 — 명시적 선택이 암묵적 조회에
+    # 덮이면 안 된다. 검색으로 존 페이지에 바로 들어온 유입은 pinned가 없으므로
+    # 자동 기억이 그대로 동작한다.
     if subs:
         save_js = ''
     else:
         save_js = (
             '<script>try{var _mz=null;try{_mz=JSON.parse(localStorage.getItem("agong_myzone"))}catch(e){}'
+            'if(!(_mz&&_mz.pinned)){'
             'var _same=_mz&&_mz.z===%s;'
             'localStorage.setItem("agong_myzone",JSON.stringify({z:%s,'
             'savedAt:(_same&&_mz.savedAt)||%s,'
             'last:(_same&&_mz.last)||{tot:%d,rank:%d,grade:%s,seen:%s}}));'
-            '}catch(e){}</script>'
+            '}}catch(e){}</script>'
             % (json.dumps(nm, ensure_ascii=False), json.dumps(nm, ensure_ascii=False),
                json.dumps(str(today)), round(r['tot']), rank_no,
                json.dumps(gr['label'], ensure_ascii=False), json.dumps(str(today))))
