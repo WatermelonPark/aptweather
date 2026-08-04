@@ -1381,6 +1381,20 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         % (_msg, ''.join(
             '<div class="seq-c%s"><i></i><span>%s</span></div>'
             % (' on' if v < 0 else '', _labs[i]) for i, v in enumerate(_seq))))
+    # 노후 재고 — 개발(재건축) 압력의 크기. 순부족 산식에는 안 들어간다.
+    # 예전엔 '언제 들어오나' 아래 별도 카드였는데, 세 줄과 떨어져 있어 '필요한 집·
+    # 지어질 집'과 나란히 읽히지 않았다(2026-08-04 사용자). 같은 표로 올리고 설명은
+    # 다른 줄과 똑같이 ⓘ 뒤로 접는다.
+    aged_row = ''
+    if paged:
+        _old, _mul, _yr = paged
+        aged_row = (
+            '<div class="w-row"><span class="w-lab"><em class="w-tag">현재</em>노후된 집'
+            '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
+            '<span class="w-sub">준공 30년 초과 아파트 · %s년 주택총조사 시군구 합 · '
+            '필요한 집의 %.1f배. 이 중 언제 얼마가 헐릴지는 알 수 없어(실현율 0~59%%) '
+            '순부족 계산에는 넣지 않았습니다</span></span><b>%s세대</b></div>'
+            % (_yr, _mul, num(_old)))
     why_html = (
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
         '%s%s'
@@ -1397,6 +1411,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
         '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>%s세대</b></div>'
+        # 노후 재고는 '앞으로 4년'이 아니라 **지금 쌓여 있는 것**이라 태그를 '현재'로
+        # 둔다. 위 두 줄과 같은 태그를 달면 "4년 안에 헐릴 물량"으로 읽히는데,
+        # 그 숫자는 아무도 모른다(실현율 0~59%) — 이 카드를 만든 이유 자체가 그거다.
+        '%s'
         '<div class="w-tip" hidden></div>'
         '</div>%s</div></section>' % (
             verdict_html, seq_html,
@@ -1406,6 +1424,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
             need_src if nm == ps else ('%s = %s 몫 · 추정' % (need_src, nm)),
             num(r['need4']),
             num(r['fsupw']),
+            aged_row,
             idx_html))
 
     # ── 인포그래픽: 분기별 입주 미니차트 ──
@@ -1498,28 +1517,13 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # 계산은 호출부(main)가 시도별로 한 번만 하고(plead) 여기선 꺼내 쓴다 —
     # build_page는 sts/adv를 받지 않는다(pidx와 같은 패턴).
     lead_html = (plead or {}).get(ps, '')
-    # 30년 넘은 아파트 재고 — 개발(재건축) 압력의 크기. 순부족에는 안 들어간다.
-    aged_html = ''
-    _ag = paged if paged is not None else None
-    if _ag:
-        _old, _mul, _yr = _ag
-        aged_html = (
-            '<div class="lead-box"><b>재건축 압력 — 30년 넘은 아파트</b>'
-            '<p>이 지역에 준공 30년이 넘은 아파트가 <b>%s호</b> 쌓여 있습니다 — '
-            '앞으로 4년간 필요한 집의 <b>%.1f배</b>입니다.</p>'
-            '<p class="note">이 중 얼마가 언제 헐릴지는 알 수 없습니다. 30년차 도래 '
-            '대비 실제 철거 비율은 실측하면 0~59%%로 흩어져(중앙값 8%%) 재건축이 '
-            '노후도보다 사업성·정책에 좌우되기 때문입니다. 그래서 순부족 계산에는 '
-            '넣지 않았습니다. 이 생활권에 속한 시군구의 주택총조사 값을 그대로 '
-            '더한 수치입니다(%s년 기준).</p>'
-            '</div>' % (num(_old), _mul, _yr))
     timeline_html = (
         '<section><div class="wrap"><h2>언제 들어오나</h2>'
         '<p class="note" style="margin-bottom:9px">%s</p>'
         '%s%s%s</div></section>' % (
             cap_line, qchart_html,
             ('<p class="note" style="margin-top:9px">%s</p>' % qcap) if qcap else '',
-            lead_html + aged_html))
+            lead_html))
 
     # ── 인포그래픽: 기여 3카드 (가중 반영, 합계 = tot = 히어로 숫자) ──
     def tcard(lab, sub_, contrib, w):

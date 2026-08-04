@@ -480,14 +480,44 @@ def test_aged_stock_is_measured_not_apportioned():
             '%s: 실측/안분 %.2f (기대 %.2f~%.2f) — 안분으로 되돌아갔나' % (z, real / appo, lo, hi))
 
 
-def test_aged_stock_card_discloses_uncertainty():
+def test_aged_stock_row_sits_with_the_other_three():
+    """노후 재고는 '왜 이 판정인가'의 세 줄과 같은 표에 있어야 한다 — 따로 떨어져
+    있으면 '필요한 집·지어질 집'과 나란히 안 읽힌다(2026-08-04 사용자)."""
     import io as _io, re as _re
     html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
-    cards = _re.findall(r'<div class="lead-box">.*?</div>', html, _re.S)
-    card = next((c for c in cards if '재건축 압력' in c), None)
-    assert card, '노후 재고 카드가 없다'
-    assert '알 수 없습니다' in card and '순부족 계산에는' in card
-    assert '더한 수치입니다' in card, '실측 합계라는 출처 표기가 없다'
+    why = _re.search(r'<div class="why3">.*?</div></section>', html, _re.S)
+    assert why, 'why3 블록이 없다'
+    body = why.group(0)
+    assert '노후된 집' in body, '노후 재고 줄이 why3 밖에 있다'
+    assert body.index('지어질 집') < body.index('노후된 집'), '세 줄 뒤에 와야 한다'
+
+
+def test_aged_stock_row_is_tagged_present_not_future():
+    """'앞으로 4년' 태그를 달면 '4년 안에 헐릴 물량'으로 읽힌다 — 그 숫자는 아무도
+    모르고(실현율 0~59%), 이 지표를 만든 이유가 바로 그거다."""
+    import io as _io
+    html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
+    i = html.index('노후된 집')
+    row = html[html.rindex('<div class="w-row">', 0, i):i]   # 그 줄의 시작부터 라벨까지
+    assert row.endswith('<em class="w-tag">현재</em>'), row[-60:]
+
+
+def test_aged_stock_tooltip_discloses_uncertainty():
+    import io as _io, re as _re
+    html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
+    sub = _re.search(r'노후된 집.*?<span class="w-sub">(.*?)</span>', html, _re.S)
+    assert sub, '노후 재고 줄의 설명이 없다'
+    t = sub.group(1)
+    assert '알 수 없어' in t and '순부족 계산에는' in t
+    assert '주택총조사' in t and '시군구' in t, '실측 합계라는 출처 표기가 없다'
+
+
+def test_old_aged_stock_card_is_gone():
+    """설명 문단은 통째로 걷어냈다(2026-08-04 사용자) — 툴팁이 그 자리를 대신한다."""
+    import io as _io
+    html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
+    assert '재건축 압력' not in html
+    assert '쌓여 있습니다' not in html
 
 
 def test_no_literal_double_percent_in_pages():
