@@ -626,13 +626,23 @@ def _aggregate(items):
             continue
         name = r.get('bldNm') or ''
         plat = (r.get('platPlc') or '').strip()
+        # 6번째 원소 착공연월(stcnsDay, 2026-08-04 추가) — 점수에는 아직 안 쓴다.
+        # 왜 모으나: 준공예정일(useInsptSchedDay)은 인허가 시점의 **서류상 날짜**라
+        # 정비사업에서 수년씩 밀린다(실측: 감만1구역 예정 2023-07인데 2025-12에야
+        # 조합설립, 한남3 예정 2024-12인데 2029 입주 예정, 광명11R 예정 2023-04인데
+        # 2025-06 착공). 그래서 '예정일이 지났는데 준공 기록이 없는' 물량이 창 안에만
+        # 58만 세대 쌓여 있는데, 지금은 재고에도 미래공급에도 안 들어가 통째로 안 세어진다.
+        # 착공은 서류가 아니라 물리적 사건이라 이 둘을 가른다:
+        #   착공 O + 예정일 경과 → 실제 공사 중(준공 임박) / 착공 X → 아직 삽도 안 뜸.
+        # 먼저 모아 두어야 '착공→준공 실제 소요기간'을 실측해 재배치 규칙을 정할 수 있다.
+        stcns = H.to_yearmonth(r.get('stcnsDay'))
         dq = H.to_quarter(r.get('useInsptDay'))
         if dq:
-            units.append([name, n, H.to_yearmonth(r.get('useInsptDay')), 'done', plat])
+            units.append([name, n, H.to_yearmonth(r.get('useInsptDay')), 'done', plat, stcns])
             continue
         sq = H.to_quarter(r.get('useInsptSchedDay'))
         if sq:
-            units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched', plat])
+            units.append([name, n, H.to_yearmonth(r.get('useInsptSchedDay')), 'sched', plat, stcns])
         # 둘 다 없으면 미정 — 미반영
     # 사업 단위 계상(2026-08-03): 호별·동별 대장에 단지 총세대수가 복제된 것을
     # (지번, 세대수)로 접는다. 상세는 hub_common.collapse_units_by_project.

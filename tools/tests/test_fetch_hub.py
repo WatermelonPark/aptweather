@@ -231,7 +231,8 @@ def test_aggregate_filters_apt_only_and_classifies_by_stage():
     assert done_q == {'2024Q1': 832}
     assert sched_q == {}
     # units 5번째 원소는 지번(감사용) — 화면 페이로드에는 안 나간다(_zone_units가 3개만 재조립).
-    assert units == [['오산자이', 832, '2024-03', 'done', '경기도 오산시 세교동 123-4번지']]
+    # 6번째=착공연월. SAMPLE_XML의 stcnsDay=20240320 → '2024-03'.
+    assert units == [['오산자이', 832, '2024-03', 'done', '경기도 오산시 세교동 123-4번지', '2024-03']]
 
 
 def test_aggregate_classifies_latest_stage_once():
@@ -247,8 +248,10 @@ def test_aggregate_classifies_latest_stage_once():
     assert sched == {'2029Q4': 200}
     # 세대 큰 순 정렬(B=200 sched 먼저) — bldNm 필드가 픽스처에 없어 빈 문자열
     # 저장 순서는 stage별 묶음(done 먼저) — 화면 순서는 렌더러가 날짜로 다시 정한다.
-    assert sorted(units) == sorted([['', 200, '2029-11', 'sched', ''],
-                                    ['', 100, '2024-03', 'done', '']])
+    # 6번째=착공연월(2026-08-04 추가). 픽스처 A는 dedupe로 마지막 레코드(stcnsDay 빈값)가
+    # 남고 B도 빈값이라 둘 다 None이다.
+    assert sorted(units) == sorted([['', 200, '2029-11', 'sched', '', None],
+                                    ['', 100, '2024-03', 'done', '', None]])
 
 
 def test_aggregate_counts_dual_registered_project_once():
@@ -1016,7 +1019,7 @@ def test_fetch_group_collects_units_across_bjdong(monkeypatch):
               'platPlc': '경기도 오산시 세교동 55번지'}]
     monkeypatch.setattr(F, 'fetch_bjdong_all_pages', lambda sigungu, bjdong, log=None: (items, False))
     done_q, sched_q, units, productive, had_unresolved_error = F.fetch_group(group)
-    assert units == [['오산자이', 300, '2024-03', 'done', '경기도 오산시 세교동 55번지']]
+    assert units == [['오산자이', 300, '2024-03', 'done', '경기도 오산시 세교동 55번지', None]]
 
 
 def _run_with_stub(tmp_path, monkeypatch, fake_groups, seeded, fetch_group_stub):
@@ -1589,3 +1592,22 @@ def test_fetch_bjdong_all_pages_complete_pagination_is_not_flagged(monkeypatch):
     items, had_error = F.fetch_bjdong_all_pages('11680', '10100')
     assert len(items) == 150
     assert had_error is False
+
+
+def test_aggregate_stores_construction_start():
+    """착공연월을 units 6번째에 담는다(점수 미반영, 실측용 축적).
+
+    준공예정일은 인허가 시점의 서류상 날짜라 정비사업에서 수년씩 밀린다. 착공은
+    물리적 사건이라 '실제 공사 중'과 '아직 삽도 안 뜸'을 가른다 — 그 판단을 하려면
+    먼저 모아야 한다.
+    """
+    items = [{'mgmHsrgstPk': 'K1', 'purpsCdNm': '공동주택', 'totHhldCnt': '300',
+              'bldNm': '테스트', 'platPlc': '서울특별시 강북구 번동 1-1번지',
+              'useInsptSchedDay': '20260630', 'stcnsDay': '20230415'}]
+    done_q, sched_q, units = F._aggregate(items)
+    assert sched_q == {'2026Q2': 300} and done_q == {}
+    assert units[0][5] == '2023-04'
+    # 착공일이 없으면 None(아직 삽 안 뜬 사업) — 나중에 이걸로 가른다.
+    items[0]['stcnsDay'] = ''
+    _, _, u2 = F._aggregate(items)
+    assert u2[0][5] is None

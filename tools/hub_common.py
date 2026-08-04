@@ -166,7 +166,12 @@ def collapse_units_by_project(units):
         ym = sorted(set(yms), key=lambda y: (-yms.count(y), y))[0] if yms else None
         names = [x[0] for x in same if (x[0] or '').strip()]
         name = max(set(names), key=lambda v: (names.count(v), -len(v))) if names else (same[0][0] or '')
-        out.append([name, n, ym, stage, plat])
+        # 착공연월(6번째, 2026-08-04)은 남은 1건에도 실어 보낸다 — 여기서 안 챙기면
+        # 접히는 순간 사라져 수집만 하고 못 쓰는 필드가 된다. 같은 사업의 대장들이
+        # 서로 다른 착공일을 달고 있으면 **가장 이른 값**을 쓴다(그 사업이 실제로
+        # 삽을 뜬 시점이므로). 하나도 없으면 None.
+        st = sorted(x[5] for x in us if len(x) > 5 and x[5])
+        out.append([name, n, ym, stage, plat, st[0] if st else None])
     return out
 
 

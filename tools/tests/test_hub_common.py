@@ -160,3 +160,35 @@ def test_apt_records_applies_collapse_by_default_and_can_opt_out():
              _reg('1000000000000000220547', rnum='4')]
     assert len(H.apt_records(items)) == 1                    # 기본: 접힘
     assert len(H.apt_records(items, collapse=False)) == 2    # 로그용 비교치
+
+
+def test_collapse_preserves_and_picks_earliest_stcns():
+    """착공연월(6번째)은 접힌 뒤에도 남아야 한다 — 안 챙기면 수집만 하고 못 쓴다.
+
+    같은 사업의 대장들이 서로 다른 착공일을 달고 있으면 가장 이른 값이 그 사업이
+    실제로 삽을 뜬 시점이다. 옛 5필드 데이터와 섞여도 깨지면 안 된다(하위호환).
+    """
+    P = '서울특별시 강북구 번동 1-1번지'
+    got = H.collapse_units_by_project([
+        ['A동', 500, '2026-03', 'sched', P, '2023-05'],
+        ['B동', 500, '2026-03', 'sched', P, '2023-02'],
+        ['C동', 500, '2026-03', 'sched', P, None]])
+    assert len(got) == 1 and got[0][5] == '2023-02'
+
+    # 옛 형식(5필드)만 있으면 None으로 채워 형태를 통일한다.
+    old = H.collapse_units_by_project([
+        ['A동', 500, '2026-03', 'sched', P],
+        ['B동', 500, '2026-03', 'sched', P]])
+    assert len(old) == 1 and old[0][5] is None
+
+    # 혼재해도 있는 값을 쓴다.
+    mix = H.collapse_units_by_project([
+        ['A동', 500, '2026-03', 'sched', P],
+        ['B동', 500, '2026-03', 'sched', P, '2023-02']])
+    assert mix[0][5] == '2023-02'
+
+    # done 우선 규칙은 그대로.
+    d = H.collapse_units_by_project([
+        ['A', 300, '2024-01', 'sched', P, '2021-01'],
+        ['A', 300, '2024-06', 'done', P, '2021-01']])
+    assert d[0][3] == 'done' and d[0][5] == '2021-01'
