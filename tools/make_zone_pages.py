@@ -1273,7 +1273,8 @@ def render_price_index(adv, zone, codes):
             '<a class="px-more" href="/#stats">전국 시황 통계 자세히 보기 →</a>'
             '</div>' % (_base, now, legend, svg))
 
-def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged=None):
+def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged=None,
+               cities=None):
     z = r['z']; nm = z['z']; ps = r['ps']
     gr = r['gr']
     tname, tcol = gr['label'], gr['color']
@@ -1713,6 +1714,20 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         '<details class="fold"><summary>어떻게 계산했나</summary><div class="dbody">\n'
         '<p><b>적정물량</b>은 과거 이 지역의 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 기준선입니다.</p>\n'
         '%s\n</div></details>' % calc_detail_html)
+    # 시·군이 둘 이상이면 각자 상세페이지가 있다(2026-08-05). 권역 등급 하나로는
+    # 안에서 반대로 가는 곳이 안 보인다 — 경기남부외곽권은 '공급 여유'인데 여주만
+    # +0.96 '다소 부족'이다. 접힘 안이 아니라 독립 섹션으로 올린다.
+    city_sec_html = ''
+    if cities and len(cities) >= 2:
+        city_sec_html = (
+            '<section><div class="wrap"><h2>이 생활권 안에서</h2>'
+            '<p class="note" style="margin-bottom:9px">시·군마다 공급 사정이 다릅니다. '
+            '눌러서 개별 리포트를 보세요.</p><div class="zlist">%s</div></div></section>'
+            % ''.join(
+                '<a href="/zone/%s/%s/">%s %s <span class="sc-tier %s">%s</span></a>'
+                % (quote(nm), quote(c['city']), c['city'], signed(c['tot']),
+                   c['gr']['k'], c['gr']['label'])
+                for c in cities))
     compo_fold_html = (
         '<details class="fold"><summary>이 생활권은 어디를 묶었나</summary><div class="dbody">\n'
         '<p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>\n'
@@ -2008,6 +2023,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
 </div></header>
 
 %(why)s
+%(cities)s
 %(timeline)s
 %(units)s
 %(flag)s
@@ -2075,6 +2091,7 @@ function shareZone(){
         ranktxt=ranktxt, prd=prd, fq=r['fq'],
         hero=hero_html, why=why_html, timeline=timeline_html, units=units_sec_html,
         flag=flag_html, limits=limits_html, near=near_html, nav=nav_html, save_js=save_js,
+        cities=city_sec_html,
         share=share_html,
         ld=json.dumps(ld, ensure_ascii=False),
         css=CSS)
@@ -2340,6 +2357,131 @@ def build_hub(pages, prd, today):
                           rows='\n'.join(rows))
 
 
+
+# ── 시·군 상세 페이지 (권역 아래 한 뎁스, 2026-08-05) ────────────────────────
+# CSS·푸터·하단바는 HUB_TPL에서 **떠서 쓴다**. 새 템플릿에 복사하면 디자인이 두
+# 벌로 갈리고, audit_design이 잡는 건 산출물이라 소스 중복은 못 막는다.
+_H_STYLE = HUB_TPL.split('<style>', 1)[1].split('</style>', 1)[0]
+_H_FOOT = '<footer>' + HUB_TPL.split('<footer>', 1)[1]
+
+CITY_TPL = (u"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>%(city)s 아파트 공급 — 앞으로 4년 부족한가 남는가 | 아공맵</title>
+<meta name="description" content="%(city)s의 아파트 공급을 적정물량과 견줘 %(label)s으로 판정했습니다. 준공예정 단지 실측, %(zone)s 안에서의 위치까지. 기준 %(prd)s.">
+<link rel="canonical" href="%(site)s/zone/%(zq)s/%(cq)s/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#16203a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="%(city)s 아파트 공급 — %(label)s">
+<meta property="og:description" content="적정물량 대비 %(disp)s세대. %(zone)s 안에서의 위치까지.">
+<meta property="og:url" content="%(site)s/zone/%(zq)s/%(cq)s/">
+<meta property="og:image" content="%(site)s/og-brand.png">
+<script type="application/ld+json">
+%(ld)s
+</script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+""" + _H_STYLE + u"""
+.crumb{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.crumb a{color:var(--muted)}
+.big{font-size:clamp(26px,7vw,38px);font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.w-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+ padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.w-row b{color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.w-tag{font-style:normal;font-size:11px;color:var(--muted);margin-right:7px;font-weight:400}
+.seq-row{display:flex;gap:6px;margin-top:10px}
+.seq-c{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+.seq-c i{display:block;height:7px;background:var(--paper2);margin-bottom:4px}
+.seq-c.on i{background:#c0392b}
+.sib{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.sib a{font-size:13px;text-decoration:none;color:var(--ink);border:1px solid var(--line);
+ padding:5px 10px;background:#fff}
+.sib a.cur{background:var(--ink);color:#fff;border-color:var(--ink)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <p class="crumb"><a href="/zone/">생활권</a> › <a href="/zone/%(zq)s/">%(zone)s</a> › %(city)s</p>
+  <h1>%(city)s, 앞으로 4년 %(head)s</h1>
+  <p class="lead">%(zone)s에 속합니다. 기준 %(prd)s · 세대 %(hh)s</p>
+</div></header>
+
+<section><div class="wrap">
+  <h2>판정</h2>
+  <p class="big" style="color:%(color)s">%(disp)s세대 <span style="font-size:15px">%(label)s</span></p>
+  <p>%(desc)s</p>
+  <div class="seq-row">%(seq)s</div>
+  <p class="lead" style="margin-top:8px">지금과 1~4년 뒤 재고 궤적입니다. 칠해진 칸이 부족한 시점입니다.</p>
+  <div style="margin-top:16px">%(rows)s</div>
+  <p class="lead" style="margin-top:10px">필요한 집은 %(zone)s 적정물량을 세대 비중(%(fshare)s)으로 나눈 값이고,
+    지어질 집·그동안 모자란 집은 국토부 건축HUB의 %(city)s 단지별 실측입니다.</p>
+</div></section>
+
+%(units)s
+
+<section><div class="wrap">
+  <h2>%(zone)s 안에서</h2>
+  <p>같은 생활권으로 묶인 곳들입니다. 가격이 같이 움직여 한 시장으로 봅니다.</p>
+  <div class="sib">%(sibs)s</div>
+  <p style="margin-top:12px"><a href="/zone/%(zq)s/">%(zone)s 전체 보기 →</a></p>
+</div></section>
+
+""" + _H_FOOT)
+
+def build_city_page(c, sibs, zrow, prd, today, cunits=None):
+    """시·군 상세 1장. 값은 city_rows()가 이미 만든 것을 그리기만 한다."""
+    zone = c['zone']; city = c['city']; gr = c['gr']
+    zq, cq = quote(zone), quote(city)
+    head = ('집이 모자랍니다' if c['tot'] > 0 else '집이 남습니다')
+    seq_html = ''.join(
+        '<div class="seq-c%s"><i></i><span>%s</span></div>'
+        % (' on' if v < 0 else '', lab)
+        for v, lab in zip(c['seq'], ('지금', '1년', '2년', '3년', '4년')))
+    backlog = -c['inow']        # 존 페이지와 같은 규약: 양수면 '밀린 집'
+    rows = []
+    rows.append('<div class="w-row"><span><em class="w-tag">과거</em>%s</span><b>%s세대</b></div>'
+                % ('그동안 모자란 집' if backlog >= 0 else '그동안 남은 집', num(abs(backlog))))
+    rows.append('<div class="w-row"><span><em class="w-tag">앞으로 4년</em>필요한 집</span>'
+                '<b>%s세대</b></div>' % num(c['need4']))
+    rows.append('<div class="w-row"><span><em class="w-tag">앞으로 4년</em>지어질 집</span>'
+                '<b>%s세대</b></div>' % num(c['fsupw']))
+    if c.get('aged'):
+        rows.append('<div class="w-row"><span><em class="w-tag">현재</em>노후된 집</span>'
+                    '<b>%s세대</b></div>' % num(c['aged']))
+    # today는 main()에서 isoformat 문자열로 온다 — render_units_2sec은 date를 받는다.
+    _td = today if hasattr(today, 'year') else datetime.date(*map(int, str(today)[:10].split('-')))
+    units_html = render_units_2sec(cunits, _td) if cunits else ''
+    if units_html:
+        units_html = ('<section><div class="wrap"><h2>어떤 단지가 들어오나</h2>%s</div></section>'
+                      % units_html)
+    sib_html = ''.join(
+        '<a class="%s" href="/zone/%s/%s/">%s %s</a>'
+        % ('cur' if s['city'] == city else '', zq, quote(s['city']), s['city'], signed_u(s['tot']))
+        for s in sibs)
+    ld = json.dumps({
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "아공맵", "item": '%s/' % SITE},
+            {"@type": "ListItem", "position": 2, "name": "생활권 공급 분석", "item": '%s/zone/' % SITE},
+            {"@type": "ListItem", "position": 3, "name": zone, "item": '%s/zone/%s/' % (SITE, zq)},
+            {"@type": "ListItem", "position": 4, "name": city},
+        ],
+    }, ensure_ascii=False, indent=2)
+    return CITY_TPL % dict(
+        city=city, zone=zone, zq=zq, cq=cq, prd=prd, site=SITE, ld=ld,
+        hh=num(c['hh']), head=head, color=gr['color'], label=gr['label'], desc=gr['desc'],
+        disp=signed(c['tot']), seq=seq_html, rows=''.join(rows), units=units_html,
+        sibs=sib_html, fshare='%.1f%%' % (c['share_in_zone'] * 100))
+
+
 def update_sitemap(names, lastmods):
     p = os.path.join(ROOT, 'sitemap.xml')
     x = io.open(p, encoding='utf-8').read()
@@ -2376,18 +2518,31 @@ def main():
     old_pages = {}
     if os.path.isdir(outdir):
         for d in os.listdir(outdir):
-            fp = os.path.join(outdir, d, 'index.html')
+            dp = os.path.join(outdir, d)
+            fp = os.path.join(dp, 'index.html')
             if os.path.exists(fp):
                 old_pages[d] = read_old(fp)
+            if os.path.isdir(dp):                       # 시·군 한 뎁스
+                for c in os.listdir(dp):
+                    cf = os.path.join(dp, c, 'index.html')
+                    if os.path.exists(cf):
+                        old_pages['%s/%s' % (d, c)] = read_old(cf)
     old_hub = read_old(os.path.join(outdir, 'index.html'))
     # 옛 페이지 정리(생활권 구성이 바뀌었을 수 있음)
     if os.path.isdir(outdir):
         for d in os.listdir(outdir):
-            fp = os.path.join(outdir, d, 'index.html')
+            dp = os.path.join(outdir, d)
+            if os.path.isdir(dp):
+                for c in os.listdir(dp):
+                    cf = os.path.join(dp, c, 'index.html')
+                    if os.path.exists(cf):
+                        os.remove(cf)
+                        os.rmdir(os.path.join(dp, c))
+            fp = os.path.join(dp, 'index.html')
             if os.path.exists(fp):
                 os.remove(fp)
-            if os.path.isdir(os.path.join(outdir, d)) and not os.listdir(os.path.join(outdir, d)):
-                os.rmdir(os.path.join(outdir, d))
+            if os.path.isdir(dp) and not os.listdir(dp):
+                os.rmdir(dp)
     # 수도권 롤업 폐지(2026-08-03) — 안에서 상계가 일어나 서울권이 한 등급
     # 내려가고 화성권(매우 부족)이 통째로 묻혔다. 행정구역대로 개별만 세운다.
     # make_capital()은 make_naver_post 등 다른 소비자가 있어 함수는 남긴다.
@@ -2426,20 +2581,39 @@ def main():
             '참고 지표입니다.</p>'
             '</div>' % (_msg, _ps, num(_got), num(_due)))
     names, lastmods, nchanged = [], {}, 0
+    cunits = ((adv.get('permits') or {}).get('city') or {}).get('units') or {}
+    ncity = 0
     for r in pages:
         nm = r['z']['z']
         d = os.path.join(outdir, nm)
         os.makedirs(d, exist_ok=True)
-        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx, plead, aged_stock(sts, adv, r)), old_pages.get(nm, ''), today)
+        cities = city_rows(adv, r)
+        html, lm, ch = keep_dates(build_page(r, rows, prd, today, punits, pidx, plead,
+                                             aged_stock(sts, adv, r), cities), old_pages.get(nm, ''), today)
         io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(html)
         names.append(nm)
         lastmods[nm] = lm
         nchanged += 1 if ch else 0
+        # 시·군 상세(권역 아래 한 뎁스). 멤버가 하나뿐인 존은 만들지 않는다 —
+        # 존 페이지와 값이 같아 같은 내용이 두 URL로 색인된다(중복 콘텐츠).
+        if len(cities) < 2:
+            continue
+        for c in cities:
+            key = '%s/%s' % (nm, c['city'])
+            cdir = os.path.join(d, c['city'])
+            os.makedirs(cdir, exist_ok=True)
+            chtml, clm, _ = keep_dates(
+                build_city_page(c, cities, r, prd, today, cunits.get(key)),
+                old_pages.get(key, ''), today)
+            io.open(os.path.join(cdir, 'index.html'), 'w', encoding='utf-8', newline='\n').write(chtml)
+            names.append(key)
+            lastmods[key] = clm
+            ncity += 1
     hub, _, _ = keep_dates(build_hub(pages, prd, today), old_hub, today)
     io.open(os.path.join(outdir, 'index.html'), 'w', encoding='utf-8', newline='\n').write(hub)
     update_sitemap(names, lastmods)
-    print('zone pages: %d개 + 허브 1개 생성 (내용 변경 %d개) → /zone/ · sitemap 갱신'
-          % (len(names), nchanged))
+    print('zone pages: %d개 + 시군 %d개 + 허브 1개 생성 (내용 변경 %d개) → /zone/ · sitemap 갱신'
+          % (len(names) - ncity, ncity, nchanged))
 
 
 if __name__ == '__main__':

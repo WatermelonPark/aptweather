@@ -635,3 +635,39 @@ def test_city_rows_empty_for_metro_zones():
     for z in ('서울권', '부산권', '대구권'):
         if z in by:
             assert not [c for c in M.city_rows(adv, by[z]) if c['city'].endswith('구')]
+
+
+def test_city_pages_exist_only_for_multi_member_zones():
+    """멤버가 하나뿐인 존은 시 페이지를 안 만든다 — 존 페이지와 값이 같아
+    같은 내용이 두 URL로 색인된다(중복 콘텐츠)."""
+    import os as _os
+    assert _os.path.exists('zone/경기동남부권/성남시/index.html')
+    assert _os.path.exists('zone/경기남부외곽권/여주시/index.html')
+    for solo in ('춘천권/춘천시', '진주권/진주시'):
+        assert not _os.path.exists('zone/%s/index.html' % solo), solo
+    for metro in ('서울권/강남구', '부산권/해운대구'):
+        assert not _os.path.exists('zone/%s/index.html' % metro), metro
+
+
+def test_city_page_agrees_with_city_rows():
+    """화면 숫자는 city_rows()가 만든 값 그대로여야 한다."""
+    import io as _io, re as _re
+    adv, sts = M.load()
+    by = {r['z']['z']: r for r in M.calc(adv, sts)}
+    c = next(x for x in M.city_rows(adv, by['경기남부외곽권']) if x['city'] == '여주시')
+    html = _io.open('zone/경기남부외곽권/여주시/index.html', encoding='utf-8').read()
+    assert M.num(c['need4']) in html and M.num(c['fsupw']) in html
+    assert c['gr']['label'] in html
+    m = _re.search(r'<p class="big"[^>]*>([^<]+)', html)
+    assert M.signed(c['tot']).strip() in m.group(1)
+
+
+def test_zone_page_links_to_its_cities():
+    """권역 등급 하나로는 안에서 반대로 가는 곳이 안 보인다 — 경기남부외곽권은
+    '공급 여유'인데 여주만 '다소 부족'이다."""
+    import io as _io
+    from urllib.parse import quote as _q
+    html = _io.open('zone/경기남부외곽권/index.html', encoding='utf-8').read()
+    assert '이 생활권 안에서' in html
+    for city in ('여주시', '평택시', '안성시'):
+        assert '/zone/%s/%s/' % (_q('경기남부외곽권'), _q(city)) in html, city

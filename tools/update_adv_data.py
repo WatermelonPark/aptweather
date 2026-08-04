@@ -1472,10 +1472,22 @@ def hub_derive(adv):
         for q, n in v.get('sched_q', {}).items(): csched[k][q] += n
         if z in complete_demol:
             for q, n in v.get('demol_q', {}).items(): cdemol[k][q] += n
+    # 단지 목록도 같은 헬퍼로 뽑는다 — 존 대신 '권역/시군'을 키로 주면 그만이다.
+    # 창(UNIT_WINDOW)·정렬·결측 처리가 존과 자동으로 같아진다.
+    c_of = {}
+    for cd in hp.get('sgg', {}):
+        z = z_of.get(cd)
+        if not z or z not in complete:
+            continue
+        nm = (bdong.get(cd) or ('', ''))[1].split(' ')[0]
+        nm = LZ_GU2SI.get(nm, nm)
+        if nm and any(m[1] == nm for m in _lz_members_of(z)):
+            c_of[cd] = '%s/%s' % (z, nm)
     adv['permits']['city'] = {
         'done': {k: dict(v) for k, v in cdone.items()},
         'sched': {k: dict(v) for k, v in csched.items()},
         'demol': {k: dict(v) for k, v in cdemol.items()},
+        'units': _zone_units(hp, c_of, set(c_of.values())),
     }
     print('hub_derive: active, complete_zones=%d, complete_demol_zones=%d, cities=%d'
           % (len(complete), len(complete_demol), len(cdone)))
