@@ -512,6 +512,9 @@ def aged_stock(sts, adv, r):
     인천으로 나뉜다. 존 이름으로 실제 시도를 잡는다(그러지 않으면 22곳이 통째로
     빠진다 — 2026-08-04 실측).
 
+    안분은 zone_share()를 그대로 쓴다. 자체 계산을 두면 클램프 폐지 같은 수정이
+    한쪽에만 반영된다(실제로 그럴 뻔했다).
+
     반환: (안분 재고, 4년 필요량 대비 배수) 또는 None.
     """
     N = (sts or {}).get('노후주택30년') or {}
@@ -523,10 +526,10 @@ def aged_stock(sts, adv, r):
     v = ser.get(ps)
     if not v or v[-1] is None:
         return None
-    tot = ((adv.get('livezone') or {}).get('sidohh') or {}).get(ps)
-    if not tot or not r.get('need4'):
+    SH = (adv.get('livezone') or {}).get('sidohh') or {}
+    if not SH.get(ps) or not r.get('need4'):
         return None
-    old = v[-1] * min(1.0, r['z']['hh'] / tot)
+    old = v[-1] * zone_share(r['z'], ps, SH)
     return old, old / r['need4']
 
 

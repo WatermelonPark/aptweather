@@ -465,6 +465,21 @@ def test_aged_stock_not_wired_into_shortage():
     assert '노후주택30년' not in src
 
 
+def test_aged_stock_uses_zone_share_without_clamp():
+    """안분 잣대는 zone_share() 하나여야 한다. 자체 계산을 두면 클램프 폐지 같은
+    수정이 한쪽에만 반영된다 — 이웃 시도를 물고 있는 존 넷(부산·대구·광주·대전세종)
+    에서 노후 재고만 10~26% 잘려 나간다."""
+    adv, sts = M.load()
+    rows = M.calc(adv, sts)
+    SH = (adv.get('livezone') or {}).get('sidohh') or {}
+    over = [r for r in rows if M.zone_share(r['z'], r['ps'], SH) > 1.0]
+    assert over, '이웃 시도를 포함하는 존이 없다 — 표본이 사라졌으면 이 검사는 무의미하다'
+    for r in over:
+        old = M.aged_stock(sts, adv, r)[0]
+        ser = ((sts.get('노후주택30년') or {}).get('series') or {})[r['ps']]
+        assert old > ser[-1], '%s: 시도 총량 이하로 잘렸다' % r['z']['z']
+
+
 def test_aged_stock_card_discloses_uncertainty():
     import io as _io, re as _re
     html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
