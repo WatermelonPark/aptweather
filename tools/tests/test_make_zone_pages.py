@@ -562,3 +562,27 @@ def test_home_marks_explicit_choice_as_pinned():
     m = _re.search(r'function mzSave\(nm\)\{.*?\n\}', html, _re.S)
     assert m, 'mzSave가 없다'
     assert 'pinned:1' in m.group(0), '홈 선택기가 pinned를 안 남긴다'
+
+
+def test_composition_lists_every_member_city_even_with_zero_supply():
+    """구성 목록은 존 정의에서 와야 한다. z['sgg']는 '입주예정 물량이 있는' 시군구
+    목록이라 그대로 쓰면 물량 0인 곳이 사라진다 — 경기북부권의 동두천·포천·연천,
+    경기동부권의 하남이 실제로 안 보였다(2026-08-05)."""
+    import io as _io, re as _re
+    from update_adv_data import LIVEZONE
+    for z in ('경기북부권', '경기동부권', '경기남부외곽권'):
+        html = _io.open('zone/%s/index.html' % z, encoding='utf-8').read()
+        m = _re.search(r'<b>%s 구성</b><span>(.*?)</span>' % z, html, _re.S)
+        assert m, '%s: 구성 문구가 없다' % z
+        txt = m.group(1)
+        for _, city in LIVEZONE[z]:
+            assert city in txt, '%s 구성에 %s가 빠졌다' % (z, city)
+
+
+def test_hub_exposes_member_city_names():
+    """권역으로 묶고 나서 허브에 도시명이 한 글자도 없어졌다 — 안성·하남 같은 곳은
+    사이트에서 찾을 길이 사라진다(2026-08-05 사용자가 안성을 못 찾음)."""
+    import io as _io
+    html = _io.open('zone/index.html', encoding='utf-8').read()
+    for city in ('안성시', '하남시', '포천시', '동두천시', '성남시', '화성시'):
+        assert city in html, '허브에 %s가 없다' % city

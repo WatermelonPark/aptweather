@@ -1287,9 +1287,21 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
                            for c in subs) + '</div>')
         sgg_names = [c['z']['z'] for c in subs]
     else:
-        members = ' · '.join('%s %s세대' % (s[0], num(s[1])) for s in sgg) if sgg else '입주예정 단지 없음'
+        # ⚠️ z['sgg']는 '입주예정 물량이 있는' 시군구 목록이지 존 구성이 아니다.
+        # 그대로 쓰면 물량 0인 곳이 구성에서 통째로 사라진다 — 실제로 경기북부권의
+        # 동두천·포천·연천, 경기동부권의 하남이 안 보였다(2026-08-05 사용자 지적).
+        # 존 정의(_lz_members)를 기준으로 깔고 물량은 없으면 0으로 채운다.
+        # 광역시 존은 정의가 ('서울','*') 꼴이라 구 목록이 안 나오므로 기존대로 sgg를 쓴다.
+        _sup = {s[0]: s[1] for s in sgg}
+        _mem = [m[1] for m in _lz_members(nm) if m[1] != '*']
+        if _mem:
+            _mem.sort(key=lambda c: -_sup.get(c, 0))
+            members = ' · '.join('%s %s세대' % (c, num(_sup.get(c, 0))) for c in _mem)
+            sgg_names = _mem
+        else:
+            members = ' · '.join('%s %s세대' % (s[0], num(s[1])) for s in sgg) if sgg else '입주예정 단지 없음'
+            sgg_names = [s[0] for s in sgg]
         sublist = ''
-        sgg_names = [s[0] for s in sgg]
     rank_no = 0
     if subs:
         ranktxt = '수도권 %d개 생활권 합계' % len(subs)
@@ -2148,6 +2160,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.rk{color:var(--muted);width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
 a.z{color:var(--ink);text-decoration:none;font-weight:600}
 a.z:hover{text-decoration:underline}
+.zc{display:block;margin-top:2px;font-size:11.5px;color:var(--muted);line-height:1.35}
 .ghead td{border:0;padding:16px 0 4px;font-weight:700;font-size:13px}
   .ghead i{font-style:normal;font-weight:400;color:#8a969b;font-size:11.5px}
   .tag{font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:0;white-space:nowrap}
@@ -2241,11 +2254,16 @@ def build_hub(pages, prd, today):
             rows.append('      <tr class="ghead"><td colspan="4" style="color:%s">%s '
                         '<i>%d곳</i></td></tr>' % (gr['color'], gr['label'], n_in))
             prev_gk = gr['k']
+        # 권역 이름 밑에 구성 시·군을 깐다. 재편 전엔 존 이름이 곧 도시명이라
+        # '수원권'을 찾으면 됐는데, 권역으로 묶고 나니 허브에 도시명이 **한 글자도**
+        # 없어져 안성·하남 같은 곳은 사이트에서 찾을 길이 사라졌다(2026-08-05 사용자).
+        cities = [m[1] for m in _lz_members(nm) if m[1] != '*']
+        sub = ('<span class="zc">%s</span>' % ' · '.join(cities)) if cities else ''
         rows.append(
-            '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a></td>'
+            '      <tr><td class="rk">%d</td><td><a class="z" href="/zone/%s/">%s</a>%s</td>'
             '<td class="num" style="color:%s">%s</td>'
             '<td><span class="tag %s">%s</span></td></tr>'
-            % (i + 1, nm, nm, gr['color'], signed_u(r['tot']), gr['k'], gr['label']))
+            % (i + 1, nm, nm, sub, gr['color'], signed_u(r['tot']), gr['k'], gr['label']))
     ld = json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": "전국 생활권 아파트 공급 순위",
