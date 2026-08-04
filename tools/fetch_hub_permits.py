@@ -990,6 +990,12 @@ def run(mode_full, only_codes, list_targets_only, reseed=False, shard=None):
             out['meta']['reseed_done'] = sorted(reseed_done)
         out['meta']['fetched'] = str(datetime.date.today())
         out['meta']['mode'] = 'full' if mode_full else 'incr'
+        if shard:
+            # 이 산출물이 어느 분할의 몇 번 샤드인지 남긴다. merge_hub_shards가
+            # 소유권을 되계산할 때 인자 순서(1..len(files))로 추정하면, 6샤드 중
+            # 일부만 넘긴 회차에서 파티션이 통째로 달라져 수집분이 조용히 버려진다
+            # (2026-08-04 감사). 파일이 스스로 밝히게 해서 순서 의존을 없앤다.
+            out['meta']['shard'] = list(shard)
         save(out)   # 체크포인트: 그룹 하나 끝날 때마다 저장(스킵 포함)
 
     print('완료: %d개 그룹, 총 %ds' % (n_done, int(time.time() - t0)))

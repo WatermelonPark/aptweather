@@ -25,8 +25,31 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fetch_hub_permits as F  # noqa: E402
 
 
-def merge(base, shard_files):
-    n = len(shard_files)
+def shard_spec_of(d, pos, fallback_n, path=''):
+    """샤드 산출물이 스스로 밝힌 (i, n). 없으면 (인자 위치, fallback_n)로 폴백.
+
+    ⚠️ 예전엔 언제나 (인자 위치, len(files))로 계산했다. 그런데 소유권은 수집
+    시점의 분할 수(--shard i/6)로 정해진다 — 6샤드 중 2개만 넘기면 n=2가 되어
+    파티션이 통째로 달라지고, 그 회차 수집분이 소유권 밖으로 밀려 조용히
+    버려진다(2026-08-04 감사: '하루 2샤드씩' 운용에서 하루치가 통째로 폐기).
+    total>0이라 merge의 안전장치(반영 0건)도 안 걸린다.
+    그래서 수집기가 meta['shard']에 기록한 값을 정본으로 쓴다.
+    """
+    sp = (d.get('meta') or {}).get('shard')
+    if isinstance(sp, (list, tuple)) and len(sp) == 2:
+        try:
+            i, n = int(sp[0]), int(sp[1])
+            if 1 <= i <= n:
+                return i, n, True
+        except (TypeError, ValueError):
+            pass
+    print('  ⚠️ %s: meta.shard 없음 — 인자 순서(%d/%d)로 추정한다. 수집 시점 분할 수와'
+          ' 다르면 이 샤드의 갱신분이 통째로 버려진다.' % (path or '샤드', pos, fallback_n))
+    return pos, fallback_n, False
+
+
+def merge(base, shard_files, total=None):
+    n = total or len(shard_files)
     groups, _ = F.build_targets()
     keys = list(groups.keys())
     out = json.loads(json.dumps(base))       # 깊은 복사 — 베이스를 건드리지 않는다
@@ -38,9 +61,10 @@ def merge(base, shard_files):
     reseed_done = set(out['meta'].get('reseed_done') or [])
     productive = set(out.get('productive_bjdong') or [])
     stats = []
-    for i, path in enumerate(shard_files, 1):
-        owned = set(F.shard_keys(keys, (i, n)))
+    for pos, path in enumerate(shard_files, 1):
         d = json.load(io.open(path, encoding='utf-8'))
+        i, sn, declared = shard_spec_of(d, pos, n, os.path.basename(path))
+        owned = set(F.shard_keys(keys, (i, sn)))
         took = 0
         for k in owned:
             ent = (d.get('sgg') or {}).get(k)
@@ -54,7 +78,10 @@ def merge(base, shard_files):
         scanned |= (set((d.get('meta') or {}).get('scanned') or []) & owned)
         reseed_done |= (set((d.get('meta') or {}).get('reseed_done') or []) & owned)
         productive |= set(d.get('productive_bjdong') or [])
-        stats.append((i, len(owned), took))
+        stats.append((i, sn, len(owned), took, declared))
+    # 병합 결과는 어느 한 샤드의 산출물이 아니다 — 샤드 꼬리표를 지워 다음 회차의
+    # base로 커밋됐을 때 엉뚱한 소유권으로 읽히지 않게 한다.
+    out['meta'].pop('shard', None)
     out['meta']['scanned'] = sorted(scanned)
     if reseed_done:
         out['meta']['reseed_done'] = sorted(reseed_done)
@@ -65,17 +92,23 @@ def merge(base, shard_files):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--base', required=True, help='병합 기준(수집 전 커밋된 hub_permits.json)')
-    ap.add_argument('--shards', nargs='+', required=True, help='샤드 1..N의 산출 파일(순서 중요)')
+    ap.add_argument('--shards', nargs='+', required=True,
+                    help='샤드 산출 파일들. 소유권은 각 파일의 meta.shard로 판정하므로 '
+                         '순서·개수가 달라도 안전하다(meta.shard가 없는 옛 파일만 순서 폴백).')
+    ap.add_argument('--total', type=int, default=None,
+                    help='meta.shard가 없는 옛 산출물의 폴백 분할 수(예: 6). '
+                         '생략하면 넘긴 파일 개수를 쓴다 — 일부만 넘길 땐 반드시 지정할 것.')
     ap.add_argument('--out', required=True)
     args = ap.parse_args()
 
     base = json.load(io.open(args.base, encoding='utf-8'))
-    out, stats = merge(base, args.shards)
-    for i, owned, took in stats:
-        print('  샤드 %d: 소유 %3d곳 중 %3d곳 반영' % (i, owned, took))
-    total = sum(t for _, _, t in stats)
+    out, stats = merge(base, args.shards, total=args.total)
+    for i, sn, owned, took, declared in stats:
+        print('  샤드 %d/%d%s: 소유 %3d곳 중 %3d곳 반영'
+              % (i, sn, '' if declared else '(추정)', owned, took))
+    total = sum(t for _, _, _, t, _ in stats)
     print('총 %d/%d 그룹 갱신 · sgg %d곳 · productive_bjdong %d곳'
-          % (total, sum(o for _, o, _ in stats), len(out['sgg']),
+          % (total, sum(o for _, _, o, _, _ in stats), len(out['sgg']),
              len(out['productive_bjdong'])))
     if total == 0:
         raise SystemExit('ERROR: 반영된 그룹이 하나도 없다 — 샤드 산출물을 확인할 것')
