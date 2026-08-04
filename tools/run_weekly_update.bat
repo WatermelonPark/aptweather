@@ -14,9 +14,12 @@ rem   Notification is handled externally by .github/workflows/watchdog.yml
 rem   (a local script cannot report that it never ran).
 rem
 rem   exit codes: 10 keys 11 pull 12 update 20 split 13 share
-rem               14 add 15 commit 16 push 17 zone-pages 19 already-running
-rem   (2026-07-24: 이메일/인스타/네이버 발행 채널 전면 제거 — 데이터 갱신·배포·
-rem    IndexNow 핑만 남음. 이전 rc=18 newsletter 코드는 폐지.)
+rem               14 add 15 commit 16 push 17 zone-pages 18 indicator-pages
+rem               19 already-running
+rem   (2026-07-24: 이메일/인스타 자동 발행 제거. 네이버는 자동 발행이 아니라
+rem    drafts/ 초안 생성만 남아 있고(gitignore, 비치명적 WARN) 계속 실행된다.
+rem    rc=18은 옛 newsletter 코드가 아니라 make_indicator_pages 실패에 쓴다
+rem    — 2026-08-04 감사에서 표와 실물이 어긋난 것을 맞춤.)
 rem ============================================================
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8

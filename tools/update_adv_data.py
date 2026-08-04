@@ -540,11 +540,35 @@ def _q_of(p): return (int(p[:4]), int(p[5]))          # '2026Q3' → (2026,3)
 def _qlabel(y, q): return '%dQ%d' % (y, q)
 
 
+def occ_rows():
+    """odcloud 입주예정 데이터셋(OCC_API) 전 행. 페이지 정책을 한 곳으로 모은다.
+
+    ⚠️ 예전엔 같은 데이터셋을 fetch_moveins는 page=1 한 번만, fetch_livezone은
+    1~8페이지를 돌며 읽었다(2026-08-04 감사) — 같은 원천에 커버리지 정책이 둘이라,
+    데이터셋이 1,000행을 넘기면 통계 탭(입주물량)과 생활권 점수가 서로 다른 모집단을
+    보게 된다. totalCount로 종료를 판정해 정책을 하나로 만든다.
+    """
+    out, page, total = [], 1, None
+    while page <= 50:                      # 안전판(perPage 1000 × 50 = 5만행)
+        d = http_json(OCC_API + '?' + urllib.parse.urlencode(
+            {'page': page, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
+        data = d.get('data') or []
+        out.extend(data)
+        if total is None:
+            total = d.get('totalCount') or d.get('matchCount')
+        if not data:
+            break
+        if isinstance(total, int) and len(out) >= total:
+            break
+        page += 1
+    if isinstance(total, int) and len(out) < total:
+        print('WARN odcloud 입주예정: %d/%d행만 수신(페이지 조기 종료)' % (len(out), total))
+    return out
+
+
 def fetch_moveins(regions):
-    url = OCC_API + '?' + urllib.parse.urlencode({'page': 1, 'perPage': 1000, 'serviceKey': DATAGO_KEY})
-    d = http_json(url)
     agg = {}
-    for r in d.get('data', []):
+    for r in occ_rows():
         ym = str(r.get('입주예정월') or '')
         if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12:
             continue   # 입주월 미정 단지는 제외
@@ -1518,25 +1542,22 @@ def fetch_livezone():
     qset = collections.defaultdict(set)
     byq = collections.defaultdict(lambda: collections.defaultdict(int))
     units = collections.defaultdict(list)   # 단지별 [시군구, 단지명, 세대수, 'YYYY-MM']
-    for pg in range(1, 9):
-        d = http_json(OCC_API + '?' + urllib.parse.urlencode({'page': pg, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
-        data = d.get('data', [])
-        if not data: break
-        for r in data:
-            sd = (r.get('지역') or '').strip(); ym = str(r.get('입주예정월') or '')
-            # 월 '00'(입주월 미정)이 '2027Q0' 같은 비정상 분기를 만들어
-            # 게이지·차트(유효 분기만)와 단지 표의 합이 어긋났다. 미정은 제외.
-            if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12: continue
-            a = (r.get('주소') or '').split(); sg = a[1] if len(a) > 1 else ''
-            if sd == '세종': sg = '세종'
-            z = zone_of(sd, sg)
-            if not z: continue
-            try: n = int(r.get('세대수') or 0)
-            except (TypeError, ValueError): n = 0
-            q = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
-            supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
-            qset[z].add(q); byq[z]['%dQ%d' % q] += n
-            units[z].append([LZ_GU2SI.get(sg, sg), (r.get('아파트명') or '').strip(), n, ym[:7]])
+    # 페이지 순회는 occ_rows()가 담당 — 같은 원천에 커버리지 정책 하나(2026-08-04 감사)
+    for r in occ_rows():
+        sd = (r.get('지역') or '').strip(); ym = str(r.get('입주예정월') or '')
+        # 월 '00'(입주월 미정)이 '2027Q0' 같은 비정상 분기를 만들어
+        # 게이지·차트(유효 분기만)와 단지 표의 합이 어긋났다. 미정은 제외.
+        if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12: continue
+        a = (r.get('주소') or '').split(); sg = a[1] if len(a) > 1 else ''
+        if sd == '세종': sg = '세종'
+        z = zone_of(sd, sg)
+        if not z: continue
+        try: n = int(r.get('세대수') or 0)
+        except (TypeError, ValueError): n = 0
+        q = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
+        supply[z] += n; detail[z][LZ_GU2SI.get(sg, sg)] += n
+        qset[z].add(q); byq[z]['%dQ%d' % q] += n
+        units[z].append([LZ_GU2SI.get(sg, sg), (r.get('아파트명') or '').strip(), n, ym[:7]])
     # ── 청약홈 확장은 의도적으로 하지 않는다 (2026-07-20 실측 후 철회) ──
     # 청약홈 분양정보는 입주예정월이 2031년까지 있어 시야가 넓어 보이지만,
     # **분양 공고 기준**이라 후분양·임대·조합 물량이 빠진다.
@@ -1713,8 +1734,12 @@ def main():
         failed.append('hub_derive'); print('hub_derive skip:', e)
     try:
         h = fetch_holidays()
-        if h:
+        if h and h != adv.get('holidays'):
+            # changed에 넣지 않으면 main()의 `if changed: write_adv(adv)`가 그 회차에
+            # 호출되지 않을 때 새 공휴일 목록이 메모리에서 그대로 버려진다
+            # (2026-08-04 감사). 값이 실제로 달라졌을 때만 신호를 올린다.
             adv['holidays'] = h
+            changed.append('holidays')
     except Exception as e:
         failed.append('holidays'); print('holidays skip:', e)
     try:
