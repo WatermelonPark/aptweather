@@ -492,14 +492,18 @@ def test_aged_stock_row_sits_with_the_other_three():
     assert body.index('지어질 집') < body.index('노후된 집'), '세 줄 뒤에 와야 한다'
 
 
-def test_aged_stock_row_is_tagged_present_not_future():
-    """'앞으로 4년' 태그를 달면 '4년 안에 헐릴 물량'으로 읽힌다 — 그 숫자는 아무도
-    모르고(실현율 0~59%), 이 지표를 만든 이유가 바로 그거다."""
+def test_aged_stock_row_is_marked_reference_not_a_term():
+    """산식 밖이라는 걸 태그와 클래스 양쪽으로 말해야 한다. '앞으로 4년'을 달면
+    '4년 안에 헐릴 물량'으로 읽히는데 그 숫자는 아무도 모르고(실현율 0~59%),
+    시점만 말하는 '현재'로는 네 번째 항으로 읽혔다(2026-08-04 사용자)."""
     import io as _io
     html = _io.open('zone/대구권/index.html', encoding='utf-8').read()
     i = html.index('노후된 집')
-    row = html[html.rindex('<div class="w-row">', 0, i):i]   # 그 줄의 시작부터 라벨까지
-    assert row.endswith('<em class="w-tag">현재</em>'), row[-60:]
+    row = html[html.rindex('<div class="w-row', 0, i):i]   # 그 줄의 시작부터 라벨까지
+    assert row.startswith('<div class="w-row w-ref">'), row[:40]
+    assert row.endswith('<em class="w-tag">참고</em>'), row[-60:]
+    # 무게를 빼는 규칙이 실제로 실려 있어야 한다(클래스만 붙고 CSS가 없으면 그대로 보인다)
+    assert '.why3 .w-ref b{font-weight:400}' in html
 
 
 def test_aged_stock_tooltip_discloses_uncertainty():

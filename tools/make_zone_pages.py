@@ -982,6 +982,17 @@ details.fold .dbody p{font-size:14px}
  font-size:12px;line-height:1.5;z-index:4;max-width:min(260px,86%);transform:translate(-50%,-100%);
  pointer-events:none}
 .why3 .w-tag{display:inline-block;font-style:normal;font-size:10.5px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:1px 7px;margin-right:8px;vertical-align:2px;white-space:nowrap}
+/* 참고 줄(노후 재고) — 순부족 산식에 안 들어간다. 세 줄과 나란히 읽히도록
+   같은 표에 두되 합산 항목의 표식을 걷는다: 값의 무게를 빼고 줄을 흐리게,
+   태그 테두리는 파선, 마감 괘선 없음. 세 줄의 마지막 실선이 산식을 닫는다.
+   파선=참고는 분기 차트의 적정 기준선(.q-ref)과 같은 어휘다. */
+/* 간격은 margin이 아니라 padding으로 준다. margin이면 줄의 border-box 위가
+   9px 내려앉아, 이 줄의 윗변을 기준으로 띄우는 툴팁이 앞 줄의 괘선을 3px
+   덮는다(방금 고친 것과 같은 함정). padding이면 윗변이 괘선에 맞는다. */
+.why3 .w-ref{padding-top:18px;border-bottom:0}
+.why3 .w-ref .w-lab,.why3 .w-ref b{color:var(--muted)}
+.why3 .w-ref b{font-weight:400}
+.why3 .w-ref .w-tag{border-style:dashed}
 .why3 .w-sum{padding:11px 0 0;font-weight:700}
 .w-lead{border-left:3px solid;padding:2px 0 2px 14px;margin:0 0 18px}
 .w-lead .wl-sum{font-size:19px;font-weight:700;line-height:1.45}
@@ -1314,8 +1325,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # 필요하고, 들어올 건 이것뿐".
     # 창 방식(2026-08-02)이라 '지난 4년'이 문자 그대로 참이다 — 4년 전 0에서 시작해
     # 준공-멸실-적정을 그대로 더한 값이다. '최대 4년치' 같은 완곡한 표현이 필요 없다.
-    b_lab, b_sub = ('그동안 모자란 집', '지난 4년 · 준공 − 멸실 − 필요량') if backlog >= 0 \
-              else ('그동안 남은 집', '지난 4년 · 준공 − 멸실 − 필요량')
+    # 태그가 '지난 4년'을 말하므로 라벨에 '그동안'을, 부제에 '지난 4년 ·'을
+    # 되풀이하지 않는다(2026-08-04). 나머지 세 줄과 어형도 맞는다.
+    b_lab, b_sub = ('모자란 집', '준공 − 멸실 − 필요량') if backlog >= 0 \
+              else ('남은 집', '준공 − 멸실 − 필요량')
     # (2026-08-04 삭제) '4년치 상한 도달 — 실제로는 더 밀렸습니다' 분기는 DEFICIT_CAP
     # 시절의 완곡 표현이었다. 창 방식(2026-08-02)으로 바뀐 뒤 44존 전부 해당 없음이라
     # 죽은 코드였고, 남겨두면 '밀린'이라는 옛 어휘가 화면에 되살아난다.
@@ -1389,7 +1402,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     if paged:
         _old, _mul, _yr = paged
         aged_row = (
-            '<div class="w-row"><span class="w-lab"><em class="w-tag">현재</em>노후된 집'
+            '<div class="w-row w-ref"><span class="w-lab"><em class="w-tag">참고</em>노후된 집'
             '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
             '<span class="w-sub">준공 30년 초과 아파트 · %s년 주택총조사 시군구 합 · '
             '필요한 집의 %.1f배. 이 중 언제 얼마가 헐릴지는 알 수 없어(실현율 0~59%%) '
@@ -1402,7 +1415,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         # 출처·산식은 ⓘ로 접는다(2026-08-04 사용자). 세 줄 밑에 늘 깔려 있어 정작
         # 읽어야 할 라벨·숫자와 경쟁했다. 텍스트는 DOM에 그대로 두고(.w-sub는 시각적
         # 으로만 숨김) 스크린리더·검색엔진은 계속 읽는다 — 지우는 게 아니라 접는 것.
-        '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s'
+        '<div class="w-row"><span class="w-lab"><em class="w-tag">지난 4년</em>%s'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
         '<span class="w-sub">%s</span></span><b>%s세대</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집'
@@ -1411,9 +1424,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
         '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>%s세대</b></div>'
-        # 노후 재고는 '앞으로 4년'이 아니라 **지금 쌓여 있는 것**이라 태그를 '현재'로
-        # 둔다. 위 두 줄과 같은 태그를 달면 "4년 안에 헐릴 물량"으로 읽히는데,
-        # 그 숫자는 아무도 모른다(실현율 0~59%) — 이 카드를 만든 이유 자체가 그거다.
+        # 태그는 '참고'. '앞으로 4년'을 달면 "4년 안에 헐릴 물량"으로 읽히는데 그
+        # 숫자는 아무도 모르고(실현율 0~59%), 애초에 이 줄을 만든 이유가 그거다.
+        # '현재'로도 써 봤지만 시점만 말할 뿐 "산식 밖"이라는 말은 못 했다 —
+        # 네 번째 항으로 읽힌다는 지적(2026-08-04)에 따라 .w-ref로 무게를 뺀다.
         '%s'
         '<div class="w-tip" hidden></div>'
         '</div>%s</div></section>' % (
