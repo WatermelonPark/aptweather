@@ -1510,3 +1510,82 @@ def test_should_refresh_group_true_for_legacy_gu_cached_under_old_codes():
                                   legacy=legacy) is True
     # legacy 정보를 안 넘기면(옛 버그 재현) 여전히 False — 인자 전달을 잊으면 잡힌다
     assert F.should_refresh_group('41190', group_bjdong, cached, False) is False
+
+
+def test_json_error_response_is_not_silently_zero():
+    """JSON 오류 응답(한도초과·키오류)이 '정상 무자료'로 둔갑하면 안 된다.
+
+    2026-08-04 감사: JSON 분기가 body/items 구조를 resultCode보다 먼저 봐서,
+    body가 비어 오는 오류 응답이 no_data_json(무재시도·정상)으로 분류됐다.
+    그러면 재시도도 clobber 방지도 안 타고 그 법정동이 0건으로 확정된다.
+    """
+    quota = '{"header":{"resultCode":"22","resultMsg":"LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR"},"body":{}}'
+    assert F.classify_response(quota) == 'error'
+    keyerr = '{"header":{"resultCode":"30","resultMsg":"SERVICE KEY IS NOT REGISTERED ERROR"},"body":{}}'
+    assert F.classify_response(keyerr) == 'error'
+    # 오류 봉투만 있고 resultCode가 없는 형태도 error다.
+    assert F.classify_response('{"returnAuthMsg":"SERVICE_KEY_IS_NOT_REGISTERED_ERROR"}') == 'error'
+    # 기존 계약 유지: bjdongCd 누락형(코드 00 + body에 items 없음)은 no_data_json.
+    assert F.classify_response(
+        '{"body":{},"header":{"resultCode":"00","resultMsg":"NORMAL SERVICE"}}') == 'no_data_json'
+
+
+def test_standard_response_wrapper_is_unwrapped():
+    """{"response":{...}} 표준 래퍼도 평평한 형태와 똑같이 읽어야 한다.
+
+    래퍼를 안 벗기면 header/body를 못 찾아 데이터가 든 응답이 0건으로 읽히고
+    오류 응답은 무자료로 둔갑한다. _json_body 한 곳에서 벗긴다.
+    """
+    wrapped_data = ('{"response":{"header":{"resultCode":"00"},"body":{"items":{"item":'
+                    '{"mgmHsrgstPk":"A","purpsCdNm":"공동주택","totHhldCnt":"100",'
+                    '"useInsptDay":"20240310"}},"totalCount":1}}}')
+    assert F.classify_response(wrapped_data) == 'data'
+    assert len(F._json_items(F._json_body(wrapped_data))) == 1
+    wrapped_err = '{"response":{"header":{"resultCode":"22","resultMsg":"LIMIT"},"body":{}}}'
+    assert F.classify_response(wrapped_err) == 'error'
+
+
+def test_fetch_bjdong_all_pages_flags_truncated_pagination(monkeypatch):
+    """🚨 totalCount를 못 채우고 끝나면 0건이 아니라 '덜 받은 것'이다(2026-08-04 감사).
+
+    서버가 numOfRows를 100으로 캡하므로 totalCount 250이면 3페이지가 필요하다.
+    2페이지째에 resultCode 00 + 빈 items가 한 번 오면, 예전엔 100건만 담긴 채
+    had_error=False로 반환돼 run()이 그 그룹을 '깨끗하게 스캔 완료'로 확정하고
+    scanned에 등록했다 — 60% 누락이 clobber 방지도 ERROR 로그도 없이 나갔다.
+    """
+    ZERO_XML = ('<response><header><resultCode>00</resultCode></header>'
+                '<body><items/><totalCount>0</totalCount></body></response>')
+
+    def fake(sigungu, bjdong, page, endpoint=F.EP):
+        if page == 1:
+            items = ''.join(
+                '<item><mgmHsrgstPk>PK%d</mgmHsrgstPk><purpsCdNm>공동주택</purpsCdNm>'
+                '<totHhldCnt>10</totHhldCnt><useInsptDay>20240310</useInsptDay></item>' % i
+                for i in range(100))
+            return ('<response><header><resultCode>00</resultCode></header><body><items>'
+                    + items + '</items><totalCount>250</totalCount></body></response>', 'data')
+        return (ZERO_XML, 'no_data_xml')      # 2페이지에서 조용히 끊김
+
+    monkeypatch.setattr(F, 'fetch_page', fake)
+    log = []
+    items, had_error = F.fetch_bjdong_all_pages('11680', '10100', log=log)
+    assert len(items) == 100
+    assert had_error is True, '부분 수집을 정상 결과로 확정하면 안 된다'
+    assert any('조기 종료' in x for x in log)
+
+
+def test_fetch_bjdong_all_pages_complete_pagination_is_not_flagged(monkeypatch):
+    """정상적으로 totalCount를 다 채우면 had_error가 붙으면 안 된다(오탐 방지)."""
+    def fake(sigungu, bjdong, page, endpoint=F.EP):
+        n = 100 if page == 1 else 50
+        items = ''.join(
+            '<item><mgmHsrgstPk>PK%d_%d</mgmHsrgstPk><purpsCdNm>공동주택</purpsCdNm>'
+            '<totHhldCnt>10</totHhldCnt><useInsptDay>20240310</useInsptDay></item>' % (page, i)
+            for i in range(n))
+        return ('<response><header><resultCode>00</resultCode></header><body><items>'
+                + items + '</items><totalCount>150</totalCount></body></response>', 'data')
+
+    monkeypatch.setattr(F, 'fetch_page', fake)
+    items, had_error = F.fetch_bjdong_all_pages('11680', '10100')
+    assert len(items) == 150
+    assert had_error is False

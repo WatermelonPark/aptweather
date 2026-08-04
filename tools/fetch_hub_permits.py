@@ -266,12 +266,26 @@ def build_targets():
 # ---------------------------------------------------------------------------
 
 def _json_body(body):
-    """응답이 JSON이면 dict로, 아니면 None. 포맷 판정 한 곳에서만 파싱한다."""
+    """응답이 JSON이면 dict로, 아니면 None. 포맷 판정 한 곳에서만 파싱한다.
+
+    data.go.kr은 같은 엔드포인트에서 두 형태를 섞어 준다:
+      · 평평한 형태  {"header":{...},"body":{...}}
+      · 표준 래퍼    {"response":{"header":{...},"body":{...}}}
+    래퍼를 안 벗기면 header/body를 못 찾는다 — 오류 응답이 '무자료'로 둔갑하고
+    데이터가 든 응답도 0건으로 읽힌다(2026-08-04 감사). 소비자가 세 곳
+    (classify_response·item 추출·totalCount 추출)이라 각자 벗기게 두면 한 곳만
+    빠뜨리기 쉬우므로, 파싱하는 이 한 곳에서 벗겨 모두 같은 모양을 보게 한다.
+    """
     try:
         d = json.loads(body)
     except ValueError:
         return None
-    return d if isinstance(d, dict) else None
+    if not isinstance(d, dict):
+        return None
+    inner = d.get('response')
+    if isinstance(inner, dict) and ('body' in inner or 'header' in inner):
+        return inner
+    return d
 
 
 def _json_items(d):
@@ -330,14 +344,25 @@ def classify_response(body):
         d = _json_body(b)
         if d is None:
             return 'error'          # JSON처럼 시작했는데 파싱 불가 = 예상 밖 포맷
+        # ⚠️ 오류 판정을 구조 판정보다 **먼저** 한다 — XML 분기와 같은 순서다.
+        # 예전엔 body/items 구조를 먼저 봐서, resultCode 22(한도초과)·30(키오류)처럼
+        # body가 비어 오는 JSON 오류 응답이 'no_data_json'(정상 무자료·무재시도)으로
+        # 분류됐다. 그러면 재시도도 clobber 방지도 안 타고 그 법정동이 0건으로
+        # 확정 기록된다 — 조용한 소거의 세 번째 경로였다(2026-08-04 감사).
+        hdr = d.get('header') if isinstance(d.get('header'), dict) else {}
+        code = str(hdr.get('resultCode', '')).strip()
+        if code and code != '00':
+            return 'error'
+        if not code and ('returnReasonCode' in d or 'returnAuthMsg' in d
+                         or 'cmmMsgHeader' in d or 'errMsg' in d):
+            return 'error'
         if _json_items(d):
             return 'data'
         jb = d.get('body')
         if not isinstance(jb, dict) or 'items' not in jb:
             # {"body":{}} — bjdongCd 누락 등 호출 자체가 잘못된 형태(기존 계약 유지)
             return 'no_data_json'
-        code = str((d.get('header') or {}).get('resultCode', '')).strip()
-        return 'no_data_xml' if code == '00' else 'error'
+        return 'no_data_xml'
     if '<item>' not in b:
         if ('<cmmMsgHeader>' in b or 'returnReasonCode' in b or 'returnAuthMsg' in b):
             return 'error'
@@ -539,6 +564,18 @@ def fetch_bjdong_all_pages(sigungu, bjdong, log=None, endpoint=EP):
         # "수집 실패"로 로그에 남고, items에는 아무것도 추가되지 않는다
         # (진짜 0건과 겉보기 결과는 같아도 로그로는 구분된다 — Finding 1).
         break
+    # 🚨 조기 종료 검증(2026-08-04 감사). 위 루프는 'totalCount에 도달했는가'로만
+    # 정상 종료를 판정하는데, 그 조건을 **못 채우고** 빠져나온 경우를 아무도 확인하지
+    # 않았다. 서버가 totalCount=1072이라고 해놓고 2페이지째에 resultCode 00 + 빈
+    # items를 한 번 돌려주면, 100건만 담긴 채 had_error=False로 반환돼 run()이 그
+    # 그룹을 '깨끗하게 스캔 완료'로 확정 저장하고 scanned에 등록한다 — 90% 누락이
+    # clobber 방지도 ERROR 로그도 없이 라이브로 나간다.
+    # totalCount를 아는데 못 채웠으면 그건 0건이 아니라 '덜 받은 것'이다.
+    if total_count is not None and len(items) < total_count:
+        had_error = True
+        if log is not None:
+            log.append('ERROR %s/%s: 페이지네이션 조기 종료 — %d/%d건만 수집(부분 수집분 폐기)'
+                       % (sigungu, bjdong, len(items), total_count))
     return items, had_error
 
 
