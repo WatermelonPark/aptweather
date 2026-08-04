@@ -487,3 +487,22 @@ def test_aged_stock_card_discloses_uncertainty():
     card = next((c for c in cards if '재건축 압력' in c), None)
     assert card, '노후 재고 카드가 없다'
     assert '알 수 없습니다' in card and '순부족 계산에는' in card
+
+
+def test_no_literal_double_percent_in_pages():
+    """% 연산자를 안 쓰는 문자열에 '%%'를 쓰면 그대로 화면에 찍힌다.
+    44장 전부에 '평균 2%%p'가 나가고 있었다(2026-08-04)."""
+    import io as _io, glob as _glob
+    bad = []
+    for p in _glob.glob('zone/*/index.html') + ['zone/index.html', 'index.html']:
+        if '%%' in _io.open(p, encoding='utf-8').read():
+            bad.append(p)
+    assert not bad, '이스케이프가 그대로 노출된 페이지: %s' % bad[:5]
+
+
+def test_future_demolition_limit_disclosed():
+    """미래 멸실은 산식에 없다 — 없다는 사실을 홈과 존 양쪽에서 밝힌다."""
+    import io as _io
+    for p in ('index.html', 'zone/서울권/index.html'):
+        h = _io.open(p, encoding='utf-8').read()
+        assert '헐릴 집' in h, '%s에 미래 멸실 한계 공시가 없다' % p

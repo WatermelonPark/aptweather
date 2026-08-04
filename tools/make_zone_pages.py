@@ -1689,10 +1689,13 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         '<div class="card"><b>%s 구성</b><span>%s</span></div>%s\n'
         '<p class="note">입주예정은 단지 주소 기반 <b>실측치</b>(%s).</p>\n'
         '</div></details>' % (nm, members, sublist, span))
+    # ⚠️ 이 문자열엔 % 연산자를 적용하지 않는다 — '%%'로 쓰면 화면에 그대로 '%%'가
+    # 찍힌다(2026-08-04에 44장 전부에서 '2%%p'로 나가고 있던 것을 잡음).
     caution_fold_html = (
         '<details class="fold"><summary>이 숫자를 읽을 때 주의할 점</summary><div class="dbody">\n'
-        '<div class="card"><b>가격을 맞히는 지표는 아니다</b><span>2010년 이후 44개 생활권 실측에서, 금리가 크게 움직인 시기엔 공급의 영향이 거의 보이지 않았고, 금리가 잔잔한 시기에도 공급이 적었던 곳이 이후 2년간 평균 2%%p 남짓 더 올랐을 뿐입니다.</span></div>\n'
+        '<div class="card"><b>가격을 맞히는 지표는 아니다</b><span>2010년 이후 44개 생활권 실측에서, 금리가 크게 움직인 시기엔 공급의 영향이 거의 보이지 않았고, 금리가 잔잔한 시기에도 공급이 적었던 곳이 이후 2년간 평균 2%p 남짓 더 올랐을 뿐입니다.</span></div>\n'
         '<div class="card"><b>공급은 3년 전에 결정된다</b><span>오늘 인허가받은 아파트는 3년쯤 뒤에 입주합니다. 즉 지금 보이는 입주예정 물량은 이미 확정된 미래이고, 바꿀 수 없습니다.</span></div>\n'
+        '<div class="card"><b>앞으로 헐릴 집은 빼지 않았다</b><span>지난 4년 몫에서는 철거(멸실)를 뺐지만, 앞으로 4년 몫에는 반영하지 않았습니다. 재건축이 언제 얼마나 진행될지 미리 알 방법이 없어서입니다 — 준공 30년이 지난 아파트 중 실제로 헐리는 비율은 해마다 0~59%로 흩어집니다. 그만큼 이 지표는 부족을 덜 잡습니다. 노후 재고가 많은 지역일수록 그렇습니다.</span></div>\n'
         '<div class="card"><b>순위는 비율, 숫자는 절대량</b><span>등급·순위는 필요량 대비 부족 비율로 매깁니다. 화면의 세대수는 절대량이라 순위와 순서가 다를 수 있습니다.</span></div>\n'
         '</div></details>')
     methodology_details_html = (
