@@ -1467,20 +1467,45 @@ def _lz_pop():
     return _lz_region('DT_1B040A3', 'T20')
 
 
+# 🚨 2026-07 행정구역 개편: 광주광역시(29)와 전라남도(46)가 **전남광주통합특별시**
+# (코드 12) 하나로 합쳐졌다. 이름이 LZ_SIDO_FULL에 없어 파서가 통째로 흘려보냈고,
+# 광주권·목포권·여순광권 3개 존(268만 명)이 조용히 사라졌다(2026-08-05 발견).
+# livezone 급감 가드는 44→41이라 0.8 문턱에 안 걸려 그대로 배포될 뻔했다.
+#
+# 우리 생활권 정의(LIVEZONE)는 여전히 '광주'/'전남'을 따로 쓰므로, 통합 시도를
+# **자식 코드로 되쪼개** 옛 두 키를 복원한다. 이름으로는 못 가른다 — 통합시 안의
+# '동구·서구·남구·북구'는 옛 광주 구인데 다른 시도에도 같은 이름이 있다.
+GWANGJU_GU = {'12210', '12240', '12270', '12300', '12330'}   # 동·서·남·북·광산구
+MERGED_JN_GJ = '전남광주통합특별시'
+
 def _lz_region(tbl, itm):
     """KOSIS 주민등록 계열 표 -> (시도 dict, 시군구 dict). 두 표의 지역 계층이 동일해
     같은 파서를 쓴다. 광역시 소속 구는 시도 단위로 처리하므로 sgg에 넣지 않는다."""
     url = API + '?' + urllib.parse.urlencode(dict(method='getList', apiKey=KEY, format='json', jsonVD='Y',
         orgId='101', tblId=tbl, objL1='ALL', itmId=itm, prdSe='M', newEstPrdCnt='1'))
     sido, sgg, cur = {}, {}, None
+    merged_tot = 0
     for r in http_json(url):
         nm = (r.get('C1_NM') or '').strip()
+        cd = (r.get('C1') or '').strip()
         try: pop = int(r.get('DT') or 0)
         except (TypeError, ValueError): continue
+        if nm == MERGED_JN_GJ:
+            cur, merged_tot = MERGED_JN_GJ, pop
+            sido['광주'] = 0
+            continue
         if nm in LZ_SIDO_FULL:
             cur = LZ_SIDO_FULL[nm]; sido[cur] = pop; continue
+        if cur == MERGED_JN_GJ:
+            if cd in GWANGJU_GU:
+                sido['광주'] += pop          # 옛 광주광역시 = 5개 구 합
+            elif not nm.endswith('구'):
+                sgg[('전남', nm)] = pop      # 나머지 시·군 = 옛 전라남도
+            continue
         if nm == '전국' or cur is None or cur in LZ_GWANG or nm.endswith('구'): continue
         sgg[(cur, nm)] = pop
+    if merged_tot:
+        sido['전남'] = merged_tot - sido['광주']
     return sido, sgg
 
 def _fetch_chung():
