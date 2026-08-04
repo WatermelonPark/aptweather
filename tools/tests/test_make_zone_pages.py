@@ -586,3 +586,52 @@ def test_hub_exposes_member_city_names():
     html = _io.open('zone/index.html', encoding='utf-8').read()
     for city in ('안성시', '하남시', '포천시', '동두천시', '성남시', '화성시'):
         assert city in html, '허브에 %s가 없다' % city
+
+
+# ---------------------------------------------------------------------------
+# 시·군 상세(권역 아래 한 뎁스) — 2026-08-05
+# ---------------------------------------------------------------------------
+
+def test_city_rows_match_zone_for_single_member_zones():
+    """시 행은 새 산식이 아니라 권역 값을 세대 비중으로 쪼갠 것이다. 멤버가 하나뿐인
+    존(춘천권=춘천시)에서는 쪼갤 게 없으므로 존 행과 **정확히 같아야** 한다.
+    풀 재배선을 받는 김해권·창원권까지 같아야 상속이 증명된다."""
+    adv, sts = M.load()
+    by = {r['z']['z']: r for r in M.calc(adv, sts)}
+    checked = 0
+    for z in ('춘천권', '진주권', '청주권', '김해권', '창원권'):
+        r = by.get(z)
+        if not r:
+            continue
+        cs = M.city_rows(adv, r)
+        if len(cs) != 1:
+            continue
+        c = cs[0]
+        assert abs(c['tot'] - r['tot']) < 1, '%s: tot %.1f vs %.1f' % (z, c['tot'], r['tot'])
+        assert abs(c['need4'] - r['need4']) < 1, z
+        assert c['gr']['label'] == r['gr']['label'], z
+        checked += 1
+    assert checked >= 3, '단일 멤버 존 표본이 사라졌다 — 이 검사가 무의미해진다'
+
+
+def test_city_rows_sum_of_need_matches_zone():
+    """수요는 권역 need4를 세대 비중으로 나눈 것이라, 시·군이 존을 다 덮는 권역
+    (경기 7곳)에서는 시 need4 합이 권역 need4와 맞아야 한다."""
+    adv, sts = M.load()
+    for r in M.calc(adv, sts):
+        if not r['z']['z'].startswith('경기'):
+            continue
+        cs = M.city_rows(adv, r)
+        if not cs:
+            continue
+        cover = sum(c['hh'] for c in cs) / float(r['z']['hh'])
+        assert abs(sum(c['need4'] for c in cs) - r['need4'] * cover) < 1, r['z']['z']
+
+
+def test_city_rows_empty_for_metro_zones():
+    """광역시 존은 멤버가 ('서울','*')라 시·군이 없다 — 구 페이지는 만들지 않는다."""
+    adv, sts = M.load()
+    by = {r['z']['z']: r for r in M.calc(adv, sts)}
+    for z in ('서울권', '부산권', '대구권'):
+        if z in by:
+            assert not [c for c in M.city_rows(adv, by[z]) if c['city'].endswith('구')]

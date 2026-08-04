@@ -1452,8 +1452,33 @@ def hub_derive(adv):
     adv['permits']['sched'] = {z: dict(sched[z]) for z in complete if z in sched}
     adv['permits']['units'] = _zone_units(hp, z_of, complete)
     adv['permits']['demol'] = {z: dict(demol[z]) for z in complete_demol if z in demol}
-    print('hub_derive: active, complete_zones=%d, complete_demol_zones=%d'
-          % (len(complete), len(complete_demol)))
+    # ── 시·군 단위(2026-08-05) — 권역 아래 한 뎁스 상세페이지용 ──────────────
+    # 존과 **같은 원본·같은 게이트**를 쓴다. 따로 모으면 권역 합계와 시 합계가
+    # 갈라진다. 키는 '권역/시군'(고성군처럼 시도가 다른 동명 시군이 있다).
+    # 광역시 존은 멤버가 ('서울','*')라 시·군이 없다 — 자연히 빠진다.
+    cdone = collections.defaultdict(lambda: collections.defaultdict(int))
+    csched = collections.defaultdict(lambda: collections.defaultdict(int))
+    cdemol = collections.defaultdict(lambda: collections.defaultdict(int))
+    for cd, v in hp.get('sgg', {}).items():
+        z = z_of.get(cd)
+        if not z or z not in complete:
+            continue
+        nm = (bdong.get(cd) or ('', ''))[1].split(' ')[0]
+        nm = LZ_GU2SI.get(nm, nm)
+        if not nm or not any(m[1] == nm for m in _lz_members_of(z)):
+            continue                      # 광역시 구 등 — 시·군 멤버가 아니면 제외
+        k = '%s/%s' % (z, nm)
+        for q, n in v.get('done_q', {}).items(): cdone[k][q] += n
+        for q, n in v.get('sched_q', {}).items(): csched[k][q] += n
+        if z in complete_demol:
+            for q, n in v.get('demol_q', {}).items(): cdemol[k][q] += n
+    adv['permits']['city'] = {
+        'done': {k: dict(v) for k, v in cdone.items()},
+        'sched': {k: dict(v) for k, v in csched.items()},
+        'demol': {k: dict(v) for k, v in cdemol.items()},
+    }
+    print('hub_derive: active, complete_zones=%d, complete_demol_zones=%d, cities=%d'
+          % (len(complete), len(complete_demol), len(cdone)))
 LZ_PSIDO = {'서울권':'수도권','인천권':'수도권','부산권':'부산','김해권':'경남','창원권':'경남','진주권':'경남',
  '울산권':'울산','대구권':'대구','포항권':'경북','구미권':'경북','안동권':'경북','대전세종권':'대전',
  '청주권':'충북','천안아산권':'충남','서산당진권':'충남','광주권':'광주','전주권':'전북','군산익산권':'전북',
@@ -1495,6 +1520,16 @@ def _lz_pop():
 # '동구·서구·남구·북구'는 옛 광주 구인데 다른 시도에도 같은 이름이 있다.
 GWANGJU_GU = {'12210', '12240', '12270', '12300', '12330'}   # 동·서·남·북·광산구
 MERGED_JN_GJ = '전남광주통합특별시'
+
+
+def _lz_members_of(zone):
+    """생활권 -> [(시도, 시군구)]. LIVEZONE에 없으면 경기 동적존 규칙."""
+    if zone in LIVEZONE:
+        return list(LIVEZONE[zone])
+    base = zone[:-1]
+    if base.startswith('경기'):
+        base = base[2:]
+    return [('경기', base + '시'), ('경기', base + '군')]
 
 def _lz_region(tbl, itm):
     """KOSIS 주민등록 계열 표 -> (시도 dict, 시군구 dict). 두 표의 지역 계층이 동일해
@@ -1636,8 +1671,15 @@ def fetch_livezone():
     spop['수도권'] = sido_pop.get('서울', 0) + sido_pop.get('인천', 0) + sido_pop.get('경기', 0)
     shh = dict(sido_hh)
     shh['수도권'] = sido_hh.get('서울', 0) + sido_hh.get('인천', 0) + sido_hh.get('경기', 0)
+    # 시군구 세대수 — 시·군 상세페이지가 존과 같은 잣대(hh/sidohh)로 안분하려면
+    # 필요하다(2026-08-05). 존 목록에 든 시군만 실어 페이로드를 줄인다.
+    used = set()
+    for z in zones:
+        for m in _lz_members_of(z['z']):
+            if m[1] != '*': used.add((m[0], m[1]))
+    sgghh = {"%s/%s" % k: v for k, v in sgg_hh.items() if k in used}
     return {'prd': '%d.%02d' % (td.year, td.month), 'unit': '만명당 예정세대(향후 전량)',
-            'sidopop': spop, 'sidohh': shh, 'zones': zones}
+            'sidopop': spop, 'sidohh': shh, 'sgghh': sgghh, 'zones': zones}
 
 
 # 주택총조사 경과연수별 아파트(DT_1JU1521)의 시군구 축. 시도값을 세대 비중으로
@@ -1669,7 +1711,7 @@ def fetch_zone_aged30():
     rows = [r for r in rows if (r.get('C2_NM') or '').startswith('30년')]
     if not rows:
         raise RuntimeError('DT_1JU1521: 30년 이상 구간이 비었다')
-    out = {}
+    out, city = {}, {}
     for r in _aged30_sgg_rows(rows):
         sd = AGED30_SIDO.get(r['C1'][:2])
         if not sd:
@@ -1682,7 +1724,10 @@ def fetch_zone_aged30():
         except (TypeError, ValueError):
             continue           # 'X'(비공개/해당없음)는 0으로 세지 않고 건너뛴다
         out[z] = out.get(z, 0) + v
-    return {'yr': rows[0].get('PRD_DE'), 'z': {k: int(v) for k, v in out.items()}}
+        if any(m[1] == r['C1_NM'] for m in _lz_members_of(z)):
+            city['%s/%s' % (z, r['C1_NM'])] = v
+    return {'yr': rows[0].get('PRD_DE'), 'z': {k: int(v) for k, v in out.items()},
+            'c': {k: int(v) for k, v in city.items()}}
 
 
 def main():

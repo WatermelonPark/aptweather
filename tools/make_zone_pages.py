@@ -490,7 +490,7 @@ def calc(adv, sts, weight_demand=False, horizon=FUT_HORIZON):
         out.append(dict(z=z, ps=ps, share=share, need=need, dA=dA, dB=dB, dC=dC, tot=tot, fsup=fsup, fq=H,
                         flag=flag, lo=lo, hi=hi, loan=loan, pv=pv, plo=plo, dY=dY, refq=refq, band=band,
                         inv_path=inv_path, tot_fallback=tot_fallback,
-                        need4=need4, zrefq=zrefq, pool=pool, pshare=pshare,
+                        need4=need4, zrefq=zrefq, zdemol=zdemol, pool=pool, pshare=pshare,
                         inow=(_rs['inow'] if _rs else 0.0),
                         fsupw=(_rs['supplyw'] if _rs else 0.0),
                         zsched=zsched, seq=seq,
@@ -2229,6 +2229,62 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 </body>
 </html>
 """
+
+
+
+def city_rows(adv, r):
+    """권역 행 -> 소속 시·군 행들. 권역 페이지 아래 한 뎁스 상세용(2026-08-05).
+
+    ⚠️ 새 산식을 만들지 않는다. 수요·멸실은 **권역 값을 세대 비중으로 쪼개고**
+    (city_hh / zone_hh), 공급만 HUB 시군구 실측(permits['city'])을 쓴 뒤 존과
+    똑같은 running_shortage()·grade()에 넣는다. 이렇게 하면
+      · 풀 재배선(POOLS)이 자동으로 상속된다 — 권역 zrefq가 이미 풀 배분액이다
+      · 시 합계가 권역 값과 어긋나지 않는다(같은 분모를 쪼갠 것이므로)
+      · 산식 사본이 안 생긴다 — 존과 갈릴 수 없다
+    단일 멤버 존(춘천권=춘천시)에서 존 행과 값이 같아야 하고, 그걸 테스트로 잠근다.
+
+    광역시 존은 멤버가 ('서울','*')라 시·군이 없어 빈 리스트가 나온다.
+    """
+    P = adv.get('permits') or {}
+    C = P.get('city') or {}
+    SGGHH = ((adv.get('livezone') or {}).get('sgghh')) or {}
+    A30 = ((adv.get('aged30') or {}).get('c')) or {}
+    zname = r['z']['z']
+    zhh = r['z']['hh'] or 0
+    if not zhh:
+        return []
+    today = datetime.date.today()
+    cur_q = today.year * 4 + (today.month - 1) // 3
+    out = []
+    for sd, city in _lz_members(zname):
+        if city == '*':
+            continue
+        hh = SGGHH.get('%s/%s' % (sd, city))
+        if not hh:
+            continue
+        f = hh / float(zhh)
+        key = '%s/%s' % (zname, city)
+        crefq = r['zrefq'] * f
+        cdemol = {q: v * f for q, v in (r.get('zdemol') or {}).items()}
+        cdone = (C.get('done') or {}).get(key) or {}
+        csched = (C.get('sched') or {}).get(key) or {}
+        if not (cdone or csched):
+            continue
+        rs = running_shortage(cdone, csched, cdemol, crefq, cur_q,
+                              horizon=FUT_HORIZON, weight_demand=False, full=True)
+        need4 = crefq * 16
+        seq = [rs['inow']]
+        _i = rs['inow']
+        for k in range(1, 17):
+            _i += csched.get(_qkey(cur_q + k), 0) - crefq
+            if k % 4 == 0:
+                seq.append(_i)
+        out.append(dict(city=city, sido=sd, zone=zname, hh=hh, share_in_zone=f,
+                        zrefq=crefq, need4=need4, tot=rs['tot'], inow=rs['inow'],
+                        fsupw=rs['supplyw'], seq=seq, done=cdone, sched=csched,
+                        aged=A30.get(key), gr=grade(rs['tot'], need4)))
+    out.sort(key=lambda c: -c['tot'])
+    return out
 
 
 def build_hub(pages, prd, today):
