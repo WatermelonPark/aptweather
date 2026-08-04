@@ -72,10 +72,105 @@ def pick_zone(rows):
     return pick, len(done), len(pool)
 
 
+# ---------------------------------------------------------- 로테이션·해석 자리
+# 해석은 기계가 못 쓴다. 이 자리를 비워 둔 채 발행하면 시세 숫자만 나열한 글이
+# 되어 블로그 톤(분석)에서 떨어진다. 눈에 띄라고 대괄호로 남긴다.
+INTERP_PLACEHOLDER = (
+    '[이번 주 데이터에서 눈에 띈 것을 2~4문장으로. 위 표의 숫자를 다시 읊지 말고 '
+    '왜 그런지, 무엇을 시사하는지 쓸 것. 예: 특정 지역만 튀는 이유, 매매-전세 '
+    '방향이 갈리는 곳, 몇 주째 이어지는 흐름.]')
+
+# ⑤ 더 보기 — 4주에 걸쳐 사이트의 다른 코너를 하나씩 소개한다.
+MORE_ROTATION = [
+    dict(h='이번 주 시세를 지도로 보려면',
+         desc='187개 시군구와 서울 25개 구의 매매·전세 변동률을 지도 한 장으로 볼 수 있습니다. 상승은 빨강, 하락은 파랑입니다.',
+         path='/weekly/', label='주간 시세 지도 보기'),
+    dict(h='우리 동네 공급은 어떤가',
+         desc='생활권별로 앞으로 4년간 들어올 물량과 필요한 양을 비교한 리포트가 있습니다. 지역을 골라 들어가 보세요.',
+         path='/zone/', label='전국 생활권 공급 순위'),
+    dict(h='집값은 왜 도는가',
+         desc='공급 → 전세 → 매매 → 다시 공급으로 이어지는 순환의 6개 고리를, 15개 시도 20년 데이터로 검증한 리포트입니다.',
+         path='/cycle/', label='「집값은 돌고 돈다」 읽기'),
+    dict(h='내 부동산 감각은 몇 점일까',
+         desc='10문항 3분이면 끝나는 테스트입니다. 문항마다 국가 통계에 근거한 해설이 붙습니다.',
+         path='/burini-test/', label='부린이 테스트 풀어보기'),
+]
+
+
+def rot_index(p):
+    """발표주차 기준 4주 로테이션 인덱스. 날짜에서 뽑으므로 상태 파일이 필요 없고,
+    주간 발행을 건너뛰어도 순서가 어긋나지 않는다."""
+    y, m, d = (int(x) for x in p.split('-'))
+    return (datetime.date(y, m, d).isocalendar()[1] - 1) % 4
+
+
+def _series_last(sts, key, region='전국'):
+    """(최신값, 직전값, 기준월) — 데이터가 없으면 (None, None, None)."""
+    d = sts.get(key) or {}
+    s = (d.get('series') or {}).get(region) or []
+    dates = d.get('dates') or []
+    vals = [v for v in s if v is not None]
+    if len(vals) < 2 or not dates:
+        return None, None, None
+    return vals[-1], vals[-2], dates[len(s) - 1] if len(dates) >= len(s) else dates[-1]
+
+
+def extra_section(adv, sts, rot):
+    """④ 이번 주의 다른 지표 — 4주 로테이션. 데이터가 없으면 섹션째 생략한다."""
+    if rot == 0:
+        cur, prv, when = _series_last(sts, '전세가율')
+        if cur is None:
+            return ''
+        mv = '올랐습니다' if cur > prv else ('내렸습니다' if cur < prv else '보합입니다')
+        return ('<h3>이번 주의 지표 — 전세가율</h3>'
+                '<p>전국 전세가율은 <b>%.1f%%</b>입니다(%s 기준, 전월 %.1f%%에서 %s). '
+                '매매가 대비 전세가의 비율로, 높아질수록 사는 값과 빌리는 값의 차이가 '
+                '좁아져 매매 전환 압력이 커집니다.</p>' % (cur, when, prv, mv))
+    if rot == 1:
+        cur, prv, when = _series_last(sts, '미분양')
+        if cur is None:
+            return ''
+        diff = cur - prv
+        mv = ('%s호 늘었습니다' % num(diff)) if diff > 0 else (
+             ('%s호 줄었습니다' % num(-diff)) if diff < 0 else '변동이 없습니다')
+        return ('<h3>이번 주의 지표 — 미분양</h3>'
+                '<p>전국 미분양은 <b>%s호</b>입니다(%s 기준, 전월 대비 %s). '
+                '미분양은 공급이 수요를 넘어선 흔적이라, 쌓이면 그 지역 분양가와 '
+                '입주장 전세가에 먼저 반영됩니다.</p>' % (num(cur), when, mv))
+    if rot == 2:
+        B = adv.get('bubble') or {}
+        conv = (B.get('conv') or {}).get('전국')
+        loan = (B.get('loan') or {}).get('v')
+        if conv is None or loan is None:
+            return ''
+        gap = conv - loan
+        judge = ('월세로 사는 비용이 대출 이자보다 비싼 상태' if gap > 0
+                 else '대출 이자가 월세보다 비싼 상태')
+        return ('<h3>이번 주의 지표 — 월세수익률 vs 대출금리</h3>'
+                '<p>전국 월세수익률(전세가율 × 전월세전환율)은 연 <b>%.2f%%</b>, '
+                '주택담보대출 금리는 <b>%.2f%%</b>입니다. 지금은 %s입니다. '
+                '어차피 어딘가에는 살아야 하므로, 이 차이는 실거주 매수를 '
+                '검토할지 판단하는 출발점이 됩니다.</p>' % (conv, loan, judge))
+    A = adv.get('aged30') or {}
+    zmap = A.get('z') or {}
+    if not zmap:
+        return ''
+    tops = sorted(zmap.items(), key=lambda x: -x[1])[:3]
+    return ('<h3>이번 주의 지표 — 30년 넘은 아파트</h3>'
+            '<p>준공 30년이 지난 아파트가 가장 많은 곳은 %s입니다(%s년 기준). '
+            '노후 재고는 재건축·재개발 압력이자 앞으로 헐릴 집이기도 해서, '
+            '많이 쌓인 지역일수록 실제 공급이 통계보다 빠듯해질 수 있습니다.</p>'
+            % (' · '.join('<b>%s %s세대</b>' % (k, num(v)) for k, v in tops),
+               A.get('yr', '')))
+
+
 # ---------------------------------------------------------------- 초안 ①
-def draft_weekly(adv, rows):
+def draft_weekly(adv, sts, rows):
     W = adv['weekly']
     p = W['rows'][-1]['p']
+    rot = rot_index(p)
+    extra_html = extra_section(adv, sts, rot)
+    more = MORE_ROTATION[rot]
     reg, last = W['regions'], W['rows'][-1]
     prev = W['rows'][-2] if len(W['rows']) > 1 else None
     val = dict(zip(reg, zip(last['ma'], last['je'])))
@@ -103,11 +198,15 @@ def draft_weekly(adv, rows):
     title = '%s년 %s월 %s주 아파트 시세 | 서울 %s, 전국 %s' % (
         ymd[0], int(ymd[1]), (int(ymd[2]) - 1) // 7 + 1, pct(seoul[0]), pct(nat[0]))
 
-    # 아공맵 상위 — 홈과 같은 기준(수도권 통합)
+    # 아공맵 상위 — 홈과 같은 범위(수도권 통합)에 사이트 표준 순서를 그대로 쓴다.
+    # ⚠️ tot(절대 세대수)만으로 정렬하면 안 된다. 등급은 '필요량 대비 비율'로 매기므로
+    # 덩치 큰 수도권이 1위인데 판정은 '균형'으로 찍히는 모순이 난다(2026-08-02 실측).
+    # zone_order()가 홈·허브·존 페이지가 공유하는 유일한 순서다.
     cap = Z.make_capital(rows)
-    units = [cap] + [r for r in rows if r['z']['region'] != '수도권']
-    units.sort(key=lambda r: -r['tot'])
+    units = Z.zone_order([cap] + [r for r in rows if r['z']['region'] != '수도권'])
     top = units[:5]
+    zone_count = len(rows)          # 개별 생활권 수(허브 표기와 동일)
+    unit_count = len(units)         # 수도권을 하나로 묶었을 때의 단위 수
 
     rowsHtml = ''
     for k in ['전국', '수도권', '서울', '경기', '인천', '부산', '대구', '대전', '광주', '울산']:
@@ -119,12 +218,12 @@ def draft_weekly(adv, rows):
         rowsHtml += ('<tr><td>%s</td><td style="text-align:right">%s</td>'
                      '<td style="text-align:right">%s</td></tr>') % (k, pct(m), pct(j))
 
+    # 순위·판정만 싣는다(세대수 제외). 판정 라벨은 하드코딩하지 않고 grade()가
+    # 돌려준 것을 그대로 쓴다 — 등급 체계가 바뀌어도 초안이 따라간다.
     topHtml = ''
-    for r in top:
-        nm = r['z']['z']
-        t = r['tot']
-        topHtml += ('<tr><td>%s</td><td style="text-align:right">%s세대</td>'
-                    '<td>%s</td></tr>') % (nm, num(abs(t)), '부족' if t >= 0 else '과잉')
+    for i, r in enumerate(top, 1):
+        topHtml += ('<tr><td>%d위</td><td>%s</td><td>%s</td></tr>'
+                    % (i, r['z']['z'], r['gr']['label']))
 
     lead = ('한국부동산원이 발표한 <b>%s 기준</b> 주간 아파트 가격 동향입니다. '
             '전국 매매가는 전주 대비 <b>%s</b>, 서울은 <b>%s</b> 움직였습니다.'
@@ -145,24 +244,43 @@ def draft_weekly(adv, rows):
                     ' · '.join('<b>%s %s</b>' % (k, pct(v)) for k, v in gu))
     body.append('<p>[여기에 시세 지도 이미지를 넣어 주세요]</p>')
 
+    # ── ② 해석 자리. 기계가 채울 수 없는 부분이라 비워 두고, 재료(위 표·순위)만
+    # 앞에 깔아 둔다. 블로그 이웃들이 기대하는 건 숫자 나열이 아니라 해석이므로
+    # 이 자리를 비운 채 발행하면 안 된다.
+    body.append('<h3>이번 주 눈에 띈 것</h3>')
+    body.append('<p>%s</p>' % INTERP_PLACEHOLDER)
+
+    # ── ③ 공급. 절대 세대수는 싣지 않는다 — 공급 모델이 갱신되면 숫자가 움직이는데
+    # 블로그 글은 박제되기 때문이다. 순위와 등급은 훨씬 덜 흔들린다.
     body.append('<h3>공급으로 보면 어떤가 — 아공맵</h3>')
     body.append('<p>주간 시세가 지금의 온도라면, 공급은 앞으로의 방향입니다. '
-                '오늘 인허가를 받은 아파트는 3년쯤 뒤에 입주하기 때문에, '
-                '지금 확정된 입주 물량은 이미 바꿀 수 없는 미래입니다.</p>')
-    body.append('<p>전국을 통근·생활 단위 <b>생활권 36곳</b>으로 나눈 뒤, '
-                '인구 대비 적정 공급량과 견줘 얼마나 모자라거나 남는지를 '
-                '세대수로 계산한 결과입니다.</p>')
+                '지금 짓고 있는 아파트는 3년쯤 뒤에 입주하기 때문에, '
+                '앞으로 4년의 공급은 이미 상당 부분 정해져 있습니다.</p>')
+    body.append('<p>전국을 하나의 주택시장처럼 움직이는 <b>생활권 %d곳</b>으로 나눈 뒤, '
+                '그 지역의 적정 공급량과 견줘 재고가 얼마나 쌓였는지 본 순위입니다. '
+                '(수도권은 한 덩어리로 묶어 %d개 단위로 봅니다. 순위는 세대수 절대량이 '
+                '아니라 <b>필요량 대비 부족 비율</b>로 매깁니다.)</p>'
+                % (zone_count, unit_count))
     body.append('<table border="1" cellspacing="0" cellpadding="6"><thead>'
-                '<tr><th>생활권</th><th>누적 수급</th><th>구분</th></tr></thead>'
+                '<tr><th>순위</th><th>생활권</th><th>판정</th></tr></thead>'
                 '<tbody>%s</tbody></table>' % topHtml)
     lead_z = top[0]
-    body.append('<p><b>%s</b>이 %s세대로 가장 크게 모자랍니다. '
+    body.append('<p><b>%s</b>이 가장 모자란 곳으로 나왔습니다. '
                 '공급 부족이 곧 가격 상승을 뜻하지는 않지만, '
-                '금리·수요와 함께 가격을 밀어올리는 힘 가운데 하나입니다.</p>' % (
-                    lead_z['z']['z'], num(abs(lead_z['tot']))))
-    body.append('<p>생활권별 상세 근거는 아공맵에서 확인할 수 있습니다.<br>'
-                '👉 <a href="%s/?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=weekly">%s</a></p>'
-                % (SITE, SITE.replace('https://', '')))
+                '금리·수요와 함께 가격을 밀어올리는 힘 가운데 하나입니다.</p>'
+                % lead_z['z']['z'])
+
+    # ── ④ 다른 지표(4주 로테이션). 매주 같은 각도만 보여주면 사이트의 폭이 안 드러난다.
+    if extra_html:
+        body.append(extra_html)
+
+    # ── ⑤ 더 보기(4주 로테이션). 매번 같은 링크를 붙이면 무시당하므로 4주에 걸쳐
+    # 사이트의 다른 코너를 하나씩 소개한다.
+    body.append('<h3>%s</h3>' % more['h'])
+    body.append('<p>%s<br>👉 <a href="%s%s%s">%s</a></p>' % (
+        more['desc'], SITE, more['path'],
+        '?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=weekly',
+        more['label']))
     body.append('<p><i>※ 이 글은 한국부동산원·국토교통부·KOSIS·한국은행 공개 데이터를 '
                 '가공한 것으로, 특정 지역의 매수·매도를 권유하지 않습니다.</i></p>')
 
@@ -174,7 +292,7 @@ def draft_weekly(adv, rows):
 
 
 # ---------------------------------------------------------------- 초안 ②
-def draft_zone(adv, r, seq, total):
+def draft_zone(adv, r, seq, total, total_zones):
     z = r['z']
     nm = z['z']
     t = r['tot']
@@ -189,11 +307,12 @@ def draft_zone(adv, r, seq, total):
     sgg = [(s[0], s[1]) for s in (z.get('sgg') or [])
            if isinstance(s, (list, tuple)) and len(s) >= 2]
 
-    title = '%s 아파트, 앞으로 얼마나 %s | 입주예정·인허가로 본 수급' % (nm, ask)
+    title = '%s 아파트, 앞으로 얼마나 %s | 준공·입주예정으로 본 수급' % (nm, ask)
 
     body = []
-    body.append('<p>전국을 통근·생활 단위 <b>생활권 36곳</b>으로 나눠 '
-                '아파트 수급을 보고 있습니다. 이번에는 <b>%s</b> 차례입니다.</p>' % nm)
+    body.append('<p>전국을 통근·생활 단위 <b>생활권 %d곳</b>으로 나눠 '
+                '아파트 수급을 보고 있습니다. 이번에는 <b>%s</b> 차례입니다.</p>'
+                % (total_zones, nm))
 
     body.append('<p>생활권은 행정구역이 아니라 실제로 출퇴근하고 생활하는 범위로 '
                 '묶은 단위입니다. 같은 도라도 차로 두 시간 걸리는 곳은 사실상 '
@@ -211,22 +330,26 @@ def draft_zone(adv, r, seq, total):
                         if len(sgg) > len(top5) else ''))
 
     body.append('<h3>결론부터</h3>')
-    body.append('<p>인구 %s명 기준으로 계산한 적정 공급량과 견주면, '
-                '%s은 현재 <b>%s세대가 %s</b> 상태입니다.</p>' % (
-                    num(z.get('pop', 0)), nm, num(abs(t)), state))
+    body.append('<p>이 지역의 적정 공급량과 견주면, %s은 현재 '
+                '<b>%s세대가 %s</b> 상태입니다. 판정은 <b>%s</b>입니다.</p>' % (
+                    nm, num(abs(t)), state, r['gr']['label']))
 
+    # ⚠️ 2026-08-02 모델 확정(activate) 반영. 예전의 3구간 가중평균(55/35/10)·
+    # 인허가 35% 반영·"앞으로 5분기"는 전부 폐기됐다. 지금은 준공/준공예정 실측을
+    # 재고처럼 굴리는 러닝재고 방식이다. 사이트 존 페이지의 '어떻게 계산했나'와
+    # 같은 내용을 말해야 한다 — 블로그와 사이트가 다른 산식을 설명하면 신뢰가 깨진다.
     body.append('<h3>어떻게 계산했나</h3>')
-    body.append('<p>세 구간을 가중 평균했습니다. '
-                '먼 미래일수록 아직 바꿀 수 있어 비중을 달리 뒀습니다.</p>')
-    body.append('<table border="1" cellspacing="0" cellpadding="6"><thead>'
-                '<tr><th>구간</th><th>의미</th><th>비중</th></tr></thead><tbody>'
-                '<tr><td>앞으로 %d분기</td><td>이미 확정된 입주예정 물량</td><td>55%%</td></tr>'
-                '<tr><td>3년 뒤</td><td>최근 인허가 → 3~4년 뒤 입주</td><td>35%%</td></tr>'
-                '<tr><td>지난 3년</td><td>이미 입주한 누적 실적</td><td>10%%</td></tr>'
-                '</tbody></table>' % r['fq'])
-    body.append('<p>과거를 3년까지 보는 이유가 있습니다. 공급 부족은 재고처럼 '
-                '쌓이기 때문입니다. 오랫동안 모자랐다면 1년 정도 물량이 쏟아져도 '
-                '그동안 밀린 몫을 다 메우지는 못합니다.</p>')
+    body.append('<p><b>적정물량</b>은 인구로 나눈 추정치가 아닙니다. 과거 이 지역의 '
+                '가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 '
+                '기준선입니다. 그만큼 들어오면 시장이 돌아섰다는 뜻이니까요.</p>')
+    body.append('<p>여기에 실제 <b>준공(입주 완료)</b>과 <b>준공예정</b> 물량을 견줍니다. '
+                '적정선보다 덜 들어온 해는 부족분이 남고, 더 들어온 해는 그 부족분을 '
+                '메웁니다. 이렇게 <b>재고처럼 굴린 누적치</b>가 순부족입니다. '
+                '앞으로는 %d분기(%d년) 몫까지 함께 봅니다.</p>' % (
+                    Z.FUT_HORIZON, Z.FUT_HORIZON // 4))
+    body.append('<p>부족을 재고로 보는 이유가 있습니다. 오랫동안 모자랐던 지역은 '
+                '1년치 물량이 한꺼번에 쏟아져도 그동안 밀린 몫까지 다 메우지는 '
+                '못하기 때문입니다.</p>')
 
     if r['flag'] == 'watch':
         body.append('<h3>실거주라면 눈여겨볼 조건</h3>')
@@ -248,13 +371,15 @@ def draft_zone(adv, r, seq, total):
                     '진입 시점은 신중히 볼 필요가 있습니다.</p>' % (r['loan'], r['hi']))
 
     body.append('<h3>이 숫자의 한계</h3>')
-    body.append('<p>인허가와 과거 실적은 시군구 단위 통계가 없어 '
-                '<b>%s 값을 인구 비중으로 나눈 추정치</b>입니다. '
-                '특정 지역에 개발이 몰린 경우 실제와 차이가 날 수 있습니다. '
-                '입주예정 물량만 단지 주소 기준의 실측값입니다.</p>' % r['ps'])
-    body.append('<p>또 세대수 절대량으로 비교하기 때문에, 시장이 큰 곳일수록 '
-                '부족 규모도 크게 잡힙니다. 작은 지역의 가뭄은 순위에서 '
-                '희석될 수 있습니다.</p>')
+    body.append('<p><b>앞으로 헐릴 집은 빼지 않았습니다.</b> 지난 몫에서는 철거(멸실)를 '
+                '반영했지만, 앞으로 4년 몫에는 넣지 않았습니다. 재건축이 언제 얼마나 '
+                '진행될지 미리 알 방법이 없어서입니다. 그만큼 이 지표는 부족을 '
+                '<b>덜</b> 잡습니다 — 노후 아파트가 많은 지역일수록 그렇습니다.</p>')
+    body.append('<p>또 <b>가격을 맞히는 지표가 아닙니다.</b> 금리가 크게 움직인 시기엔 '
+                '공급의 영향이 거의 보이지 않았습니다. 공급은 가격을 밀어올리는 '
+                '여러 힘 가운데 하나일 뿐입니다.</p>')
+    body.append('<p>끝으로 화면의 세대수는 <b>절대량</b>이고 등급·순위는 <b>필요량 대비 '
+                '비율</b>로 매깁니다. 그래서 세대수가 큰 곳이 순위에서는 뒤일 수 있습니다.</p>')
 
     body.append('<p>%s의 분기별 물량과 산출 근거 전체는 아래에서 볼 수 있습니다.<br>'
                 '👉 <a href="%s/zone/%s/?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=zone_deep">%s 생활권 리포트</a></p>' % (
@@ -354,11 +479,11 @@ def main():
     rows = Z.calc(adv, sts)
     p = adv['weekly']['rows'][-1]['p']
 
-    d1 = draft_weekly(adv, rows)
+    d1 = draft_weekly(adv, sts, rows)
     pool = [r for r in rows
             if r['z']['region'] != '수도권' or r['z']['z'] == '서울권']
     pick, seq, total = pick_zone(pool)
-    d2 = draft_zone(adv, pick, seq, total)
+    d2 = draft_zone(adv, pick, seq, total, len(rows))
 
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
