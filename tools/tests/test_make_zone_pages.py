@@ -446,15 +446,11 @@ def test_hero_desc_never_contradicts_sequence():
 # 노후 재고(재건축 압력) 카드 (2026-08-04) — 참고 수치, 순부족 산식 밖
 # ---------------------------------------------------------------------------
 
-def test_aged_stock_maps_capital_zones_to_real_sido():
-    """수도권 존은 ps가 '수도권'인데 노후 계열은 서울·경기·인천으로 나뉜다.
-    존 이름으로 실제 시도를 잡지 않으면 22곳이 통째로 빠진다."""
+def test_aged_stock_covers_every_zone():
     adv, sts = M.load()
     rows = M.calc(adv, sts)
     got = [r['z']['z'] for r in rows if M.aged_stock(sts, adv, r)]
     assert len(got) == len(rows), '산출 못 한 존: %s' % (set(r['z']['z'] for r in rows) - set(got))
-    for z in ('서울권', '인천권', '고양권'):
-        assert z in got
 
 
 def test_aged_stock_not_wired_into_shortage():
@@ -462,22 +458,26 @@ def test_aged_stock_not_wired_into_shortage():
     import inspect
     src = inspect.getsource(M.calc)
     assert 'aged_stock' not in src, 'calc()가 노후 재고를 쓰고 있다'
-    assert '노후주택30년' not in src
+    assert '노후주택30년' not in src and 'aged30' not in src
 
 
-def test_aged_stock_uses_zone_share_without_clamp():
-    """안분 잣대는 zone_share() 하나여야 한다. 자체 계산을 두면 클램프 폐지 같은
-    수정이 한쪽에만 반영된다 — 이웃 시도를 물고 있는 존 넷(부산·대구·광주·대전세종)
-    에서 노후 재고만 10~26% 잘려 나간다."""
+def test_aged_stock_is_measured_not_apportioned():
+    """시도값 안분으로 되돌아가면 깨진다. 안분은 노후 재고가 세대수에 비례한다고
+    가정하는데 전혀 아니다 — 산본(1992년 입주)을 안은 군포권은 안분이 3.6배 과소,
+    동탄인 화성권은 16배 과대였다(2026-08-04 실측). 이 두 곳의 실측/안분 비가
+    1에 가까워지면 안분으로 되돌아간 것이다."""
     adv, sts = M.load()
     rows = M.calc(adv, sts)
     SH = (adv.get('livezone') or {}).get('sidohh') or {}
-    over = [r for r in rows if M.zone_share(r['z'], r['ps'], SH) > 1.0]
-    assert over, '이웃 시도를 포함하는 존이 없다 — 표본이 사라졌으면 이 검사는 무의미하다'
-    for r in over:
-        old = M.aged_stock(sts, adv, r)[0]
-        ser = ((sts.get('노후주택30년') or {}).get('series') or {})[r['ps']]
-        assert old > ser[-1], '%s: 시도 총량 이하로 잘렸다' % r['z']['z']
+    ser = (sts.get('노후주택30년') or {}).get('series') or {}
+    by = {r['z']['z']: r for r in rows}
+    for z, lo, hi in (('군포권', 3.0, 5.0), ('화성권', 0.02, 0.20)):
+        r = by[z]
+        real = M.aged_stock(sts, adv, r)[0]
+        ps = '경기'            # 두 곳 다 경기 — 옛 안분이 쓰던 시도
+        appo = ser[ps][-1] * M.zone_share(r['z'], ps, SH)
+        assert lo < real / appo < hi, (
+            '%s: 실측/안분 %.2f (기대 %.2f~%.2f) — 안분으로 되돌아갔나' % (z, real / appo, lo, hi))
 
 
 def test_aged_stock_card_discloses_uncertainty():
@@ -487,6 +487,7 @@ def test_aged_stock_card_discloses_uncertainty():
     card = next((c for c in cards if '재건축 압력' in c), None)
     assert card, '노후 재고 카드가 없다'
     assert '알 수 없습니다' in card and '순부족 계산에는' in card
+    assert '더한 수치입니다' in card, '실측 합계라는 출처 표기가 없다'
 
 
 def test_no_literal_double_percent_in_pages():

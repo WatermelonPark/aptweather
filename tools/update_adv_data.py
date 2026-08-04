@@ -1187,6 +1187,32 @@ LIVEZONE = {
 LZ_GU2SI = {'서원구':'청주시','상당구':'청주시','흥덕구':'청주시','청원구':'청주시','동남구':'천안시','서북구':'천안시',
  '완산구':'전주시','덕진구':'전주시','의창구':'창원시','성산구':'창원시','마산합포구':'창원시','마산회원구':'창원시','진해구':'창원시'}
 
+# (시도, 시군구) → 생활권. 예전엔 fetch_livezone과 _hub_zone_map이 같은 규칙을
+# 각자 들고 있었다(2026-08-04에 세 번째 사본을 만들 뻔해 합쳤다). 안분 잣대를
+# 두 곳에 두면 한쪽만 고치게 된다 — 같은 날 aged_stock에서 실제로 그랬다.
+LZ_M2Z = {m: z for z, mm in LIVEZONE.items() for m in mm}
+
+def lz_gg_zone(sg):
+    """경기 시군 → 생활권명.
+
+    ⚠️ replace('시','')를 쓰면 안 된다. 중간의 '시'까지 지워
+    '시흥시'->'흥권', '군포시'->'포권'이 되어 인구 51만·25만 도시가
+    통째로 빠졌다(2026-07-20 실측). 끝의 시/군만 떼야 한다.
+    ⚠️ 경기 광주시는 '광주권'이 되어 광주광역시 생활권과 충돌한다.
+    실제로 경기 광주시 물량 4,797세대가 광주광역시에 합산돼 있었다.
+    이름이 겹치는 곳은 접두어를 붙여 분리한다.
+    """
+    base = re.sub(r'(시|군)$', '', sg)
+    return ('경기' + base + '권') if (base + '권') in LIVEZONE else (base + '권')
+
+def lz_zone_of(sd, sg):
+    """시도 약칭(서울/경기/경북…) + 시군구명 → 생활권명. 없으면 None."""
+    if (sd, '*') in LZ_M2Z: return LZ_M2Z[(sd, '*')]
+    sg = LZ_GU2SI.get(sg, sg)
+    if (sd, sg) in LZ_M2Z: return LZ_M2Z[(sd, sg)]
+    if sd == '경기': return lz_gg_zone(sg)
+    return None
+
 # ---- 건축HUB 준공/준공예정(done_q/sched_q) → 생활권 시계열 (hub_derive) ----
 def _load_hub_permits():
     return json.load(io.open(os.path.join(TOOLS_DATA, 'hub_permits.json'), encoding='utf-8'))
@@ -1227,19 +1253,10 @@ def _load_bdong_map():
     return out
 
 def _hub_zone_map(bdong):
-    """시군구코드 → 생활권. fetch_livezone()의 zone_of/gg_zone 규칙을 그대로 복제하되
-    입력이 KOSIS 인구 행이 아니라 code_bdong.json 시군구명이라 leading 토큰만 쓴다
-    ('성남시 분당구' → '성남시' → 성남권)."""
-    m2z = {m: z for z, mm in LIVEZONE.items() for m in mm}
-    def gg_zone(sg):
-        base = re.sub(r'(시|군)$', '', sg)
-        return ('경기' + base + '권') if (base + '권') in LIVEZONE else (base + '권')
-    def zone_of(sd, sg):
-        if (sd, '*') in m2z: return m2z[(sd, '*')]
-        sg = LZ_GU2SI.get(sg, sg)
-        if (sd, sg) in m2z: return m2z[(sd, sg)]
-        if sd == '경기': return gg_zone(sg)
-        return None
+    """시군구코드 → 생활권. 배정 규칙은 lz_zone_of() 한 곳을 쓴다. 다른 점은
+    입력이 KOSIS 인구 행이 아니라 code_bdong.json 시군구명이라 leading 토큰만
+    쓴다는 것뿐이다 ('성남시 분당구' → '성남시' → 성남권)."""
+    zone_of = lz_zone_of
     out = {}
     for cd, (sido_full, nm) in bdong.items():
         sd = LZ_SIDO_FULL.get(sido_full)
@@ -1504,26 +1521,7 @@ def fetch_livezone():
     assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
     sido_pop, sgg_pop = _lz_pop()
     sido_hh, sgg_hh = _lz_hh()
-    m2z = {m: z for z, mm in LIVEZONE.items() for m in mm}
-    def gg_zone(sg):
-        """경기 시군 → 생활권명.
-
-        ⚠️ replace('시','')를 쓰면 안 된다. 중간의 '시'까지 지워
-        '시흥시'->'흥권', '군포시'->'포권'이 되어 인구 51만·25만 도시가
-        통째로 빠졌다(2026-07-20 실측). 끝의 시/군만 떼야 한다.
-        ⚠️ 경기 광주시는 '광주권'이 되어 광주광역시 생활권과 충돌한다.
-        실제로 경기 광주시 물량 4,797세대가 광주광역시에 합산돼 있었다.
-        이름이 겹치는 곳은 접두어를 붙여 분리한다.
-        """
-        base = re.sub(r'(시|군)$', '', sg)
-        return ('경기' + base + '권') if (base + '권') in LIVEZONE else (base + '권')
-
-    def zone_of(sd, sg):
-        if (sd, '*') in m2z: return m2z[(sd, '*')]
-        sg = LZ_GU2SI.get(sg, sg)
-        if (sd, sg) in m2z: return m2z[(sd, sg)]
-        if sd == '경기': return gg_zone(sg)
-        return None
+    zone_of = lz_zone_of
     def zone_val(z, sido, sgg):
         if z in LIVEZONE:
             return sum(sido.get(m[0], 0) if m[1] == '*' else sgg.get(m, 0) for m in LIVEZONE[z])
@@ -1597,6 +1595,51 @@ def fetch_livezone():
     shh['수도권'] = sido_hh.get('서울', 0) + sido_hh.get('인천', 0) + sido_hh.get('경기', 0)
     return {'prd': '%d.%02d' % (td.year, td.month), 'unit': '만명당 예정세대(향후 전량)',
             'sidopop': spop, 'sidohh': shh, 'zones': zones}
+
+
+# 주택총조사 경과연수별 아파트(DT_1JU1521)의 시군구 축. 시도값을 세대 비중으로
+# 안분하던 것을 대신한다 — 안분은 노후 재고가 세대수에 비례한다고 가정하는데
+# 전혀 아니다(2026-08-04 실측: 44곳 절대오차 중앙값 32%, 최대 257%. 산본이
+# 1992년 입주인 군포권은 3.6배 과소, 동탄인 화성권은 16배 과대였다).
+AGED30_SIDO = {'11':'서울','21':'부산','22':'대구','23':'인천','24':'광주','25':'대전',
+    '26':'울산','29':'세종','31':'경기','32':'강원','33':'충북','34':'충남','35':'전북',
+    '36':'전남','37':'경북','38':'경남','39':'제주'}
+
+def _aged30_sgg_rows(rows):
+    """DT_1JU1521 응답 → 시군구 단위 행만. 두 종류의 이중계상을 걷어낸다.
+
+    ① 동부/읍부/면부 집계행(코드 꼬리 003/004/005) — 시군구가 아니다.
+    ② 통합시와 그 일반구가 **둘 다** 등재돼 있다(성남시 31020 + 분당구 31023).
+       그대로 더하면 경기가 602,215 → 989,206으로 64% 부풀었다(실측).
+       시군구 단위 행은 코드 5번째 자리가 '0'이고 일반구는 아니다 — 이 규칙으로
+       17개 시도 전부와 전국 합계가 오차 0으로 재현되는 것을 확인했다.
+    """
+    return [r for r in rows
+            if len(r.get('C1') or '') == 5
+            and r['C1'][2:] not in ('003', '004', '005')
+            and r['C1'][4] == '0']
+
+def fetch_zone_aged30():
+    """생활권별 30년 초과 아파트 재고(호). 반환 {'yr': '2025', 'z': {존: 호수}}."""
+    rows = kosis({'orgId': '101', 'tblId': 'DT_1JU1521', 'itmId': 'T20',
+                  'objL1': 'ALL', 'objL2': 'ALL', 'prdSe': 'Y', 'newEstPrdCnt': '1'})
+    rows = [r for r in rows if (r.get('C2_NM') or '').startswith('30년')]
+    if not rows:
+        raise RuntimeError('DT_1JU1521: 30년 이상 구간이 비었다')
+    out = {}
+    for r in _aged30_sgg_rows(rows):
+        sd = AGED30_SIDO.get(r['C1'][:2])
+        if not sd:
+            continue
+        z = lz_zone_of(sd, r['C1_NM'])
+        if not z:
+            continue
+        try:
+            v = float(r.get('DT'))
+        except (TypeError, ValueError):
+            continue           # 'X'(비공개/해당없음)는 0으로 세지 않고 건너뛴다
+        out[z] = out.get(z, 0) + v
+    return {'yr': rows[0].get('PRD_DE'), 'z': {k: int(v) for k, v in out.items()}}
 
 
 def main():
@@ -1791,6 +1834,15 @@ def main():
             print('livezone skip: DATA_GO_KR_KEY 없음')
     except Exception as e:
         print('livezone skip:', e)
+    # 노후 재고는 livezone 딕셔너리 **밖**에 둔다. 안에 넣으면 differs()가 매번
+    # "새 lz엔 aged30이 없다"고 보고 livezone을 무조건 재채택한다.
+    try:
+        a30 = fetch_zone_aged30()
+        if a30['z'] and a30 != adv.get('aged30'):
+            adv['aged30'] = a30
+            changed.append('aged30(%d)' % len(a30['z']))
+    except Exception as e:
+        failed.append('aged30'); print('aged30 skip:', e)
     if changed:
         write_adv(adv)
     changed += update_basic()   # 기본통계(STATS) 증분 갱신

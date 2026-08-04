@@ -508,29 +508,22 @@ def aged_stock(sts, adv, r):
     DT_MLTM_692는 축이 주체별(국가·지자체·주공·민간)이라 지역이 없다.
     KOSIS 경과연수 구분도 '20~30년 미만'/'30년 이상' 두 칸뿐이라 40년차가 없다.
 
-    ⚠️ 시도 매핑 주의: 수도권 존은 r['ps']가 '수도권'인데 노후 계열은 서울·경기·
-    인천으로 나뉜다. 존 이름으로 실제 시도를 잡는다(그러지 않으면 22곳이 통째로
-    빠진다 — 2026-08-04 실측).
+    값은 adv['aged30']에서 온다 — 주택총조사(DT_1JU1521)의 **시군구** 축을
+    생활권으로 합산한 실측치다. 시도값을 세대 비중으로 안분하던 것을 2026-08-04에
+    걷어냈다. 노후 재고가 세대수에 비례한다는 가정이 틀렸기 때문이다: 44곳 절대
+    오차 중앙값 32%·최대 257%였고, 산본(1992년 입주)을 안은 군포권은 3.6배 과소,
+    동탄인 화성권은 16배 과대였다. 안분으로는 이 차이를 원리적으로 못 만든다.
 
-    안분은 zone_share()를 그대로 쓴다. 자체 계산을 두면 클램프 폐지 같은 수정이
-    한쪽에만 반영된다(실제로 그럴 뻔했다).
+    ⚠️ 안분으로 되돌리지 말 것. 시도 계열('노후주택30년')은 통계 탭 표시용으로만
+    남아 있다 — 여기서 쓰면 위 오차가 그대로 돌아온다.
 
-    반환: (안분 재고, 4년 필요량 대비 배수) 또는 None.
+    반환: (재고 호수, 4년 필요량 대비 배수, 조사연도) 또는 None.
     """
-    N = (sts or {}).get('노후주택30년') or {}
-    ser = N.get('series') or {}
-    ps = r['ps']
-    if ps == '수도권':
-        z = r['z']['z']
-        ps = '서울' if z == '서울권' else ('인천' if z == '인천권' else '경기')
-    v = ser.get(ps)
-    if not v or v[-1] is None:
+    A = adv.get('aged30') or {}
+    old = (A.get('z') or {}).get(r['z']['z'])
+    if not old or not r.get('need4'):
         return None
-    SH = (adv.get('livezone') or {}).get('sidohh') or {}
-    if not SH.get(ps) or not r.get('need4'):
-        return None
-    old = v[-1] * zone_share(r['z'], ps, SH)
-    return old, old / r['need4']
+    return old, old / r['need4'], (A.get('yr') or '최신')
 
 
 def start_lead(sts, adv, ps, cur_q, yrs=3):
@@ -1509,7 +1502,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     aged_html = ''
     _ag = paged if paged is not None else None
     if _ag:
-        _old, _mul = _ag
+        _old, _mul, _yr = _ag
         aged_html = (
             '<div class="lead-box"><b>재건축 압력 — 30년 넘은 아파트</b>'
             '<p>이 지역에 준공 30년이 넘은 아파트가 <b>%s호</b> 쌓여 있습니다 — '
@@ -1517,8 +1510,9 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
             '<p class="note">이 중 얼마가 언제 헐릴지는 알 수 없습니다. 30년차 도래 '
             '대비 실제 철거 비율은 실측하면 0~59%%로 흩어져(중앙값 8%%) 재건축이 '
             '노후도보다 사업성·정책에 좌우되기 때문입니다. 그래서 순부족 계산에는 '
-            '넣지 않았습니다. 시도 통계를 세대 비중으로 나눈 참고 수치입니다.</p>'
-            '</div>' % (num(_old), _mul))
+            '넣지 않았습니다. 이 생활권에 속한 시군구의 주택총조사 값을 그대로 '
+            '더한 수치입니다(%s년 기준).</p>'
+            '</div>' % (num(_old), _mul, _yr))
     timeline_html = (
         '<section><div class="wrap"><h2>언제 들어오나</h2>'
         '<p class="note" style="margin-bottom:9px">%s</p>'
