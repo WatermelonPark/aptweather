@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v53'; // 수도권 롤업 폐지(44곳 개별) + 양끝 접힘
+const VERSION = 'v54'; // 경기 20존 -> 7권역 재편(전국 31존)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

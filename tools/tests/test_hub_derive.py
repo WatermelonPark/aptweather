@@ -15,8 +15,8 @@ def _bdong(): return {'41370':('경기도','오산시'), '41131':('경기도','�
 
 def test_hub_zone_map_leading_token():
     z = U._hub_zone_map(_bdong())
-    assert z['41370'] == '오산권'
-    assert z['41131'] == '성남권'
+    assert z['41370'] == '경기남부외곽권'
+    assert z['41131'] == '경기동남부권'
 
 def test_hub_derive_inactive_emits_nothing(tmp_path, monkeypatch):
     # meta.activate=false → done/sched 미방출
@@ -34,8 +34,8 @@ def test_hub_derive_active_complete_zone_only(tmp_path, monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    assert adv['permits']['done']['오산권'] == {'2023Q1':100}
-    assert adv['permits']['sched']['오산권'] == {'2028Q2':200}
+    assert adv['permits']['done']['경기남부외곽권'] == {'2023Q1':100}
+    assert adv['permits']['sched']['경기남부외곽권'] == {'2028Q2':200}
 
 
 # ---------------------------------------------------------------------------
@@ -79,8 +79,8 @@ def test_hub_derive_multi_gu_zone_complete_when_rep_scanned(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong_suwon())
     U.hub_derive(adv)
-    assert adv['permits']['done']['수원권'] == {'2023Q1': 1000}
-    assert adv['permits']['sched']['수원권'] == {'2028Q2': 2000}
+    assert adv['permits']['done']['경기남부권'] == {'2023Q1': 1000}
+    assert adv['permits']['sched']['경기남부권'] == {'2028Q2': 2000}
 
 
 def test_hub_derive_multi_gu_zone_incomplete_when_rep_not_scanned(monkeypatch):
@@ -92,7 +92,7 @@ def test_hub_derive_multi_gu_zone_incomplete_when_rep_not_scanned(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong_suwon())
     U.hub_derive(adv)
-    assert '수원권' not in adv['permits'].get('done', {})
+    assert '경기남부권' not in adv['permits'].get('done', {})
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +115,7 @@ def test_hub_derive_injects_units_sorted_and_capped(tmp_path, monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    u = adv['permits']['units']['오산권']
+    u = adv['permits']['units']['경기남부외곽권']
     # done: 시간 창(UNIT_WINDOW=48개월) — -49개월짜리는 제외, 창 안만 남는다
     assert u['done'] == [['오산자이', 300, _ym_off(-42)]]
     # sched: 준공예정 연월 오름차순(가까운 미래 먼저)
@@ -140,7 +140,7 @@ def test_hub_derive_drops_audit_only_jibun_from_client_payload(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    done = adv['permits']['units']['오산권']['done']
+    done = adv['permits']['units']['경기남부외곽권']['done']
     assert all(len(u) == 3 for u in done), '지번이 클라이언트 페이로드로 새고 있다'
     assert sorted(u[0] for u in done) == ['신단지', '옛단지']
 
@@ -163,7 +163,7 @@ def test_hub_derive_units_window_no_count_cap(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    zu = adv['permits']['units']['오산권']
+    zu = adv['permits']['units']['경기남부외곽권']
     assert len(zu['sched']) == expect                 # 분기 창 안 전부 (캡 없음)
     assert expect >= 27                               # 캡이 부활하면 여기서 걸린다
     assert '먼미래단지' not in [u[0] for u in zu['sched']]
@@ -180,13 +180,13 @@ def test_hub_derive_units_missing_date_sorts_last(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    sched = adv['permits']['units']['오산권']['sched']
+    sched = adv['permits']['units']['경기남부외곽권']['sched']
     assert sched[0][0] == '오산확정단지'
     assert sched[1][0] == '오산미정단지'   # 연월 결측은 맨 뒤
 
 
 def test_hub_derive_all_members_unresolved_zone_emits_nothing(monkeypatch):
-    # 오산권의 유일한 멤버 41370이 통째로 unresolved_legacy면 members[존]가 populate
+    # 경기남부외곽권의 유일한 멤버 41370이 통째로 unresolved_legacy면 members[존]가 populate
     # 자체가 안 되어(defaultdict라 add()가 한 번도 안 불림) complete 집합에 못 들어가야
     # 한다(hub_derive의 `if ms` 가드 — 빈 멤버 집합인 존은 방출 금지).
     adv = {'permits': {}}
@@ -196,9 +196,9 @@ def test_hub_derive_all_members_unresolved_zone_emits_nothing(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    assert '오산권' not in adv['permits'].get('done', {})
-    assert '오산권' not in adv['permits'].get('sched', {})
-    assert '오산권' not in adv['permits'].get('units', {})
+    assert '경기남부외곽권' not in adv['permits'].get('done', {})
+    assert '경기남부외곽권' not in adv['permits'].get('sched', {})
+    assert '경기남부외곽권' not in adv['permits'].get('units', {})
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +216,7 @@ def test_hub_derive_demol_emitted_when_zone_complete_in_scanned_demol(monkeypatc
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    assert adv['permits']['demol']['오산권'] == {'2014Q1': 50, '2015Q2': 30}
+    assert adv['permits']['demol']['경기남부외곽권'] == {'2014Q1': 50, '2015Q2': 30}
 
 
 def test_hub_derive_demol_not_emitted_when_zone_incomplete_in_scanned_demol(monkeypatch):
@@ -230,10 +230,10 @@ def test_hub_derive_demol_not_emitted_when_zone_incomplete_in_scanned_demol(monk
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    assert '오산권' not in adv['permits'].get('demol', {})
+    assert '경기남부외곽권' not in adv['permits'].get('demol', {})
     # done/sched는 영향받지 않아야 함
-    assert adv['permits']['done']['오산권'] == {'2023Q1': 100}
-    assert adv['permits']['sched']['오산권'] == {'2028Q2': 200}
+    assert adv['permits']['done']['경기남부외곽권'] == {'2023Q1': 100}
+    assert adv['permits']['sched']['경기남부외곽권'] == {'2028Q2': 200}
 
 
 def test_hub_derive_inactive_emits_no_demol(monkeypatch):
@@ -358,4 +358,4 @@ def test_hub_derive_units_excludes_incomplete_zone(monkeypatch):
     monkeypatch.setattr(U, '_load_hub_permits', lambda: hp)
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
-    assert '오산권' not in adv['permits'].get('units', {})
+    assert '경기남부외곽권' not in adv['permits'].get('units', {})

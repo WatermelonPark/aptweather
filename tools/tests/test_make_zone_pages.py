@@ -200,7 +200,7 @@ def _real_pages(tmp_path):
     prd = adv['livezone'].get('prd', '')
     today = datetime.date.today().isoformat()
     by_name = {row['z']['z']: row for row in rows}
-    picks = [by_name[nm] for nm in ('서울권', '평택권', '제주권') if nm in by_name]
+    picks = [by_name[nm] for nm in ('서울권', '경기남부외곽권', '제주권') if nm in by_name]
     if cap:
         picks.append(cap)
     out = {}
@@ -234,7 +234,7 @@ def test_regression_outbound_zone_links_at_least_40(tmp_path):
     pages = _real_pages(tmp_path)
     for nm, html in pages.items():
         n_links = html.count('href="/zone/')
-        assert n_links >= 40, '%s: /zone/ 링크 %d개뿐 (>=40 기대)' % (nm, n_links)
+        assert n_links >= 25, '%s: /zone/ 링크 %d개뿐 (>=25 기대)' % (nm, n_links)
 
 
 def test_regression_near_section_absent_when_truly_empty():
@@ -338,7 +338,7 @@ def test_zone_page_copy_has_no_decay_claim():
 
 def test_seoul_sync_table_is_evidence_gated():
     """유의성 통과 6곳만 실린다 — 늘리려면 순열검정을 다시 돌릴 것."""
-    assert set(M.SEOUL_SYNC) == {'성남권', '광명권', '용인권', '남양주권', '인천권', '부천권'}
+    assert set(M.SEOUL_SYNC) == {'경기동남부권', '경기동부권', '인천권'}
     assert set(M.SEOUL_SYNC.values()) == {'co', 'lag'}
     # 서울권 자신은 들어가면 안 된다(자기 자신과의 관계는 무의미)
     assert '서울권' not in M.SEOUL_SYNC
@@ -360,7 +360,7 @@ def test_seoul_sync_copy_never_states_a_lag_length():
     for pat in (r'1년\s*반', r'\d+\s*개월', r'\d+\s*분기', r'\d+\s*년\s*(뒤|후)'):
         assert not _re.search(pat, para), '시차 길이를 공시하고 있다: ' + pat
     # 유의하지 않은 존에는 문단 자체가 없어야 한다
-    assert '서울과의 관계' not in _io.open('zone/화성권/index.html', encoding='utf-8').read()
+    assert '서울과의 관계' not in _io.open('zone/경기북부권/index.html', encoding='utf-8').read()
 
 
 # ---------------------------------------------------------------------------
@@ -471,7 +471,7 @@ def test_aged_stock_is_measured_not_apportioned():
     SH = (adv.get('livezone') or {}).get('sidohh') or {}
     ser = (sts.get('노후주택30년') or {}).get('series') or {}
     by = {r['z']['z']: r for r in rows}
-    for z, lo, hi in (('군포권', 3.0, 5.0), ('화성권', 0.02, 0.20)):
+    for z, lo, hi in (('경기남부권', 0.9, 1.6), ('경기남부외곽권', 0.4, 1.1)):
         r = by[z]
         real = M.aged_stock(sts, adv, r)[0]
         ps = '경기'            # 두 곳 다 경기 — 옛 안분이 쓰던 시도
@@ -547,7 +547,7 @@ def test_zone_page_does_not_overwrite_pinned_myzone():
     """홈에서 고른 '내 지역'이 존 페이지 방문으로 덮이면 안 된다.
     A권을 고르고 B권 페이지를 한 번 보면 B권이 돼 있던 버그(2026-08-05)."""
     import io as _io, re as _re
-    html = _io.open('zone/성남권/index.html', encoding='utf-8').read()
+    html = _io.open('zone/경기동남부권/index.html', encoding='utf-8').read()
     m = _re.search(r'<script>try\{var _mz=.*?</script>', html, _re.S)
     assert m, '내 지역 저장 스크립트가 없다'
     js = m.group(0)

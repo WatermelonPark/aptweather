@@ -43,14 +43,23 @@ def test_zone_of_resolves_across_sido_boundary():
 
 def test_zone_of_keeps_gyeonggi_gwangju_separate():
     """경기 광주시가 광주광역시에 합산된 전례가 있다(4,797세대)."""
-    assert U.lz_zone_of('경기', '광주시') == '경기광주권'
+    assert U.lz_zone_of('경기', '광주시') == '경기동부권'
     assert U.lz_zone_of('광주', '북구') == '광주권'
 
 
-def test_zone_of_does_not_eat_middle_syllable():
-    """replace('시','')를 쓰면 시흥시->흥권, 군포시->포권이 된다."""
-    assert U.lz_zone_of('경기', '시흥시') == '시흥권'
-    assert U.lz_zone_of('경기', '군포시') == '군포권'
+def test_every_gyeonggi_city_lands_in_a_zone():
+    """경기 31개 시군이 전부 8권역 중 하나에 들어가야 한다. 빠지면 lz_gg_zone
+    폴백이 '시흥권' 같은 유령 존을 조용히 만든다 — 예전엔 인구 20만 미만 11곳이
+    통째로 빠져 있었다(71.8만 세대)."""
+    GG = ['수원시','성남시','의정부시','안양시','부천시','광명시','평택시','동두천시','안산시',
+          '고양시','과천시','구리시','남양주시','오산시','시흥시','군포시','의왕시','하남시',
+          '용인시','파주시','이천시','안성시','김포시','화성시','광주시','양주시','포천시',
+          '여주시','연천군','가평군','양평군']
+    assert len(GG) == 31
+    zones = {c: U.lz_zone_of('경기', c) for c in GG}
+    ghost = {c: z for c, z in zones.items() if not z.startswith('경기')}
+    assert not ghost, '권역에 못 든 시군(폴백 유령 존): %s' % ghost
+    assert len(set(zones.values())) == 7
 
 
 def test_single_zone_assignment_rule():
