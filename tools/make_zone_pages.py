@@ -1357,17 +1357,17 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
         # 으로만 숨김) 스크린리더·검색엔진은 계속 읽는다 — 지우는 게 아니라 접는 것.
         '<div class="w-row"><span class="w-lab"><em class="w-tag">과거</em>%s'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
-        '<span class="w-sub">%s</span></span><b>%s%s</b></div>'
+        '<span class="w-sub">%s</span></span><b>%s세대</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>필요한 집'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
-        '<span class="w-sub">%s</span></span><b>+%s</b></div>'
+        '<span class="w-sub">%s</span></span><b>%s세대</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
-        '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>−%s</b></div>'
+        '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>%s세대</b></div>'
         '<div class="w-tip" hidden></div>'
         '</div>%s</div></section>' % (
             verdict_html, seq_html,
-            b_lab, b_sub, ('+' if backlog >= 0 else '−'), num(abs(backlog)),
+            b_lab, b_sub, num(abs(backlog)),
             # 롤업은 need_src가 이미 완결된 문장이라 '= X 몫' 꼬리를 붙이지 않는다
             # ("수도권 세대의 94% = 수도권 몫"이 자기참조로 읽혔다 — 2026-08-02).
             need_src if nm == ps else ('%s = %s 몫 · 추정' % (need_src, nm)),
@@ -1795,9 +1795,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None):
             'btns.forEach(function(x){x.classList.toggle("on",x===b)});'
             'tip.textContent=sub.textContent;tip.hidden=false;'
             'var wr=w3.getBoundingClientRect(),br=b.getBoundingClientRect();'
+            'var rr=b.parentNode.parentNode.getBoundingClientRect();'
             'tip.style.left="0px";tip.style.top="0px";'
             'var tw=tip.offsetWidth;'
-            'var x=br.left-wr.left+br.width/2,y=br.top-wr.top-6;'
+            'var x=br.left-wr.left+br.width/2,y=rr.top-wr.top-6;'
             'x=Math.max(tw/2+2,Math.min(x,wr.width-tw/2-2));'
             'tip.style.left=x+"px";tip.style.top=y+"px";}'
             'btns.forEach(function(b){'
