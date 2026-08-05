@@ -1302,10 +1302,21 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         # 광역시 존은 정의가 ('서울','*') 꼴이라 구 목록이 안 나오므로 기존대로 sgg를 쓴다.
         _sup = {s[0]: s[1] for s in sgg}
         _mem = [m[1] for m in _lz_members(nm) if m[1] != '*']
-        if _mem:
-            _mem.sort(key=lambda c: -_sup.get(c, 0))
-            members = ' · '.join('%s %s세대' % (c, num(_sup.get(c, 0))) for c in _mem)
-            sgg_names = _mem
+        # ⚠️ 혼합 존(광역시 '*' + 이웃 시군)에서 '*'를 그냥 버리면 **광역시가 구성에서
+        # 통째로 사라진다**. 실측(2026-08-05): 부산권 구성이 '양산시'만, 대전세종권이
+        # '계룡시'만 남았고 검색 스니펫(메타설명·JSON-LD)에도 그대로 나갔다.
+        # LIVEZONE 기준 혼합 존은 부산권·대구권·대전세종권·광주권 4곳이다.
+        # 광역시 몫은 sgg(물량 있는 시군구 실측) 중 이름 있는 멤버가 아닌 것의 합 —
+        # 부산권이면 부산 구들의 합이다. 이름은 시도명을 그대로 쓴다.
+        _metro = [m[0] for m in _lz_members(nm) if m[1] == '*']
+        _rows = [(c, _sup.get(c, 0)) for c in _mem]
+        for _sd in _metro:
+            _rest = sum(v for k, v in _sup.items() if k not in set(_mem))
+            _rows.append((_sd, _rest))
+        if _rows:
+            _rows.sort(key=lambda t: -t[1])
+            members = ' · '.join('%s %s세대' % (c, num(v)) for c, v in _rows)
+            sgg_names = [c for c, _ in _rows]
         else:
             members = ' · '.join('%s %s세대' % (s[0], num(s[1])) for s in sgg) if sgg else '입주예정 단지 없음'
             sgg_names = [s[0] for s in sgg]

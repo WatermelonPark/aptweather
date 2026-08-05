@@ -711,3 +711,28 @@ def test_hybrid_zone_page_shows_metro_remainder():
         adv, sts = M.load()
         r = next(x for x in M.calc(adv, sts) if x['z']['z'] == z)
         assert abs(sum(nums) - (-r['tot'])) < 2, '%s: 칩 합 %.0f vs 존 %.0f' % (z, sum(nums), -r['tot'])
+
+
+def test_mixed_zone_composition_includes_metro():
+    """혼합 존(광역시 '*' + 이웃 시군)의 구성에 광역시가 남아야 한다.
+
+    2026-08-05 회귀: b1cd0a9가 구성 목록을 z['sgg'] 실측에서 _lz_members 기반으로
+    바꾸며 '*' 멤버를 필터로 버려, 부산권 구성이 '양산시'만·대전세종권이 '계룡시'만
+    남았다. 메타설명·JSON-LD가 같은 목록을 쓰므로 검색 스니펫에도 그대로 나갔다.
+    """
+    import re
+    from update_adv_data import LIVEZONE
+    mixed = [z for z, m in LIVEZONE.items()
+             if any(x[1] == '*' for x in m) and any(x[1] != '*' for x in m)]
+    assert mixed, '혼합 존이 하나도 없다면 이 테스트의 전제가 깨진 것'
+    for z in mixed:
+        p = os.path.join(M.ROOT, 'zone', z, 'index.html')
+        if not os.path.exists(p):
+            continue
+        html = open(p, encoding='utf-8').read()
+        m = re.search(r'구성: ([^.<]*)', html)
+        assert m, '%s: 메타설명에 구성 표기가 없다' % z
+        names = m.group(1)
+        metros = [x[0] for x in LIVEZONE[z] if x[1] == '*']
+        for sd in metros:
+            assert sd in names, '%s 구성에서 광역시 %s가 빠졌다: %r' % (z, sd, names)

@@ -2749,7 +2749,13 @@ function renderMyZone(){
     box.innerHTML='';
     renderMyRow(row,rank,zones.length);
     window.__MZ_JUST=0;
-    mzSet({z:row.z,savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
+    /* ⚠️ pinned를 반드시 물려준다. 여기서 빠뜨리면 mzSave가 방금 심은 pinned:1을
+       같은 콜스택에서 곧바로 지워, 존 페이지의 암묵 저장 가드(if(!(_mz&&_mz.pinned)))가
+       항상 통과한다 — 6bf92bc가 고쳤다고 한 '홈에서 고른 지역이 존 페이지를 보면
+       덮이는' 버그가 그대로 재현됐다(2026-08-05 리뷰). 홈을 다시 열기만 해도
+       pinned가 지워지므로 어떤 경로로도 수정이 듣지 않았다. */
+    mzSet({z:row.z,pinned:saved.pinned||undefined,
+           savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
            last:{tot:Math.round(row.tot),rank:rank,grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
     return;
   }
