@@ -47,13 +47,34 @@ def load():
     return json.load(io.open(DATA, encoding='utf-8'))
 
 
+def has_stcns(entry):
+    """이 그룹의 units가 착공연월(6번째)을 담고 있나 — 필드 도입 이후 수집분인지 판별.
+
+    ⚠️ units가 비어 있으면(수집했는데 공동주택이 0건인 시군구) 판정 불가라 True로
+    본다. 아니면 매번 재수집 대상으로 잡혀 캠페인이 끝나지 않는다.
+    """
+    u = entry.get('units') or []
+    if not u:
+        return True
+    return any(len(x) > 5 and x[5] for x in u)
+
+
 def progress():
-    """(완료 그룹 수, 전체 그룹 수, 남은 코드 목록)."""
+    """(완료 그룹 수, 전체 그룹 수, 남은 코드 목록).
+
+    ⚠️ reseed_done에 있어도 **착공연월이 없으면 다시 대상**으로 잡는다.
+    착공일 수집(2026-08-04)보다 먼저 돌아간 캠페인 진행분이 25곳 있는데, 수집기는
+    reseed_done만 보고 건너뛰므로 그대로 두면 그 시군구는 영영 착공일 없이 남는다.
+    착공 여부가 이번 재수집의 목적이라 그러면 캠페인이 목적을 못 이룬다.
+    """
     import fetch_hub_permits as F
     groups, _ = F.build_targets()
     keys = list(groups.keys())
-    done = set((load().get('meta') or {}).get('reseed_done') or [])
-    remain = [k for k in keys if k not in done]
+    d = load()
+    done = set((d.get('meta') or {}).get('reseed_done') or [])
+    sgg = d.get('sgg') or {}
+    remain = [k for k in keys
+              if k not in done or not has_stcns(sgg.get(k) or {})]
     return len(keys) - len(remain), len(keys), remain
 
 
@@ -141,6 +162,18 @@ def main():
             print()
             print('[덩어리 %d] %d곳 수집 (남은 예산 %.0f분): %s'
                   % (n_chunk, len(batch), left, ','.join(batch)))
+            # ⚠️ 수집기는 reseed_done에 있는 그룹을 건너뛴다. 착공일이 없어서 다시
+            # 대상으로 잡은 그룹은 그 표시를 지워야 실제로 재수집된다 — 안 그러면
+            # 러너는 계속 대상으로 잡고 수집기는 계속 건너뛰어 무한루프가 된다.
+            stale = [k for k in batch if not has_stcns((load().get('sgg') or {}).get(k) or {})]
+            if stale:
+                d = load()
+                rd = set((d.get('meta') or {}).get('reseed_done') or []) - set(stale)
+                d.setdefault('meta', {})['reseed_done'] = sorted(rd)
+                io.open(DATA, 'w', encoding='utf-8').write(
+                    json.dumps(d, ensure_ascii=False, separators=(',', ':')))
+                print('  착공일 없는 %d곳의 완료 표시를 해제해 재수집시킨다: %s'
+                      % (len(stale), ','.join(stale)))
             r = subprocess.run(
                 [sys.executable, '-u', os.path.join(HERE, 'fetch_hub_permits.py'),
                  '--full', '--reseed', '--only', ','.join(batch)],
