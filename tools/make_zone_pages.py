@@ -1355,8 +1355,15 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # 되풀이하지 않는다(2026-08-04). 나머지 세 줄과 어형도 맞는다.
     # 산식 약어만 있던 부제를 완결 문장으로(2026-08-05 사용자) — 무엇을(출처)
     # 어떻게(계산) + 단서. 노후된 집 줄이 기준이다.
-    _b_how = ('지난 4년의 준공 − 멸실 − 필요량을 누적한 값입니다. '
-              '준공·멸실은 건축물대장 실측이고, 필요량은 아래 \'필요한 집\'과 같은 기준입니다. ')
+    # 시점은 분기 범위로 못 박는다(2026-08-05 사용자: "시점이 언젠지도").
+    # running_shortage와 같은 창: 지난 4년 = cur_q-15..cur_q, 앞으로 = cur_q+1..cur_q+16.
+    _t = datetime.date.today()
+    _cq = _t.year * 4 + (_t.month - 1) // 3
+    _past_rng = '%s~%s' % (_qkey(_cq - BACKLOG_WINDOW + 1), _qkey(_cq))
+    _fut_rng = '%s~%s' % (_qkey(_cq + 1), _qkey(_cq + FUT_HORIZON))
+    _b_how = ('지난 4년(%s)의 준공 − 멸실 − 필요량을 누적한 값입니다. '
+              '준공·멸실은 건축물대장 실측이고, 필요량은 아래 \'필요한 집\'과 같은 기준입니다. '
+              % _past_rng)
     b_lab, b_sub = ('모자란 집', _b_how + '필요보다 덜 지어진 만큼이 아직 수요로 남아 있습니다.') \
         if backlog >= 0 \
         else ('남은 집', _b_how + '필요보다 많이 지어진 만큼이 재고로 남아 있습니다.')
@@ -1364,8 +1371,13 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # 시절의 완곡 표현이었다. 창 방식(2026-08-02)으로 바뀐 뒤 44존 전부 해당 없음이라
     # 죽은 코드였고, 남겨두면 '밀린'이라는 옛 어휘가 화면에 되살아난다.
     # 필요한 집 출처: 풀 소속 존은 풀 이름·구성·풀 내 세대 비중으로 표기.
-    _n_how = ('과거 이 지역 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량으로 '
-              '잡은 연간 적정 공급량, 그 4년치입니다. ')
+    # 전환 '시점'에 특정 연도는 못 쓴다 — 적정선의 뿌리는 시도별 기준값이라
+    # 존별 전환 연도가 데이터에 없다(존별 재적합은 과적합으로 기각, 재시도 금지).
+    # 대신 전환점을 찾은 관측 창(2003년~ 지수, 금리 급변기 제외)을 쓴다.
+    _n_how = ('과거 이 지역 가격이 하락에서 상승으로 방향을 바꾼 시점들의 입주물량으로 '
+              '잡은 연간 적정 공급량, 그 4년치(%s)입니다. 전환점은 2003년 이후 '
+              '매매가격지수에서 금리가 가격을 지배한 시기를 빼고 찾았습니다. '
+              % _fut_rng)
     if r.get('pool'):
         need_src = _n_how + '%s 풀(%s) 필요량을 세대수 비중 %d%%로 나눈 %s 몫 · 추정치입니다.' % (
             r['pool'], '·'.join(m[:-1] for m in POOLS[r['pool']]),
@@ -1457,7 +1469,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         '<span class="w-sub">%s</span></span><b>%s세대</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
-        '<span class="w-sub">앞으로 4년(16분기)에 입주 예정인 단지의 세대수를 단지 주소 기반으로 실측해 더한 값입니다. 할인 없이 액면 그대로 반영합니다.</span></span><b>%s세대</b></div>'
+        '<span class="w-sub">앞으로 4년(%s)에 입주 예정인 단지의 세대수를 단지 주소 기반으로 실측해 더한 값입니다. 할인 없이 액면 그대로 반영합니다.</span></span><b>%s세대</b></div>'
         # 태그는 '참고'. '앞으로 4년'을 달면 "4년 안에 헐릴 물량"으로 읽히는데 그
         # 숫자는 아무도 모르고(실현율 0~59%), 애초에 이 줄을 만든 이유가 그거다.
         # '현재'로도 써 봤지만 시점만 말할 뿐 "산식 밖"이라는 말은 못 했다 —
@@ -1470,7 +1482,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
             # need_src는 세 분기 모두 완결 문장이다(꼬리 분기는 2026-08-05 제거).
             need_src,
             num(r['need4']),
-            num(r['fsupw']),
+            _fut_rng, num(r['fsupw']),
             aged_row,
             idx_html))
 
