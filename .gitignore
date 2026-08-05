@@ -16,3 +16,4 @@ tools/data/국토교통부_건축인허가_철거멸실관리대장*/
 
 # 지수곡선 분석 캐시 (로컬 전용, 재생성 가능 — tools/fetch_index_levels.py)
 tools/cache/
+tools/data/.reseed.lock
