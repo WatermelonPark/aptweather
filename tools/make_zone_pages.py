@@ -1379,7 +1379,8 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
               '매매가격지수에서 금리가 가격을 지배한 시기를 빼고 찾았습니다. '
               % _fut_rng)
     if r.get('pool'):
-        need_src = _n_how + '%s 풀(%s) 필요량을 세대수 비중 %d%%로 나눈 %s 몫 · 추정치입니다.' % (
+        # '나눈'이 아니라 '만큼 반영한' — 실제 연산은 곱하기다(2026-08-05 사용자).
+        need_src = _n_how + '%s 풀(%s) 필요량을 세대수 비중 %d%%만큼 반영한 %s 몫 · 추정치입니다.' % (
             r['pool'], '·'.join(m[:-1] for m in POOLS[r['pool']]),
             round((r['pshare'] or 0) * 100), nm)
     elif nm == ps:
@@ -1392,8 +1393,13 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         # 비율로 좁아져 서로 상쇄된다 — 빠진 시군구 수요를 22곳에 얹지 않는다).
         need_src = _n_how + '산하 생활권 %d곳의 합계 · 추정치입니다.' % len(r.get('subs') or [])
     else:
-        need_src = _n_how + '%s 필요량을 세대수 비중 %d%%로 나눈 %s 몫 · 추정치입니다.' % (
-            ps, round(r['share'] * 100), nm)
+        _pct = round(r['share'] * 100)
+        if _pct >= 100:
+            # 울산권·제주권 — "100%만큼 반영한"은 공허하다(2026-08-05 사용자).
+            need_src = _n_how + '%s 세대가 사실상 모두 이 생활권에 속해 %s 필요량을 그대로 반영한 추정치입니다.' % (ps, ps)
+        else:
+            need_src = _n_how + '%s 필요량을 세대수 비중 %d%%만큼 반영한 %s 몫 · 추정치입니다.' % (
+                ps, _pct, nm)
     if r['tot'] < 0:
         sum_line = '여유 %s세대' % num(-r['tot'])
     elif backlog >= 0:
@@ -1450,9 +1456,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         aged_row = (
             '<div class="w-row w-ref"><span class="w-lab"><em class="w-tag">참고</em>노후된 집'
             '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
-            '<span class="w-sub">준공 30년 초과 아파트 · %s년 주택총조사 시군구 합 · '
-            '필요한 집의 %.1f배. 이 중 언제 얼마가 헐릴지는 알 수 없어(실현율 0~59%%) '
-            '순부족 계산에는 넣지 않았습니다</span></span><b>%s세대</b></div>'
+            '<span class="w-sub">이 지역에서 준공 30년이 지난 아파트의 합입니다'
+            '(%s년 주택총조사 · 시군구 합산). 필요한 집의 %.1f배 규모지만, 언제 얼마나 '
+            '헐릴지는 알 수 없어(연간 실현율 0~59%%) 순부족 계산에는 넣지 않았습니다.'
+            '</span></span><b>%s세대</b></div>'
             % (_yr, _mul, num(_old)))
     why_html = (
         '<section><div class="wrap"><h2>왜 이 판정인가</h2>'
