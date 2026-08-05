@@ -50,6 +50,14 @@ CORE_STATS = ['전세가율', '주택멸실', '아파트멸실']
 # 홈이 통째로 쓰는 ADV 키
 CORE_ADV = ['livezone', 'occupancy', 'permits', 'bubble', 'holidays']
 
+# 빌드 전용 하위 키 — data.js(정적 페이지 생성기의 원본)엔 남고 브라우저 페이로드엔
+# 안 실린다. ⚠️ CORE_ADV가 'permits'를 **통째로** 복사하므로, permits에 새 하위 키를
+# 넣으면 아무도 안 막아준 채 홈 페이로드가 커진다 — 실제로 permits.city(150KB)가
+# 그렇게 새어 data-core가 131KB -> 311KB로 부풀었다(2026-08-05 코드리뷰에서 발견).
+# permits에 뭔가 추가할 땐 홈이 정말 읽는지 확인하고, 아니면 여기 등록할 것.
+BUILD_ONLY_PERMITS = ('units', 'city')
+BUILD_ONLY_LIVEZONE = ('sgghh',)
+
 
 def main():
     src = io.open(SRC, encoding='utf-8').read()
@@ -60,20 +68,23 @@ def main():
     core_adv = {k: adv[k] for k in CORE_ADV if k in adv}
 
     def strip_units(a):
-        """livezone.zones[].units + permits.units 제거 — 단지 목록은 zone 정적
+        """빌드 전용 키 제거. 단지 목록·시군구 세대수·시군 시계열은 zone 정적
         페이지(make_zone_pages가 data.js를 직접 읽어 렌더) 전용이라 브라우저
-        페이로드가 실어 나를 이유가 없다. permits.units는 HUB 러닝재고 재작성으로
-        생긴 존 상세 리스트라 홈 scCalc(done/sched만 사용)도 안 쓴다."""
+        페이로드가 실어 나를 이유가 없다. 홈 scCalc는 done/sched/demol만 쓴다."""
         a = dict(a)
         lz = a.get('livezone')
-        if lz and lz.get('zones'):
+        if lz:
             lz = dict(lz)
-            lz['zones'] = [{k: v for k, v in z.items() if k != 'units'} for z in lz['zones']]
+            if lz.get('zones'):
+                lz['zones'] = [{k: v for k, v in z.items() if k != 'units'} for z in lz['zones']]
+            for k in BUILD_ONLY_LIVEZONE:
+                lz.pop(k, None)
             a['livezone'] = lz
         p = a.get('permits')
-        if p and 'units' in p:
+        if p:
             p = dict(p)
-            p.pop('units', None)
+            for k in BUILD_ONLY_PERMITS:
+                p.pop(k, None)
             a['permits'] = p
         return a
 

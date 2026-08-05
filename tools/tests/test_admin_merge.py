@@ -55,3 +55,15 @@ def test_other_sido_unaffected(monkeypatch):
     sido, sgg = _parse(monkeypatch)
     assert sido['서울'] == 4522718 and sido['경기'] == 6181804
     assert sgg[('경기', '수원시')] == 500000
+
+
+def test_partial_response_raises_instead_of_silently_zeroing(monkeypatch):
+    """통합시 행만 오고 구 행이 빠지면 광주=0·전남=통합총계가 된다. 둘 다 '있는 값'
+    이라 어떤 가드에도 안 걸리고 광주권만 조용히 사라진다 — 키 결측보다 나쁘다."""
+    import pytest
+    rows = [{'C1': '12', 'C1_NM': '전남광주통합특별시', 'DT': '1579042'},
+            {'C1': '12110', 'C1_NM': '목포시', 'DT': '102499'}]
+    monkeypatch.setattr(U, 'http_json', lambda url: rows)
+    monkeypatch.setattr(U, 'KEY', 'x')
+    with pytest.raises(RuntimeError, match='부분 응답'):
+        U._lz_region('DT_1B040B3', 'T1')

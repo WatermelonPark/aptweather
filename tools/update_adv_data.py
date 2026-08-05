@@ -1570,6 +1570,13 @@ def _lz_region(tbl, itm):
         if nm == '전국' or cur is None or cur in LZ_GWANG or nm.endswith('구'): continue
         sgg[(cur, nm)] = pop
     if merged_tot:
+        # ⚠️ 여기서 조용히 넘기면 안 된다. 통합시 행만 오고 구 행이 빠진 부분 응답이면
+        # 광주=0·전남=통합총계가 되는데, 둘 다 '있는 값'이라 어떤 가드에도 안 걸리고
+        # 광주권만 MIN_POP 미달로 사라진다(키 결측보다 나쁘다 — 틀린 값이 그럴듯하다).
+        # 예외를 던지면 main()의 `livezone skip`이 받아 기존 데이터를 그대로 둔다.
+        if not sido['광주']:
+            raise RuntimeError('%s 하위 광주 구(%s)가 응답에 없다 — 부분 응답 의심'
+                               % (MERGED_JN_GJ, ','.join(sorted(GWANGJU_GU))))
         sido['전남'] = merged_tot - sido['광주']
     return sido, sgg
 
