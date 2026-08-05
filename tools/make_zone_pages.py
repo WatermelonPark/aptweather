@@ -986,9 +986,14 @@ details.fold .dbody p{font-size:14px}
 .why3 .w-i::after{content:'';position:absolute;left:-9px;right:-9px;top:-12px;bottom:-12px}
 .why3 .w-i:hover,.why3 .w-i.on{background:var(--ink)}
 .why3 .w-i:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:50%}
-.w-tip{position:absolute;background:var(--ink);color:#fff;padding:7px 10px;border-radius:3px;
- font-size:12px;line-height:1.5;z-index:4;max-width:min(260px,86%);transform:translate(-50%,-100%);
- pointer-events:none}
+.w-tip{position:absolute;background:var(--ink);color:#fff;padding:8px 32px 8px 10px;border-radius:3px;
+ font-size:12px;line-height:1.5;z-index:4;max-width:min(300px,90%);transform:translate(-50%,-100%)}
+/* 닫기. 바깥 탭으로도 닫히지만(pointerdown 참조) 그건 아는 사람만 쓰는 출구다 —
+   보이는 출구가 있어야 한다. 히트 영역은 ::after로 32px까지. */
+.w-tx{position:absolute;top:3px;right:3px;width:22px;height:22px;border:0;padding:0;background:none;
+ color:#fff;opacity:.75;font-size:15px;line-height:1;cursor:pointer}
+.w-tx::after{content:'';position:absolute;left:-5px;right:-5px;top:-5px;bottom:-5px}
+.w-tx:hover{opacity:1}
 .why3 .w-tag{display:inline-block;font-style:normal;font-size:10.5px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:1px 7px;margin-right:8px;vertical-align:2px;white-space:nowrap}
 /* 참고 줄(노후 재고) — 순부족 산식에 안 들어간다. 세 줄과 나란히 읽히도록
    같은 표에 두되 합산 항목의 표식을 걷는다: 값의 무게를 빼고 줄을 흐리게,
@@ -1348,16 +1353,23 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # 준공-멸실-적정을 그대로 더한 값이다. '최대 4년치' 같은 완곡한 표현이 필요 없다.
     # 태그가 '지난 4년'을 말하므로 라벨에 '그동안'을, 부제에 '지난 4년 ·'을
     # 되풀이하지 않는다(2026-08-04). 나머지 세 줄과 어형도 맞는다.
-    b_lab, b_sub = ('모자란 집', '준공 − 멸실 − 필요량') if backlog >= 0 \
-              else ('남은 집', '준공 − 멸실 − 필요량')
+    # 산식 약어만 있던 부제를 완결 문장으로(2026-08-05 사용자) — 무엇을(출처)
+    # 어떻게(계산) + 단서. 노후된 집 줄이 기준이다.
+    _b_how = ('지난 4년의 준공 − 멸실 − 필요량을 누적한 값입니다. '
+              '준공·멸실은 건축물대장 실측이고, 필요량은 아래 \'필요한 집\'과 같은 기준입니다. ')
+    b_lab, b_sub = ('모자란 집', _b_how + '필요보다 덜 지어진 만큼이 아직 수요로 남아 있습니다.') \
+        if backlog >= 0 \
+        else ('남은 집', _b_how + '필요보다 많이 지어진 만큼이 재고로 남아 있습니다.')
     # (2026-08-04 삭제) '4년치 상한 도달 — 실제로는 더 밀렸습니다' 분기는 DEFICIT_CAP
     # 시절의 완곡 표현이었다. 창 방식(2026-08-02)으로 바뀐 뒤 44존 전부 해당 없음이라
     # 죽은 코드였고, 남겨두면 '밀린'이라는 옛 어휘가 화면에 되살아난다.
     # 필요한 집 출처: 풀 소속 존은 풀 이름·구성·풀 내 세대 비중으로 표기.
+    _n_how = ('과거 이 지역 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량으로 '
+              '잡은 연간 적정 공급량, 그 4년치입니다. ')
     if r.get('pool'):
-        need_src = '%s 풀(%s) 세대의 %d%%' % (
+        need_src = _n_how + '%s 풀(%s) 필요량을 세대수 비중 %d%%로 나눈 %s 몫 · 추정치입니다.' % (
             r['pool'], '·'.join(m[:-1] for m in POOLS[r['pool']]),
-            round((r['pshare'] or 0) * 100))
+            round((r['pshare'] or 0) * 100), nm)
     elif nm == ps:
         # 롤업(수도권)은 자기 자신이 시도라 "수도권 세대의 94%"가 자기참조로 읽혔다.
         # 2026-08-02 사용자 결정: 생활권에 편입되지 않은 시군구(가평·연천 등 17곳,
@@ -1366,9 +1378,10 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         # 고쳐 쓰는 게 아니라 주장을 걷어낸다. 각 존의 zrefq는 그대로다(시도
         # 적정물량을 세대 비중으로 나눈 값이라, 분모를 22곳으로 좁히면 refq도 같은
         # 비율로 좁아져 서로 상쇄된다 — 빠진 시군구 수요를 22곳에 얹지 않는다).
-        need_src = '생활권 %d곳 합계 · 추정' % len(r.get('subs') or [])
+        need_src = _n_how + '산하 생활권 %d곳의 합계 · 추정치입니다.' % len(r.get('subs') or [])
     else:
-        need_src = '%s 세대의 %d%%' % (ps, round(r['share'] * 100))
+        need_src = _n_how + '%s 필요량을 세대수 비중 %d%%로 나눈 %s 몫 · 추정치입니다.' % (
+            ps, round(r['share'] * 100), nm)
     if r['tot'] < 0:
         sum_line = '여유 %s세대' % num(-r['tot'])
     elif backlog >= 0:
@@ -1444,19 +1457,18 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
         '<span class="w-sub">%s</span></span><b>%s세대</b></div>'
         '<div class="w-row"><span class="w-lab"><em class="w-tag">앞으로 4년</em>지어질 집'
         '<button type="button" class="w-i" aria-label="설명 보기">i</button>'
-        '<span class="w-sub">준공예정 실측 · 액면 그대로</span></span><b>%s세대</b></div>'
+        '<span class="w-sub">앞으로 4년(16분기)에 입주 예정인 단지의 세대수를 단지 주소 기반으로 실측해 더한 값입니다. 할인 없이 액면 그대로 반영합니다.</span></span><b>%s세대</b></div>'
         # 태그는 '참고'. '앞으로 4년'을 달면 "4년 안에 헐릴 물량"으로 읽히는데 그
         # 숫자는 아무도 모르고(실현율 0~59%), 애초에 이 줄을 만든 이유가 그거다.
         # '현재'로도 써 봤지만 시점만 말할 뿐 "산식 밖"이라는 말은 못 했다 —
         # 네 번째 항으로 읽힌다는 지적(2026-08-04)에 따라 .w-ref로 무게를 뺀다.
         '%s'
-        '<div class="w-tip" hidden></div>'
+        '<div class="w-tip" hidden><span class="w-tt"></span><button type="button" class="w-tx" aria-label="설명 닫기">×</button></div>'
         '</div>%s</div></section>' % (
             verdict_html, seq_html,
             b_lab, b_sub, num(abs(backlog)),
-            # 롤업은 need_src가 이미 완결된 문장이라 '= X 몫' 꼬리를 붙이지 않는다
-            # ("수도권 세대의 94% = 수도권 몫"이 자기참조로 읽혔다 — 2026-08-02).
-            need_src if nm == ps else ('%s = %s 몫 · 추정' % (need_src, nm)),
+            # need_src는 세 분기 모두 완결 문장이다(꼬리 분기는 2026-08-05 제거).
+            need_src,
             num(r['need4']),
             num(r['fsupw']),
             aged_row,
@@ -1908,7 +1920,11 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
             'if(!e.pointerType||e.pointerType==="mouse")show(c);});'
             'c.addEventListener("focus",function(){show(c)});});'
             'wrap.addEventListener("mouseleave",hide);'
+            # iOS 사파리는 비인터랙티브 요소를 탭해도 document로 click이 안 올라온다 —
+            # 바깥 탭 dismiss가 click에만 걸려 있으면 모바일에서 못 닫는다(2026-08-05).
             'document.addEventListener("click",function(e){'
+            'if(!wrap.contains(e.target))hide();});'
+            'document.addEventListener("pointerdown",function(e){'
             'if(!wrap.contains(e.target))hide();});})();</script>'
             # 게이지 ⓘ — .q-col과 같은 규칙(click은 무조건 show, hover는 마우스만).
             # 터치에서 합성 mouseenter가 click보다 먼저 와 토글이 상쇄되는 함정 회피.
@@ -1918,7 +1934,7 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
             'function hide(){tip.hidden=true;btns.forEach(function(b){b.classList.remove("on")});}'
             'function show(b){var sub=b.parentNode.querySelector(".w-sub");if(!sub)return;'
             'btns.forEach(function(x){x.classList.toggle("on",x===b)});'
-            'tip.textContent=sub.textContent;tip.hidden=false;'
+            'tip.querySelector(".w-tt").textContent=sub.textContent;tip.hidden=false;'
             'var wr=w3.getBoundingClientRect(),br=b.getBoundingClientRect();'
             'var rr=b.parentNode.parentNode.getBoundingClientRect();'
             'tip.style.left="0px";tip.style.top="0px";'
@@ -1931,8 +1947,12 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
             'b.addEventListener("pointerenter",function(e){'
             'if(!e.pointerType||e.pointerType==="mouse")show(b);});'
             'b.addEventListener("focus",function(){show(b)});});'
+            'var xb=tip.querySelector(".w-tx");'
+            'if(xb)xb.addEventListener("click",function(e){e.stopPropagation();hide()});'
             'w3.addEventListener("mouseleave",hide);'
             'document.addEventListener("click",function(e){'
+            'if(!w3.contains(e.target))hide();});'
+            'document.addEventListener("pointerdown",function(e){'
             'if(!w3.contains(e.target))hide();});})();</script>'
             '<script>(function(){var w=document.querySelector(".pidx");if(!w)return;'
             'var svg=w.querySelector("svg"),tip=w.querySelector(".px-tip");'
