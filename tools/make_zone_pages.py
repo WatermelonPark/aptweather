@@ -824,6 +824,8 @@ button.cta.sub{border:1.5px solid var(--ink)}
 .zlist{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
 .zlist a{font-size:12.5px;font-weight:600;text-decoration:none;color:var(--ink2);background:#fff;
  border:1px solid var(--line);border-radius:3px;padding:5px 9px}
+.zlist .zrest{font-size:12.5px;font-weight:600;color:var(--muted);background:var(--paper2);
+ border:1px solid var(--line);border-radius:3px;padding:5px 9px}
 .note{font-size:13.5px;color:var(--muted);line-height:1.75}
 footer{padding:26px 0 40px;text-align:center;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
 footer a{color:var(--muted)}
@@ -1719,15 +1721,28 @@ def build_page(r, allrows, prd, today, punits=None, pidx=None, plead=None, paged
     # +0.96 '다소 부족'이다. 접힘 안이 아니라 독립 섹션으로 올린다.
     city_sec_html = ''
     if cities and len(cities) >= 2:
+        # ⚠️ 혼합 존(광역시 * + 인접 시군)은 광역시 몫을 반드시 함께 보여준다.
+        # 광주권은 존이 '공급 여유'(−1,961)인데 시군 넷의 합은 +4,964(부족)라,
+        # 광역시 몫(−6,925) 없이 시군만 나열하면 부분이 전체와 모순돼 보인다
+        # (2026-08-05 정합성 감사). running_shortage가 창 단순합(선형)이라
+        # 광역시 몫 = 존 − Σ시군이 성분별로 정확히 성립한다(항등식 실측 확인).
+        star = [m[0] for m in _lz_members(nm) if m[1] == '*']
+        rest_html = ''
+        if star:
+            rest = r['tot'] - sum(c['tot'] for c in cities)
+            rest_html = ('<span class="zrest">%s %s</span>'
+                         % ('·'.join(star), signed(rest)))
         city_sec_html = (
             '<section><div class="wrap"><h2>이 생활권 안에서</h2>'
             '<p class="note" style="margin-bottom:9px">시·군마다 공급 사정이 다릅니다. '
-            '눌러서 개별 리포트를 보세요.</p><div class="zlist">%s</div></div></section>'
-            % ''.join(
-                '<a href="/zone/%s/%s/">%s %s <span class="sc-tier %s">%s</span></a>'
-                % (quote(nm), quote(c['city']), c['city'], signed(c['tot']),
-                   c['gr']['k'], c['gr']['label'])
-                for c in cities))
+            '눌러서 개별 리포트를 보세요.%s</p><div class="zlist">%s%s</div></div></section>'
+            % (' 광역시 몫은 이 페이지(생활권 전체)에 포함돼 있습니다.' if star else '',
+               rest_html,
+               ''.join(
+                   '<a href="/zone/%s/%s/">%s %s <span class="sc-tier %s">%s</span></a>'
+                   % (quote(nm), quote(c['city']), c['city'], signed(c['tot']),
+                      c['gr']['k'], c['gr']['label'])
+                   for c in cities)))
     compo_fold_html = (
         '<details class="fold"><summary>이 생활권은 어디를 묶었나</summary><div class="dbody">\n'
         '<p>행정구역이 아니라 <b>하나의 주택시장처럼 움직이는 범위</b>로 묶었습니다.</p>\n'
@@ -2466,6 +2481,14 @@ def build_city_page(c, sibs, zrow, prd, today, cunits=None):
         '<a class="%s" href="/zone/%s/%s/">%s %s</a>'
         % ('cur' if s['city'] == city else '', zq, quote(s['city']), s['city'], signed_u(s['tot']))
         for s in sibs)
+    # 혼합 존이면 광역시 몫도 형제 목록에 — 없으면 시군 합이 권역 판정과 모순돼 보인다
+    # (광주권: 시군 합 +4,964 vs 권역 −1,961. 존 페이지 city_sec와 같은 결정).
+    star = [m[0] for m in _lz_members(zone) if m[1] == '*']
+    if star:
+        rest = zrow['tot'] - sum(s['tot'] for s in sibs)
+        sib_html = ('<span style="font-size:13px;color:var(--muted);border:1px solid var(--line);'
+                    'padding:5px 10px;background:var(--paper2)">%s %s</span>'
+                    % ('·'.join(star), signed_u(rest))) + sib_html
     ld = json.dumps({
         "@context": "https://schema.org", "@type": "BreadcrumbList",
         "itemListElement": [

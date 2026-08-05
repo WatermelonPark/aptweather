@@ -671,3 +671,43 @@ def test_zone_page_links_to_its_cities():
     assert '이 생활권 안에서' in html
     for city in ('여주시', '평택시', '안성시'):
         assert '/zone/%s/%s/' % (_q('경기남부외곽권'), _q(city)) in html, city
+
+
+def test_hybrid_zone_decomposition_identity():
+    """혼합 존(광역시 * + 인접 시군)에서 광역시 몫 = 존 − Σ시군이 성분별로 성립해야
+    한다. running_shortage가 창 단순합(선형)이라 가능하다 — 클램프가 다시 생기면
+    이 분해가 깨지고, 화면의 광역시 몫이 틀린 수가 된다."""
+    from update_adv_data import LIVEZONE
+    adv, sts = M.load()
+    by = {r['z']['z']: r for r in M.calc(adv, sts)}
+    checked = 0
+    for z, mem in LIVEZONE.items():
+        if z not in by or not any(m[1] == '*' for m in mem):
+            continue
+        cs = M.city_rows(adv, by[z])
+        if not cs:
+            continue
+        r = by[z]
+        rest_tot = r['tot'] - sum(c['tot'] for c in cs)
+        rest_need = r['need4'] - sum(c['need4'] for c in cs)
+        rest_sup = r['fsupw'] - sum(c['fsupw'] for c in cs)
+        rest_inow = r['inow'] - sum(c['inow'] for c in cs)
+        assert abs(rest_tot - (rest_need - rest_sup - rest_inow)) < 1, z
+        checked += 1
+    assert checked >= 2, '혼합 존 표본(대구권·광주권)이 사라졌다'
+
+
+def test_hybrid_zone_page_shows_metro_remainder():
+    """광주권은 존이 '공급 여유'인데 시군 넷의 합은 부족이다 — 광역시 몫 없이 시군만
+    나열하면 부분이 전체와 모순돼 보인다(2026-08-05 정합성 감사)."""
+    import io as _io, re as _re
+    for z, metro in (('광주권', '광주'), ('대구권', '대구')):
+        html = _io.open('zone/%s/index.html' % z, encoding='utf-8').read()
+        m = _re.search(r'class="zrest">([^<]+)', html)
+        assert m and m.group(1).startswith(metro), '%s: 광역시 몫 칩이 없다' % z
+        # 표시 합계 = 존 표시값: zrest + 시군 칩들의 수치 합이 히어로와 일치
+        nums = [float(x.replace(',', '').replace('−', '-').replace('+', ''))
+                for x in _re.findall(r'(?:zrest">|/">)[가-힣·]+ ([+−][\d,]+)', html)]
+        adv, sts = M.load()
+        r = next(x for x in M.calc(adv, sts) if x['z']['z'] == z)
+        assert abs(sum(nums) - (-r['tot'])) < 2, '%s: 칩 합 %.0f vs 존 %.0f' % (z, sum(nums), -r['tot'])
