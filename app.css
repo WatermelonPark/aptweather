@@ -534,7 +534,6 @@
   .tilemap svg text{font-family:inherit}
   .gt-head{display:flex;justify-content:flex-end;margin:0 0 10px}
   .chartwrap.sm{height:300px;position:relative}
-  .chart-scroll .chartwrap.sm{min-width:100%}
   /* 단위는 축 눈금마다 반복하지 않고 여기서 한 번만 말한다.
      눈금이 '+0.15%'에서 '0.15'로 짧아지는 만큼 축이 좁아지고 플롯이 넓어진다. */
   .chart-unit{text-align:right;font-size:11px;font-weight:500;color:var(--muted);margin:0 0 2px}
@@ -592,7 +591,6 @@
   .home-cta:active{transform:scale(.98)}
   .home-cta.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;
     font-size:16px;padding:14px 24px}
-  .hcard.feat{background:#fff;border-color:var(--ink2)}
   .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7;padding:0 18px 20px}
   .home-sec{padding:38px 0;text-align:center}
   .home-sec.hs-alt{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -601,9 +599,6 @@
   .home-sec h3{font-size:clamp(17px,3.6vw,20px);font-weight:700;letter-spacing:-.01em;margin-bottom:10px}
   .home-sec p{font-size:16px;line-height:1.75;color:var(--ink2);max-width:520px;margin:0 auto}
   .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
-  .calc-tabs button.on{background:#1c2733;color:#fff;border-color:#1c2733}
-  
-  .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}.calc-big.mid{color:#b9770e}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .bb-det{display:none;font-size:12.5px;color:var(--ink2);line-height:1.75;background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;margin:2px 0 10px}
@@ -625,32 +620,17 @@
   .sc-how[open] summary .t::after{content:' ▴'}
   .sc-how .src{font-size:11.5px;font-weight:500;color:var(--muted)}
   .sc-how .body{margin-top:9px;font-size:13px;line-height:1.9;color:var(--ink2)}
-  /* 영점(적정 공급) 척추 — 막대는 카드 속 그래픽이 아니라 이 선에서
-     좌우로 자라난 조직이다. 행 간격을 건너 하나의 연속선으로 잇고,
-     블록 밖으로는 넘기지 않도록 첫 행 위·끝 행 아래만 잘라낸다. */
-  .sc-zero{position:absolute;left:50%;top:-16px;bottom:-16px;width:1px;
-    margin-left:-.5px;background:var(--ink);opacity:.5;z-index:2}
   .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted);white-space:nowrap}
   .sc-tier.g4{background:#fdecea;color:#a93226}
   .sc-tier.g3{background:#fbeee9;color:#c0392b}
   .sc-tier.g2{background:#faf3e7;color:#b9770e}
   .sc-tier.g1{background:#edf0ee;color:#5e6f74}
   .sc-tier.g0{background:#e9f0f7;color:#1a5276}
-  .sc-flag.warn{background:#fdecea;color:#a93226}
   /* 좁은 화면: 고정폭 합이 커서 ▸(sc-go)가 화면 밖으로 밀려 가로 스크롤이 생겼다.
      반드시 .sc-val/.sc-tier 정의 '뒤'에 와야 덮어쓴다(같은 특이도라 순서가 승패를 가름). */
   @media(max-width:400px){
     .sc-tier{width:52px}
   }
-  .mz-chip.zone{display:inline-flex;align-items:center;gap:6px}
-  /* 2단 선택의 층위를 시각으로 나눈다. 예전엔 1·2차가 같은 칩이라, 시도를 누르면
-     화면에 칩이 20~30개 깔려 어디를 눌러야 하는지 헷갈렸다(2026-08-01 지적).
-     고른 시도는 먹칠해 '현재 위치'로, 나머지 1차는 물러나고, 2차만 앞으로 나온다. */
-  .mz-sido .mz-chip{color:var(--ink2)}
-  .mz-sido .mz-chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
-  .mz-sido.picked .mz-chip:not(.on){opacity:.4}
-  .mz-sido.picked .mz-chip:not(.on):hover,
-  .mz-sido.picked .mz-chip:not(.on):focus-visible{opacity:1}
   /* --- 접근성 기본선 --- */
   a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,
   summary:focus-visible,[tabindex]:focus-visible,[role="button"]:focus-visible{
@@ -667,18 +647,8 @@ a.nav-btn,a.home-cta{text-decoration:none}
 
 /* 표 헤더는 항상 중앙정렬(2026-07-22 원칙) — 고정컬럼 헤더의 좌측 예외 무효화 */
 table.adv thead th:first-child{text-align:center}
-.hz-c.on i{background:#c0392b}
-.hz-c.on em{color:var(--ink2);font-weight:600}
 /* 제목이 모바일에서 '남나' 한 글자만 넘어가 못생겼다 — 부제로 분리(2026-08-02). */
 .sec-sub{color:var(--muted);font-size:13.5px}
-
-/* 순위 섹션만 여백을 조인다(2026-08-02) — 홈 첫 화면에 순위 행이 더 들어오게.
-   .home-sec/.thead 전역 값은 다른 섹션 리듬이라 건드리지 않고 여기서만 좁힌다. */
-/* 접힘 안내 — 행과 같은 폭·높이로 목록 흐름에 얹는다(2026-08-03 롤업 폐지). */
-.sc-gap{display:flex;align-items:center;justify-content:center;gap:6px;
- padding:11px 8px;font-size:13px;color:var(--muted);text-decoration:none;
- border-top:1px solid var(--line);border-bottom:1px solid var(--line);
- background:repeating-linear-gradient(135deg,transparent,transparent 6px,rgba(0,0,0,.02) 6px,rgba(0,0,0,.02) 12px)}
 #sec-score{padding-top:22px}
 #sec-score h2{margin-bottom:4px}
 #sec-score .thead{margin-top:18px}
