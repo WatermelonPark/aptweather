@@ -40,23 +40,24 @@ LAZY_STATS = ['규모별']
 TREND_SGG_KEEP = 12
 NL = chr(10)
 
-# 홈이 쓰는 STATS 계열 — 아공맵 스코어가 순공급을 계산할 때 참조한다.
-# 나머지 9계열(매매지수·인허가·준공·착공·전세지수·금리·보급률·노후주택30년·
-# 아파트건설, 합계 194KB)은 통계 탭 전용이라 core에 넣지 않는다.
-# 아파트멸실은 홈 scCalc의 러닝재고 멸실 항이 직접 읽는다(2026-08-03) — core에
-# 없으면 홈과 존 페이지 산식이 갈린다. 시도 20곳×15년 연간이라 몇 KB뿐이다.
-CORE_STATS = ['전세가율', '주택멸실', '아파트멸실']
+# 홈이 쓰는 STATS 계열.
+# 준공·착공은 2026-08-06부터 core에 싣는다 — 공급·가격 통합표가 이 둘을 직접 그리고,
+# 그게 홈의 주 컨텐츠다(합쳐 65KB). 대신 같은 날 permits의 HUB 파생분(done/sched/demol,
+# 83KB)이 통째로 빠져 core는 오히려 가벼워졌다.
+# 아파트멸실은 러닝재고의 멸실 항이 직접 읽는다(2026-08-03) — core에 없으면 홈과
+# 지역 페이지 산식이 갈린다. 시도 20곳×15년 연간이라 몇 KB뿐이다.
+CORE_STATS = ['전세가율', '주택멸실', '아파트멸실', '준공', '착공']
 
 # 홈이 통째로 쓰는 ADV 키
-CORE_ADV = ['livezone', 'occupancy', 'permits', 'bubble', 'holidays']
+CORE_ADV = ['sido', 'occupancy', 'permits', 'bubble', 'holidays']
 
 # 빌드 전용 하위 키 — data.js(정적 페이지 생성기의 원본)엔 남고 브라우저 페이로드엔
 # 안 실린다. ⚠️ CORE_ADV가 'permits'를 **통째로** 복사하므로, permits에 새 하위 키를
 # 넣으면 아무도 안 막아준 채 홈 페이로드가 커진다 — 실제로 permits.city(150KB)가
 # 그렇게 새어 data-core가 131KB -> 311KB로 부풀었다(2026-08-05 코드리뷰에서 발견).
 # permits에 뭔가 추가할 땐 홈이 정말 읽는지 확인하고, 아니면 여기 등록할 것.
-BUILD_ONLY_PERMITS = ('units', 'city')
-BUILD_ONLY_LIVEZONE = ('sgghh',)
+# done/sched/demol은 건축HUB 파생분 — 2026-08-06 산식 교체로 점수에서 빠졌다.
+BUILD_ONLY_PERMITS = ('units', 'city', 'done', 'sched', 'demol')
 
 
 def main():
@@ -68,18 +69,10 @@ def main():
     core_adv = {k: adv[k] for k in CORE_ADV if k in adv}
 
     def strip_units(a):
-        """빌드 전용 키 제거. 단지 목록·시군구 세대수·시군 시계열은 zone 정적
-        페이지(make_zone_pages가 data.js를 직접 읽어 렌더) 전용이라 브라우저
-        페이로드가 실어 나를 이유가 없다. 홈 scCalc는 done/sched/demol만 쓴다."""
+        """빌드 전용 키 제거. 단지 목록·시군 시계열은 지역 정적 페이지
+        (make_zone_pages가 data.js를 직접 읽어 렌더) 전용이라 브라우저 페이로드가
+        실어 나를 이유가 없다. 홈은 ADV.sido의 점수와 STATS 준공·착공만 쓴다."""
         a = dict(a)
-        lz = a.get('livezone')
-        if lz:
-            lz = dict(lz)
-            if lz.get('zones'):
-                lz['zones'] = [{k: v for k, v in z.items() if k != 'units'} for z in lz['zones']]
-            for k in BUILD_ONLY_LIVEZONE:
-                lz.pop(k, None)
-            a['livezone'] = lz
         p = a.get('permits')
         if p:
             p = dict(p)

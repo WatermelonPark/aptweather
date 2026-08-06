@@ -1783,12 +1783,17 @@ def main():
             if D.get('dates'):
                 print('  %s: %s ~ %s (%d개월)' % (k, D['dates'][0], D['dates'][-1], len(D['dates'])))
         return
-    if arg == '--seed-livezone':   # 생활권 입주예정 최초 시딩 (KOSIS+DATAGO 필요)
-        adv['livezone'] = fetch_livezone()
+    if arg == '--seed-sido':
+        # 시도 20곳 공급 지표 재계산. STATS만 읽으므로 API 키가 필요 없다 —
+        # 산식이나 적정물량 상수를 고친 뒤 데이터를 즉시 맞출 때 쓴다.
+        import sido_zones
+        adv['sido'] = sido_zones.calc(read_current_stats())
+        adv.pop('livezone', None)   # 생활권 31곳 체제 잔재 (2026-08-06 폐기)
         write_adv(adv)
-        print('livezone seeded: %d zones, prd %s' % (len(adv['livezone']['zones']), adv['livezone']['prd']))
+        print('sido seeded: %d곳, 실적~%s, 착공~%s, 미래 %d분기'
+              % (len(adv['sido']['zones']), adv['sido']['L'], adv['sido']['S'], adv['sido']['H']))
         return
-    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-livezone | --seed-supply | --dry-run | --discover <kw>'
+    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-sido | --seed-supply | --dry-run | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
     failed = []     # 어떤 지표 fetch가 죽었는지 집계 — 전량 실패를 '변경 없음'과 구분한다
@@ -1910,40 +1915,6 @@ def main():
     except Exception as e:
         failed.append('bubble'); print('bubble skip:', e)
     try:
-        if DATAGO_KEY:
-            lz = fetch_livezone()
-            prev = (adv.get('livezone') or {}).get('zones') or []
-            n_new, n_old = len(lz['zones']), len(prev)
-            # 가드 1: 생활권이 급감하면 채택하지 않는다.
-            # make_zone_pages는 매 실행마다 /zone/ 전체를 지우고 이 목록으로만 재생성하므로,
-            # API 부분 응답을 그대로 받으면 색인된 URL이 무더기로 404가 된다.
-            if n_old >= 10 and n_new < n_old * 0.8:
-                print('livezone GUARD: 생활권이 %d개 -> %d개로 급감해 채택하지 않음 '
-                      '(API 부분 응답 의심). zone 페이지·sitemap 보존.' % (n_old, n_new))
-            elif lz['zones'] and differs(lz, adv.get('livezone')):
-                if n_new < n_old:   # 급감은 아니어도 감소는 항상 눈에 띄게 (URL이 사라진다)
-                    gone = sorted({z['z'] for z in prev} - {z['z'] for z in lz['zones']})
-                    print('livezone NOTE: 생활권 %d -> %d개로 감소. 사라진 곳: %s '
-                          '(해당 zone 페이지가 삭제되고 sitemap에서 빠짐)' % (n_old, n_new, ', '.join(gone) or '?'))
-                adv['livezone'] = lz
-                changed.append('livezone(%d)' % len(lz['zones']))
-                # 가드 2: 입주예정 물량이 0인 생활권을 로그에 드러낸다.
-                # 0은 결측이 아니라 실제 공급 가뭄이므로 그대로 '부족'으로 계산한다
-                # (2026-07-19 확정). 다만 갑자기 0이 되면 원자료 이상 신호일 수 있어
-                # 눈에 띄게 남긴다. 데이터셋 건강성 자체는 위 가드 1이 지킨다.
-                zero = [z['z'] for z in lz['zones'] if not (z.get('supply') or 0)]
-                if zero:
-                    print('livezone NOTE: 입주예정 물량 0인 생활권 %d곳 -> %s '
-                          '(결측이 아니라 0으로 간주해 부족으로 계산됨. '
-                          '이전에 물량이 있던 곳이 0이 됐다면 원자료를 확인할 것)'
-                          % (len(zero), ', '.join(zero)))
-        else:
-            print('livezone skip: DATA_GO_KR_KEY 없음')
-    except Exception as e:
-        print('livezone skip:', e)
-    # 노후 재고는 livezone 딕셔너리 **밖**에 둔다. 안에 넣으면 differs()가 매번
-    # "새 lz엔 aged30이 없다"고 보고 livezone을 무조건 재채택한다.
-    try:
         a30 = fetch_zone_aged30()
         if a30['z'] and a30 != adv.get('aged30'):
             adv['aged30'] = a30
@@ -1953,6 +1924,29 @@ def main():
     if changed:
         write_adv(adv)
     changed += update_basic()   # 기본통계(STATS) 증분 갱신
+    # ── 시도 공급 지표 ───────────────────────────────────────────────────────
+    # STATS의 준공·착공·아파트멸실에서 파생하므로 **update_basic 뒤**에 와야 한다.
+    # 앞에 두면 이번 회차에 갱신된 통계가 아니라 지난 회차 값으로 점수가 나온다.
+    try:
+        import sido_zones
+        sd = sido_zones.calc(read_current_stats())
+        n_new = len(sd['zones'])
+        n_old = len((adv.get('sido') or {}).get('zones') or [])
+        # 가드: 지역이 줄면 채택하지 않는다. make_zone_pages가 매 실행마다 /zone/을
+        # 통째로 지우고 이 목록으로만 재생성하므로, 통계 부분 응답을 그대로 받으면
+        # 색인된 URL이 무더기로 404가 된다(옛 livezone 가드와 같은 이유).
+        if n_old and n_new < n_old:
+            gone = sorted({z['z'] for z in (adv['sido']['zones'])} - {z['z'] for z in sd['zones']})
+            print('sido GUARD: 지역이 %d개 -> %d개로 줄어 채택하지 않음. 빠진 곳: %s '
+                  '(통계 부분 응답 의심. zone 페이지·sitemap 보존)'
+                  % (n_old, n_new, ', '.join(gone) or '?'))
+            failed.append('sido-shrink')
+        elif differs(sd, adv.get('sido')):
+            adv['sido'] = sd
+            changed.append('sido(%d곳, 실적~%s, 미래 %d분기)' % (n_new, sd['L'], sd['H']))
+            write_adv(adv)
+    except Exception as e:
+        failed.append('sido'); print('sido skip:', e)
     # 후속 단계(뉴스레터 발송 등)에 변경 내역 전달 — 커밋 대상 아님
     io.open(os.path.join(ROOT, '.stats_changed'), 'w', encoding='utf-8').write(','.join(changed))
     # 클라우드 冗長 러너 게이트용: 이 실행에서 fetch가 하나라도 실패했는지 남긴다.
