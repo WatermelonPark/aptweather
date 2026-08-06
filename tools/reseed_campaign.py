@@ -38,6 +38,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DATA = os.path.join(HERE, 'data', 'hub_permits.json')
 LOCK = os.path.join(HERE, 'data', '.reseed.lock')
+TRIES = os.path.join(HERE, 'data', '.reseed_tries.json')   # 그룹별 시도 횟수(캠페인 종료 보장용)
+MAX_TRIES = 3
 LOCK_STALE_SEC = 3 * 3600      # 3시간 넘은 락은 죽은 것으로 본다(덩어리 최대치보다 넉넉히)
 
 sys.path.insert(0, HERE)
@@ -59,6 +61,20 @@ def has_stcns(entry):
     return any(len(x) > 5 and x[5] for x in u)
 
 
+def tries():
+    try:
+        return json.load(io.open(TRIES, encoding='utf-8'))
+    except Exception:
+        return {}
+
+
+def bump(codes):
+    t = tries()
+    for c in codes:
+        t[c] = t.get(c, 0) + 1
+    io.open(TRIES, 'w', encoding='utf-8').write(json.dumps(t, ensure_ascii=False))
+
+
 def progress():
     """(완료 그룹 수, 전체 그룹 수, 남은 코드 목록).
 
@@ -73,8 +89,14 @@ def progress():
     d = load()
     done = set((d.get('meta') or {}).get('reseed_done') or [])
     sgg = d.get('sgg') or {}
+    # ⚠️ 시도 상한. 착공일을 원천이 아예 안 주는 시군구도 있고, API 오류(code 04/05)로
+    # 수집이 거부돼 옛 값이 남는 경우도 있다. 그 둘은 has_stcns가 영원히 False라
+    # 상한이 없으면 같은 그룹만 반복해 캠페인이 끝나지 않는다(2026-08-06 실제로
+    # 11530·11590이 덩어리 2·3·4에 연속 등장). MAX_TRIES를 넘기면 완료로 본다.
+    t = tries()
     remain = [k for k in keys
-              if k not in done or not has_stcns(sgg.get(k) or {})]
+              if (k not in done or not has_stcns(sgg.get(k) or {}))
+              and t.get(k, 0) < MAX_TRIES]
     return len(keys) - len(remain), len(keys), remain
 
 
@@ -135,9 +157,16 @@ def main():
     ap.add_argument('--chunk', type=int, default=6, help='한 덩어리에 넣을 그룹 수')
     ap.add_argument('--push', action='store_true', help='덩어리마다 푸시까지')
     ap.add_argument('--status', action='store_true', help='진행률만 출력하고 종료')
+    ap.add_argument('--prefer', default='',
+                    help='먼저 돌릴 코드 접두사(콤마구분, 예: 11 = 서울). 가설 검증처럼 '
+                         '특정 지역 결과가 급할 때 순서를 당긴다.')
     args = ap.parse_args()
 
     done, total, remain = progress()
+    if args.prefer:
+        pre = tuple(x.strip() for x in args.prefer.split(',') if x.strip())
+        remain = ([k for k in remain if k.startswith(pre)]
+                  + [k for k in remain if not k.startswith(pre)])
     print('재시딩 진행: %d/%d 그룹 (남은 %d곳)' % (done, total, len(remain)))
     if args.status:
         return 0
@@ -174,6 +203,7 @@ def main():
                     json.dumps(d, ensure_ascii=False, separators=(',', ':')))
                 print('  착공일 없는 %d곳의 완료 표시를 해제해 재수집시킨다: %s'
                       % (len(stale), ','.join(stale)))
+            bump(batch)
             r = subprocess.run(
                 [sys.executable, '-u', os.path.join(HERE, 'fetch_hub_permits.py'),
                  '--full', '--reseed', '--only', ','.join(batch)],
@@ -185,13 +215,24 @@ def main():
                 break
             commit('data: HUB 재시딩 진행분 (%s)' % ','.join(batch), args.push)
             done, total, remain = progress()
+            if args.prefer:
+                remain = ([k for k in remain if k.startswith(pre)]
+                          + [k for k in remain if not k.startswith(pre)])
             print('  누적 %d/%d' % (done, total))
     finally:
         drop_lock()
 
     done, total, remain = progress()
+    t = tries()
+    gave_up = sorted(k for k, n in t.items() if n >= MAX_TRIES
+                     and not has_stcns((load().get('sgg') or {}).get(k) or {}))
     print()
     print('이번 실행 종료 — 누적 %d/%d 그룹, 남은 %d곳' % (done, total, len(remain)))
+    if gave_up:
+        print('⚠️ %d회 시도해도 착공일이 안 들어온 %d곳(완료로 처리): %s'
+              % (MAX_TRIES, len(gave_up), ', '.join(gave_up[:12])))
+        print('   원천이 그 지역 착공일을 안 주거나 API 오류가 지속된 것이다. '
+              '착공 기준 산식을 쓸 때 이 지역들은 판정 불가로 다뤄야 한다.')
     if remain:
         print('이어서 돌리려면 같은 명령을 다시 실행하면 된다(재개됨).')
     return 0
