@@ -13,8 +13,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 from make_beginner_cards import noto  # noqa: E402
 
-def _kdate(d):
-    return '%d월 %d일' % (d.month, d.day)
+def _pubdate(basis):
+    """조사기준일(월요일 'YYYY-MM-DD') -> 부동산원 공표일(그 주 목요일).
+
+    주간 아파트가격동향은 월요일 조사·목요일 공표라 +3일이면 맞는다. 공휴일이
+    끼면 하루씩 밀리는 주가 있는데, 그건 원천 공표 일정이라 우리가 알 수 없다 —
+    통상 일정으로 적고, 어긋나도 하루 차이라 신선도 판별에는 지장이 없다.
+    """
+    y, m, d = (int(x) for x in basis.split('-'))
+    return (datetime.date(y, m, d) + datetime.timedelta(days=3)).isoformat()
 
 
 INK = (22, 32, 58)
@@ -65,20 +72,19 @@ def main():
 
     # 헤더
     d.text((IW // 2, 66), '이번 주 아파트 시세 지도', font=noto(46), fill=INK, anchor='mm')
-    # 조사기준일(월)과 갱신일(=공표 후 배치가 받아온 날)을 **함께** 적는다.
-    # 조사기준일만 적으면 카드가 멈춰도 신선한지 묵은 건지 알 방법이 없다 —
-    # 실제로 2026-07-18 카드가 3주간 '이번 주'로 나가고 있었다(2026-08-06 발견).
-    # 조사기준일을 갱신일로 바꾸는 건 안 된다: 이 변동률이 측정한 시점은 월요일이고
-    # 부동산원 공식 표기도 조사기준일이다. 바꾸면 숫자의 시점을 잘못 말하게 된다.
-    d.text((IW // 2, 118), '%s 조사 기준 · 매매가격 전주 대비 변동률(%%)' % row['p'],
+    # 조사기준일(월)이 아니라 **발표일(목)**을 적는다(2026-08-06 사용자).
+    # 둘 다 사실이지만 발표일 하나로 충분하다 — 사람들이 '몇 월 며칠 발표된
+    # 주간시세'로 인식하고, 카드가 멈추면 이 날짜가 안 움직여 신선도까지 드러난다
+    # (실제로 2026-07-18 카드가 3주간 '이번 주'로 나갔다).
+    # ⚠️ 오늘 날짜를 쓰지 않는다. 배치가 하루 늦게 돌면 발표일이 아닌 날을 발표일로
+    # 적게 된다. 데이터의 조사기준일에서 유도해야 언제 구워도 같은 값이 나온다.
+    d.text((IW // 2, 122), '%s 발표 · 매매가격 전주 대비 변동률(%%)' % _pubdate(row['p']),
            font=noto(24), fill=MUTED, anchor='mm')
-    d.text((IW // 2, 146), '%s 갱신' % _kdate(datetime.date.today()),
-           font=noto(20), fill=MUTED, anchor='mm')
     # 범례
-    d.rounded_rectangle((IW // 2 - 190, 174, IW // 2 - 168, 196), 5, fill=UP)
-    d.text((IW // 2 - 158, 185), '상승', font=noto(21), fill=INK, anchor='lm')
-    d.rounded_rectangle((IW // 2 + 20, 174, IW // 2 + 42, 196), 5, fill=DN)
-    d.text((IW // 2 + 52, 185), '하락', font=noto(21), fill=INK, anchor='lm')
+    d.rounded_rectangle((IW // 2 - 190, 150, IW // 2 - 168, 172), 5, fill=UP)
+    d.text((IW // 2 - 158, 161), '상승', font=noto(21), fill=INK, anchor='lm')
+    d.rounded_rectangle((IW // 2 + 20, 150, IW // 2 + 42, 172), 5, fill=DN)
+    d.text((IW // 2 + 52, 161), '하락', font=noto(21), fill=INK, anchor='lm')
 
     # 타일 지도 (4열)
     TW, TH, G = 196, 128, 14
