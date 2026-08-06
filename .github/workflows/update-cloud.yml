@@ -173,8 +173,10 @@ jobs:
           # 구워 그대로 배포했다(홈 순위표와 /zone/ 상세가 다른 숫자를 표시).
           # 그래서 생성 '전에' 두 가지를 막는다:
           #   1) pytest — 코드가 깨진 채로 페이지를 굽지 않는다
-          #   2) check_dual_calc — Python calc()와 JS scCalc()가 갈라진 채 배포하지 않는다
-          # 둘 중 하나라도 실패하면 아무것도 커밋하지 않고 잡을 red로 만든다.
+          # (2026-08-06: 옛 게이트 2번 check_dual_calc는 폐지. 점수를 sido_zones.py가
+          #  빌드 시점에 계산해 ADV.sido로 싣고 홈·지역 페이지가 읽기만 하므로
+          #  갈릴 구현 자체가 없다.)
+          # 실패하면 아무것도 커밋하지 않고 잡을 red로 만든다.
           # (데이터 갱신은 하루 밀리지만, 틀린 숫자가 조용히 나가는 것보다 낫다.
           #  실패는 GitHub 알림으로 사람에게 전달된다.)
           # ⚠️ '테스트가 실패했다'와 '테스트를 돌릴 수 없었다'를 반드시 구분한다.
@@ -192,19 +194,11 @@ jobs:
               exit 1
             fi
           else
-            echo "::warning::pytest를 설치하지 못해 테스트를 건너뛴다(인프라 문제). 미러 대조는 계속한다."
-          fi
-          if command -v node >/dev/null 2>&1; then
-            if ! python3 tools/check_dual_calc.py; then
-              echo "::error::이중구현 미러 불일치 — 배포 중단. calc()(Python)와 scCalc()(JS)가 갈라졌다."
-              exit 1
-            fi
-          else
-            echo "::warning::node가 없어 미러 대조를 건너뛴다(인프라 문제)."
+            echo "::warning::pytest를 설치하지 못해 테스트를 건너뛴다(인프라 문제)."
           fi
           echo "검증 통과 — 페이지 생성으로 진행"
           # ───────────────────────────────────────────────────────────────
-          python3 tools/make_zone_pages.py      || echo "::warning::make_zone_pages 실패 — 데이터만 커밋"
+          python3 tools/make_sido_pages.py      || echo "::warning::make_sido_pages 실패 — 데이터만 커밋"
           python3 tools/make_indicator_pages.py || echo "::warning::make_indicator_pages 실패 — 데이터만 커밋"
           # 공유 카드(og:image)도 여기서 재생성한다 — 로컬 배치가 멈추면 /weekly/의
           # 카카오·트위터 미리보기가 옛 주차 지도에 고정된 채 '이번 주'로 배포된다.

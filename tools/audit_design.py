@@ -128,7 +128,7 @@ def main():
         for p, f in bad:
             print('  %-26s %s' % (p[:26], ' · '.join(f)))
     if zones:
-        print('\n생활권 %d장은 tools/make_zone_pages.py 산출물 — 템플릿을 고치면 일괄 반영된다.' % len(zones))
+        print('\n지역 %d장은 tools/make_sido_pages.py 산출물 — 템플릿을 고치면 일괄 반영된다.' % len(zones))
 
 
 if __name__ == '__main__':

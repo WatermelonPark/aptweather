@@ -59,6 +59,21 @@ CORE_ADV = ['sido', 'occupancy', 'permits', 'bubble', 'holidays']
 # done/sched/demol은 건축HUB 파생분 — 2026-08-06 산식 교체로 점수에서 빠졌다.
 BUILD_ONLY_PERMITS = ('units', 'city', 'done', 'sched', 'demol')
 
+# 홈 통합표가 그리는 구간·지역. 기준표 표와 같은 시작점(2017)이다.
+TABLE_FROM = '2017.01'
+TABLE_STATS = ('준공', '착공')
+try:
+    import sido_zones as _SZ
+    TABLE_REGIONS = set(_SZ.ORDER)
+except Exception:                     # 산식 모듈이 없어도 스플릿은 돌아야 한다
+    TABLE_REGIONS = {'전국', '수도권', '지방', '서울', '경기', '인천', '부산', '대구', '광주',
+                     '대전', '세종', '울산', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'}
+
+
+def _r2(a):
+    """변동률 소수 2자리 — 원자료는 자리수가 들쭉날쭉해 그대로 실으면 30% 커진다."""
+    return None if a is None else [None if v is None else round(v, 2) for v in a]
+
 
 def main():
     src = io.open(SRC, encoding='utf-8').read()
@@ -91,9 +106,37 @@ def main():
         core_adv['weekly'] = {'regions': w.get('regions', []),
                               'sgg': {'codes': sgg.get('codes', []), 'rows': sgg['rows'][-1:]}}
 
+    # 홈 통합표가 쓰는 가격 변동률 — 매매·전세·월세만, 시도 20곳만.
+    # 전체 monthly는 753.9KB(대부분 seoul 76.8 + sgg 617.1)라 통째로는 못 싣는다.
+    # 통계 탭이 열리면 loadFullData가 전체로 덮어쓴다(상위 키 통째 교체라 안전).
+    mo = adv.get('monthly') or {}
+    if mo.get('rows'):
+        core_adv['monthly'] = {
+            'regions': mo.get('regions', []),
+            'rows': [{'p': r['p'],
+                      'ma': _r2(r.get('ma')), 'je': _r2(r.get('je')), 'wo': _r2(r.get('wo'))}
+                     # ⚠️ monthly는 '2017-01', STATS는 '2017.01'로 구분자가 다르다.
+                     # 그대로 비교하면 '-'(0x2D) < '.'(0x2E)라 2017년이 통째로 잘린다.
+                     for r in mo['rows'] if r['p'].replace('-', '.') >= TABLE_FROM],
+            'note': mo.get('note', ''),
+        }
+
     core_stats = {k: stats[k] for k in CORE_STATS if k in stats}
     missing = [k for k in CORE_STATS if k not in stats]
     assert not missing, '홈이 쓰는 STATS 계열이 없다: %s' % missing
+    # 준공·착공은 표가 그리는 구간(TABLE_FROM~)만, 표에 나오는 지역만 싣는다.
+    # 전 구간 22개 지역이면 65KB인데 이렇게 자르면 절반 아래다. 점수(ADV.sido)는
+    # 이미 계산돼 있으므로 홈이 옛 구간을 다시 읽을 일이 없다.
+    for k in TABLE_STATS:
+        s = core_stats.get(k)
+        if not s:
+            continue
+        keep = [i for i, d in enumerate(s['dates']) if d >= TABLE_FROM]
+        core_stats[k] = {
+            'unit': s.get('unit'), 'source': s.get('source'),
+            'dates': [s['dates'][i] for i in keep],
+            'series': {r: [v[i] for i in keep] for r, v in s['series'].items() if r in TABLE_REGIONS},
+        }
 
     dump = lambda o: json.dumps(o, ensure_ascii=False, separators=(',', ':'))
     body = (

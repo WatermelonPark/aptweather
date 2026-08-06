@@ -9,7 +9,7 @@ zone 페이지와 같은 모델: 배치가 실데이터를 표·요약 문장으
 
 결정성: 본문 날짜는 전부 데이터 시점에서 유도한다(오늘 날짜 금지).
 데이터가 안 바뀐 실행은 바이트 동일 출력 → git diff 없음 → 커밋 없음.
-(make_zone_pages가 keep_dates로 배운 것과 같은 교훈, 여기선 애초에 오늘을 안 쓴다)
+(옛 make_zone_pages가 keep_dates로 배운 것과 같은 교훈, 여기선 애초에 오늘을 안 쓴다)
 
 실행: python tools/make_indicator_pages.py   # 생성 + sitemap 갱신
 """
@@ -308,9 +308,9 @@ def build_moveins(adv):
     ref = {k: (v * 4 if v else None) for k, v in o['ref'].items()}
     idx = {r: i for i, r in enumerate(regs)}
     last_act = [r['p'] for r in rows if not r.get('e')][-1]     # 마지막 실적 분기
-    # dateModified·sitemap lastmod는 실적 분기가 아니라 livezone 월 스탬프로.
-    # 입주'예정'분이 매주 갱신되는 페이지라 실적 기준(분기 지연)은 과소표현이다.
-    prd = (adv.get('livezone') or {}).get('prd') or last_act[:4]
+    # dateModified·sitemap lastmod는 실적 분기가 아니라 마지막 실적 분기로.
+    # (옛 livezone 월 스탬프는 생활권 체제와 함께 사라졌다 — 2026-08-06)
+    prd = last_act[:4]
     mod_iso = (prd.replace('.', '-') + '-01') if '.' in prd else prd + '-01-01'
     years = ['2025', '2026', '2027']
 

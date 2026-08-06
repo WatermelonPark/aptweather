@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v55'; // 시·군 상세 페이지 60장 추가
+const VERSION = 'v56'; // 시도 20곳 재편 + 홈 통합표 (생활권 31곳·시군 60장 폐기)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

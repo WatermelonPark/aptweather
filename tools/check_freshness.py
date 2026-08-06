@@ -47,7 +47,6 @@ SKIPPED = []           # 원천 조회 실패로 판정하지 못한 계열
 GRACE_WEEKLY = 9
 GRACE_MONTHLY = 50     # 매월 15일경 전월분 발표
 GRACE_BASIC = 100      # 인허가·착공·준공이 약 2개월 지연(정상 최대 ~95일)
-GRACE_HUB = 45         # update-hub는 월 1회(매월 1일) — 한 번 걸러도 알아채는 선
 
 
 def get_json(url):
@@ -77,11 +76,6 @@ def live_adv_stats():
             print('  경고: %s 조회 실패 (%s) — 그 계열 감시는 이번 회차 건너뜀'
                   % (lazy, str(e)[:40]))
     return adv, stats
-
-
-def live_hub_meta():
-    """라이브 tools/data/hub_permits.json의 meta(수집 시점)."""
-    return (get_json(SITE + '/tools/data/hub_permits.json') or {}).get('meta') or {}
 
 
 PNG_SIG = bytes([137, 80, 78, 71, 13, 10, 26, 10])
@@ -120,8 +114,8 @@ def live_card_basis():
 def check_age(label, stamp, grace):
     """수집 시점 도장(YYYY-MM-DD)이 grace일보다 오래됐으면 실패 사유를 반환.
 
-    원천 대조(check)와 달리 '언제 마지막으로 받아왔나'만 본다 — 건축HUB는 원천에
-    '최신 시점' 질의가 없고, 있어도 일일 쿼터를 감시가 축내면 안 된다.
+    원천 대조(check)와 달리 '언제 마지막으로 받아왔나'만 본다 — 원천에 '최신 시점'
+    질의가 없거나, 있어도 일일 쿼터를 감시가 축내면 안 되는 소스에 쓴다.
     """
     if not stamp:
         return '%s: 수집 시점 도장이 없음' % label
@@ -312,21 +306,24 @@ def main():
                            lambda c=cfg: kosis_latest(c['org'], c['tbl'], c['objn'], 'Y'),
                            None))
 
-    # 간판 지표(순부족)의 공급·재고 입력이 통째로 여기서 온다. update-hub가 실패하거나
-    # (쿼터 소진·타임아웃·push 실패) hub_permits.json이 옛 시점에 굳어도 예전엔
-    # 아무 신호가 없었다 — 다음 정기 실행이 한 달 뒤라 최대 두 달까지 조용히 정지했다
-    # (2026-08-04 감사). 월 1회 실행이므로 한 번 걸러도 알아채도록 grace를 45일로 둔다.
-    print('[건축HUB — 원천 건축HUB(수집 시점 기준)]')
+    # 간판 지표(순부족)의 공급·재고 입력. 2026-08-06까지는 건축HUB 단지 수집이
+    # 여기 있었는데, 미래 공급을 인허가 기반 준공예정으로 세던 게 착공 기준 대비
+    # 1.29~1.68배 과대라 통째로 걷어냈다. 지금 입력은 위에서 이미 대조한 국토부
+    # 준공·착공(SUPPLY_CONF)뿐이라 별도 감시 구획이 필요 없다.
+    # 대신 라이브 점수 블록이 옛 시점에 굳는 것만 본다 — data-core.js의 ADV.sido가
+    # 갱신을 멈추면 홈 표의 미래 구간이 조용히 정지한다.
+    print('[시도 공급 지표 — ADV.sido]')
     try:
-        hm = live_hub_meta()
-        fails.append(check_age('HUB준공', hm.get('fetched'), GRACE_HUB))
-        fails.append(check_age('HUB멸실', hm.get('fetched_demol'), GRACE_HUB))
-        if not hm.get('activate'):
-            # activate=false면 라이브 스코어가 pre-HUB로 되돌아간 것이다. 의도한
-            # 롤백일 수 있으나 조용히 그 상태로 굳는 것을 막는다.
-            fails.append('HUB activate=false — 라이브 스코어가 pre-HUB 산식으로 돌아가 있음')
+        core = urllib.request.urlopen(
+            urllib.request.Request(SITE + '/data-core.js', headers=UA),
+            timeout=60).read().decode('utf-8', 'replace')
+        m = re.search(r'"sido":\{[^{]*"L":"(\d{4}Q[1-4])"', core)
+        if not m:
+            fails.append('ADV.sido를 라이브 data-core.js에서 못 찾았다 — 홈 표가 안 그려진다')
+        else:
+            print('  실적 마지막 분기: %s' % m.group(1))
     except Exception as e:
-        fails.append('HUB 메타 조회 실패(%s) — hub_permits.json 배포 확인 필요' % str(e)[:60])
+        fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 
     # 커버리지 가드: 라이브에 있는데 위에서 한 번도 대조 안 한 계열을 잡는다.
     # 분양·미분양이 SUPPLY_CONF에 있다는 이유로 몇 주간 감시 밖에 있었다 — 사람이

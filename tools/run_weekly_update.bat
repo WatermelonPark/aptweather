@@ -114,9 +114,9 @@ if errorlevel 1 (
   exit /b 13
 )
 
-python tools\make_zone_pages.py
+python tools\make_sido_pages.py
 if errorlevel 1 (
-  echo ERROR: make_zone_pages failed - newsletter skipped
+  echo ERROR: make_sido_pages failed - newsletter skipped
   exit /b 17
 )
 
@@ -126,17 +126,9 @@ if errorlevel 1 (
   exit /b 18
 )
 
-rem 이중 구현 정합성 검사. 아공맵 스코어는 index.html scCalc()와
-rem make_zone_pages.py calc() 양쪽에 있어서, 한쪽만 고치면 같은 지표가
-rem 홈과 zone 페이지에 다르게 나온다(2026-07-20 실제 발생, 홈이 2.4배).
-rem 비치명적 — 불일치가 통계 갱신을 막지는 않게 WARN만 남긴다.
-python tools\check_dual_calc.py
-if errorlevel 1 echo WARN: scCalc vs calc mismatch - home and zone pages differ
-
-rem 네이버 블로그 초안 2건(주간 시세 + 생활권 심층). drafts/는 gitignore라
-rem 커밋 대상이 아니고, 실패해도 통계 갱신을 막지 않는다.
-python tools\make_naver_post.py
-if errorlevel 1 echo WARN: make_naver_post failed - naver draft not generated
+rem 이중 구현 정합성 검사(check_dual_calc)는 2026-08-06에 폐지했다.
+rem 점수를 tools\sido_zones.py가 빌드 시점에 계산해 ADV.sido로 싣고 홈·지역
+rem 페이지가 그걸 읽기만 하므로, 갈릴 구현 자체가 없다.
 
 rem NOTE: this list must cover every file the steps above write.
 rem split_data.py emits 5 files (core/trend/rest/sgg/size) and
