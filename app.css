@@ -64,7 +64,6 @@
     padding:5px 13px;border-radius:0;margin-bottom:18px}
   .v-strong{background:#dff3ec;color:#157a61;border:1px solid #9dd9c5}
   .v-mid{background:#fdf3d8;color:#9a7000;border:1px solid #ecd28a}
-  .v-weak{background:#fae3df;color:#b23022;border:1px solid #e7b3aa}
   .v-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 
   .chartbox{background:#fff;border-radius:0;
@@ -168,8 +167,6 @@
   /* ===== 테스트 ===== */
   .quiz-wrap{max-width:560px;margin:0 auto;padding:0 18px 120px;min-height:80vh}
   .quiz-hero{padding:56px 4px 0;text-align:center}
-  .qeyebrow{font-size:13px;font-weight:500;
-    color:var(--ink);margin-bottom:14px}
   .quiz-hero h2{font-size:32px;font-weight:700;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em}
   .quiz-hero p{font-size:15.5px;line-height:1.7;color:var(--ink2);margin:0 auto 28px;max-width:420px}
   .qmeta{margin-top:16px;font-size:13px;color:var(--muted)}
@@ -227,13 +224,6 @@
   .qnext.show{display:block}
   /* 결과 */
   .qresult{text-align:center;padding:40px 4px}
-  .qscore-ring{font-size:56px;font-weight:700;color:var(--ink);margin:10px 0 2px}
-  .qresult-eyebrow{font-size:13.5px;font-weight:500;color:var(--muted);margin-bottom:6px}
-  .qgrade{font-size:25px;font-weight:700;margin:4px auto 4px;letter-spacing:-.02em;
-    line-height:1.3;max-width:420px}
-  .qlv{display:inline-block;background:var(--ink);color:#fff;font-size:18px;font-weight:600;
-    padding:2px 12px;border-radius:0;margin-right:6px;letter-spacing:.01em;vertical-align:2px}
-  .qgrade-desc{font-size:14.5px;line-height:1.7;color:var(--ink2);max-width:400px;margin:14px auto 28px}
   /* 결과 카드 */
   .rcard{background:#18242a;border:1px solid rgba(255,255,255,.16);
     border-radius:0;padding:30px 24px 22px;max-width:380px;margin:14px auto 24px;
@@ -542,14 +532,11 @@
   .rk-medal{margin-right:3px;font-size:13px;vertical-align:-1px}
   .rk-new{color:var(--muted);font-weight:600;font-size:11px}
   .map-suplegend{text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:10px}
-  @media(max-width:720px){}
+  
   .tilemap svg text{font-family:inherit}
   .gt-head{display:flex;justify-content:flex-end;margin:0 0 10px}
   .chartwrap.sm{height:300px;position:relative}
-  .chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .chart-scroll .chartwrap.sm{min-width:100%}
-  .chart-frame{position:relative}
-  .chart-yaxis{position:absolute;left:0;top:0;z-index:2;pointer-events:none}
   /* 단위는 축 눈금마다 반복하지 않고 여기서 한 번만 말한다.
      눈금이 '+0.15%'에서 '0.15'로 짧아지는 만큼 축이 좁아지고 플롯이 넓어진다. */
   .chart-unit{text-align:right;font-size:11px;font-weight:500;color:var(--muted);margin:0 0 2px}
@@ -597,35 +584,17 @@
     -webkit-mask-image:radial-gradient(ellipse 70% 62% at 50% 44%,#000 34%,transparent 80%);
     mask-image:radial-gradient(ellipse 70% 62% at 50% 44%,#000 34%,transparent 80%)}
   .home-hero>.wrap{position:relative;z-index:1}
-  .hero-cta{margin-top:22px}
   .home-hero .wrap{position:relative;z-index:1}
   .home-eyebrow{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:14px}
   .home-hero h1{font-size:clamp(30px,6.4vw,48px);line-height:1.12;font-weight:700;
     letter-spacing:-.01em;margin-bottom:16px}
   .home-hero .sub{font-size:16px;color:var(--ink2);max-width:440px;margin:0 auto;line-height:1.6}
-  .home-ctas{display:flex;flex-direction:column;gap:12px;margin-top:30px;align-items:center}
   .home-cta{font-family:inherit;font-size:18px;font-weight:600;padding:17px 24px;border-radius:var(--r-touch);
     width:100%;max-width:400px;border:0;cursor:pointer;background:var(--ink);color:#fff;transition:.15s}
   .home-cta:active{transform:scale(.98)}
   .home-cta.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink);box-shadow:none;
     font-size:16px;padding:14px 24px}
-  .home-divider{display:flex;align-items:center;gap:12px;margin:36px 0 0;
-    font-size:12.5px;font-weight:500;color:var(--muted)}
-  .home-divider::before,.home-divider::after{content:"";flex:1;height:1px;background:var(--line)}
-  .home-cards{display:flex;flex-direction:column;gap:14px;margin-top:16px}
-  .hcard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
-    background:#fff;border:1px solid var(--line);border-radius:0;padding:20px 22px;
-    cursor:pointer;font-family:inherit;transition:.15s;position:relative}
-  .hcard:hover{border-color:var(--ink);}
-  .hcard:active{transform:scale(.99)}
-  .hcard .hc-emoji{font-size:34px;line-height:1;flex:none}
-  .hcard .hc-body{flex:1;min-width:0}
-  .hcard .hc-title{display:block;font-size:18px;font-weight:600;color:var(--ink);letter-spacing:-.01em;margin-bottom:4px}
-  .hcard .hc-desc{display:block;font-size:13.5px;color:var(--ink2);line-height:1.5}
-  .hcard .hc-go{font-size:22px;color:var(--muted);flex:none}
   .hcard.feat{background:#fff;border-color:var(--ink2)}
-  .hcard .hc-badge{position:absolute;top:-8px;right:16px;font-size:10.5px;font-weight:600;
-    letter-spacing:.03em;color:#fff;background:var(--ink);padding:3px 10px;border-radius:0}
   .home-foot{text-align:center;font-size:12.5px;color:var(--muted);margin-top:26px;line-height:1.7;padding:0 18px 20px}
   .home-sec{padding:38px 0;text-align:center}
   .home-sec.hs-alt{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -634,25 +603,9 @@
   .home-sec h3{font-size:clamp(17px,3.6vw,20px);font-weight:700;letter-spacing:-.01em;margin-bottom:10px}
   .home-sec p{font-size:16px;line-height:1.75;color:var(--ink2);max-width:520px;margin:0 auto}
   .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
-  /* ===== 시장 도구: 재건축 계산기 / 버블밴드 ===== */
-  .calc-tabs{display:flex;gap:8px;margin:16px 0 4px}
-  .calc-tabs button{flex:1;padding:12px 8px;border:1px solid var(--line);border-radius:var(--r-touch);background:#fff;font-weight:600;font-size:15px;color:var(--muted);cursor:pointer}
   .calc-tabs button.on{background:#1c2733;color:#fff;border-color:#1c2733}
-  .calc-card{border-radius:0;padding:18px 16px;margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media(max-width:560px){.calc-grid{grid-template-columns:1fr}}
-  .calc-f label{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:4px}
-  .calc-f input{width:100%;padding:10px;border:1px solid var(--line);border-radius:var(--r-touch);font-size:16px;box-sizing:border-box;background:#fff}
-  .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}
-  .calc-run{width:100%;margin-top:14px;padding:13px;border:0;border-radius:var(--r-touch);background:#1c2733;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  .calc-out{border-radius:0;padding:18px 16px;margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .calc-big{font-size:19px;font-weight:700;margin:0 0 4px}
-  .calc-big.good{color:#1a5276}.calc-big.bad{color:#a93226}.calc-big.mid{color:#b9770e}
-  .calc-desc{font-size:13.5px;color:var(--ink2);margin:0 0 12px;line-height:1.6}
-  .calc-kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
-  .calc-kv b{font-variant-numeric:tabular-nums;white-space:nowrap}
-  .calc-warn{color:#a93226;font-weight:500;margin:0}
-  .calc-note{font-size:12.5px;color:var(--muted);line-height:1.75;margin:14px 2px}
+  
+  .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}.calc-big.bad{color:#a93226}.calc-big.mid{color:#b9770e}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .bb-det{display:none;font-size:12.5px;color:var(--ink2);line-height:1.75;background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;margin:2px 0 10px}

@@ -2465,7 +2465,12 @@ function tbDraw(){
   var firstFut=true;
   rows.forEach(function(r){
     var cls=[];
-    if(r.fut){ cls.push('fut'); if(firstFut){ cls.push('now'); firstFut=false; } }
+    if(r.fut) cls.push('fut');
+    /* 굵은 줄은 '전부 미래인 첫 행'이 아니라 **미래가 처음 섞이는 행** 앞에 긋는다.
+       연 모드에서 2026년은 실적 2분기 + 추정 2분기라 fut가 아니고, 줄을 fut 기준으로
+       그으면 2027년 앞에 놓여 2026년 절반이 추정이라는 사실이 줄 위로 숨는다
+       (2026-08-06 사용자 지정). 분기·월 모드에는 섞인 행이 없어 동작이 같다. */
+    if(r.nf>0&&firstFut){ cls.push('now'); firstFut=false; }
     var mark='';
     if(r.mix) mark='<i class="tb-mx" title="실적과 착공 기준 추정이 섞인 기간">±</i>';
     else if(r.part) mark='<i class="tb-mx" title="'+r.n+'개월치만 있는 기간">·</i>';
@@ -2490,8 +2495,8 @@ function tbDraw(){
   if(n) n.textContent=(TB_PER==='y'?'한 해 합계 · ':TB_PER==='m'?'한 달치 · ':'')
     +'과거 칸은 왼쪽부터 매매·전세·월세, 미래 칸은 적정물량 대비';
   var f=document.getElementById('tb-foot');
-  if(f) f.innerHTML='굵은 줄 아래 '+B.H+'분기(3년)는 착공 실적으로 추정한 미래 공급입니다. '
-    +'0은 그 기간 착공이 실제로 없었다는 뜻입니다. <b>±</b>는 실적과 추정이 섞인 기간, '
+  if(f) f.innerHTML='굵은 줄부터 아래로 착공 실적으로 추정한 미래 공급이 섞입니다(최대 '
+    +B.H+'분기 = 3년). 0은 그 기간 착공이 실제로 없었다는 뜻입니다. <b>±</b>는 실적과 추정이 섞인 기간, '
     +'<b>·</b>는 기간이 덜 찬 칸이라 적정물량도 같은 비율로 줄여 견줍니다. '
     +'<sup>*</sup>는 적정물량이 추정치인 지역입니다.';
 }
