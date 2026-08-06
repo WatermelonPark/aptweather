@@ -194,9 +194,7 @@
   .qprogress{height:6px;background:var(--paper2);border-radius:0;margin:30px 0 8px;overflow:hidden}
   .qbar{height:100%;background:var(--ink);border-radius:0;transition:width .35s ease;width:0}
   .qcount{font-size:13px;font-weight:500;color:var(--muted);margin-bottom:18px}
-  /* 문제 카드 */
-  .qcard{}
-  .qq{font-size:21px;font-weight:600;line-height:1.4;margin-bottom:24px;letter-spacing:-.01em}
+    .qq{font-size:21px;font-weight:600;line-height:1.4;margin-bottom:24px;letter-spacing:-.01em}
   .qopts{display:flex;flex-direction:column;gap:12px}
   .qopts-lr{flex-direction:row;gap:12px}
   .qopts-lr .qopt{flex:1;text-align:center;display:flex;flex-direction:column;
@@ -605,7 +603,7 @@
   .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
   .calc-tabs button.on{background:#1c2733;color:#fff;border-color:#1c2733}
   
-  .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}.calc-big.bad{color:#a93226}.calc-big.mid{color:#b9770e}
+  .calc-f .hint{font-size:11px;color:var(--muted);margin-top:3px}.calc-big.mid{color:#b9770e}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .bb-det{display:none;font-size:12.5px;color:var(--ink2);line-height:1.75;background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;margin:2px 0 10px}
@@ -616,19 +614,6 @@
   .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted)}
   .bb-chip.hi{background:#fdecea;color:#a93226}
   .bb-chip.lo{background:#eaf3fb;color:#1a5276}
-  .sc-key .k-l::before,.sc-key .k-r::before{content:"";display:inline-block;
-    width:9px;height:9px;margin-right:6px}
-  .sc-key .k-r::before{background:#a93226}
-  .sc-key .k-r b{color:#a93226}
-  /* 표두 — 통계 원부의 조판. 표번호·제목·단위·표본·기준일만 담고
-     형용사는 담지 않는다. 아래 겹줄이 표두와 데이터의 경계를 긋는다. */
-  .thead{margin:28px 0 0;text-align:left}
-  .thead .th-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-  .thead .th-t{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
-  .thead .th-u{font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap}
-  .thead .th-m{margin-top:4px;font-size:11.5px;font-weight:500;color:var(--muted);line-height:1.55}
-  .thead::after{content:"";display:block;margin-top:8px;height:3px;
-    border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
   .sc-how{margin:24px 0 0;text-align:left;
     border-top:1px solid var(--line);padding-top:13px}
   /* 한 줄 각주: 왼쪽 = 산출 방법 토글 · 오른쪽 = 출처·주기.
@@ -652,7 +637,6 @@
   .sc-tier.g1{background:#edf0ee;color:#5e6f74}
   .sc-tier.g0{background:#e9f0f7;color:#1a5276}
   .sc-flag.warn{background:#fdecea;color:#a93226}
-  .sc-flag.watch{background:#f3ecfb;color:#7a4fb5}
   /* 좁은 화면: 고정폭 합이 커서 ▸(sc-go)가 화면 밖으로 밀려 가로 스크롤이 생겼다.
      반드시 .sc-val/.sc-tier 정의 '뒤'에 와야 덮어쓴다(같은 특이도라 순서가 승패를 가름). */
   @media(max-width:400px){
@@ -683,11 +667,6 @@ a.nav-btn,a.home-cta{text-decoration:none}
 
 /* 표 헤더는 항상 중앙정렬(2026-07-22 원칙) — 고정컬럼 헤더의 좌측 예외 무효화 */
 table.adv thead th:first-child{text-align:center}
-
-/* 히어로 내 지역(2026-07-31) — 첫 방문 질문+선택기 / 재방문 판정 */
-#hero-zone{margin-top:18px}
-/* 재고 궤적 5칸 — 존 페이지 .seq와 같은 규칙(부족=빨강). 폭은 카드에 맞춰 좁게. */
-.hz-seq{display:flex;gap:5px;max-width:300px;margin:9px 0 0}
 .hz-c.on i{background:#c0392b}
 .hz-c.on em{color:var(--ink2);font-weight:600}
 /* 제목이 모바일에서 '남나' 한 글자만 넘어가 못생겼다 — 부제로 분리(2026-08-02). */
