@@ -359,3 +359,51 @@ def test_hub_derive_units_excludes_incomplete_zone(monkeypatch):
     monkeypatch.setattr(U, '_load_bdong_map', lambda: _bdong())
     U.hub_derive(adv)
     assert '경기남부외곽권' not in adv['permits'].get('units', {})
+
+
+def _gate(lz_names, pm_names):
+    """main()의 최종 게이트 로직을 그대로 재현해 판정만 돌려준다.
+
+    (main은 네트워크·파일 IO가 얽혀 통째로 못 부른다. 판정식이 갈리지 않도록
+    조건을 소스와 같은 형태로 유지할 것.)
+    """
+    lz, pm = set(lz_names), set(pm_names)
+    if not (lz and pm):
+        return 'skip'
+    orphan_lz, orphan_pm = lz - pm, pm - lz
+    if len(orphan_lz) == len(lz):
+        return 'abort'
+    return 'note' if (orphan_lz or orphan_pm) else 'ok'
+
+
+def test_zone_name_divergence_gate():
+    """🚨 존 재정의가 한쪽에만 반영되면 data.js 쓰기를 막아야 한다(2026-08-05 리뷰).
+
+    permits는 코드의 LIVEZONE에서, livezone은 API 응답에서 만들어진다. 재정의 커밋
+    배포 시 permits만 새 이름으로 갈아타고 livezone이 급감 가드에 막히면, 두 이름이
+    하나도 안 겹쳐 make_zone_pages의 공급 조회가 전부 비고 전 존이 pre-HUB 폴백으로
+    조용히 롤백된다. pytest·check_dual_calc 어느 게이트에도 안 걸린다.
+    """
+    # 정상: 이름이 같다
+    assert _gate(['서울권', '부산권'], ['서울권', '부산권']) == 'ok'
+    # 사고: 존 재편으로 이름이 통째로 갈림 → 쓰기 차단
+    assert _gate(['경기남부권', '경기서부권'], ['수원권', '부천권']) == 'abort'
+    # 부분 불일치(존 하나가 공급 0 등)는 경고만 — 정상 운영을 막지 않는다
+    assert _gate(['서울권', '부산권', '제주권'], ['서울권', '부산권']) == 'note'
+    # 한쪽이 비면(HUB 비활성 등) 판정하지 않는다
+    assert _gate(['서울권'], []) == 'skip'
+    assert _gate([], ['서울권']) == 'skip'
+
+
+def test_zone_names_actually_match_now():
+    """현재 배포 데이터에서 두 이름 집합이 실제로 일치하는지(회귀 감지)."""
+    import io as _io, json as _json, re as _re
+    p = os.path.join(os.path.dirname(__file__), '..', '..', 'data.js')
+    if not os.path.exists(p):
+        return
+    s = _io.open(p, encoding='utf-8').read()
+    adv = _json.loads(_re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});', s, _re.S).group(1))
+    lz = {z['z'] for z in (adv.get('livezone') or {}).get('zones') or []}
+    pm = set((adv.get('permits') or {}).get('done') or {}) | set((adv.get('permits') or {}).get('sched') or {})
+    if lz and pm:
+        assert _gate(lz, pm) in ('ok', 'note'), 'livezone과 permits 존 이름이 통째로 갈렸다'
