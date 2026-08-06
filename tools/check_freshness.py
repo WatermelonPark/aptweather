@@ -111,6 +111,14 @@ def live_card_basis():
     return None
 
 
+def _q_to_date(q):
+    """'2026Q2' → 그 분기 마지막 날. 통계가 분기 단위라 '며칠 지났나'를 재려면 필요."""
+    y, n = int(q[:4]), int(q[5])
+    m = n * 3
+    d = 31 if m in (3, 12) else 30
+    return '%04d-%02d-%02d' % (y, m, d)
+
+
 def check_age(label, stamp, grace):
     """수집 시점 도장(YYYY-MM-DD)이 grace일보다 오래됐으면 실패 사유를 반환.
 
@@ -317,11 +325,21 @@ def main():
         core = urllib.request.urlopen(
             urllib.request.Request(SITE + '/data-core.js', headers=UA),
             timeout=60).read().decode('utf-8', 'replace')
-        m = re.search(r'"sido":\{[^{]*"L":"(\d{4}Q[1-4])"', core)
-        if not m:
-            fails.append('ADV.sido를 라이브 data-core.js에서 못 찾았다 — 홈 표가 안 그려진다')
+        # ⚠️ 정규식으로 'L' 값만 긁지 않는다 — 키 순서가 바뀌면 조용히 못 찾는다.
+        # ADV 블록을 통째로 파싱해 지역 수까지 본다.
+        m = re.search(r'const ADV=(\{.*?\});\s*const STATS', core, re.S)
+        sido = json.loads(m.group(1)).get('sido') if m else None
+        if not sido or not sido.get('zones'):
+            fails.append('라이브 data-core.js에 ADV.sido가 없다 — 홈 표가 안 그려진다')
         else:
-            print('  실적 마지막 분기: %s' % m.group(1))
+            n_z = len(sido['zones'])
+            print('  실적 마지막 분기 %s · 착공 %s · 미래 %d분기 · 지역 %d곳'
+                  % (sido.get('L'), sido.get('S'), sido.get('H', 0), n_z))
+            if n_z < 20:
+                fails.append('ADV.sido 지역이 %d곳뿐이다(20곳이어야 함) — 빠진 곳: %s'
+                             % (n_z, ', '.join(sido.get('missing') or ['?'])))
+            fails.append(check_age('시도 지표', None if not sido.get('L') else
+                                   _q_to_date(sido['L']), 200))
     except Exception as e:
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 

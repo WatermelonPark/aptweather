@@ -1165,7 +1165,6 @@ def write_adv(adv):
     io.open(DATA, 'w', encoding='utf-8').write(c2)
 
 
-# ---- 생활권 입주예정 (odcloud 단지별 → 생활권 집계, 인구 대비 강도) ----
 # ── 생활권(31곳)·건축HUB 파생 코드는 2026-08-06에 통째로 걷어냈다 ──────────
 # 지역이 국토부 통계와 같은 시도 단위가 되면서 안분 잣대(LIVEZONE/LZ_*)도,
 # 단지별 수집(fetch_hub_permits → hub_derive)도 필요 없어졌다. 미래 공급을

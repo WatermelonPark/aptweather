@@ -165,7 +165,6 @@
   .nav-btn.on{color:#fff}
     .nav-btn svg{display:block}
 
-
   /* ===== 테스트 ===== */
   .quiz-wrap{max-width:560px;margin:0 auto;padding:0 18px 120px;min-height:80vh}
   .quiz-hero{padding:56px 4px 0;text-align:center}
@@ -542,9 +541,8 @@
   .rk-same{color:var(--muted)}
   .rk-medal{margin-right:3px;font-size:13px;vertical-align:-1px}
   .rk-new{color:var(--muted);font-weight:600;font-size:11px}
-  .map-hint{display:none;text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:8px}
   .map-suplegend{text-align:center;font-size:12px;font-weight:500;color:var(--muted);margin-top:10px}
-  @media(max-width:720px){.map-hint{display:block}}
+  @media(max-width:720px){}
   .tilemap svg text{font-family:inherit}
   .gt-head{display:flex;justify-content:flex-end;margin:0 0 10px}
   .chartwrap.sm{height:300px;position:relative}
@@ -665,30 +663,10 @@
   .bb-chip{flex:none;width:88px;text-align:center;font-size:11px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted)}
   .bb-chip.hi{background:#fdecea;color:#a93226}
   .bb-chip.lo{background:#eaf3fb;color:#1a5276}
-  /* 아공맵 스코어 */
-  .sc-row{display:flex;align-items:center;gap:7px;margin:1px 0;padding:8px 0;cursor:pointer;text-decoration:none;color:inherit;border-bottom:1px solid #e8ecea;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
-  .sc-row:last-child{border-bottom:0}
-  .sc-go{flex:none;width:10px;text-align:right;color:#adbcb5;font-weight:600}
-  .sc-lab{flex:none;width:78px;text-align:left;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 아공맵 헤더 — 축(axis) 키 */
-  .sc-lead{font-size:16px;line-height:1.75;color:var(--ink2);max-width:470px;margin:0 auto}
-  .sc-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:13px 0 0}
-  .sc-chips span{font-size:11.5px;font-weight:500;color:var(--muted);background:#fff;
-    border:1px solid var(--line);border-radius:0;padding:4px 11px}
-  /* 색 범례 — 축 지시물이 아니다. 이전 형태(반으로 가른 상자)는 가운데 경계가
-     0선을 가리키는 척했지만 트랙 좌우 고정폭이 비대칭이라 실제 0선과 22px
-     어긋나 있었다(감사 M-2). 경계를 주장하지 않는 칩 범례로 격하한다.
-     칩 색은 막대 색과 반드시 일치시킬 것: 과잉=파랑 #1a5276 · 부족=빨강 #a93226 */
-  .sc-key{display:flex;justify-content:center;gap:22px;margin:16px auto 0}
-  .sc-key>div{flex:none}
   .sc-key .k-l::before,.sc-key .k-r::before{content:"";display:inline-block;
     width:9px;height:9px;margin-right:6px}
-  .sc-key .k-l::before{background:#1a5276}
   .sc-key .k-r::before{background:#a93226}
-  .sc-key b{display:inline;font-size:12.5px;font-weight:600;letter-spacing:-.01em}
-  .sc-key .k-l b{color:#1a5276}
   .sc-key .k-r b{color:#a93226}
-  .sc-key i{display:inline;font-style:normal;font-size:11px;font-weight:500;color:var(--muted);margin-left:5px}
   /* 표두 — 통계 원부의 조판. 표번호·제목·단위·표본·기준일만 담고
      형용사는 담지 않는다. 아래 겹줄이 표두와 데이터의 경계를 긋는다. */
   .thead{margin:28px 0 0;text-align:left}
@@ -698,9 +676,6 @@
   .thead .th-m{margin-top:4px;font-size:11.5px;font-weight:500;color:var(--muted);line-height:1.55}
   .thead::after{content:"";display:block;margin-top:8px;height:3px;
     border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
-  .sc-keycap{font-size:11.5px;color:var(--muted);margin-top:8px}
-  .sc-hd{max-width:640px;margin:26px auto 8px;font-size:12px;font-weight:500;
-    color:var(--muted);text-align:left;line-height:1.6}
   .sc-how{margin:24px 0 0;text-align:left;
     border-top:1px solid var(--line);padding-top:13px}
   /* 한 줄 각주: 왼쪽 = 산출 방법 토글 · 오른쪽 = 출처·주기.
@@ -712,43 +687,24 @@
   .sc-how[open] summary .t::after{content:' ▴'}
   .sc-how .src{font-size:11.5px;font-weight:500;color:var(--muted)}
   .sc-how .body{margin-top:9px;font-size:13px;line-height:1.9;color:var(--ink2)}
-  .sc-track{flex:1;min-width:56px;height:14px;background:#dee4e1;border-radius:0;position:relative}
-  .sc-fill{position:absolute;top:0;bottom:0;border-radius:0}
   /* 영점(적정 공급) 척추 — 막대는 카드 속 그래픽이 아니라 이 선에서
      좌우로 자라난 조직이다. 행 간격을 건너 하나의 연속선으로 잇고,
      블록 밖으로는 넘기지 않도록 첫 행 위·끝 행 아래만 잘라낸다. */
   .sc-zero{position:absolute;left:50%;top:-16px;bottom:-16px;width:1px;
     margin-left:-.5px;background:var(--ink);opacity:.5;z-index:2}
-  .sc-row:first-of-type .sc-zero{top:0}
-  .sc-row:last-of-type .sc-zero{bottom:0}
-  .sc-val{flex:none;width:62px;text-align:right;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
   .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted);white-space:nowrap}
   .sc-tier.g4{background:#fdecea;color:#a93226}
   .sc-tier.g3{background:#fbeee9;color:#c0392b}
   .sc-tier.g2{background:#faf3e7;color:#b9770e}
   .sc-tier.g1{background:#edf0ee;color:#5e6f74}
   .sc-tier.g0{background:#e9f0f7;color:#1a5276}
-  .sc-ghead{font-weight:700;font-size:13px;margin:14px 0 4px;padding-bottom:3px;border-bottom:2px solid currentColor}
-  .sc-ghead i{font-style:normal;font-weight:400;color:var(--muted);font-size:11.5px}
-  .sc-flag{flex:none;font-size:11px;font-weight:600;width:18px;text-align:center;border-radius:0;line-height:1.5}
   .sc-flag.warn{background:#fdecea;color:#a93226}
   .sc-flag.watch{background:#f3ecfb;color:#7a4fb5}
   /* 좁은 화면: 고정폭 합이 커서 ▸(sc-go)가 화면 밖으로 밀려 가로 스크롤이 생겼다.
      반드시 .sc-val/.sc-tier 정의 '뒤'에 와야 덮어쓴다(같은 특이도라 순서가 승패를 가름). */
   @media(max-width:400px){
-    .sc-row{gap:5px}
-    .sc-lab{width:66px}
-    .sc-val{width:56px}
     .sc-tier{width:52px}
-    .sc-track{min-width:44px}
   }
-  .sc-det{display:none;font-size:12.5px;color:var(--ink2);line-height:1.75;background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;margin:2px 0 10px}
-  /* 내 지역 카드 */
-  .mz-diff{font-weight:700;margin-left:6px}
-  .mz-change{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer}
-  .mz-sum{margin:0 0 10px}
-  .mz-sido,.mz-zones{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-  .mz-chip{border:1px solid var(--line);background:#fff;padding:7px 12px;cursor:pointer;font-size:13.5px}
   .mz-chip.zone{display:inline-flex;align-items:center;gap:6px}
   /* 2단 선택의 층위를 시각으로 나눈다. 예전엔 1·2차가 같은 칩이라, 시도를 누르면
      화면에 칩이 20~30개 깔려 어디를 눌러야 하는지 헷갈렸다(2026-08-01 지적).
@@ -758,25 +714,6 @@
   .mz-sido.picked .mz-chip:not(.on){opacity:.4}
   .mz-sido.picked .mz-chip:not(.on):hover,
   .mz-sido.picked .mz-chip:not(.on):focus-visible{opacity:1}
-  .mz-zones .mz-chip{border-color:var(--ink2);color:var(--ink);font-weight:600}
-  .mz-zones .mz-chip:hover{border-color:var(--ink);background:var(--paper2)}
-  /* 생활권 입주예정 지도 */
-  .lz-reg{margin:7px 0}
-  .lz-regname{font-size:12px;font-weight:600;color:var(--muted);margin:0 2px 5px}
-  .lz-tiles{display:flex;flex-wrap:wrap;gap:6px}
-  .lz-tile.lz-nd{background:var(--paper);border:1px dashed var(--line);color:var(--muted)}
-.lz-tile.lz-nd .lz-tv{color:var(--muted);font-weight:700}
-.lz-tile{border:1px solid #d8dfdc;border-radius:0;padding:6px 3px;width:70px;cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;-webkit-tap-highlight-color:rgba(0,0,0,.06);position:relative}
-  .lz-tile:active{outline:1.5px solid var(--ink);outline-offset:-1.5px}
-  .lz-tn{font-size:12px;font-weight:600;color:#1b2426}
-  .lz-tv{font-size:11px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
-  .lz-row{display:flex;align-items:center;gap:8px;margin:1px 0;padding:5px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
-  .lz-lab{flex:none;width:80px;font-size:12.5px;font-weight:500;color:var(--ink2)}
-  .lz-track{flex:1;height:15px;background:#f1f3f5;border-radius:0;overflow:hidden}
-  .lz-fill{height:100%;border-radius:0}
-  .lz-val{flex:none;width:32px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
-  .lz-jt{flex:none;width:66px;text-align:right;font-size:11px;font-weight:600}
-  .lz-det{background:#f7f9f8;border:1px solid var(--line);border-radius:0;padding:10px 12px;font-size:12.5px;line-height:1.8;color:var(--ink2);margin-top:8px}
   /* --- 접근성 기본선 --- */
   a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,
   summary:focus-visible,[tabindex]:focus-visible,[role="button"]:focus-visible{
@@ -796,39 +733,12 @@ table.adv thead th:first-child{text-align:center}
 
 /* 히어로 내 지역(2026-07-31) — 첫 방문 질문+선택기 / 재방문 판정 */
 #hero-zone{margin-top:18px}
-.hz-q{font-size:18px;font-weight:700;margin:0 0 6px}
-.hz-verdict{display:inline-block;text-align:center}
-.hz-head{display:flex;align-items:center;justify-content:center;gap:10px;font-size:22px;font-weight:700}
-.hz-desc{margin:6px 0 0;font-weight:600}
-.hz-meta{color:var(--muted);font-size:12.5px;margin:0}
-.hz-links{margin:10px 0 0;display:flex;gap:16px;justify-content:center;align-items:center}
-.hz-links a{font-weight:700;text-decoration:underline}
-/* 내 지역 고정 행 — 순위표 맨 위(2026-08-02 C안). 히어로 카드를 걷어내고
-   순위 맥락 안에 둔다. 표 행과 붙어 보이도록 좌우 여백을 맞추고 아래만 띄운다. */
-.sc-mine{border:1px solid var(--line);border-left:3px solid var(--ink);
- background:#fff;padding:11px 13px 12px;margin:0 0 10px}
-.sm-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.sm-tag{font-size:11px;font-weight:700;color:#fff;background:var(--ink);padding:2px 6px;border-radius:2px}
-.sm-name{font-size:16px;font-weight:700;color:var(--ink);text-decoration:none}
-.sm-name:hover{text-decoration:underline}
-.sm-rank{font-size:12px;color:var(--muted)}
-.sm-x{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;
- width:30px;height:30px;border:0;background:none;color:var(--muted);cursor:pointer;border-radius:3px}
-.sm-x:hover{color:var(--ink);background:rgba(0,0,0,.05)}
-.sm-desc{margin:7px 0 0;font-size:14px;font-weight:600;color:var(--ink)}
 /* 재고 궤적 5칸 — 존 페이지 .seq와 같은 규칙(부족=빨강). 폭은 카드에 맞춰 좁게. */
 .hz-seq{display:flex;gap:5px;max-width:300px;margin:9px 0 0}
-.hz-c{flex:1 1 0;text-align:center}
-.hz-c i{display:block;height:6px;border-radius:2px;background:#cfd8d4}
 .hz-c.on i{background:#c0392b}
-.hz-c em{display:block;font-style:normal;font-size:10.5px;color:var(--muted);margin-top:3px}
 .hz-c.on em{color:var(--ink2);font-weight:600}
 /* 제목이 모바일에서 '남나' 한 글자만 넘어가 못생겼다 — 부제로 분리(2026-08-02). */
 .sec-sub{color:var(--muted);font-size:13.5px}
-.sc-lab .sc-sub{display:block;font-style:normal;font-size:10.5px;font-weight:400;color:var(--muted);line-height:1.3}
-.sc-more{display:block;text-align:center;margin:14px 0 4px;padding:10px;border:1px solid var(--line);
- background:#fff;font-weight:600;font-size:13.5px;color:var(--ink);text-decoration:none}
-.sc-more:hover{border-color:var(--ink)}
 
 /* 순위 섹션만 여백을 조인다(2026-08-02) — 홈 첫 화면에 순위 행이 더 들어오게.
    .home-sec/.thead 전역 값은 다른 섹션 리듬이라 건드리지 않고 여기서만 좁힌다. */
@@ -837,10 +747,8 @@ table.adv thead th:first-child{text-align:center}
  padding:11px 8px;font-size:13px;color:var(--muted);text-decoration:none;
  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
  background:repeating-linear-gradient(135deg,transparent,transparent 6px,rgba(0,0,0,.02) 6px,rgba(0,0,0,.02) 12px)}
-.sc-gap:hover{color:var(--ink)}
 #sec-score{padding-top:22px}
 #sec-score h2{margin-bottom:4px}
-#sec-score .sc-key{margin-top:12px}
 #sec-score .thead{margin-top:18px}
 .sec-sub{margin:0 0 0}
 

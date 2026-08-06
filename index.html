@@ -2346,90 +2346,94 @@ function sidoOf(nm){ var a=sidoAll(); for(var i=0;i<a.length;i++) if(a[i].z===nm
    행=기간, 열=시도 20곳, 칸=공급 세대수 + 배경색.
    과거 칸은 세로 3등분(왼쪽부터 매매/전세/월세), 미래 칸은 적정물량 대비 단색.
    ⚠️ 값이 정확히 0.00일 때만 무색이다. 옅은 값을 흰색으로 두면 오류처럼 보인다
-   (2026-08-06 사용자 지적) — TB_MIN이 그 바닥을 만든다. */
+   (2026-08-06 사용자 지적) — TB_MIN이 그 바닥을 만든다.
+
+   ⚠️ 표는 **월 단위로 짓고 위로 합친다**. 분기로 고정해 짓던 첫 구현에는 셋이
+   같이 있었다(2026-08-06 리뷰): 연 모드의 혼합 표시가 모든 과거 연도에 붙었고,
+   부분 기간(2029년 2분기치·2017년 3분기치)이 1년치 적정물량과 비교돼 과대 부족으로
+   보였고, '월' 버튼은 눌려도 분기 표를 그렸다. 합치는 칸 수(n)를 들고 다니면
+   적정물량도 같은 비율로 따라와 셋이 한꺼번에 해결된다. */
 var TB_PER='q';
 var TB_MIN=0.13;          // 0이 아니면 최소 이만큼은 물들인다
-var TB_PRICE_SCALE=2;     // 가격 변동 ±2%가 만색
-var TB_FROM=2017*4+1;     // 표 시작 = 2017Q2 (기준표 표와 같은 구간)
+var TB_PRICE_SCALE=2;     // 가격 변동 ±2%가 만색. ±3%로 넓히지 말 것 —
+                          // 최근 서울이 진한 건 실제로 공급부족이라서다(사용자 확인).
+var TB_FROM=2017*12;      // 표 시작 = 2017.01 (기준표 표와 같은 구간)
+var TB_SIZE={m:1,q:3,y:12};
 function tbTint(v,scale){
   if(v==null||v===0) return 'transparent';
   var a=(TB_MIN+(1-TB_MIN)*Math.min(1,Math.abs(v)/scale))*0.8;
   return (v>0?'rgba(198,58,48,':'rgba(38,110,180,')+a.toFixed(3)+')';
 }
-function tbQi(y,q){ return y*4+q-1; }
+function tbMi(d){ return +d.slice(0,4)*12 + (+d.slice(5,7)-1); }   // 'YYYY.MM'/'YYYY-MM' → 월 인덱스
 function tbLabel(i,per){
-  var y=Math.floor(i/4), q=i%4+1;
+  var y=Math.floor(i/12);
   if(per==='y') return String(y);
-  return ('0'+(y%100)).slice(-2)+'Q'+q;
+  if(per==='q') return ('0'+(y%100)).slice(-2)+'Q'+(Math.floor((i%12)/3)+1);
+  return ('0'+(y%100)).slice(-2)+'.'+(i%12+1);
 }
-/* STATS 월별 시리즈 -> {분기 인덱스:[합, 월수]}.
+/* 월별 원장. 여기서만 원자료를 읽고, 아래 tbAgg가 기간 단위로 접는다.
    ⚠️ KOSIS는 값 0을 '-'로 준다. null은 결측이 아니라 진짜 0이다(시도합÷전국이
-   모든 연도 1.00). 건너뛰면 그 분기가 통째로 사라진다. */
-function tbQuarters(key,reg){
-  var s=STATS[key]; if(!s||!s.series||!s.series[reg]) return {};
-  var out={},d=s.dates,v=s.series[reg];
-  for(var k=0;k<d.length;k++){
-    var y=+d[k].slice(0,4), m=+d[k].slice(5,7), i=tbQi(y,Math.floor((m-1)/3)+1);
-    var c=out[i]||[0,0]; c[0]+=(v[k]||0); c[1]++; out[i]=c;
-  }
-  return out;
-}
-/* 가격 변동률(ADV.monthly)을 분기로 합친다 — 월별 변동률의 합이 분기 변동률이다. */
-function tbPrice(){
-  var M=ADV.monthly; if(!M||!M.rows) return {regions:[],q:{}};
-  var q={};
-  M.rows.forEach(function(r){
-    var y=+r.p.slice(0,4), m=+r.p.slice(5,7), i=tbQi(y,Math.floor((m-1)/3)+1);
-    var c=q[i]; if(!c){ c=q[i]={ma:[],je:[],wo:[]}; }
-    ['ma','je','wo'].forEach(function(f){
-      (r[f]||[]).forEach(function(v,n){ if(v!=null) c[f][n]=(c[f][n]||0)+v; });
-    });
-  });
-  return {regions:M.regions||[],q:q};
-}
+   모든 연도 1.00). 건너뛰면 그 달이 통째로 사라진다. */
 function tbBuild(){
   var S=ADV.sido; if(!S||!S.zones||!S.zones.length) return null;
+  var D=STATS['준공'], K=STATS['착공']; if(!D||!K) return null;
   var regs=S.zones.map(function(z){return z.z;});
   var refs={}, est={}; S.zones.forEach(function(z){ refs[z.z]=z.ref; est[z.z]=z.est; });
-  var done={}, start={};
-  regs.forEach(function(r){ done[r]=tbQuarters('준공',r); start[r]=tbQuarters('착공',r); });
-  var P=tbPrice(), pidx={}; P.regions.forEach(function(r,i){ pidx[r]=i; });
-  var L=tbQi(+S.L.slice(0,4),+S.L.slice(5)), H=S.H, lead=S.lead, conv=S.conv;
+  var di={}, ki={};
+  D.dates.forEach(function(d,n){ di[tbMi(d)]=n; });
+  K.dates.forEach(function(d,n){ ki[tbMi(d)]=n; });
+  var lastD=tbMi(D.dates[D.dates.length-1]);
+  var lastK=tbMi(K.dates[K.dates.length-1]);
+  var LEAD=S.lead*3;                       // 12분기 = 36개월
+  var pi={}, P=ADV.monthly||{};
+  (P.regions||[]).forEach(function(r,n){ pi[r]=n; });
+  var prow={};
+  (P.rows||[]).forEach(function(r){ prow[tbMi(r.p)]=r; });
   var rows=[];
-  for(var i=TB_FROM;i<=L+H;i++){
-    var fut=i>L, cells=[];
+  for(var i=TB_FROM;i<=lastK+LEAD;i++){
+    var fut=i>lastD, sup=[];
     for(var k=0;k<regs.length;k++){
-      var r=regs[k], v;
-      if(fut){ var st=start[r][i-lead]; v=st?Math.round(st[0]*conv):0; }
-      else   { var dn=done[r][i]; v=(dn&&dn[1]===3)?dn[0]:(dn?dn[0]:0); }
-      cells.push(v);
+      var r=regs[k];
+      if(fut){
+        var j=ki[i-LEAD];
+        sup.push(j==null?0:Math.round(((K.series[r]||[])[j]||0)*S.conv));
+      }else{
+        var n=di[i];
+        sup.push(n==null?0:((D.series[r]||[])[n]||0));
+      }
     }
-    var pq=P.q[i]||null;
-    rows.push({i:i,fut:fut,s:cells,
-      m:(!fut&&pq)?regs.map(function(r){return pq.ma[pidx[r]];}):null,
-      j:(!fut&&pq)?regs.map(function(r){return pq.je[pidx[r]];}):null,
-      w:(!fut&&pq)?regs.map(function(r){return pq.wo[pidx[r]];}):null});
+    var pr=fut?null:prow[i];
+    rows.push({i:i,fut:fut,s:sup,
+      m:pr?regs.map(function(r){return (pr.ma||[])[pi[r]];}):null,
+      j:pr?regs.map(function(r){return (pr.je||[])[pi[r]];}):null,
+      w:pr?regs.map(function(r){return (pr.wo||[])[pi[r]];}):null});
   }
-  return {regs:regs,refs:refs,est:est,rows:rows,L:L,H:H,S:S};
+  return {regs:regs,refs:refs,est:est,rows:rows,H:S.H,L:S.L};
 }
-/* 분기 행 -> 연 행. 공급은 합, 가격 변동률도 합(분기 변동률의 합 = 연 변동률). */
-function tbToYear(B){
-  var out=[],cur=null;
-  B.rows.forEach(function(r){
-    var y=Math.floor(r.i/4);
-    if(!cur||cur.y!==y){
-      cur={y:y,i:y*4,s:B.regs.map(function(){return 0;}),m:null,j:null,w:null,fut:true,mix:false};
+/* 월 원장 → 기간 단위. n(합친 달 수)을 같이 돌려줘야 부분 기간의 적정물량이
+   같은 비율로 줄어든다 — 안 그러면 2029년(2분기치)이 1년치 기준과 비교돼
+   과대 부족으로 보인다. */
+function tbAgg(rows,per){
+  var size=TB_SIZE[per]||3, out=[], cur=null, key=null;
+  rows.forEach(function(r){
+    var g=Math.floor(r.i/size);
+    if(cur===null||g!==key){
+      key=g;
+      cur={i:g*size,n:0,nf:0,s:r.s.map(function(){return 0;}),m:null,j:null,w:null};
       out.push(cur);
     }
+    cur.n++; if(r.fut) cur.nf++;
     r.s.forEach(function(v,k){ cur.s[k]+=v; });
-    if(r.m){
-      ['m','j','w'].forEach(function(f){
-        if(!cur[f]) cur[f]=B.regs.map(function(){return null;});
-        r[f].forEach(function(v,k){ if(v!=null) cur[f][k]=(cur[f][k]||0)+v; });
-      });
-      if(cur.fut) cur.mix=(cur.s.length>0);   // 실적 분기가 있으면 미래 아님
-      cur.fut=false;
-    } else if(!cur.fut) cur.mix=true;          // 실적 + 추정이 한 해에 섞였다
+    ['m','j','w'].forEach(function(f){
+      if(!r[f]) return;
+      if(!cur[f]) cur[f]=r.s.map(function(){return null;});
+      r[f].forEach(function(v,k){ if(v!=null) cur[f][k]=(cur[f][k]||0)+v; });
+    });
+  });
+  out.forEach(function(c){
+    c.fut=(c.nf===c.n);                 // 전부 미래일 때만 미래 행
+    c.mix=(c.nf>0&&c.nf<c.n);           // 실적과 추정이 한 칸에 섞였다
+    c.part=(c.n<size);                  // 기간이 덜 찼다(표 시작·끝)
   });
   return out;
 }
@@ -2446,27 +2450,28 @@ function tbDraw(){
   var B=tbBuild();
   if(!B){ var sec=document.getElementById('sec-score'); if(sec) sec.style.display='none'; return; }
   var rel=(document.getElementById('tb-rel')||{}).checked;
-  var yr=(TB_PER==='y');
-  var rows=yr?tbToYear(B):B.rows;
-  var mul=yr?4:1;
+  var size=TB_SIZE[TB_PER]||3;
+  var rows=tbAgg(B.rows,TB_PER);
   var h='<thead><tr><th>기간</th>';
   B.regs.forEach(function(r){
     h+='<th><a class="tb-zl" href="/zone/'+encodeURIComponent(r)+'/">'+r+'</a>'
-       +(B.est[r]?'<sup title="적정물량이 추정치인 지역">*</sup>':'')+'</th>';
+      +(B.est[r]?'<sup title="적정물량이 추정치인 지역">*</sup>':'')+'</th>';
   });
   h+='</tr><tr class="tb-ref"><th>적정물량</th>';
   B.regs.forEach(function(r){
-    h+='<th>'+(B.refs[r]*mul).toLocaleString()+'</th>';
+    h+='<th>'+Math.round(B.refs[r]*size/3).toLocaleString()+'</th>';
   });
   h+='</tr></thead><tbody>';
   var firstFut=true;
   rows.forEach(function(r){
     var cls=[];
     if(r.fut){ cls.push('fut'); if(firstFut){ cls.push('now'); firstFut=false; } }
-    if(r.mix) cls.push('mix');
-    h+='<tr class="'+cls.join(' ')+'"><td>'+tbLabel(r.i,TB_PER)+(r.mix?'<i class="tb-mx" title="실적과 추정이 섞인 해">±</i>':'')+'</td>';
+    var mark='';
+    if(r.mix) mark='<i class="tb-mx" title="실적과 착공 기준 추정이 섞인 기간">±</i>';
+    else if(r.part) mark='<i class="tb-mx" title="'+r.n+'개월치만 있는 기간">·</i>';
+    h+='<tr class="'+cls.join(' ')+'"><td>'+tbLabel(r.i,TB_PER)+mark+'</td>';
     for(var k=0;k<B.regs.length;k++){
-      var ref=B.refs[B.regs[k]]*mul, v=r.s[k];
+      var ref=B.refs[B.regs[k]]*r.n/3, v=r.s[k];
       var txt=rel?(ref?Math.round(v/ref*100)+'%':'–'):v.toLocaleString();
       var lay;
       if(r.fut){
@@ -2482,10 +2487,13 @@ function tbDraw(){
   });
   el.innerHTML=h+'</tbody>';
   var n=document.getElementById('tb-note');
-  if(n) n.textContent=(TB_PER==='y'?'한 해 합계 · ':'')+'과거 칸은 왼쪽부터 매매·전세·월세, 미래 칸은 적정물량 대비';
+  if(n) n.textContent=(TB_PER==='y'?'한 해 합계 · ':TB_PER==='m'?'한 달치 · ':'')
+    +'과거 칸은 왼쪽부터 매매·전세·월세, 미래 칸은 적정물량 대비';
   var f=document.getElementById('tb-foot');
-  if(f) f.innerHTML='굵은 줄 아래 '+B.H+'분기('+(B.H/4).toFixed(0)+'년)는 착공 실적으로 추정한 미래 공급입니다. '
-    +'0은 그 기간 착공이 실제로 없었다는 뜻입니다. <sup>*</sup>는 적정물량이 추정치인 지역입니다.';
+  if(f) f.innerHTML='굵은 줄 아래 '+B.H+'분기(3년)는 착공 실적으로 추정한 미래 공급입니다. '
+    +'0은 그 기간 착공이 실제로 없었다는 뜻입니다. <b>±</b>는 실적과 추정이 섞인 기간, '
+    +'<b>·</b>는 기간이 덜 찬 칸이라 적정물량도 같은 비율로 줄여 견줍니다. '
+    +'<sup>*</sup>는 적정물량이 추정치인 지역입니다.';
 }
 function renderHeroMap(){
   const el=document.getElementById('hero-map');

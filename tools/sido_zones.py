@@ -151,12 +151,16 @@ def calc(stats, today=None):
     H = S + LEAD_Q - L
     if H <= 0:
         raise ValueError('미래 시야가 0 이하다 (착공 %s, 준공 %s)' % (qkey(S), qkey(L)))
-    out = []
+    out, missing = [], []
     for z in ORDER:
         ref = REF_Q[z]
         dn = quarterly(stats, '준공', z)
         st = quarterly(stats, '착공', z)
         if not dn or not st:
+            # ⚠️ 조용히 넘기면 그 지역이 표·페이지·sitemap에서 통째로 사라진다.
+            # update_adv_data의 sido 가드가 '지역 수 감소'를 잡지만, 왜 줄었는지는
+            # 여기서만 알 수 있다. 이 프로젝트에서 조용한 소거로 세 번 사고가 났다.
+            missing.append(z)
             continue
         dq = demol_q(stats, z)
         inow = sum(dn.get(i, 0) - dq - ref for i in range(L - BACKLOG_WINDOW + 1, L + 1))
@@ -169,9 +173,14 @@ def calc(stats, today=None):
             'ref': ref, 'inow': round(inow), 'fut': round(fut), 'need': need,
             'tot': round(tot), 'ratio': round(ratio, 4), 'grade': grade(ratio),
         })
+    if missing:
+        import sys as _s
+        print('⚠️ sido_zones: 준공·착공 시리즈가 없어 빠진 지역 %d곳 — %s '
+              '(STATS 부분 응답 의심. 이 지역들은 표·페이지·sitemap에서 사라진다)'
+              % (len(missing), ', '.join(missing)), file=_s.stderr)
     return {'L': qkey(L), 'S': qkey(S), 'H': H,
             'lead': LEAD_Q, 'conv': CONV, 'window': BACKLOG_WINDOW,
-            'zones': out}
+            'missing': missing, 'zones': out}
 
 
 def zone_order(rows):

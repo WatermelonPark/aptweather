@@ -33,7 +33,9 @@ import sido_zones as SZ                                            # noqa: E402
 SITE = 'https://www.agongmap.co.kr'
 OUT = os.path.join(ROOT, 'zone')
 GA = 'G-3FJNG6G1F3'
-TABLE_FROM = SZ.qidx(2017, 2)          # 표 시작 — 기준표 표와 같은 구간
+# 표 시작. 홈 통합표(index.html TB_FROM = 2017.01)와 같은 지점이어야 한다 —
+# 두 화면이 같은 지역을 다른 구간으로 그리면 숫자를 맞춰보는 사람이 어긋난 걸 본다.
+TABLE_FROM = SZ.qidx(2017, 1)
 
 GRADE_TXT = {
     'g4': ('매우 부족', '#a93226', '앞으로 3년, 필요한 집이 크게 모자랍니다'),
