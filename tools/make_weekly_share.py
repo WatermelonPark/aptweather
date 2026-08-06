@@ -6,12 +6,16 @@ data.js의 ADV.weekly 최신 주차를 읽어 17개 시도 타일 지도를 그�
 
 사용: python tools/make_weekly_share.py
 """
-import io, os, re, json, sys
+import io, os, re, json, sys, datetime
 from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 from make_beginner_cards import noto  # noqa: E402
+
+def _kdate(d):
+    return '%d월 %d일' % (d.month, d.day)
+
 
 INK = (22, 32, 58)
 PAPER = (246, 244, 238)
@@ -61,12 +65,20 @@ def main():
 
     # 헤더
     d.text((IW // 2, 66), '이번 주 아파트 시세 지도', font=noto(46), fill=INK, anchor='mm')
-    d.text((IW // 2, 122), '%s 기준 · 매매가격 전주 대비 변동률(%%)' % row['p'], font=noto(24), fill=MUTED, anchor='mm')
+    # 조사기준일(월)과 갱신일(=공표 후 배치가 받아온 날)을 **함께** 적는다.
+    # 조사기준일만 적으면 카드가 멈춰도 신선한지 묵은 건지 알 방법이 없다 —
+    # 실제로 2026-07-18 카드가 3주간 '이번 주'로 나가고 있었다(2026-08-06 발견).
+    # 조사기준일을 갱신일로 바꾸는 건 안 된다: 이 변동률이 측정한 시점은 월요일이고
+    # 부동산원 공식 표기도 조사기준일이다. 바꾸면 숫자의 시점을 잘못 말하게 된다.
+    d.text((IW // 2, 118), '%s 조사 기준 · 매매가격 전주 대비 변동률(%%)' % row['p'],
+           font=noto(24), fill=MUTED, anchor='mm')
+    d.text((IW // 2, 146), '%s 갱신' % _kdate(datetime.date.today()),
+           font=noto(20), fill=MUTED, anchor='mm')
     # 범례
-    d.rounded_rectangle((IW // 2 - 190, 150, IW // 2 - 168, 172), 5, fill=UP)
-    d.text((IW // 2 - 158, 161), '상승', font=noto(21), fill=INK, anchor='lm')
-    d.rounded_rectangle((IW // 2 + 20, 150, IW // 2 + 42, 172), 5, fill=DN)
-    d.text((IW // 2 + 52, 161), '하락', font=noto(21), fill=INK, anchor='lm')
+    d.rounded_rectangle((IW // 2 - 190, 174, IW // 2 - 168, 196), 5, fill=UP)
+    d.text((IW // 2 - 158, 185), '상승', font=noto(21), fill=INK, anchor='lm')
+    d.rounded_rectangle((IW // 2 + 20, 174, IW // 2 + 42, 196), 5, fill=DN)
+    d.text((IW // 2 + 52, 185), '하락', font=noto(21), fill=INK, anchor='lm')
 
     # 타일 지도 (4열)
     TW, TH, G = 196, 128, 14
