@@ -84,6 +84,39 @@ def live_hub_meta():
     return (get_json(SITE + '/tools/data/hub_permits.json') or {}).get('meta') or {}
 
 
+PNG_SIG = bytes([137, 80, 78, 71, 13, 10, 26, 10])
+
+
+def live_card_basis():
+    """라이브 공유 카드(share/weekly-map.png)에 심긴 조사기준일.
+
+    카드는 /weekly/의 og:image다 — 카카오·트위터 미리보기가 이걸 쓴다. 데이터가
+    아니라 그림이라 감시 밖에 있었고, 2026-07-13 카드가 3주 넘게 '이번 주 아파트
+    시세 지도'로 걸려 있었는데 아무 신호도 없었다(2026-08-06 발견). 원인은 클라우드
+    배치에 pillow가 없어 생성 스텝이 매 회차 조용히 죽은 것.
+
+    PIL 없이 PNG tEXt 청크를 직접 읽는다 — 감시 잡에 이미지 라이브러리를 들이지
+    않으려는 것이다. 청크는 [길이4][타입4][데이터][CRC4]의 배열이고, tEXt 데이터는
+    키와 값을 NUL 하나로 이어 붙인 형태다.
+    """
+    raw = urllib.request.urlopen(
+        urllib.request.Request(SITE + '/share/weekly-map.png', headers=UA), timeout=60).read()
+    if raw[:8] != PNG_SIG:
+        return None
+    i = 8
+    while i + 8 <= len(raw):
+        n = int.from_bytes(raw[i:i + 4], 'big')
+        typ = raw[i + 4:i + 8]
+        if typ == b'IEND':
+            break
+        if typ == b'tEXt':
+            k, _, v = raw[i + 8:i + 8 + n].partition(bytes([0]))
+            if k == b'agongmap-basis':
+                return v.decode('ascii', 'replace')
+        i += 12 + n
+    return None
+
+
 def check_age(label, stamp, grace):
     """수집 시점 도장(YYYY-MM-DD)이 grace일보다 오래됐으면 실패 사유를 반환.
 
@@ -221,6 +254,23 @@ def main():
     print('[시세 — 원천 R-ONE]')
     wk = ((adv.get('weekly') or {}).get('rows') or [{}])[-1].get('p')
     fails.append(check('주간', wk, lambda: rone_latest(U.RONE_TBL['maega'], 'WK'), GRACE_WEEKLY))
+    # 공유 카드는 라이브 데이터와 같은 주차여야 한다. 원천이 아니라 **라이브 주간**과
+    # 대조하는 게 핵심 — 배치가 데이터를 못 받은 날은 위 '주간' 검사가 이미 잡고,
+    # 여기서 보려는 건 '데이터는 새 주차인데 카드만 안 만들어진' 상태다.
+    try:
+        cb = live_card_basis()
+        if cb is None:
+            print('  공유카드: 기준일 메타 없음 — 옛 카드가 배포돼 있거나 생성기가 낡음')
+            fails.append('공유카드: 기준일 메타가 없다(생성 스텝이 죽었는지 확인)')
+        elif wk and cb != wk:
+            print('  공유카드: %s (라이브 주간 %s) — 뒤처짐' % (cb, wk))
+            fails.append('공유카드가 %s에 멈춤 — 라이브 주간은 %s (og:image가 옛 주차)' % (cb, wk))
+        else:
+            print('  공유카드: %s — 라이브 주간과 일치' % cb)
+    except Exception as e:
+        SKIPPED.append('공유카드')
+        print('  공유카드: 조회 실패(%s) — 이번 회차 판정 못 함' % str(e)[:50])
+
     mo = ((adv.get('monthly') or {}).get('rows') or [{}])[-1].get('p')
     fails.append(check('월간', mo, lambda: rone_latest(U.RONE_MONTHLY_TBL['maega'], 'MM'), GRACE_MONTHLY))
 

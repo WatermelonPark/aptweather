@@ -7,7 +7,7 @@ data.js의 ADV.weekly 최신 주차를 읽어 17개 시도 타일 지도를 그�
 사용: python tools/make_weekly_share.py
 """
 import io, os, re, json, sys, datetime
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, PngImagePlugin
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
@@ -119,7 +119,13 @@ def main():
     d.text((IW // 2, IH - 30), '자료: KOSIS 한국부동산원 전국주택가격동향조사 · 매주 금요일 자동 갱신', font=noto(18), fill=MUTED, anchor='mm')
 
     out = os.path.join(ROOT, 'share', 'weekly-map.png')
-    img.save(out, 'PNG')
+    # 조사기준일을 PNG 메타(tEXt)에 심는다 — 감시가 라이브 카드의 신선도를 읽을
+    # 유일한 방법이다. 그림에서 날짜를 OCR할 수는 없고, 파일 해시로는 '배포가
+    # 됐나'만 알지 '언제 주차인가'를 모른다. 2026-07-18 카드가 3주간 라이브에
+    # 걸려 있었는데 아무 신호가 없던 이유가 이것이다(2026-08-06).
+    meta = PngImagePlugin.PngInfo()
+    meta.add_text('agongmap-basis', row['p'])
+    img.save(out, 'PNG', pnginfo=meta)
     print('wrote share/weekly-map.png (%s)' % row['p'])
 
 
