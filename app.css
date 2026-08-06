@@ -843,3 +843,56 @@ table.adv thead th:first-child{text-align:center}
 #sec-score .sc-key{margin-top:12px}
 #sec-score .thead{margin-top:18px}
 .sec-sub{margin:0 0 0}
+
+  /* ===== 공급·가격 통합표 (홈, 2026-08-06) =====================================
+     행=기간, 열=시도 20곳. 칸 배경은 과거=가격 변동 세로 3등분, 미래=적정물량 대비.
+     20열이라 가로 스크롤이 전제다 — 기간 열과 표두는 붙박이로 둔다. */
+  .tb-bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:16px 0 10px}
+  .tb-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-touch);overflow:hidden}
+  .tb-seg button{border:0;background:transparent;color:var(--muted);padding:6px 15px;
+    font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;border-right:1px solid var(--line)}
+  .tb-seg button:last-child{border-right:0}
+  .tb-seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
+  .tb-chk{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  .tb-key{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11.5px;
+    color:var(--muted);flex-wrap:wrap}
+  .tb-key .tk{display:inline-flex;align-items:center;gap:4px}
+  .tb-key i{width:11px;height:11px;display:inline-block}
+  .tb-key .tk-d{background:rgba(38,110,180,.78)}
+  .tb-key .tk-u{background:rgba(198,58,48,.78)}
+  .tk-ramp{width:88px;height:8px;display:inline-block;
+    background:linear-gradient(90deg,rgba(38,110,180,.78),rgba(38,110,180,.12),
+      rgba(198,58,48,.12),rgba(198,58,48,.78))}
+  .tk-n{margin-left:2px}
+  .tb-scroll{overflow:auto;max-height:min(70vh,620px);border:1px solid var(--line);
+    background:var(--paper)}
+  #tb-main{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+  #tb-main th,#tb-main td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+    padding:0;text-align:center;white-space:nowrap}
+  #tb-main thead th{background:var(--paper);font-weight:600;font-size:12px;padding:6px 9px;
+    color:var(--ink);position:sticky;top:0;z-index:6}
+  #tb-main thead th sup{font-size:9px;color:var(--muted)}
+  #tb-main thead tr.tb-ref th{top:30px;font-weight:400;font-size:10.5px;color:var(--muted);
+    padding:3px 9px;border-bottom:2px solid var(--ink2)}
+  /* ⚠️ 붙박이 열의 z-index는 칸 안 숫자(.tc b, z-index:2)보다 커야 한다. 데이터
+     td는 position이 없어 스택 문맥을 안 만들므로, 그 안의 숫자가 루트 문맥에서
+     붙박이 열과 같은 층으로 경합해 DOM 순서상 나중인 숫자가 이긴다 — 실제로
+     기간 열이 뚫려 보였다(2026-08-06). */
+  #tb-main tbody td:first-child,#tb-main thead th:first-child{position:sticky;left:0;
+    background:var(--paper);z-index:4;text-align:right;padding:0 10px;font-size:11px;
+    color:var(--muted);min-width:58px}
+  #tb-main thead th:first-child{z-index:7}
+  #tb-main .tc{position:relative;display:block;height:25px;min-width:56px}
+  #tb-main .tl{position:absolute;top:0;bottom:0;display:block}
+  /* 숫자는 세 색을 가로지르므로 종이색 후광으로 띄운다 — 진한 칸에서 안 묻히게 */
+  #tb-main .tc b{position:relative;z-index:2;line-height:25px;font-size:11.5px;font-weight:500;
+    text-shadow:0 0 3px var(--paper),0 0 2px var(--paper)}
+  #tb-main tbody tr.fut td:first-child{font-style:italic}
+  #tb-main tbody tr.now td{border-top:3px solid var(--ink)}
+  #tb-main tbody tr.now td:first-child{font-weight:700;color:var(--ink);font-style:normal}
+  #tb-main .tb-mx{font-style:normal;color:var(--muted);font-size:9.5px;margin-left:2px}
+  /* 표두 지역명 = 상세페이지 링크. 밑줄은 hover에만 — 20개가 늘 밑줄이면 시끄럽다 */
+  #tb-main .tb-zl{color:inherit;text-decoration:none}
+  #tb-main .tb-zl:hover{text-decoration:underline}
+  .tb-foot{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.65}
+  .tb-foot sup{font-size:9px}

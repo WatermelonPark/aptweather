@@ -91,7 +91,7 @@ def test_등급_경계():
     assert M.grade(1.5) == 'g4' and M.grade(1.4999) == 'g3'
     assert M.grade(1.0) == 'g3' and M.grade(0.9999) == 'g2'
     assert M.grade(0.5) == 'g2' and M.grade(0.4999) == 'g1'
-    assert M.grade(-0.5) == 'g1' and M.grade(-0.5001) == 'g0'
+    assert M.grade(0.0) == "g1" and M.grade(-0.0001) == "g0"
 
 
 def test_순서는_등급_먼저_그다음_순부족():

@@ -148,46 +148,38 @@
     <div class="home-eyebrow" style="color:var(--muted)">아파트 · 공급량 · 투자지도</div>
     <h1>아공맵</h1>
     <p class="sub">국가 통계로 전국 아파트의 공급과 시세를 추적합니다. 매주 자동 갱신.</p>
-    <!-- 내 지역이 히어로를 차지한다(2026-07-31 스펙 관철): 첫 방문=질문+선택기,
-         재방문=내 지역 판정. 기존 CTA(시세지도=아래 주간 섹션과 중복, 카카오=하단 이동)는 제거. -->
-    <div id="hero-zone"></div>
   </div></header>
 
   <section class="home-sec" id="sec-score"><div class="wrap">
-    <h2 class="h2-bal">전국 한눈에</h2>
-    <p class="sec-sub">어디가 모자라고 어디가 남나</p>
-    <div class="sc-key">
-      <div class="k-l"><b>+ 공급 과잉</b><i>하락 압력</i></div>
-      <div class="k-r"><b>공급 부족 −</b><i>상승 압력</i></div>
-    </div>
+    <h2 class="h2-bal">전국 공급 지도</h2>
+    <p class="sec-sub">언제 어디에 얼마나 지어지는가</p>
 
-    <div class="thead"><div class="th-line"><b class="th-t">아공맵 지역 순위</b><span class="th-u" id="sc-cap">모자란 세대수 큰 순 · 등급은 필요량 대비 비율 · 막대는 제곱근 비례</span></div></div>
-    <div class="adv-tabs" role="tablist" aria-label="순위 정렬 기준">
-      <button id="scs-abs" class="on" onclick="setScSort('abs')">세대수순</button>
-      <button id="scs-ratio" onclick="setScSort('ratio')">비율순</button>
+    <div class="tb-bar">
+      <div class="tb-seg" id="tb-per" role="tablist" aria-label="기간 단위">
+        <button data-p="m" onclick="tbPer('m')">월</button>
+        <button data-p="q" class="on" onclick="tbPer('q')">분기</button>
+        <button data-p="y" onclick="tbPer('y')">연</button>
+      </div>
+      <label class="tb-chk"><input type="checkbox" id="tb-rel" onchange="tbDraw()"> 적정물량 대비로 보기</label>
     </div>
-    <!-- 내 지역은 히어로가 아니라 순위표 맨 위에 붙는다(2026-08-02 사용자 결정 C안).
-         히어로에 카드로 띄우면 반복해 볼 것도 아닌 정보가 첫 화면을 먹고 전국
-         순위가 밀렸다. 순위 맥락 안에 두면 "전국에서 내 동네가 어디쯤"이라는
-         원래 질문에 바로 답이 된다. -->
-    <div id="mine-row"></div>
-    <div id="score-wrap" style="text-align:left"></div>
-    <!-- 2026-08-03: 수도권 롤업 폐지 후 홈도 44곳 개별이다. 다만 목록이 2,022px가
-         돼 양끝(가장 모자란 14 + 가장 남는 5)만 남기고 가운데를 접는다 — 접힘 줄과
-         이 버튼이 모두 /zone/ 허브로 보낸다. 두 화면의 정렬 규칙은 같다. -->
-    <a class="sc-more" href="/zone/" onclick="track('home_cta',{to:'zone_hub'})">전체 44개 지역 보기 →</a>
-    <div class="thead"><div class="th-line"><b class="th-t">생활권별 공급 지도</b></div></div>
-    <div id="score-map" style="text-align:left"></div>
+    <div class="tb-key">
+      <span class="tk"><i class="tk-d"></i>하락 · 공급 과잉</span>
+      <span class="tk-ramp" aria-hidden="true"></span>
+      <span class="tk"><i class="tk-u"></i>상승 · 공급 부족</span>
+      <span class="tk-n" id="tb-note"></span>
+    </div>
+    <div class="tb-scroll"><table id="tb-main"></table></div>
+    <p class="tb-foot" id="tb-foot"></p>
 
-    <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">아공맵 자체 산출 · 매주 갱신</span></summary><div class="body">아파트는 짓는 데 3~4년 걸려, 지금 공사 중인 물량으로 4년 뒤까지 내다볼 수 있습니다.
-행정구역이 아니라 실제 생활권 단위로, <b>필요한 집</b>(세대수 기준 추정)과
-<b>그동안 모자란 것 + 지어질 집</b>(국토부 건축HUB 단지별 실측)을 견줘
-세대수로 계산합니다. 등급은 필요량 대비 부족 비율의 절대 구간입니다.
-지난 4년 몫에서는 철거(멸실)를 뺐지만, <b>앞으로 4년간 헐릴 집은 빼지 않았습니다</b> —
-재건축 시기를 미리 알 방법이 없어서입니다. 그만큼 부족이 덜 잡힙니다.
-부산·김해·창원(동남권)과 대구·구미(대구권역)는 가격이 실측으로 같이 움직여 각각 한 시장으로 묶어 배분합니다.
-공급 기준이며 가격 예측이 아닙니다 — 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.
-금리는 점수에서 빼고, 이자가 월세의 두 배를 넘으면 <b style="color:#a93226">⚠ 보유 부담</b> 표시만 합니다.</div></details>
+    <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">국토교통부 · 한국부동산원 · 매주 갱신</span></summary><div class="body">칸 안의 숫자는 그 기간에 <b>준공된</b> 아파트 세대수입니다(국토교통부 주택건설 준공실적).
+굵은 줄 아래는 아직 오지 않은 기간이라, <b>착공 실적을 3년 뒤로 밀어</b> 추정한 값을 넣었습니다 —
+착공한 것의 96%가 3년 뒤 준공되는 게 15년치 실측입니다. 인허가는 쓰지 않습니다.
+삽을 안 뜬 계획이 섞여 실제보다 1.3~1.7배 부풀기 때문입니다.
+칸의 배경색은 과거 구간에서는 <b>실제 가격 변동</b>(왼쪽부터 매매·전세·월세, 한국부동산원 실거래가격지수),
+미래 구간에서는 <b>적정물량 대비 모자란 정도</b>입니다. 붉을수록 오르거나 모자라고, 푸를수록 내리거나 남습니다.
+적정물량은 과거 그 지역의 가격이 하락에서 상승으로 방향을 바꾼 시점의 입주물량을 실측해 잡은 기준선입니다.
+서울·경기·인천은 수도권 기준을 세대수 비중으로 나눈 값이고, 세종·제주는 세대당 원단위로 추정한 값이라
+<b>* 표시</b>를 달았습니다. 공급 기준이며 가격 예측이 아닙니다 — 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.</div></details>
   </div></section>
 
   <section class="home-sec"><div class="wrap">
@@ -2341,191 +2333,159 @@ function bbToggle(row){
     track('bubble_detail',{region:row.querySelector('.bb-lab').textContent});
   }
 }
-/* ===== 아공맵 스코어: 공급·금리 환경 합성 지표 (가중치 밴드15/현재15/예정35/인허가35) ===== */
-function scToggle(row){
-  const d=row.nextElementSibling;
-  if(!d||!d.classList.contains('sc-det'))return;
-  const wasOpen=d.style.display==='block';
-  document.querySelectorAll('#score-wrap .sc-det').forEach(x=>x.style.display='none');
-  document.querySelectorAll('#score-wrap .sc-row').forEach(x=>x.setAttribute('aria-expanded','false'));
-  if(!wasOpen){
-    d.style.display='block';
-    row.setAttribute('aria-expanded','true');
-    track('score_detail',{region:row.querySelector('.sc-lab').textContent});
+/* ===== 아공맵 스코어: 시도 20곳 공급 지표 ===== */
+/* ── 시도 20곳 공급 지표 ──────────────────────────────────────────────────
+   2026-08-06 이전에는 홈이 scCalc()로 순부족을 직접 계산하고 Python과 산식을
+   글자 단위로 맞추는 이중구현 미러를 유지했다(check_dual_calc.py가 감시). 산식을
+   국토부 준공·착공으로 바꾸면서 계산을 빌드 시점으로 옮겼다 — 화면은 ADV.sido를
+   읽기만 하므로 두 구현이 갈릴 일이 없다. 정본은 tools/sido_zones.py 하나다. */
+function sidoAll(){ return ((ADV.sido||{}).zones)||[]; }
+function sidoOf(nm){ var a=sidoAll(); for(var i=0;i<a.length;i++) if(a[i].z===nm) return a[i]; return null; }
+
+/* ── 공급·가격 통합표 ─────────────────────────────────────────────────────
+   행=기간, 열=시도 20곳, 칸=공급 세대수 + 배경색.
+   과거 칸은 세로 3등분(왼쪽부터 매매/전세/월세), 미래 칸은 적정물량 대비 단색.
+   ⚠️ 값이 정확히 0.00일 때만 무색이다. 옅은 값을 흰색으로 두면 오류처럼 보인다
+   (2026-08-06 사용자 지적) — TB_MIN이 그 바닥을 만든다. */
+var TB_PER='q';
+var TB_MIN=0.13;          // 0이 아니면 최소 이만큼은 물들인다
+var TB_PRICE_SCALE=2;     // 가격 변동 ±2%가 만색
+var TB_FROM=2017*4+1;     // 표 시작 = 2017Q2 (기준표 표와 같은 구간)
+function tbTint(v,scale){
+  if(v==null||v===0) return 'transparent';
+  var a=(TB_MIN+(1-TB_MIN)*Math.min(1,Math.abs(v)/scale))*0.8;
+  return (v>0?'rgba(198,58,48,':'rgba(38,110,180,')+a.toFixed(3)+')';
+}
+function tbQi(y,q){ return y*4+q-1; }
+function tbLabel(i,per){
+  var y=Math.floor(i/4), q=i%4+1;
+  if(per==='y') return String(y);
+  return ('0'+(y%100)).slice(-2)+'Q'+q;
+}
+/* STATS 월별 시리즈 -> {분기 인덱스:[합, 월수]}.
+   ⚠️ KOSIS는 값 0을 '-'로 준다. null은 결측이 아니라 진짜 0이다(시도합÷전국이
+   모든 연도 1.00). 건너뛰면 그 분기가 통째로 사라진다. */
+function tbQuarters(key,reg){
+  var s=STATS[key]; if(!s||!s.series||!s.series[reg]) return {};
+  var out={},d=s.dates,v=s.series[reg];
+  for(var k=0;k<d.length;k++){
+    var y=+d[k].slice(0,4), m=+d[k].slice(5,7), i=tbQi(y,Math.floor((m-1)/3)+1);
+    var c=out[i]||[0,0]; c[0]+=(v[k]||0); c[1]++; out[i]=c;
   }
+  return out;
 }
-function scColor(v){
-  if(v==null)return '#e8ecea';
-  const a=Math.min(Math.sqrt(Math.abs(v)/60000),1);
-  return v>=0?'rgba(224,86,74,'+(0.12+0.72*a).toFixed(3)+')':'rgba(58,123,213,'+(0.12+0.72*a).toFixed(3)+')';
-}
-function scFmt(v){   // 화면 표기는 부호 반전: 부족을 음수로 보여준다
-  const d=-v, s=d<0?'−':'+', a=Math.abs(d);
-  return s+(a>=10000?(a/10000).toFixed(1)+'만':Math.round(a).toLocaleString());
-}
-/* 등급 판정 — tools/make_zone_pages.py grade()와 반드시 동치(미러). 컷·라벨·색 동일. */
-/* 마지막 컷 -0.5 → 0 (2026-08-02). 향후 16분기 물가차감 실질 상승률이 비율 0에서
-   손익분기다(0 아래 실질 -0.3~-1.2% · 0~0.5 +0.13% · 0.5~1.0 +2.58% · 1.0+ +10.22%).
-   근거·한계는 make_zone_pages.py GRADE_CUTS 주석. ⚠️ 두 구현은 같이 고친다. */
-var GRADE_CUTS=[1.5,1.0,0.5,0.0];
-var GRADES=[
-  ['g4','매우 부족','#a93226','앞으로 4년, 필요한 집이 크게 모자랍니다'],
-  ['g3','부족','#c0392b','공급이 수요를 못 따라갑니다'],
-  ['g2','다소 부족','#b9770e','부족하지만 심하진 않습니다'],
-  ['g1','균형','#5e6f74','필요한 만큼 들어오고 있습니다'],
-  ['g0','공급 여유','#1a5276','입주가 몰려 있어 세입자·매수자에게 유리한 시기가 옵니다']];
-function scGrade(tot,need4){
-  var r=need4?tot/need4:0, g=GRADES[GRADES.length-1];
-  for(var i=0;i<GRADE_CUTS.length;i++){if(r>=GRADE_CUTS[i]){g=GRADES[i];break;}}
-  return {k:g[0],label:g[1],color:g[2],desc:g[3],ratio:r};
-}
-/* 화면에 나열하는 표준 순서 — 등급 그룹 → 그룹 안은 절대 세대수 큰 순.
-   ⚠️ tools/make_zone_pages.py zone_order()와 반드시 동치(미러).
-   홈 순위표·/zone/ 허브·존 페이지의 "N위"가 모두 이 하나의 순서를 써야 한다.
-   2026-08-04 감사 전까지 홈 '내 지역' 카드의 mzRank만 gr.ratio 단독 내림차순이라
-   44곳 중 38곳이 존 페이지와 다른 순위를 보였고(서울권 홈 7위 vs 존 페이지 2위),
-   두 화면이 같은 localStorage 키에 서로 다른 정의의 rank를 덮어썼다. */
-var GORDER=['g4','g3','g2','g1','g0'];
-function zoneOrder(rows){
-  return rows.slice().sort(function(a,b){
-    return (GORDER.indexOf(a.gr.k)-GORDER.indexOf(b.gr.k))||(b.tot-a.tot);
+/* 가격 변동률(ADV.monthly)을 분기로 합친다 — 월별 변동률의 합이 분기 변동률이다. */
+function tbPrice(){
+  var M=ADV.monthly; if(!M||!M.rows) return {regions:[],q:{}};
+  var q={};
+  M.rows.forEach(function(r){
+    var y=+r.p.slice(0,4), m=+r.p.slice(5,7), i=tbQi(y,Math.floor((m-1)/3)+1);
+    var c=q[i]; if(!c){ c=q[i]={ma:[],je:[],wo:[]}; }
+    ['ma','je','wo'].forEach(function(f){
+      (r[f]||[]).forEach(function(v,n){ if(v!=null) c[f][n]=(c[f][n]||0)+v; });
+    });
   });
+  return {regions:M.regions||[],q:q};
 }
-/* 러닝재고 순부족 — tools/make_zone_pages.py calc()/running_shortage()와 반드시 동치(미러). 정규화 금지.
-   B안(weight_demand=False)+horizon 16(4년) 고정 — 기준표 「기본의 기본 3」 근거(2026-07-25 확정).
-   수요는 비가중(Σrefq), 공급도 액면 그대로(Σsched) — calc()의 fut_weighted(A안) 분기는 여기 없다. */
-function _qkey(i){return Math.floor(i/4)+'Q'+(i%4+1);}
-/* 미래 공급 가중 = 1.0(감쇠 폐지 2026-08-02). 옛 값 1-(k-1)/20은 근거가 없었고,
-   수요만 100%인 비대칭 탓에 순부족이 구조적으로 부풀었다. HUB 예정일 vs 실제
-   준공일 실측(n=215) 중앙값 지연 0개월 — 물량은 밀릴 뿐 사라지지 않는다.
-   전체 근거는 make_zone_pages.py _conf() docstring. ⚠️ 두 구현은 같이 고친다. */
-function _conf(k){return 1.0;}
-var ANCHOR=2010*4;
-/* 과거 재고를 몇 분기 거슬러 볼지(4년). 옛 DEFICIT_CAP(누적 상한)을 대체 —
-   창이 곧 상한이라 클램프가 필요 없다. 근거·예측력 비교는 make_zone_pages.py
-   running_shortage() 주석. ⚠️ 두 구현은 반드시 같이 고친다(max abs diff 0.0). */
-var BACKLOG_WINDOW=16;
-function runningShortage(done,sched,demol,refq,curQ,horizon){
-  /* 최근 4년만 0에서 누적(2026-08-02). 2010 앵커 방식은 상한이 값만 묶고 기억은
-     안 지워 '과거 4년' 문구가 사실과 달랐다. 창이 예측력도 더 낫다(8Q 0.144→0.167). */
-  horizon=horizon||16; var I=0;
-  /* 진행 중인 분기는 done이 구조적으로 0에 가깝다(수집기가 사용승인일 찍힌 단지만
-     done으로 분류하는데 그 등록이 분기 중엔 거의 안 올라온다 — 2026Q3 실측 전국
-     done 0 / sched 80,063세대). 그런데 그 분기의 수요(refq)는 온전히 차감돼 순부족이
-     부풀었다(2026-08-04 감사). 미래 루프는 k=1부터라 sched[curQ]를 영영 안 읽으므로
-     여기서 되돌린다. curQ는 이 루프에만 등장해 산식 안 중복은 없다.
-     ⚠️ '이중계상 없음'은 대장(레코드) 단위에서만 참 — 같은 단지가 동별 대장으로
-     쪼개져 일부 준공·일부 준공예정으로 남으면 겹친다(실측 6.3%). 접기 소급 적용이
-     끝나면 해소된다. 상세는 make_zone_pages.running_shortage 주석.
-     ⚠️ make_zone_pages.running_shortage와 동치(미러). */
-  for(var i=curQ-BACKLOG_WINDOW+1;i<=curQ;i++){
-    var qk=_qkey(i), sup=((done[qk])||0);
-    if(i===curQ) sup+=((sched[qk])||0);
-    I+=sup-((demol[qk])||0)-refq;
+function tbBuild(){
+  var S=ADV.sido; if(!S||!S.zones||!S.zones.length) return null;
+  var regs=S.zones.map(function(z){return z.z;});
+  var refs={}, est={}; S.zones.forEach(function(z){ refs[z.z]=z.ref; est[z.z]=z.est; });
+  var done={}, start={};
+  regs.forEach(function(r){ done[r]=tbQuarters('준공',r); start[r]=tbQuarters('착공',r); });
+  var P=tbPrice(), pidx={}; P.regions.forEach(function(r,i){ pidx[r]=i; });
+  var L=tbQi(+S.L.slice(0,4),+S.L.slice(5)), H=S.H, lead=S.lead, conv=S.conv;
+  var rows=[];
+  for(var i=TB_FROM;i<=L+H;i++){
+    var fut=i>L, cells=[];
+    for(var k=0;k<regs.length;k++){
+      var r=regs[k], v;
+      if(fut){ var st=start[r][i-lead]; v=st?Math.round(st[0]*conv):0; }
+      else   { var dn=done[r][i]; v=(dn&&dn[1]===3)?dn[0]:(dn?dn[0]:0); }
+      cells.push(v);
+    }
+    var pq=P.q[i]||null;
+    rows.push({i:i,fut:fut,s:cells,
+      m:(!fut&&pq)?regs.map(function(r){return pq.ma[pidx[r]];}):null,
+      j:(!fut&&pq)?regs.map(function(r){return pq.je[pidx[r]];}):null,
+      w:(!fut&&pq)?regs.map(function(r){return pq.wo[pidx[r]];}):null});
   }
-  var demandSum=0, supplyWeighted=0;
-  for(var k=1;k<=horizon;k++){ var w=_conf(k); if(w<=0)break; demandSum+=refq; supplyWeighted+=w*((sched[_qkey(curQ+k)])||0); }
-  /* 분해값 포함 반환 — Python running_shortage(full=True) 미러. tot==demand-supplyw-inow */
-  return {tot:(demandSum-supplyWeighted)-I, inow:I, demand:demandSum, supplyw:supplyWeighted};
+  return {regs:regs,refs:refs,est:est,rows:rows,L:L,H:H,S:S};
 }
-/* 생활권별 누적 순부족(세대) — 적정물량 대비. + = 부족(상승압력), − = 과잉 */
-function scCalc(){
-  const LZ=ADV.livezone,B=ADV.bubble,O=ADV.occupancy,P=ADV.permits,J=STATS['전세가율'],DM=STATS['주택멸실'];
-  if(!LZ||!LZ.zones||!LZ.zones.length||!O||!P||!LZ.sidohh)return null;
-  /* 적정물량 안분 잣대 — 2026-07-31 인구 -> 주민등록세대수(hh/sidohh). data-core.js는
-     sw.js v38 프리캐시로 index.html과 함께 갱신되므로 pop 폴백 없음.
-     ⚠️ tools/make_zone_pages.py calc()와 산식이 같아야 한다(이중구현 미러). */
-  const SH=LZ.sidohh||{};
-  // 앞으로 창 = 오늘 이후 분기만. 원자료가 과거 분기까지 담고 있어 그대로 쓰면 지난 물량을 미래로 셈.
-  const now=new Date(), curQ=now.getFullYear()*4+Math.floor(now.getMonth()/3);
-  const qIdx=s=>{const m=/^(\d{4})Q([1-4])$/.exec(s);return m?(+m[1])*4+(+m[2]-1):null;};
-  // 전역 미래 분기 집합 — 모든 생활권이 같은 창을 써야 절대량 비교가 성립한다.
-  // (물량이 없는 분기는 '창 밖'이 아니라 공급 0으로 센다)
-  const FUTQ=[...new Set(LZ.zones.flatMap(z=>Object.keys(z.byq||{})))]
-    .map(k=>[k,qIdx(k)]).filter(x=>x[1]!=null&&x[1]>curQ)
-    .sort((a,b)=>a[1]-b[1]).slice(0,8).map(x=>x[0]);   // ⚠️ tools/make_zone_pages.py 의 H_MAX와 반드시 같아야 한다 (이중 구현)
-  const H=Math.max(1,FUTQ.length);
-  const futSum=z=>FUTQ.reduce((s,k)=>s+((z.byq||{})[k]||0),0);
-  const lastOf=(sr,r)=>{const s=sr&&sr[r];if(!s)return 0;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return 0;};
-  const lat=r=>{const s=J&&J.series&&J.series[r];if(!s)return null;for(let i=s.length-1;i>=0;i--)if(s[i]!=null)return s[i];return null;};
-  const act=O.rows.filter(r=>!r.e), ph=P.rows.slice(-2);
-  /* 수요 풀(공급 영향권, 2026-08-01) — 풀 적정 = 구성 존 기존 시도 배분액 합,
-     풀 안에서 세대(hh) 비중 재배분. 두 풀은 서로 별개.
-     ⚠️ tools/make_zone_pages.py POOLS·사전 패스와 반드시 동치(미러). */
-  const POOLS={'동남권':['부산권','김해권','창원권'],'대구권역':['대구권','구미권']};
-  const POOL_OF={};Object.keys(POOLS).forEach(p=>POOLS[p].forEach(zn=>POOL_OF[zn]=p));
-  /* 존이 대표 시도에서 차지하는 세대 비중. ⚠️ make_zone_pages.zone_share와 동치(미러).
-     예전엔 Math.min(1,·)로 잘랐는데, 이웃 시도를 낀 생활권 넷(부산권+양산 /
-     대구권+경산·칠곡 / 광주권+나주·담양·화순·장성 / 대전세종권+세종·계룡)은
-     hh가 대표 시도 세대수를 넘어(1.10~1.26) 수요만 잘리고 공급은 전량 계상됐다
-     — 구조적으로 '공급 여유' 쪽으로 기울었다(2026-08-04 감사). 클램프 제거 =
-     세대당 적정률(refq/SH)을 존 전체 세대에 적용 = 공급 집계 범위와 단위 일치. */
-  const zoneShare=(z,ps)=>z.hh/(SH[ps]||z.hh||1);
-  const poolRef={},poolHh={};
-  LZ.zones.forEach(zz=>{
-    const p=POOL_OF[zz.z];if(!p)return;
-    const ps_=zz.region==='수도권'?'수도권':(zz.psido||'수도권');
-    const band_=O.band&&O.band[ps_];
-    const ref_=(O.ref&&O.ref[ps_])||(band_?(band_[0]+band_[1])/2:null);if(!ref_)return;
-    poolRef[p]=(poolRef[p]||0)+ref_*zoneShare(zz,ps_);
-    poolHh[p]=(poolHh[p]||0)+zz.hh;
+/* 분기 행 -> 연 행. 공급은 합, 가격 변동률도 합(분기 변동률의 합 = 연 변동률). */
+function tbToYear(B){
+  var out=[],cur=null;
+  B.rows.forEach(function(r){
+    var y=Math.floor(r.i/4);
+    if(!cur||cur.y!==y){
+      cur={y:y,i:y*4,s:B.regs.map(function(){return 0;}),m:null,j:null,w:null,fut:true,mix:false};
+      out.push(cur);
+    }
+    r.s.forEach(function(v,k){ cur.s[k]+=v; });
+    if(r.m){
+      ['m','j','w'].forEach(function(f){
+        if(!cur[f]) cur[f]=B.regs.map(function(){return null;});
+        r[f].forEach(function(v,k){ if(v!=null) cur[f][k]=(cur[f][k]||0)+v; });
+      });
+      if(cur.fut) cur.mix=(cur.s.length>0);   // 실적 분기가 있으면 미래 아님
+      cur.fut=false;
+    } else if(!cur.fut) cur.mix=true;          // 실적 + 추정이 한 해에 섞였다
   });
-  return LZ.zones.map(z=>{
-    const ps=z.region==='수도권'?'수도권':(z.psido||'수도권');
-    const oi=O.regions.indexOf(ps); if(oi<0)return null;
-    const band=O.band&&O.band[ps];
-    const refq=(O.ref&&O.ref[ps])||(band?(band[0]+band[1])/2:null); if(!refq)return null;
-    const share=zoneShare(z,ps);
-    // 존 적정(zrefq): 기본은 시도 안분, 풀 소속 존은 풀 배분액을 세대 비중으로(미러).
-    let zrefq=refq*share;
-    const pool=POOL_OF[z.z];
-    if(pool&&poolHh[pool])zrefq=poolRef[pool]*z.hh/poolHh[pool];
-    const dY=lastOf(DM&&DM.series,ps), dQ=dY/4;
-    // ⚠️ 정규화(×12/H)를 넣지 말 것 — make_zone_pages.py calc()에는 없다.
-    // 2026-07-20에 여기만 정규화가 남아 홈이 zone 페이지의 2.4배로 표시된 적 있다.
-    const dA=zrefq*H-futSum(z);
-    const n4=act.slice(-12).map(r=>r.v[oi]).filter(v=>v!=null);   // 과거 3년 누적
-    const dB=n4.length?(refq*n4.length-(n4.reduce((a,b)=>a+b,0)-dQ*n4.length))*share:0;
-    let dC=0,pv=null; const pi=P.regions.indexOf(ps);
-    if(pi>=0){const vs=ph.map(r=>r.v[pi]);if(vs.every(v=>v!=null)){pv=vs[0]+vs[1];dC=(P.ref[ps][0]-(pv-dY))*share;}}
-    const tot_fallback=0.55*dA+0.35*dC+0.10*dB;
-    const zdone=(P.done&&P.done[z.z])||{}, zsched=(P.sched&&P.sched[z.z])||{};
-    /* 멸실: KOSIS 아파트멸실(시도 연간)×share÷4분기. 2025~26은 최근 3개년 평균
-       이월. HUB demol은 2020년에서 끊겨 창 안이 전부 0이었다(2026-08-03 배선).
-       ⚠️ make_zone_pages.py calc()와 반드시 동치 — 계열 없으면 HUB 폴백. */
-    let zdemol={};
-    const _adm=(typeof STATS!=='undefined'&&STATS['아파트멸실'])||null;
-    if(_adm&&_adm.series&&_adm.series[ps]&&_adm.dates){
-      const _ym={};_adm.dates.forEach((y,i)=>{const v=_adm.series[ps][i];if(v!=null)_ym[y]=v;});
-      const _ys=Object.keys(_ym).sort(), _tail=_ys.slice(-3).map(y=>_ym[y]);
-      const _avg3=_tail.length?_tail.reduce((a,b)=>a+b,0)/_tail.length:0;
-      for(let _k=0;_k<BACKLOG_WINDOW;_k++){const _qi=curQ-_k;
-        const _ann=(_ym[String(Math.floor(_qi/4))]!=null)?_ym[String(Math.floor(_qi/4))]:_avg3;
-        zdemol[_qkey(_qi)]=_ann*share/4;}
-    }else{zdemol=(P.demol&&P.demol[z.z])||{};}
-    const invPath=!!(Object.keys(zdone).length||Object.keys(zsched).length);
-    // zdone/zsched는 ZONE 실적, refq는 REGION 적정 — share를 곱해 zone-level 적정으로 맞춘다
-    // (tools/make_zone_pages.py calc()와 반드시 동치, dA/dB/dC와 동일 원칙).
-    // zdemol도 zdone과 동일하게 이미 zone-level 절대값(멸실 세대)이라 share를 곱하지 않는다.
-    const _rs=invPath?runningShortage(zdone,zsched,zdemol,zrefq,curQ):null;
-    const tot=_rs?_rs.tot:tot_fallback;
-    /* 재고 궤적 5칸(지금·1~4년 뒤). zsched 전량을 홈에 실어 보내면 44존×151분기라
-       페이로드가 감당이 안 된다 — 여기서 5개 값으로 접어서 넘긴다.
-       ⚠️ make_zone_pages.calc()의 r['seq']와 반드시 동치. */
-    const seq=[_rs?_rs.inow:0];
-    if(_rs){let _i=_rs.inow;
-      for(let k=1;k<=16;k++){_i+=((zsched[_qkey(curQ+k)])||0)-zrefq;if(k%4===0)seq.push(_i);}
-    }else{for(let k=0;k<4;k++)seq.push(0);}
-    const need4=zrefq*16;
-    let flag=null,lo=null,hi=null;
-    const cv=B&&B.conv&&B.conv[ps],jr=lat(ps);
-    if(cv!=null&&jr!=null){lo=jr/100*cv;hi=lo*2;if(B.loan.v>=hi)flag='warn';else if(B.loan.v<=lo)flag='watch';}
-    return {z:z.z,region:z.region,psido:ps,pop:z.pop,supply:z.supply,inten:z.inten,sgg:z.sgg,
-            q0:z.q0,q1:z.q1,span:z.span,dA:dA,dB:dB,dC:dC,tot:tot,flag:flag,lo:lo,hi:hi,
-            need:zrefq*H,pv:pv,dY:dY,loan:B&&B.loan?B.loan.v:null,
-            need4:need4,inow:(_rs?_rs.inow:0),fsupw:(_rs?_rs.supplyw:0),seq:seq,
-            gr:scGrade(tot,need4)};
-  }).filter(Boolean);
+  return out;
+}
+function tbPer(p){
+  if(TB_PER===p) return;
+  TB_PER=p;
+  var seg=document.getElementById('tb-per');
+  if(seg) [].forEach.call(seg.children,function(b){ b.classList.toggle('on',b.dataset.p===p); });
+  tbDraw();
+  if(typeof track==='function') track('supply_table',{period:p});
+}
+function tbDraw(){
+  var el=document.getElementById('tb-main'); if(!el) return;
+  var B=tbBuild();
+  if(!B){ var sec=document.getElementById('sec-score'); if(sec) sec.style.display='none'; return; }
+  var rel=(document.getElementById('tb-rel')||{}).checked;
+  var yr=(TB_PER==='y');
+  var rows=yr?tbToYear(B):B.rows;
+  var mul=yr?4:1;
+  var h='<thead><tr><th>기간</th>';
+  B.regs.forEach(function(r){
+    h+='<th><a class="tb-zl" href="/zone/'+encodeURIComponent(r)+'/">'+r+'</a>'
+       +(B.est[r]?'<sup title="적정물량이 추정치인 지역">*</sup>':'')+'</th>';
+  });
+  h+='</tr><tr class="tb-ref"><th>적정물량</th>';
+  B.regs.forEach(function(r){
+    h+='<th>'+(B.refs[r]*mul).toLocaleString()+'</th>';
+  });
+  h+='</tr></thead><tbody>';
+  var firstFut=true;
+  rows.forEach(function(r){
+    var cls=[];
+    if(r.fut){ cls.push('fut'); if(firstFut){ cls.push('now'); firstFut=false; } }
+    if(r.mix) cls.push('mix');
+    h+='<tr class="'+cls.join(' ')+'"><td>'+tbLabel(r.i,TB_PER)+(r.mix?'<i class="tb-mx" title="실적과 추정이 섞인 해">±</i>':'')+'</td>';
+    for(var k=0;k<B.regs.length;k++){
+      var ref=B.refs[B.regs[k]]*mul, v=r.s[k];
+      var txt=rel?(ref?Math.round(v/ref*100)+'%':'–'):v.toLocaleString();
+      var lay;
+      if(r.fut){
+        lay='<i class="tl" style="left:0;right:0;background:'+tbTint(ref?1-v/ref:null,1)+'"></i>';
+      }else{
+        lay='<i class="tl" style="left:0;width:33.34%;background:'+tbTint(r.m?r.m[k]:null,TB_PRICE_SCALE)+'"></i>'
+           +'<i class="tl" style="left:33.33%;width:33.34%;background:'+tbTint(r.j?r.j[k]:null,TB_PRICE_SCALE)+'"></i>'
+           +'<i class="tl" style="left:66.66%;right:0;background:'+tbTint(r.w?r.w[k]:null,TB_PRICE_SCALE)+'"></i>';
+      }
+      h+='<td><span class="tc">'+lay+'<b>'+txt+'</b></span></td>';
+    }
+    h+='</tr>';
+  });
+  el.innerHTML=h+'</tbody>';
+  var n=document.getElementById('tb-note');
+  if(n) n.textContent=(TB_PER==='y'?'한 해 합계 · ':'')+'과거 칸은 왼쪽부터 매매·전세·월세, 미래 칸은 적정물량 대비';
+  var f=document.getElementById('tb-foot');
+  if(f) f.innerHTML='굵은 줄 아래 '+B.H+'분기('+(B.H/4).toFixed(0)+'년)는 착공 실적으로 추정한 미래 공급입니다. '
+    +'0은 그 기간 착공이 실제로 없었다는 뜻입니다. <sup>*</sup>는 적정물량이 추정치인 지역입니다.';
 }
 function renderHeroMap(){
   const el=document.getElementById('hero-map');
@@ -2542,253 +2502,6 @@ function renderHeroMap(){
   });
   p.push('</svg>');
   el.innerHTML=p.join('');
-}
-/* 수도권 롤업 등급은 22곳 '평균'이 아니라 **풀 전체 비율**이다 — 수도권은 우리
-   모델에서 단일 수요 풀이라(psido='수도권', share=hh/sidohh) 그 값이 맞다. 김포·평택의
-   여유가 서울의 부족을 흡수할 수 있다는 게 모델의 주장이고, 스필오버 실측(수도권 20존
-   잔차 동조 0.7~0.9)이 그 전제를 받친다. 구성원 최악값으로 바꾸면 모델과 모순되고
-   서울이 늘 심각해 수도권이 영구히 '매우 부족'이 되어 정보가 0이 된다.
-   다만 안이 극단적으로 갈리는 사실(매우 부족 5 / 여유 4)은 숨기면 안 되므로 분포를 적는다.
-   ⚠️ tools/make_zone_pages.py build_hub의 dist_txt와 같은 형식(2026-08-01). */
-function capDist(zones){
-  const order=['g4','g3','g2','g1','g0'], cnt={};
-  zones.forEach(z=>{cnt[z.gr.k]=(cnt[z.gr.k]||0)+1;});
-  return order.filter(k=>cnt[k]).map(k=>{
-    const g=GRADES.find(x=>x[0]===k);
-    return (g?g[1]:k)+' '+cnt[k];
-  }).join(' · ')||'집계 없음';
-}
-/* 순위표 정렬 모드. 홈에는 순번(#)이 없어서 정렬을 바꿔도 '몇 위'가 흔들리지 않는다
-   — 번호가 붙는 /zone/ 허브는 zone_order() 하나를 따라야 하므로 여기 토글을 옮기지 말 것. */
-let SCSORT='abs';   // 기본은 세대수순(2026-08-01 사용자 지정) — 큰 시장이 먼저 보인다
-function setScSort(m){
-  if(SCSORT===m)return;
-  SCSORT=m;
-  ['ratio','abs'].forEach(k=>{const b=document.getElementById('scs-'+k);if(b)b.classList.toggle('on',k===m);});
-  renderScoreSec();
-  track('score_sort',{mode:m});
-}
-function renderScoreSec(){
-  const sec=document.getElementById('sec-score');if(!sec)return;
-  const all=scCalc();
-  if(!all||!all.length){sec.style.display='none';return;}
-  const zones=all;
-  const f=v=>v==null?'·':Math.round(v).toLocaleString();
-  // ── 리스트: 수도권 통합 + 비수도권 생활권 ──
-  /* 2026-08-03: 수도권 롤업 폐지. 서울·인천·경기 20곳을 행정구역 그대로 개별
-     행으로 세운다. 롤업은 안에서 상계가 일어나 화성권(+1.58 매우 부족)이
-     평택(-1.73)·양주(-2.80)에 묻혔고, 서울권도 인천의 여유에 눌려 한 등급
-     내려갔다(단독 +1.03 부족 → 롤업 +0.52 다소 부족). 경기 20곳을 한 줄로
-     접는 안도 재봤지만 같은 상계가 그대로 재현돼(부족 12곳 +198,672 vs 여유
-     8곳 -104,636 → +0.28 균형) 채택하지 않았다.
-     agg 구조 자체는 남긴다 — zones 배열을 쓰는 하류(capDist 등)와 호환. */
-  const agg={};
-  zones.forEach(z=>{
-    const k=z.z;
-    const u=agg[k]||(agg[k]={name:k,region:z.region,psido:z.psido,pop:0,supply:0,dA:0,dB:0,dC:0,tot:0,need:0,zones:[],flag:z.flag,lo:z.lo,hi:z.hi,loan:z.loan,pv:z.pv,dY:z.dY});
-    u.pop+=z.pop;u.supply+=z.supply;u.dA+=z.dA;u.dB+=z.dB;u.dC+=z.dC;u.tot+=z.tot;u.need+=z.need;u.zones.push(z);
-  });
-  // 집계 유닛(수도권 1행 포함)에도 등급 — 합산 tot/need4로 판정.
-  // 2026-08-01 사용자 결정: 표시값·막대는 절대 세대수로 원복(퍼센트가 안 와닿음).
-  // 다만 그룹은 등급(=비율) 기준을 유지한다 — 그래야 '작은 지역이 더 심하게 모자란'
-  // 사실이 드러나고, 그룹 안에서 절대값 정렬이라 그룹 간 모순도 생기지 않는다.
-  // (비율은 행 title 툴팁으로 보존)
-  Object.keys(agg).forEach(k=>{const u=agg[k];u.need4=u.zones.reduce((s,z)=>s+(z.need4||0),0);u.gr=scGrade(u.tot,u.need4);});
-  const units=Object.keys(agg).map(k=>agg[k]).sort((a,b)=>b.tot-a.tot);
-  const mx=Math.max.apply(null,units.map(u=>Math.abs(u.tot)))||1;
-  /* GORDER는 위(scGrade 옆)에서 한 번만 정의한다 — 여기에 사본을 두면 등급이 늘거나
-     순서가 바뀔 때 한쪽만 고쳐진다. zoneOrder도 같은 상수를 쓴다. */
-  /* 한 행을 그리는 곳은 하나뿐이어야 한다 — 정렬 모드가 둘이라고 템플릿을 복제하면
-     한쪽만 고쳐져 두 모드가 어긋난다(같은 실수가 홈↔허브에서 이미 났었다). */
-  const scRow=(u)=>{
-        // 가운데 0을 축으로 발산 — 부족(−)은 오른쪽, 과잉(+)은 왼쪽. 색도 부호를 따라간다.
-        const w=Math.max(2,Math.min(50,Math.sqrt(Math.abs(u.tot)/mx)*50));
-        const barCol=u.tot>=0?(u.tot>=30000?'#a93226':'#c0392b'):(u.tot<=-10000?'#1a5276':'#3a7bd5');
-        const bar='<div class="sc-zero"></div>'+(u.tot>=0
-          ?'<div class="sc-fill" style="left:50%;width:'+w+'%;background:'+barCol+'"></div>'
-          :'<div class="sc-fill" style="right:50%;width:'+w+'%;background:'+barCol+'"></div>');
-        // ★(watch)는 2026-07-31 제거 — 투자 추천처럼 읽히는 오해 소지. ⚠(warn)만 유지.
-        const fb=u.flag==='warn'?'<span class="sc-flag warn" title="주담대 금리가 임대수익 위험선을 넘어 보유 부담이 큽니다">⚠</span>':'<span class="sc-flag"></span>';
-        const rr=u.gr.ratio||0;
-        return '<a class="sc-row" href="/zone/'+encodeURIComponent(u.name)+'/" title="'+u.name+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%'+'"><span class="sc-lab">'+u.name+'</span>'+fb
-          +'<div class="sc-track">'+bar+'</div>'
-          /* 값은 '지금 정렬 기준' 하나만 보여준다. 둘을 같이 적으면 칸이 밀리고
-             어느 쪽으로 줄 세운 건지 오히려 헷갈린다(2026-08-01 사용자 지적).
-             다른 잣대가 궁금하면 토글이 그 역할을 한다. */
-          +'<span class="sc-val" style="color:'+u.gr.color+'">'
-          +(SCSORT==='abs' ? scFmt(u.tot)
-                           : (rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%')+'</span>'
-          +'<span class="sc-tier '+u.gr.k+'">'+u.gr.label+'</span><span class="sc-go">›</span></a>';
-  };
-  /* 두 정렬은 다른 질문에 답한다 — 비율순은 '어디가 비율로 가장 급한가',
-     세대수순은 '어디에 물량이 가장 많이 모자란가'. 수도권·대구처럼 큰 시장은
-     비율로는 완만해도 절대량이 압도적이라, 한 잣대만 두면 한쪽 질문이 사라진다.
-     세대수순에서는 등급 그룹 머리를 걷는다 — 정렬 기준과 묶는 기준이 다르면
-     바로 그 모순(큰 숫자가 낮은 그룹에)이 되살아나기 때문이다. 등급은 행 배지로 남는다. */
-  /* 비율순 모드는 값 칸도 %라, 그룹 안까지 비율로 줄 세워야 숫자가 순서대로 읽힌다.
-     등급 경계가 곧 비율 구간이므로 비율 내림차순이면 그룹도 저절로 이어진다. */
-  const ordered = SCSORT==='abs' ? units
-                                 : units.slice().sort((a,b)=>(b.gr.ratio||0)-(a.gr.ratio||0));
-  /* 수도권 롤업을 걷어내 44행이 되면서 목록이 2,022px(모바일 2.5화면)가 됐다.
-     양끝만 남긴다 — 섹션 제목이 '어디가 모자라고 어디가 남나'라 여유 쪽을
-     통째로 자르면 절반의 질문이 사라진다. 가운데를 접고 허브로 보낸다. */
-  const HEAD=14, TAIL=5;
-  const gap=(n)=>'<a class="sc-gap" href="/zone/" data-t="zone_hub_gap">'
-    +'가운데 '+n+'곳 접힘 · 전체 보기 ›</a>';
-  const wrap=document.getElementById('score-wrap');
-  if(SCSORT==='abs'){
-    // units는 이미 tot 내림차순 — 앞은 가장 모자란 곳, 뒤는 가장 남는 곳.
-    const n=units.length;
-    wrap.innerHTML = (n<=HEAD+TAIL+1)
-      ? units.map(scRow).join('')
-      : units.slice(0,HEAD).map(scRow).join('')+gap(n-HEAD-TAIL)
-        +units.slice(n-TAIL).map(scRow).join('');
-  }else{
-    // 비율순은 등급 그룹 머리를 유지한다 — 그룹째 접으면 등급 분포가 안 보인다.
-    let left=HEAD+TAIL, hidden=0, html='';
-    GORDER.forEach(gk=>{
-      const list=ordered.filter(u=>u.gr.k===gk);
-      if(!list.length)return;
-      const g=list[0].gr, take=Math.max(0,Math.min(list.length,left));
-      html+='<div class="sc-ghead" style="color:'+g.color+'">'+g.label+' <i>'+list.length+'개 지역</i></div>'
-        +list.slice(0,take).map(scRow).join('');
-      hidden+=list.length-take; left-=take;
-    });
-    wrap.innerHTML = html + (hidden?gap(hidden):'');
-  }
-  wrap.querySelectorAll('.sc-gap').forEach(a=>a.addEventListener('click',()=>{
-    track('home_cta',{to:a.dataset.t});}));
-  const cap=document.getElementById('sc-cap');
-  if(cap)cap.textContent = SCSORT==='abs'
-    ? '모자란 세대수 큰 순 · 막대는 제곱근 비례'
-    : '필요량 대비 부족 비율 큰 순 · 막대는 세대수 제곱근 비례';
-  // ── 지도: 상세 생활권 36개 ──
-  const REGORD=['수도권','충청','강원','전라','경상','제주'];
-  const byreg={}; zones.forEach(z=>{(byreg[z.region]=byreg[z.region]||[]).push(z);});
-  const mapEl=document.getElementById('score-map');
-  if(mapEl)mapEl.innerHTML=REGORD.map(rg=>{
-    // 타일도 절대 세대수 표시·정렬(2026-08-01 원복). 비율은 title에.
-    const list=(byreg[rg]||[]).slice().sort((a,b)=>b.tot-a.tot);
-    if(!list.length)return '';
-    return '<div class="lz-reg"><div class="lz-regname">'+rg+'</div><div class="lz-tiles">'+
-      list.map(z=>{const rr=z.gr.ratio||0;
-        return '<a class="lz-tile" href="/zone/'+encodeURIComponent(z.z)+'/" style="background:'+scColor(z.tot)+'" title="'+z.z+' · '+z.gr.label+' · 필요량 대비 '+(rr>=0?'−':'+')+Math.round(Math.abs(rr)*100)+'%">'+
-        '<span class="lz-tn">'+z.z.replace('권','')+'</span><span class="lz-tv">'+scFmt(z.tot)+'</span></a>';}).join('')+
-      '</div></div>';
-  }).join('');
-  window.__SCZ=zones;
-}
-/* 순위표 맨 위 고정 행 — 내 지역(2026-08-02 C안). 순위표와 같은 맥락에 두어
-   '전국에서 내 동네가 어디쯤'이라는 질문에 바로 답하게 한다. 히어로는 비운다.
-   시점 문구·5칸 바 규칙은 존 페이지(make_zone_pages build_page)와 동일하다. */
-const MZ_SLAB=['지금','1년','2년','3년','4년'];
-function mzHeadline(seq,gdesc,gk){
-  const sq=seq||[], sh=sq.map((v,i)=>v<0?i:-1).filter(i=>i>=0);
-  const last=sq.length-1;
-  if(sh.length&&sh.length<sq.length){
-    if(sh.indexOf(last)>=0&&sh.indexOf(0)<0)return MZ_SLAB[sh[0]]+' 뒤부터 모자라기 시작합니다';
-    if(sh.indexOf(last)<0&&sh.indexOf(0)>=0)return '지금은 모자라지만 '+MZ_SLAB[sh[sh.length-1]+1]+' 뒤 풀립니다';
-    return '시기에 따라 모자랐다 풀렸다 합니다';
-  }
-  /* 아래 두 분기는 make_zone_pages build_page의 hero_desc에만 있고 여기엔 빠져 있었다
-     (2026-08-04 감사). 그 결과 홈 카드가 5칸을 전부 '부족'으로 칠해 놓고 문장은
-     '필요한 만큼 들어오고 있습니다'를 출력했다 — 같은 지역의 존 페이지는 제대로
-     '크게 모자라진 않지만 4년 내내 조금씩 부족합니다'라고 썼다. ⚠️ 정본은 Python. */
-  if(sh.length===sq.length&&sq.length&&(gk==='g1'||gk==='g0'))
-    return '크게 모자라진 않지만 4년 내내 조금씩 부족합니다';
-  if(!sh.length&&(gk==='g4'||gk==='g3'||gk==='g2'))
-    return '지금 재고는 남지만 앞으로 필요량에는 못 미칩니다';
-  return gdesc;
-}
-function renderMyRow(row,rank,total){
-  const el=document.getElementById('mine-row'); if(!el)return;
-  if(!row){el.innerHTML='';return;}
-  const g=row.gr, sq=row.seq||[];
-  const bars=sq.map((v,i)=>'<span class="hz-c'+(v<0?' on':'')+'"><i></i><em>'+MZ_SLAB[i]+'</em></span>').join('');
-  el.innerHTML='<div class="sc-mine">'
-    +'<div class="sm-h"><span class="sm-tag">내 지역</span>'
-    +'<a class="sm-name" href="/zone/'+encodeURIComponent(row.z)+'/">'+row.z+'</a>'
-    +'<span class="sc-tier '+g.k+'">'+g.label+'</span>'
-    +'<span class="sm-rank">'+total+'곳 중 '+rank+'위</span>'
-    +'<button class="sm-x" title="지역 바꾸기" aria-label="내 지역 지우고 다시 고르기" '
-    +'onclick="mzClear();renderMyZone();track(\'myzone\',{action:\'change\',region:\''+row.z+'\'})">'
-    +'<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>'
-    +'</div>'
-    +'<p class="sm-desc">'+mzHeadline(sq,g.desc,g.k)+'</p>'
-    +'<div class="hz-seq">'+bars+'</div>'
-    +'</div>';
-}
-/* ── 내 지역 — 히어로 안에 렌더(2026-07-31: 스펙 관철 + 암묵 저장).
-   localStorage agong_myzone은 존 페이지의 자동 기억 스크립트와 스키마 공유.
-   순위는 비율(순부족/4년 필요량 = gr.ratio) 기준 — 등급·순위표와 같은 잣대. ── */
-const MYZONE_KEY='agong_myzone';
-function mzGet(){try{const d=JSON.parse(localStorage.getItem(MYZONE_KEY));return (d&&d.z)?d:null;}catch(e){return null;}}
-function mzSet(d){try{localStorage.setItem(MYZONE_KEY,JSON.stringify(d));}catch(e){}}
-function mzClear(){try{localStorage.removeItem(MYZONE_KEY);}catch(e){}}
-function mzRank(zones,nm){
-  /* 존 페이지·허브와 같은 잣대(zoneOrder = 등급군 → 절대 세대수)로 매긴다.
-     예전엔 gr.ratio 단독 정렬이라 같은 존이 화면마다 다른 'N위'로 보였다. */
-  return zoneOrder(zones).findIndex(z=>z.z===nm)+1;
-}
-function renderMyZone(){
-  const box=document.getElementById('hero-zone');
-  const zones=window.__SCZ;
-  if(!box||!zones||!zones.length){if(box)box.style.display='none';return;}
-  const saved=mzGet();
-  const row=saved?zones.find(z=>z.z===saved.z):null;
-  if(saved&&!row){mzClear();}          // 생활권 개편 등으로 사라진 존 → 첫 방문 상태
-  if(row){
-    const rank=mzRank(zones,row.z);
-    /* '지난 방문보다 −77,794세대' 표시는 2026-08-02에 뺐다 — 모델을 고칠 때마다
-       크게 흔들려 시장 변화로 오독된다. 되살리려면 값이 모델 변경분과 시장
-       변동분을 구분할 수 있어야 한다(지금은 못 한다). last는 계속 저장한다. */
-    /* 2026-08-02 C안: 내 지역은 히어로가 아니라 순위표 맨 위에 고정한다.
-       히어로 카드는 '반복해 볼 것도 아닌' 정보가 첫 화면을 먹는 구조였다.
-       여기서는 히어로를 비우고 renderMyRow()가 순위표 위에 그린다. */
-    box.style.display='none';
-    box.innerHTML='';
-    renderMyRow(row,rank,zones.length);
-    window.__MZ_JUST=0;
-    /* ⚠️ pinned를 반드시 물려준다. 여기서 빠뜨리면 mzSave가 방금 심은 pinned:1을
-       같은 콜스택에서 곧바로 지워, 존 페이지의 암묵 저장 가드(if(!(_mz&&_mz.pinned)))가
-       항상 통과한다 — 6bf92bc가 고쳤다고 한 '홈에서 고른 지역이 존 페이지를 보면
-       덮이는' 버그가 그대로 재현됐다(2026-08-05 리뷰). 홈을 다시 열기만 해도
-       pinned가 지워지므로 어떤 경로로도 수정이 듣지 않았다. */
-    mzSet({z:row.z,pinned:saved.pinned||undefined,
-           savedAt:saved.savedAt||new Date().toISOString().slice(0,10),
-           last:{tot:Math.round(row.tot),rank:rank,grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
-    return;
-  }
-  // 첫 방문 / 지역 바꾸기 / 폴백: 질문 + 시도 → 생활권 2단 선택기 + 전국 요약 한 줄
-  box.style.display='';           // 저장 상태에서 숨겨뒀던 히어로를 되돌린다
-  renderMyRow(null);              // 순위표 위 고정 행도 같이 걷는다
-  const lack=zones.filter(z=>z.gr.k==='g4'||z.gr.k==='g3').length;
-  const byps={};zones.forEach(z=>{(byps[z.psido]=byps[z.psido]||[]).push(z);});
-  const sidos=regSort(Object.keys(byps));
-  box.innerHTML='<p class="hz-q">우리 동네 아파트, 앞으로 모자랄까 남을까</p>'
-    +'<p class="mz-sum">지금 전국 '+zones.length+'개 생활권 중 <b>'+lack+'곳이 공급 부족</b>입니다. 우리 동네부터 확인해 보세요.</p>'
-    +'<div class="mz-sido">'+sidos.map(s=>'<button class="mz-chip" onclick="mzPick(this,\''+s+'\')">'+s+'</button>').join('')+'</div>'
-    +'<div class="mz-zones" id="mz-zones"></div>';
-}
-function mzPick(btn,ps){
-  document.querySelectorAll('.mz-sido .mz-chip').forEach(b=>b.classList.toggle('on',b===btn));
-  const sw=document.querySelector('.mz-sido'); if(sw)sw.classList.add('picked');
-  const zones=regSort((window.__SCZ||[]).filter(z=>z.psido===ps),z=>z.z);
-  document.getElementById('mz-zones').innerHTML=zones.map(z=>
-    '<button class="mz-chip zone" onclick="mzSave(\''+z.z+'\')">'+z.z+' <span class="sc-tier '+z.gr.k+'">'+z.gr.label+'</span></button>').join('');
-  track('myzone',{action:'sido',region:ps});
-}
-function mzSave(nm){
-  const zones=window.__SCZ||[],row=zones.find(z=>z.z===nm);
-  if(!row)return;
-  /* pinned=명시적 선택. 존 페이지의 암묵 저장은 이 표시가 있으면 z를 안 건드린다
-     — 없던 시절엔 A권을 고르고 B권 페이지를 한 번 보면 내 지역이 B권으로 바뀌었다
-     (2026-08-05). 키 하나에 '고른 지역'과 '마지막 본 지역' 두 의미가 얹혀 있던 게
-     원인이고, 이 플래그가 둘을 가른다. */
-  mzSet({z:nm,pinned:1,savedAt:new Date().toISOString().slice(0,10),
-         last:{tot:Math.round(row.tot),rank:mzRank(zones,nm),grade:row.gr.label,seen:new Date().toISOString().slice(0,10)}});
-  window.__MZ_JUST=1;
-  renderMyZone();track('myzone',{action:'save',region:nm});
 }
 function renderBubbleSec(){
   const sec=document.getElementById('sec-bubble');if(!sec)return;
@@ -2841,8 +2554,7 @@ function renderBubbleSec(){
 
 /* 모든 선언(QUIZSETS·curSet 등) 이후에 초기 라우팅 실행 — TDZ 방지 */
 renderHeroMap();    // 히어로 배경 = 이번 주 전국 시군구 지도
-renderScoreSec();   // 홈 섹션 — 뷰 진입과 무관하게 로드 시 렌더
-renderMyZone();     // 내 지역 카드 — __SCZ 설정 이후여야 함
+tbDraw();           // 홈 통합표 — 뷰 진입과 무관하게 로드 시 렌더
 CHALLENGE=readChallenge();
 if(CHALLENGE){
   track('challenge_accepted',{quiz_type:CHALLENGE.set,friend_score:CHALLENGE.score,
