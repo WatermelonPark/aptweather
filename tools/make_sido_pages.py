@@ -53,6 +53,38 @@ AGG_NOTE = {
 }
 
 
+DATE_RE = re.compile(r'\d{4}-\d{2}-\d{2}')
+
+
+def read_old(path):
+    try:
+        return io.open(path, encoding='utf-8').read()
+    except IOError:
+        return None
+
+
+def keep_dates(new_html, old_html, today):
+    """내용이 같고 날짜만 다르면 **옛 페이지를 그대로** 돌려준다.
+
+    ⚠️ 이게 없으면 데이터가 안 바뀐 날에도 21장과 sitemap의 lastmod가 날짜만
+    달라진 채 매일 커밋된다(옛 make_zone_pages가 같은 이유로 갖고 있던 장치인데
+    2026-08-06 재편 때 빠뜨렸다). 검색엔진에도 '매일 전부 갱신'이라는 틀린 신호가
+    간다. 페이지 안의 YYYY-MM-DD는 datePublished·dateModified 둘뿐이라 날짜만
+    가려내고 비교하면 된다.
+
+    돌려주는 값: (채택할 HTML, 그 페이지의 lastmod, 내용이 실제로 바뀌었나)
+
+    ⚠️ 세 번째 값이 필요하다. lastmod == today로 '바뀌었나'를 판정하면, 옛 날짜가
+    마침 오늘일 때(같은 날 두 번 생성) 안 바뀐 페이지도 바뀐 것으로 센다.
+    """
+    if not old_html:
+        return new_html, today, True
+    if DATE_RE.sub('@', new_html) == DATE_RE.sub('@', old_html):
+        m = re.search(r'"dateModified":\s*"(\d{4}-\d{2}-\d{2})"', old_html)
+        return old_html, (m.group(1) if m else today), False
+    return new_html, today, True
+
+
 def esc(s):
     return (str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             .replace('"', '&quot;'))
@@ -303,25 +335,30 @@ def build_hub(calc):
     return ''.join(h)
 
 
-def update_sitemap(names, lastmod):
+def update_sitemap(names, lastmods, hub_lastmod, home_lastmod):
     """/zone/ 항목을 통째로 갈아 끼운다.
 
     옛 생활권 31곳 URL이 남아 있으면 색인에 404가 쌓인다 — 먼저 전부 지우고
     새 20곳만 넣는다(리다이렉트는 두지 않기로 함, 2026-08-06 사용자 결정).
+
+    ⚠️ lastmod는 **페이지별로 실제 내용이 바뀐 날**이다. 오늘 날짜를 일괄로 박으면
+    안 바뀐 날에도 21줄이 매일 달라져 커밋되고, 검색엔진엔 '매일 전부 갱신'이라는
+    틀린 신호가 간다. home_lastmod는 한 장이라도 바뀐 날에만 넘어온다(아니면 None).
     """
     p = os.path.join(ROOT, 'sitemap.xml')
     x = io.open(p, encoding='utf-8').read()
     x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/[^<]*</loc>.*?</url>', '', x, flags=re.S)
-    for loc in ('%s/' % SITE, '%s/weekly/' % SITE):
-        x = re.sub(r'(<loc>%s</loc>\s*<lastmod>)[^<]*(</lastmod>)' % re.escape(loc),
-                   r'\g<1>%s\g<2>' % lastmod, x)
+    if home_lastmod:
+        for loc in ('%s/' % SITE, '%s/weekly/' % SITE):
+            x = re.sub(r'(<loc>%s</loc>\s*<lastmod>)[^<]*(</lastmod>)' % re.escape(loc),
+                       r'\g<1>%s\g<2>' % home_lastmod, x)
     block = ('\n  <url>\n    <loc>%s/zone/</loc>\n    <lastmod>%s</lastmod>\n'
              '    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>'
-             % (SITE, lastmod))
+             % (SITE, hub_lastmod))
     block += ''.join(
         '\n  <url>\n    <loc>%s/zone/%s/</loc>\n    <lastmod>%s</lastmod>\n'
         '    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>'
-        % (SITE, urllib.parse.quote(n), lastmod) for n in names)
+        % (SITE, urllib.parse.quote(n), lastmods[n]) for n in names)
     x = x.replace('</urlset>', block + '\n</urlset>')
     io.open(p, 'w', encoding='utf-8', newline='\n').write(x)
 
@@ -343,17 +380,25 @@ def main():
                 shutil.rmtree(p); gone.append(d)
     os.makedirs(OUT, exist_ok=True)
 
+    today = datetime.date.today().isoformat()
+    lastmods, changed = {}, 0
     for z in names:
         d = os.path.join(OUT, z)
         os.makedirs(d, exist_ok=True)
-        io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(
-            build_page(z, calc, stats, pq, calc['zones']))
-    io.open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8', newline='\n').write(
-        build_hub(calc))
-    update_sitemap(names, datetime.date.today().isoformat())
+        fp = os.path.join(d, 'index.html')
+        html, lm, ch = keep_dates(build_page(z, calc, stats, pq, calc['zones']),
+                                  read_old(fp), today)
+        if ch:
+            changed += 1
+        lastmods[z] = lm
+        io.open(fp, 'w', encoding='utf-8', newline='\n').write(html)
+    hub_fp = os.path.join(OUT, 'index.html')
+    hub, hub_lm, hub_ch = keep_dates(build_hub(calc), read_old(hub_fp), today)
+    io.open(hub_fp, 'w', encoding='utf-8', newline='\n').write(hub)
+    update_sitemap(names, lastmods, hub_lm, today if (changed or hub_ch) else None)
 
-    print('지역 페이지 %d개 + 허브 생성 (실적~%s, 미래 %d분기) → sitemap 갱신'
-          % (len(names), calc['L'], calc['H']))
+    print('지역 페이지 %d개 + 허브 (실적~%s, 미래 %d분기) — 내용 변경 %d개'
+          % (len(names), calc['L'], calc['H'], changed))
     if gone:
         print('옛 생활권 디렉터리 %d개 삭제: %s' % (len(gone), ', '.join(sorted(gone))))
     return 0

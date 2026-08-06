@@ -1333,14 +1333,20 @@ def main():
         sd = sido_zones.calc(read_current_stats())
         n_new = len(sd['zones'])
         n_old = len((adv.get('sido') or {}).get('zones') or [])
-        # 가드: 지역이 줄면 채택하지 않는다. make_zone_pages가 매 실행마다 /zone/을
+        # 가드: 지역이 빠지면 채택하지 않는다. make_sido_pages가 매 실행마다 /zone/을
         # 통째로 지우고 이 목록으로만 재생성하므로, 통계 부분 응답을 그대로 받으면
         # 색인된 URL이 무더기로 404가 된다(옛 livezone 가드와 같은 이유).
-        if n_old and n_new < n_old:
-            gone = sorted({z['z'] for z in (adv['sido']['zones'])} - {z['z'] for z in sd['zones']})
-            print('sido GUARD: 지역이 %d개 -> %d개로 줄어 채택하지 않음. 빠진 곳: %s '
+        # ⚠️ 이전 값과의 비교만으로는 부족하다 — 첫 시딩(n_old==0)에는 검사가 통째로
+        # 건너뛰어져 17곳짜리 결과가 그대로 실린다(2026-08-07 리뷰). 기대 개수는
+        # sido_zones.ORDER가 알고 있으므로 절대 기준으로도 본다.
+        want = len(sido_zones.ORDER)
+        gone = sorted(sd.get('missing') or [])
+        if n_new < want or (n_old and n_new < n_old):
+            if not gone and n_old:
+                gone = sorted({z['z'] for z in adv['sido']['zones']} - {z['z'] for z in sd['zones']})
+            print('sido GUARD: 지역이 %d곳뿐이라 채택하지 않음(%d곳이어야 함, 직전 %d곳). 빠진 곳: %s '
                   '(통계 부분 응답 의심. zone 페이지·sitemap 보존)'
-                  % (n_old, n_new, ', '.join(gone) or '?'))
+                  % (n_new, want, n_old, ', '.join(gone) or '?'))
             failed.append('sido-shrink')
         elif differs(sd, adv.get('sido')):
             adv['sido'] = sd

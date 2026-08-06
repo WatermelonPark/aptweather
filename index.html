@@ -2365,6 +2365,7 @@ function tbTint(v,scale){
   return (v>0?'rgba(198,58,48,':'rgba(38,110,180,')+a.toFixed(3)+')';
 }
 function tbMi(d){ return +d.slice(0,4)*12 + (+d.slice(5,7)-1); }   // 'YYYY.MM'/'YYYY-MM' → 월 인덱스
+function tbQLast(q){ return +q.slice(0,4)*12 + (+q.slice(5))*3 - 1; }  // '2026Q2' → 그 분기 마지막 달
 function tbLabel(i,per){
   var y=Math.floor(i/12);
   if(per==='y') return String(y);
@@ -2382,15 +2383,19 @@ function tbBuild(){
   var di={}, ki={};
   D.dates.forEach(function(d,n){ di[tbMi(d)]=n; });
   K.dates.forEach(function(d,n){ ki[tbMi(d)]=n; });
-  var lastD=tbMi(D.dates[D.dates.length-1]);
-  var lastK=tbMi(K.dates[K.dates.length-1]);
+  /* ⚠️ 경계는 **분기 기준**이어야 한다. 준공 시리즈의 마지막 '월'을 쓰면, KOSIS가
+     분기 중간까지만 발표한 달(매달 일어난다)에 홈은 그 달을 실적으로 그리고
+     지역 페이지(make_sido_pages.series)는 같은 분기를 통째로 착공 추정으로 그려
+     두 화면이 같은 분기에 다른 숫자를 보여준다(2026-08-07 리뷰).
+     sido_zones가 이미 정한 L(마지막 완결 분기)과 H를 그대로 따른다. */
+  var lastD=tbQLast(S.L);
   var LEAD=S.lead*3;                       // 12분기 = 36개월
   var pi={}, P=ADV.monthly||{};
   (P.regions||[]).forEach(function(r,n){ pi[r]=n; });
   var prow={};
   (P.rows||[]).forEach(function(r){ prow[tbMi(r.p)]=r; });
   var rows=[];
-  for(var i=TB_FROM;i<=lastK+LEAD;i++){
+  for(var i=TB_FROM;i<=lastD+S.H*3;i++){
     var fut=i>lastD, sup=[];
     for(var k=0;k<regs.length;k++){
       var r=regs[k];

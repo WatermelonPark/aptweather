@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v59'; // 죽은 CSS 0개 달성
+const VERSION = 'v60'; // 표 경계를 분기 기준으로 통일
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
