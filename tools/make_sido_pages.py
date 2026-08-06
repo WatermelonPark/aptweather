@@ -1,0 +1,361 @@
+# -*- coding: utf-8 -*-
+"""시도 20곳의 공급 상세 페이지와 허브를 만든다.
+
+옛 make_zone_pages.py(생활권 31곳·시군구 페이지·건축HUB 단지 목록)를 대체한다.
+지역이 국토부 통계와 같은 단위가 되면서 안분·풀 재배선·단지 수집이 통째로
+필요 없어졌고, 페이지도 그만큼 단순해졌다(50KB → 10KB대).
+
+점수는 계산하지 않는다 — tools/sido_zones.py가 빌드 시점에 계산해 ADV.sido로
+싣고, 여기서는 그걸 읽어 그리기만 한다. 홈(index.html)도 같은 값을 읽으므로
+두 화면이 갈릴 수 없다(옛 이중구현 미러와 그 감시 도구가 사라진 이유).
+
+사용: python tools/make_sido_pages.py
+"""
+import datetime
+import io
+import json
+import os
+import re
+import shutil
+import sys
+import urllib.parse
+
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import sido_zones as SZ                                            # noqa: E402
+
+SITE = 'https://www.agongmap.co.kr'
+OUT = os.path.join(ROOT, 'zone')
+GA = 'G-3FJNG6G1F3'
+TABLE_FROM = SZ.qidx(2017, 2)          # 표 시작 — 기준표 표와 같은 구간
+
+GRADE_TXT = {
+    'g4': ('매우 부족', '#a93226', '앞으로 3년, 필요한 집이 크게 모자랍니다'),
+    'g3': ('부족', '#c0392b', '공급이 수요를 못 따라갑니다'),
+    'g2': ('다소 부족', '#b9770e', '부족하지만 심하진 않습니다'),
+    'g1': ('균형', '#5e6f74', '필요한 만큼 들어오고 있습니다'),
+    'g0': ('공급 여유', '#1a5276', '입주가 몰려 있어 세입자·매수자에게 유리한 시기가 옵니다'),
+}
+# 집계 3종은 '지역'이 아니라 묶음이라 설명이 달라야 한다
+AGG_NOTE = {
+    '전국': '전국 17개 시도를 합친 값입니다.',
+    '수도권': '서울·경기·인천을 합친 값입니다. 적정물량 50,000호는 기준표 기준 그대로이고, '
+              '서울·경기·인천 개별 값은 이를 세대수 비중으로 나눈 추정치입니다.',
+    '지방': '수도권을 뺀 14개 시도를 합친 값입니다.',
+}
+
+
+def esc(s):
+    return (str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            .replace('"', '&quot;'))
+
+
+def num(v):
+    return format(int(round(v)), ',')
+
+
+def signed(v):
+    """부족은 −, 과잉은 + 로 보여준다(홈 표기와 같은 부호 규칙)."""
+    d = -v
+    return ('−' if d < 0 else '+') + num(abs(d))
+
+
+def load():
+    src = io.open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read()
+    adv = json.loads(re.search(
+        r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/', src, re.S).group(1))
+    stats = json.loads(re.search(
+        r'const STATS\s*=\s*(\{.*?\});?\s*(?:/\*|const |$)', src, re.S).group(1))
+    return adv, stats
+
+
+def price_quarters(adv):
+    """{분기 인덱스: {지역: (매매, 전세, 월세)}} — 월별 변동률을 분기로 합친다."""
+    mo = (adv.get('monthly') or {})
+    regs = mo.get('regions') or []
+    out = {}
+    for r in mo.get('rows') or []:
+        y, m = int(r['p'][:4]), int(r['p'][5:7])
+        i = SZ.qidx(y, (m - 1) // 3 + 1)
+        cur = out.setdefault(i, {})
+        for k, reg in enumerate(regs):
+            a = cur.setdefault(reg, [0.0, 0.0, 0.0])
+            for f, n in (('ma', 0), ('je', 1), ('wo', 2)):
+                v = (r.get(f) or [None] * len(regs))[k]
+                if v is not None:
+                    a[n] += v
+    return out
+
+
+def series(stats, z, calc):
+    """지역 하나의 분기별 공급 — (분기 인덱스, 값, 미래 여부) 목록."""
+    L = SZ.qidx(int(calc['L'][:4]), int(calc['L'][5:]))
+    dn = SZ.quarterly(stats, '준공', z)
+    st = SZ.quarterly(stats, '착공', z)
+    rows = []
+    for i in range(TABLE_FROM, L + calc['H'] + 1):
+        if i <= L:
+            rows.append((i, dn.get(i, 0), False))
+        else:
+            rows.append((i, round(st.get(i - calc['lead'], 0) * calc['conv']), True))
+    return rows
+
+
+def head(z, desc, title):
+    u = SITE + '/zone/' + urllib.parse.quote(z) + '/'
+    ld = [
+        {"@context": "https://schema.org", "@type": "Article", "headline": title,
+         "description": desc,
+         "datePublished": datetime.date.today().isoformat(),
+         "dateModified": datetime.date.today().isoformat(),
+         "author": {"@type": "Organization", "name": "아공맵"},
+         "publisher": {"@type": "Organization", "name": "아공맵"},
+         "mainEntityOfPage": u,
+         "about": {"@type": "Place", "name": z}},
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "아공맵", "item": SITE + "/"},
+            {"@type": "ListItem", "position": 2, "name": "시도 공급 분석", "item": SITE + "/zone/"},
+            {"@type": "ListItem", "position": 3, "name": z, "item": u}]},
+    ]
+    return '''<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=%(ga)s"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','%(ga)s');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<title>%(title)s | 아공맵</title>
+<meta name="description" content="%(desc)s">
+<link rel="canonical" href="%(url)s">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" href="/app_icon.png">
+<meta name="theme-color" content="#16203a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="%(title)s">
+<meta property="og:description" content="%(desc)s">
+<meta property="og:url" content="%(url)s">
+<meta property="og:image" content="%(site)s/share/weekly-map.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">%(ld)s</script>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+''' % {'ga': GA, 'title': esc(title), 'desc': esc(desc), 'url': u, 'site': SITE,
+       'ld': json.dumps(ld, ensure_ascii=False)}
+
+
+FOOT = '''<footer><div class="wrap">
+  <b>아공맵</b> — 아파트 · 공급량 · 투자지도<br>
+  <a href="/">agongmap.co.kr</a> · <a href="/about/">아공맵 소개</a> · 자료: 국토교통부 주택건설실적(준공·착공) · 한국부동산원 아파트 실거래가격지수
+  <div class="disc">공공 데이터를 가공한 참고 자료이며 투자자문이 아닙니다. 투자 판단과 책임은 이용자에게 있습니다.</div>
+</div></footer>
+
+<nav class="bottomnav">
+  <a class="nav-btn" href="/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>홈</span></a>
+  <a class="nav-btn" href="/#test"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="7.4" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="7.4" cy="12" r="1.7" fill="currentColor"/><circle cx="16.6" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>퀴즈</span></a>
+  <a class="nav-btn" href="/#stats"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>통계</span></a>
+  <a class="nav-btn" href="/cycle/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>리포트</span></a>
+</nav>
+</body>
+</html>
+'''
+
+
+def tint(v, scale):
+    """홈 표와 같은 색 규칙 — 0.00일 때만 무색, 아니면 최소 0.13은 물든다."""
+    if v is None or v == 0:
+        return 'transparent'
+    a = (0.13 + 0.87 * min(1.0, abs(v) / float(scale))) * 0.8
+    return ('rgba(198,58,48,%.3f)' if v > 0 else 'rgba(38,110,180,%.3f)') % a
+
+
+def build_page(z, calc, stats, pq, others):
+    row = [x for x in calc['zones'] if x['z'] == z][0]
+    lab, color, gdesc = GRADE_TXT[row['grade']]
+    rows = series(stats, z, calc)
+    L = SZ.qidx(int(calc['L'][:4]), int(calc['L'][5:]))
+    fut = [r for r in rows if r[2]]
+    fut_sum = sum(r[1] for r in fut)
+    yrs = calc['H'] / 4.0
+
+    desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 앞으로 %.0f년 착공 기준 공급 %s세대, '
+            '분기 적정물량 %s호. 국토교통부 준공·착공 실적으로 매주 자동 갱신.'
+            % (z, signed(row['tot']), lab, yrs, num(fut_sum), num(row['ref'])))
+    title = '%s 아파트 공급 분석 — %s' % (z, lab)
+
+    h = [head(z, desc, title)]
+    h.append('<header class="zhead"><div class="wrap">'
+             '<nav class="crumb"><a href="/">아공맵</a> › <a href="/zone/">시도 공급 분석</a> › <b>%s</b></nav>'
+             '<h1>%s 아파트 공급</h1>'
+             '<p class="zlead"><span class="sc-tier %s">%s</span> %s</p>'
+             % (esc(z), esc(z), row['grade'], esc(lab), esc(gdesc)))
+    if z in AGG_NOTE:
+        h.append('<p class="znote">%s</p>' % esc(AGG_NOTE[z]))
+    elif row['est']:
+        h.append('<p class="znote">적정물량 %s호는 기준표 기준표에 없어 추정한 값입니다. '
+                 '%s</p>' % (num(row['ref']),
+                             '수도권 기준을 세대수 비중으로 나눴습니다.' if z in ('서울', '경기', '인천')
+                             else '다른 시도의 세대당 원단위로 환산했습니다.'))
+    h.append('</div></header>')
+
+    # ── 핵심 수치 ──
+    h.append('<section><div class="wrap"><h2>숫자로 보면</h2><div class="zgrid">')
+    for k, v, note in (
+        ('누적 순부족', signed(row['tot']) + '세대',
+         '앞으로 %.0f년 필요량에서 이미 쌓인 재고와 지어질 물량을 뺀 값' % yrs),
+        ('지난 4년 재고', signed(-row['inow']) + '세대',
+         '준공에서 멸실과 적정물량을 뺀 누적. −는 그만큼 모자랐다는 뜻'),
+        ('앞으로 %.0f년 공급' % yrs, num(fut_sum) + '세대',
+         '이미 착공한 물량을 3년 뒤로 밀어 추정'),
+        ('분기 적정물량', num(row['ref']) + '호',
+         '가격이 하락에서 상승으로 돌아선 시점의 입주물량 실측 기준선'),
+    ):
+        h.append('<div class="zcell"><b>%s</b><span>%s</span><i>%s</i></div>' % (k, v, note))
+    h.append('</div></section>')
+
+    # ── 기간별 표 ──
+    h.append('<section><div class="wrap"><h2>%s의 분기별 공급</h2>'
+             '<p class="zsub">칸 색은 실적 구간에서는 가격 변동(매매·전세·월세), '
+             '미래 구간에서는 적정물량 대비 모자란 정도입니다.</p>'
+             '<div class="ztb-scroll"><table class="ztb">'
+             '<thead><tr><th>기간</th><th>공급</th><th>적정 대비</th>'
+             '<th>매매</th><th>전세</th><th>월세</th></tr></thead><tbody>' % esc(z))
+    first_fut = True
+    for i, v, isfut in rows:
+        cls = ''
+        if isfut and first_fut:
+            cls = ' class="znow"'; first_fut = False
+        pct = int(round(v / float(row['ref']) * 100)) if row['ref'] else 0
+        gap = (1 - v / float(row['ref'])) if row['ref'] else None
+        p = (pq.get(i) or {}).get(z)
+        if isfut:
+            cells = ('<td style="background:%s">%d%%</td>' % (tint(gap, 1), pct)
+                     + '<td colspan="3" class="zfut">착공 기준 추정</td>')
+        else:
+            cells = ('<td>%d%%</td>' % pct) + ''.join(
+                '<td style="background:%s">%s</td>'
+                % (tint(p[n] if p else None, 2), ('%+.1f%%' % p[n]) if p else '–')
+                for n in (0, 1, 2))
+        h.append('<tr%s><td>%s</td><td>%s</td>%s</tr>'
+                 % (cls, SZ.qlabel(i), num(v), cells))
+    h.append('</tbody></table></div>'
+             '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기 착공이 실제로 없었다는 뜻입니다.</p>'
+             '</div></section>' % calc['H'])
+
+    # ── 산출 방법 ──
+    h.append('<section><div class="wrap"><h2>어떻게 계산했나</h2>'
+             '<p>칸의 숫자는 그 분기에 <b>준공된</b> 아파트 세대수입니다(국토교통부 주택건설 준공실적). '
+             '아직 오지 않은 분기는 <b>착공 실적을 3년 뒤로 밀어</b> 추정했습니다 — '
+             '착공한 것의 96%%가 3년 뒤 준공되는 게 15년치 실측입니다. '
+             '인허가는 쓰지 않습니다. 삽을 안 뜬 계획이 섞여 실제보다 1.3~1.7배 부풀기 때문입니다.</p>'
+             '<p>누적 순부족은 <b>앞으로 %d분기 필요량 − 지어질 물량 − 지난 16분기에 쌓인 재고</b>입니다. '
+             '재고에서는 멸실(철거)을 뺐지만 <b>앞으로 헐릴 집은 빼지 않았습니다</b> — '
+             '재건축 시기를 미리 알 방법이 없어서입니다. 그만큼 부족이 덜 잡힙니다.</p>'
+             '<p>공급 기준이며 가격 예측이 아닙니다. 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.</p>'
+             '</div></section>' % calc['H'])
+
+    # ── 다른 지역 ──
+    h.append('<section><div class="wrap"><h2>다른 지역</h2><div class="zlinks">')
+    for o in others:
+        if o['z'] == z:
+            continue
+        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
+                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
+    h.append('</div><p class="zsub" style="margin-top:14px">'
+             '<a href="/">← 전국 공급 표로 돌아가기</a></p></div></section>')
+    h.append(FOOT)
+    return ''.join(h)
+
+
+def build_hub(calc):
+    agg = [z for z in calc['zones'] if z['agg']]
+    sido = SZ.zone_order(calc['zones'])
+    desc = ('전국 17개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. '
+            '실적은 국토교통부 준공, 앞으로 %d분기는 착공 실적 기준. 기준 %s.'
+            % (calc['H'], calc['L']))
+    h = [head('시도별 공급', desc, '시도별 아파트 공급 분석')]
+    h.append('<header class="zhead"><div class="wrap">'
+             '<nav class="crumb"><a href="/">아공맵</a> › <b>시도 공급 분석</b></nav>'
+             '<h1>시도별 아파트 공급</h1>'
+             '<p class="zlead">%s</p></div></header>' % esc(desc))
+    h.append('<section><div class="wrap"><h2>전국·수도권·지방</h2><div class="zlinks">')
+    for o in agg:
+        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
+                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
+    h.append('</div><h2>17개 시도</h2><p class="zsub">모자란 정도가 큰 순입니다.</p><div class="zlinks">')
+    for o in sido:
+        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span>'
+                 '<i>%s세대</i></a>'
+                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'],
+                    GRADE_TXT[o['grade']][0], signed(o['tot'])))
+    h.append('</div></div></section>')
+    h.append(FOOT)
+    return ''.join(h)
+
+
+def update_sitemap(names, lastmod):
+    """/zone/ 항목을 통째로 갈아 끼운다.
+
+    옛 생활권 31곳 URL이 남아 있으면 색인에 404가 쌓인다 — 먼저 전부 지우고
+    새 20곳만 넣는다(리다이렉트는 두지 않기로 함, 2026-08-06 사용자 결정).
+    """
+    p = os.path.join(ROOT, 'sitemap.xml')
+    x = io.open(p, encoding='utf-8').read()
+    x = re.sub(r'\s*<url>\s*<loc>[^<]*/zone/[^<]*</loc>.*?</url>', '', x, flags=re.S)
+    for loc in ('%s/' % SITE, '%s/weekly/' % SITE):
+        x = re.sub(r'(<loc>%s</loc>\s*<lastmod>)[^<]*(</lastmod>)' % re.escape(loc),
+                   r'\g<1>%s\g<2>' % lastmod, x)
+    block = ('\n  <url>\n    <loc>%s/zone/</loc>\n    <lastmod>%s</lastmod>\n'
+             '    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>'
+             % (SITE, lastmod))
+    block += ''.join(
+        '\n  <url>\n    <loc>%s/zone/%s/</loc>\n    <lastmod>%s</lastmod>\n'
+        '    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>'
+        % (SITE, urllib.parse.quote(n), lastmod) for n in names)
+    x = x.replace('</urlset>', block + '\n</urlset>')
+    io.open(p, 'w', encoding='utf-8', newline='\n').write(x)
+
+
+def main():
+    adv, stats = load()
+    calc = adv.get('sido')
+    assert calc and calc.get('zones'), 'ADV.sido가 없다 — update_adv_data.py --seed-sido 먼저'
+    pq = price_quarters(adv)
+    names = [z['z'] for z in calc['zones']]
+
+    # 옛 생활권 디렉터리 정리. 이름이 통째로 바뀌었으므로 남겨두면 stale 페이지가
+    # 색인에 그대로 남는다(리다이렉트도 두지 않기로 함 — 2026-08-06 사용자 결정).
+    gone = []
+    if os.path.isdir(OUT):
+        for d in os.listdir(OUT):
+            p = os.path.join(OUT, d)
+            if os.path.isdir(p) and d not in names:
+                shutil.rmtree(p); gone.append(d)
+    os.makedirs(OUT, exist_ok=True)
+
+    for z in names:
+        d = os.path.join(OUT, z)
+        os.makedirs(d, exist_ok=True)
+        io.open(os.path.join(d, 'index.html'), 'w', encoding='utf-8', newline='\n').write(
+            build_page(z, calc, stats, pq, calc['zones']))
+    io.open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8', newline='\n').write(
+        build_hub(calc))
+    update_sitemap(names, datetime.date.today().isoformat())
+
+    print('지역 페이지 %d개 + 허브 생성 (실적~%s, 미래 %d분기) → sitemap 갱신'
+          % (len(names), calc['L'], calc['H']))
+    if gone:
+        print('옛 생활권 디렉터리 %d개 삭제: %s' % (len(gone), ', '.join(sorted(gone))))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

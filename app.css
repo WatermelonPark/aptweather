@@ -896,3 +896,46 @@ table.adv thead th:first-child{text-align:center}
   #tb-main .tb-zl:hover{text-decoration:underline}
   .tb-foot{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.65}
   .tb-foot sup{font-size:9px}
+
+  /* ===== 시도 상세 페이지 (2026-08-06) ======================================
+     생활권 31곳 시절의 .zsec/.ztab 계열을 대체한다. 페이지가 6섹션에서
+     4섹션으로 줄어 규칙도 그만큼 적다. */
+  .zhead{padding:34px 0 26px;border-bottom:1px solid var(--line)}
+  .crumb{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .crumb a{color:var(--muted);text-decoration:none}
+  .crumb a:hover{text-decoration:underline}
+  .zhead h1{font-size:clamp(28px,5vw,42px);line-height:1.15;font-weight:700;letter-spacing:-.01em}
+  .zlead{margin-top:14px;font-size:16px;color:var(--ink2);display:flex;align-items:center;
+    gap:9px;flex-wrap:wrap}
+  .znote{margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.7}
+  .zhead+section,section+section{padding-top:30px}
+  section h2{font-size:19px;font-weight:700;margin-bottom:4px}
+  .zsub{font-size:12.5px;color:var(--muted);line-height:1.7;margin:2px 0 12px}
+
+  .zgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);margin-top:14px}
+  .zcell{background:var(--paper);padding:13px 14px}
+  .zcell b{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
+  .zcell span{display:block;font-size:21px;font-weight:700;letter-spacing:-.01em;
+    margin:3px 0 5px;font-variant-numeric:tabular-nums}
+  .zcell i{display:block;font-style:normal;font-size:11px;color:var(--muted);line-height:1.55}
+
+  .ztb-scroll{overflow:auto;max-height:min(66vh,560px);border:1px solid var(--line)}
+  .ztb{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums}
+  .ztb th,.ztb td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+    padding:5px 9px;text-align:right;white-space:nowrap;font-size:12.5px}
+  .ztb th{background:var(--paper);position:sticky;top:0;z-index:2;font-weight:600;
+    font-size:11.5px;color:var(--muted);border-bottom:2px solid var(--ink2)}
+  .ztb th:first-child,.ztb td:first-child{text-align:left;color:var(--muted);font-size:11.5px}
+  .ztb tr.znow td{border-top:3px solid var(--ink)}
+  .ztb tr.znow td:first-child{font-weight:700;color:var(--ink)}
+  .ztb .zfut{text-align:center;color:var(--muted);font-size:11px}
+
+  .zlinks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);margin-top:12px}
+  .zlinks a{background:var(--paper);padding:10px 12px;text-decoration:none;color:var(--ink);
+    display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px}
+  .zlinks a:hover{background:var(--paper2)}
+  .zlinks a b{font-weight:600}
+  .zlinks a i{font-style:normal;font-size:11px;color:var(--muted);
+    margin-left:auto;font-variant-numeric:tabular-nums}
