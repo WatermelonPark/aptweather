@@ -119,6 +119,15 @@ def test_실데이터가_있으면_모든_지역이_나온다():
     got = {z['z'] for z in r['zones']}
     assert got == set(M.ORDER), '빠진 지역: %s' % (set(M.ORDER) - got)
     assert r['H'] > 0
+    # ⚠️ 이름 집합과 H만 보면 손상된 데이터가 그대로 통과한다 — 감사에서 세 가지
+    # 손상 주입이 전부 PASS했다(2026-08-07). 프로젝트가 핵심 불변식으로 못 박은
+    # '전국 = Σ17시도'를 **calc 출력**에 대해서도 본다.
+    assert r['missing'] == [], '실데이터에 빠진 지역이 있다: %s' % r['missing']
+    assert r['agg_warn'] == [], '집계 항등식이 깨졌다: %s' % r['agg_warn']
+    byz = {z['z']: z for z in r['zones']}
+    cap = sum(byz[z]['inow'] for z in ('서울', '경기', '인천'))
+    assert abs(cap - byz['수도권']['inow']) <= 3, '수도권 ≠ 서울+경기+인천'
+    assert abs((byz['전국']['inow'] - byz['수도권']['inow']) - byz['지방']['inow']) <= 3
 
 
 def test_미분양은_점수에_안_들어간다():
