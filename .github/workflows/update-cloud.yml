@@ -133,7 +133,7 @@ jobs:
           # (2026-07-30 실사고). 그래서 '가장 최신 주간/월간을 가진 산출물'을 고른다.
           # 산출물별 최신 weekly(YYYY-MM-DD)를 뽑아 가장 신선한 것을 고른다.
           # 파이썬 heredoc은 YAML 블록 들여쓰기를 깨므로 순수 셸로 짠다.
-          SRC=""; BEST=""; BESTMO=""
+          SRC=""; BEST=""; BESTMO=""; BESTSL=""
           for d in _art/data-*; do
             [ -f "$d/data-core.js" ] || continue
             wk=$(grep -oE '"p":"[0-9]{4}-[0-9]{2}-[0-9]{2}"' "$d/data-core.js" \
@@ -143,14 +143,20 @@ jobs:
             # 뒤처진 러너가 채택되던 구멍을 막는 2차 정렬 키다.
             mo=$(grep -oE '"p":"[0-9]{4}-[0-9]{2}"' "$d/data-core.js" \
                  | grep -oE '[0-9]{4}-[0-9]{2}' | sort | tail -1)
-            echo "후보 $d: weekly=${wk:--} monthly=${mo:--}"
+            # 3차 키: 공급 축(ADV.sido.L = 준공 실적 마지막 완결 분기). 주간·월간이
+            # 동률이면 공급이 뒤진 러너가 그대로 이겨, 새 분기 준공·착공을 그 회차에
+            # 못 실었다(2026-08-08 감사에서 합성 아티팩트로 재현).
+            sl=$(grep -oE '"L":"[0-9]{4}Q[1-4]"' "$d/data-core.js" \
+                 | grep -oE '[0-9]{4}Q[1-4]' | sort | tail -1)
+            echo "후보 $d: weekly=${wk:--} monthly=${mo:--} sidoL=${sl:--}"
             newer=0
             if [ -n "$wk" ]; then
               if [ -z "$BEST" ] || [ "$wk" \> "$BEST" ]; then newer=1
               elif [ "$wk" = "$BEST" ] && [ -n "$mo" ] && [ "$mo" \> "$BESTMO" ]; then newer=1
+              elif [ "$wk" = "$BEST" ] && [ "$mo" = "$BESTMO" ] && [ -n "$sl" ] && [ "$sl" \> "$BESTSL" ]; then newer=1
               fi
             fi
-            if [ "$newer" = "1" ]; then BEST="$wk"; BESTMO="$mo"; SRC="$d"; fi
+            if [ "$newer" = "1" ]; then BEST="$wk"; BESTMO="$mo"; BESTSL="$sl"; SRC="$d"; fi
           done
           # weekly를 하나도 못 읽었으면(구조 변경 등) 예전처럼 아무거나
           [ -z "$SRC" ] && SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
@@ -235,14 +241,25 @@ jobs:
           git config user.name  "stats-bot"
           git config user.email "actions@users.noreply.github.com"
           git commit -m "데이터 자동 갱신 (클라우드 冗長)"
-          # 경합 대비 pull --rebase 후 push. rebase에서 'theirs'가 우리 커밋이라
-          # 충돌 시 방금 받은 최신 데이터가 이긴다.
+          # 경합 대비 pull --rebase 후 push.
+          # ⚠️ 예전엔 `-X theirs`로 충돌을 자동 해소했는데, data.js는 STATS가 **한 줄에
+          #    170만 자**라 사람이 그 줄을 손대면 봇과 항상 같은 훅에서 부딪힌다. 그때
+          #    -X theirs가 사람 수정을 경고 하나 없이 되돌렸다(2026-08-08 감사에서
+          #    3-저장소로 재현: 손교정한 라벨이 exit 0인 채 옛 값으로 복귀).
+          #    생성기가 다시 만드는 값은 다음 회차에 복구되지만, --heal-basic으로 넣은
+          #    이력 교정처럼 갱신창 밖의 손교정은 영구 소실된다. 이제 충돌은 터뜨린다 —
+          #    데이터는 다음 회차가 다시 만들지만 사람의 수정은 아무도 못 만든다.
           # ⚠️ 루프 마지막 명령이 sleep이면 3회 모두 실패해도 스텝이 exit 0으로 끝나
           # 커밋 유실이 초록 체크로 은폐된다(2026-08-04 감사). pushed 플래그로 판정한다.
           pushed=0
           for i in 1 2 3; do
-            if git pull --rebase -X theirs origin main && git push; then
-              echo "푸시 완료"; pushed=1; break
+            if git pull --rebase origin main && git push; then
+              echo "푸시 완료"; pushed=1
+              # 색인 요청. PC 배치(run_weekly_update.bat)에만 있던 스텝이라
+              # 클라우드 전환 뒤로는 어느 경로에서도 안 돌았다 — 그 사이 URL 집합이
+              # 통째로 바뀌었는데(2026-08-06 생활권 31곳 → 시도 20곳) 제출이 없었다.
+              python3 tools/ping_indexnow.py --sitemap || echo "::warning::IndexNow 핑 실패(색인 지연만 발생)"
+              break
             fi
             # rebase가 중간 상태로 남으면 다음 회차도 연쇄 실패한다 — 정리 후 재시도.
             git rebase --abort 2>/dev/null || true
@@ -250,6 +267,7 @@ jobs:
           done
           if [ "$pushed" -ne 1 ]; then
             echo "::error::push 3회 모두 실패 — 이 회차 커밋이 러너와 함께 유실된다."
+            echo "::error::충돌이라면 사람이 같은 줄을 고쳤다는 뜻이다. 그 수정을 확인한 뒤 재실행할 것."
             exit 1
           fi
 

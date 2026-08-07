@@ -14,6 +14,7 @@
 import datetime
 import io
 import json
+import math
 import os
 import re
 import shutil
@@ -97,8 +98,15 @@ def esc(s):
             .replace('"', '&quot;'))
 
 
+def rnd(v):
+    """JS Math.round와 같은 half-up. 파이썬 기본 round()는 은행가 반올림이라
+    비율이 정확히 x.5인 칸에서 홈(Math.round)과 1%p 어긋났다 — 1,000칸 중 7칸
+    (부산 25Q2 88.5%: zone 88% vs 홈 89%, 2026-08-08 감사)."""
+    return int(math.floor(float(v) + 0.5))
+
+
 def num(v):
-    return format(int(round(v)), ',')
+    return format(rnd(v), ',')
 
 
 def signed(v):
@@ -152,7 +160,7 @@ def series(stats, z, calc):
         if i <= L:
             rows.append((i, dn.get(i, 0), False))
         else:
-            rows.append((i, round(st.get(i - calc['lead'], 0) * calc['conv']), True))
+            rows.append((i, rnd(st.get(i - calc['lead'], 0) * calc['conv']), True))
     return rows
 
 
@@ -237,12 +245,18 @@ def build_page(z, calc, stats, pq, others):
     rows = series(stats, z, calc)
     L = SZ.qidx(int(calc['L'][:4]), int(calc['L'][5:]))
     fut = [r for r in rows if r[2]]
-    fut_sum = sum(r[1] for r in fut)
     yrs = calc['H'] / 4.0
+    # ⚠️ 카드 세 개는 **서로 검산이 되어야 한다**. 예전엔 '앞으로 3년 공급'만 분기별
+    # 반올림의 합(fut_sum)이라 ADV.sido의 fut과 1~2세대 어긋났고, 같은 페이지의
+    # '어떻게 계산했나' 산식으로 검산하면 20곳 중 12곳이 안 맞았다(2026-08-08 감사).
+    # 표시할 정수로 먼저 고정하고, 누적 순부족은 그 정수들로 계산한다.
+    d_ref, d_fut, d_inow = rnd(row['ref']), rnd(row['fut']), rnd(row['inow'])
+    d_tot = d_ref * calc['H'] - d_fut - d_inow
+    fut_sum = d_fut
 
     desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 앞으로 %.0f년 착공 기준 공급 %s세대, '
             '분기 적정물량 %s호. 국토교통부 준공·착공 실적으로 매주 자동 갱신.'
-            % (z, signed(row['tot']), lab, yrs, num(fut_sum), num(row['ref'])))
+            % (z, signed(d_tot), lab, yrs, num(d_fut), num(d_ref)))
     title = '%s 아파트 공급 분석 — %s' % (z, lab)
 
     h = [head(z, desc, title)]
@@ -274,14 +288,14 @@ def build_page(z, calc, stats, pq, others):
         # ⚠️ 부호를 뒤집지 않는다. tot는 '양수=부족'인데 signed()로 −를 붙이면
         # 바로 아래 '어떻게 계산했나'의 산식(필요량 − 지어질 물량 − 재고)으로
         # 검산했을 때 부호가 반대가 된다(2026-08-07 감사).
-        ('누적 순부족', ('%s세대 부족' % num(row['tot'])) if row['tot'] >= 0
-         else ('%s세대 여유' % num(-row['tot'])),
+        ('누적 순부족', ('%s세대 부족' % num(d_tot)) if d_tot >= 0
+         else ('%s세대 여유' % num(-d_tot)),
          '앞으로 %.0f년 필요량에서 이미 쌓인 재고와 지어질 물량을 뺀 값' % yrs),
-        ('지난 4년 재고', signed(-row['inow']) + '세대',
+        ('지난 4년 재고', signed(-d_inow) + '세대',
          '준공에서 멸실과 적정물량을 뺀 누적. −는 그만큼 모자랐다는 뜻'),
         ('앞으로 %.0f년 공급' % yrs, num(fut_sum) + '세대',
          '이미 착공한 물량을 3년 뒤로 밀어 추정'),
-        ('분기 적정물량', num(row['ref']) + '호',
+        ('분기 적정물량', num(d_ref) + '호',
          '가격이 하락에서 상승으로 돌아선 시점의 입주물량 실측 기준선'),
         ('미분양', (num(row['unsold']) + '호') if row.get('unsold') is not None else '–',
          ('%s 기준 · 분기 적정물량의 %.2f배' % (calc.get('unsold_prd') or '', row['um']))
@@ -302,7 +316,7 @@ def build_page(z, calc, stats, pq, others):
         cls = ''
         if isfut and first_fut:
             cls = ' class="znow"'; first_fut = False
-        pct = int(round(v / float(row['ref']) * 100)) if row['ref'] else 0
+        pct = rnd(v / float(row['ref']) * 100) if row['ref'] else 0
         gap = (1 - v / float(row['ref'])) if row['ref'] else None
         p = (pq.get(i) or {}).get(z)
         if isfut:
@@ -475,6 +489,14 @@ def main():
     # 되면 L·H는 그대로라 위 게이트를 통과하는데, 그 상태로 구우면 등급 카드는 옛
     # 점수(24,297세대 부족)인데 분기 표는 전 칸 0인 자가당착 페이지가 나온다
     # (2026-08-07 감사에서 울산으로 재현). 지역 구성까지 같은지 본다.
+    # ⚠️ H는 착공 끝 − 준공 끝 + 리드타임이라, 두 시리즈가 같은 분기에서 끝나야
+    # H == lead가 된다. 한쪽만 늦게 들어온 회차(부분 수집)에는 H가 13이 되고
+    # 등급이 3곳까지 조용히 바뀌는데 테스트·게이트가 전부 통과한다(2026-08-08 감사).
+    # 실측상 두 계열은 같은 표의 두 열이라 늘 함께 도착한다 — 어긋나면 수집 사고다.
+    if _live['H'] != _live['lead']:
+        raise SystemExit('ABORT: 준공(~%s)과 착공(~%s)의 끝 분기가 달라 H=%d다(정상 %d) — '
+                         '한쪽만 수집된 회차로 보인다. 데이터를 먼저 맞출 것.'
+                         % (_live['L'], _live['S'], _live['H'], _live['lead']))
     if _live.get('missing'):
         raise SystemExit('ABORT: STATS 준공·착공에서 %d곳이 결측이다(%s) — 데이터를 '
                          '먼저 복구할 것.' % (len(_live['missing']), ', '.join(_live['missing'])))

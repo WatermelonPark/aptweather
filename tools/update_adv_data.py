@@ -881,15 +881,34 @@ def update_rate(stats):
     return ['금리(%d)' % n] if n else []
 
 
-def _fetch_annual_one(name):
-    """{연도(str): {지역: 값}} 반환."""
+def _fetch_annual_one(name, years=None):
+    """{연도(str): {지역: 값}} 반환. 다년 요청이 40,000셀을 넘으면 연 단위로 쪼갠다
+       (노후주택30년은 지역×유형이 넓어 3년치가 한계다)."""
+    import datetime
     cfg = ANNUAL_CONF[name]
+    n = years or ANNUAL_YEARS
     p = {'orgId': cfg['org'], 'tblId': cfg['tbl'], 'itmId': 'ALL', 'prdSe': 'Y',
-         'newEstPrdCnt': str(ANNUAL_YEARS)}
+         'newEstPrdCnt': str(n)}
     for i in range(1, cfg['objn'] + 1):
         p['objL%d' % i] = 'ALL'
+    try:
+        data = kosis(p)
+    except RuntimeError as e:
+        if 'err 31' not in str(e):
+            raise
+        data = []
+        y0 = datetime.date.today().year
+        for y in range(y0, y0 - n, -1):
+            q = dict(p); q.pop('newEstPrdCnt')
+            q['startPrdDe'] = q['endPrdDe'] = str(y)
+            try:
+                data += kosis(q)
+            except RuntimeError as e2:
+                if 'err 30' not in str(e2):
+                    raise
+            time.sleep(0.15)
     out = {}
-    for row in kosis(p):
+    for row in data:
         if (row.get('ITM_NM') or '').strip() != cfg['itm']:
             continue
         if any((row.get(k) or '').strip() != v for k, v in (cfg.get('only') or {}).items()):
@@ -1117,6 +1136,38 @@ def main():
             if D.get('dates'):
                 print('  %s: %s ~ %s (%d개월)' % (k, D['dates'][0], D['dates'][-1], len(D['dates'])))
         return
+    if arg == '--heal-annual':
+        # 연간 계열도 ANNUAL_YEARS(3년)만 덮어쓰므로, 그보다 옛 구간은 최초 시딩 때의
+        # 판본이 그대로 굳는다. 주택보급률이 2014년까지 **구지표**, 2015년부터 신지표라
+        # 2015년에 1.9%p짜리 없던 급락이 그려졌다(2026-08-08 감사). 전량 재조회한다.
+        # ⚠️ 새 지표가 없는 옛 연도는 값을 지운다 — 정의가 다른 값을 한 선으로 잇는 것보다
+        #    선이 늦게 시작하는 게 정직하다.
+        # usage: --heal-annual <계열> [연수]
+        name = sys.argv[2]
+        years = int(sys.argv[3]) if len(sys.argv) > 3 else 30
+        assert name in ANNUAL_CONF, '계열: %s' % ', '.join(ANNUAL_CONF)
+        assert KEY, 'KOSIS_API_KEY 환경변수 필요'
+        st = read_current_stats()
+        fetched = _fetch_annual_one(name, years)
+        D = st[name]
+        n = merge_annual(D, fetched, ANNUAL_CONF[name]['dec'])
+        # ⚠️ 조회 범위 **안**에서만 지운다. 밖(더 옛 연도)은 '새 지표에 없다'가 아니라
+        # '이번에 안 물어봤다'이다 — 이걸 구분하지 않아 아파트건설의 1970~1994년
+        # 25셀을 한 번 날렸다(2026-08-08, 백업에서 복원).
+        lo, hi = (min(fetched), max(fetched)) if fetched else ('9999', '0000')
+        wiped = 0
+        for i, y in enumerate(D['dates']):
+            if y in fetched or not (lo <= y <= hi):
+                continue
+            for r in D['series']:
+                if D['series'][r][i] is not None:
+                    D['series'][r][i] = None
+                    wiped += 1
+        if n or wiped:
+            write_stats(st)
+        print('heal %s: %d개 연도 조회(%s~%s), %d셀 교정, %d셀 삭제(새 지표 없음)'
+              % (name, len(fetched), min(fetched or ['-']), max(fetched or ['-']), n, wiped))
+        return
     if arg == '--heal-basic':
         # 갱신창(BASIC_MONTHS / _DEEP) 밖 이력을 원천과 다시 맞춘다. 창 안만 훑는
         # 평소 배치로는 옛 달의 오류가 스스로 낫지 않는다 — 전세가율이 2025.03↔04
@@ -1155,7 +1206,7 @@ def main():
         print('sido seeded: %d곳, 실적~%s, 착공~%s, 미래 %d분기'
               % (len(adv['sido']['zones']), adv['sido']['L'], adv['sido']['S'], adv['sido']['H']))
         return
-    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-sido | --seed-supply | --discover <kw>'
+    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-sido | --seed-supply | --heal-basic <계열> [개월] | --heal-annual <계열> [연수] | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
     failed = []     # 어떤 지표 fetch가 죽었는지 집계 — 전량 실패를 '변경 없음'과 구분한다
