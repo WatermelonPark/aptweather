@@ -231,6 +231,14 @@ def build_page(z, calc, stats, pq, others):
              '<h1>%s 아파트 공급</h1>'
              '<p class="zlead"><span class="sc-tier %s">%s</span> %s</p>'
              % (esc(z), esc(z), row['grade'], esc(lab), esc(gdesc)))
+    if row.get('uwarn'):
+        # 미분양은 순위 산식에 안 들어간다(결과값이라 이중계상). 다만 판정과
+        # 어긋나면 그 사실을 숨기지 않는다 — 제주가 '매우 부족'인데 미분양이
+        # 적정물량의 2.4배인 건 읽는 사람이 알아야 한다(2026-08-07).
+        h.append('<p class="zwarn">⚠ 부족으로 나오지만 <b>미분양이 %s호</b> 쌓여 '
+                 '있습니다(분기 적정물량의 %.1f배). 지을 데가 없어서가 아니라 '
+                 '안 팔려서 안 짓는 것일 수 있습니다.</p>'
+                 % (num(row['unsold']), row['um']))
     if z in AGG_NOTE:
         h.append('<p class="znote">%s</p>' % esc(AGG_NOTE[z]))
     elif row['est']:
@@ -251,6 +259,9 @@ def build_page(z, calc, stats, pq, others):
          '이미 착공한 물량을 3년 뒤로 밀어 추정'),
         ('분기 적정물량', num(row['ref']) + '호',
          '가격이 하락에서 상승으로 돌아선 시점의 입주물량 실측 기준선'),
+        ('미분양', (num(row['unsold']) + '호') if row.get('unsold') is not None else '–',
+         ('%s 기준 · 분기 적정물량의 %.2f배' % (calc.get('unsold_prd') or '', row['um']))
+         if row.get('um') is not None else '자료 없음'),
     ):
         h.append('<div class="zcell"><b>%s</b><span>%s</span><i>%s</i></div>' % (k, v, note))
     h.append('</div></section>')
@@ -293,6 +304,9 @@ def build_page(z, calc, stats, pq, others):
              '<p>누적 순부족은 <b>앞으로 %d분기 필요량 − 지어질 물량 − 지난 16분기에 쌓인 재고</b>입니다. '
              '재고에서는 멸실(철거)을 뺐지만 <b>앞으로 헐릴 집은 빼지 않았습니다</b> — '
              '재건축 시기를 미리 알 방법이 없어서입니다. 그만큼 부족이 덜 잡힙니다.</p>'
+             '<p><b>미분양</b>은 지금 안 팔리고 남은 집입니다(한국부동산원). '
+             '순위 계산에는 넣지 않습니다 — 결과값이라 공급에서 빼면 이중으로 세고 부호도 반대가 됩니다. '
+             '판정을 읽는 맥락으로만 씁니다.</p>'
              '<p>공급 기준이며 가격 예측이 아닙니다. 금리가 크게 움직이면 공급 신호는 가격에 묻힙니다.</p>'
              '</div></section>' % calc['H'])
 

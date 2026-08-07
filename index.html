@@ -2414,7 +2414,10 @@ function tbBuild(){
       j:pr?regs.map(function(r){return (pr.je||[])[pi[r]];}):null,
       w:pr?regs.map(function(r){return (pr.wo||[])[pi[r]];}):null});
   }
-  return {regs:regs,refs:refs,est:est,rows:rows,H:S.H,L:S.L};
+  var un={}, um={}, uw={};
+  S.zones.forEach(function(z){ un[z.z]=z.unsold; um[z.z]=z.um; uw[z.z]=z.uwarn; });
+  return {regs:regs,refs:refs,est:est,rows:rows,H:S.H,L:S.L,
+          un:un,um:um,uw:uw,uprd:S.unsold_prd};
 }
 /* 월 원장 → 기간 단위. n(합친 달 수)을 같이 돌려줘야 부분 기간의 적정물량이
    같은 비율로 줄어든다 — 안 그러면 2029년(2분기치)이 1년치 기준과 비교돼
@@ -2497,7 +2500,23 @@ function tbDraw(){
     }
     h+='</tr>';
   });
-  el.innerHTML=h+'</tbody>';
+  /* ── 미분양 줄 ────────────────────────────────────────────────────────
+     미분양은 **순위 산식에 넣지 않는다**(결과값이라 재고에서 차감하면 부호가
+     반대고 이중계상된다). 여기 있는 건 위 칸들을 읽는 맥락이다 — 판정이
+     '부족'인데 미분양이 쌓인 곳은 지을 데가 없어서가 아니라 안 팔려서
+     안 짓는 것일 수 있다(제주 2.4배·부산 1.3배 vs 서울 0.05배).
+     색은 한 방향 파랑이다. 미분양이 적으면 부족 신호가 아니라 그냥 정상이라
+     붉게 칠할 근거가 없다. */
+  h+='</tbody><tfoot><tr class="tb-un"><td>미분양<i class="tb-mx" title="'
+    +(B.uprd||'')+' 기준 · 분기 적정물량 대비 배수로 색을 넣었다">?</i></td>';
+  for(var u=0;u<B.regs.length;u++){
+    var rg=B.regs[u], uv=B.un[rg], mm=B.um[rg];
+    h+='<td><span class="tc">'
+      +'<i class="tl" style="left:0;right:0;background:'+tbTint(mm==null?null:-mm,2)+'"></i>'
+      +'<b>'+(uv==null?'–':uv.toLocaleString())+(B.uw[rg]?'<em title="부족 판정인데 미분양이 적정물량 이상 쌓였다">⚠</em>':'')+'</b></span></td>';
+  }
+  h+='</tr></tfoot>';
+  el.innerHTML=h;
   var n=document.getElementById('tb-note');
   if(n) n.textContent=(TB_PER==='y'?'한 해 합계 · ':TB_PER==='m'?'한 달치 · ':'')
     +'과거 칸은 왼쪽부터 매매·전세·월세, 미래 칸은 적정물량 대비';
@@ -2510,7 +2529,11 @@ function tbDraw(){
   if(f) f.innerHTML='굵은 줄부터 아래로 착공 실적으로 추정한 미래 공급이 섞입니다(최대 '
     +B.H+'분기 = 3년). 0은 그 기간 착공이 실제로 없었다는 뜻입니다. <b>±</b>는 실적과 추정이 섞인 기간, '
     +'<b>·</b>는 기간이 덜 찬 칸이라 적정물량도 같은 비율로 줄여 견줍니다. '
-    +'<sup>*</sup>는 적정물량이 추정치인 지역입니다.';
+    +'<sup>*</sup>는 적정물량이 추정치인 지역입니다.<br>'
+    +'맨 아래 <b>미분양</b>은 지금 안 팔리고 남은 집입니다('+(B.uprd||'')+' 기준, 한국부동산원). '
+    +'순위 계산에는 넣지 않습니다 — 결과값이라 공급에서 빼면 이중으로 세입니다. '
+    +'<b>⚠</b>가 붙은 곳은 <b>부족으로 나오는데 미분양이 적정물량 이상 쌓인</b> 지역입니다. '
+    +'지을 데가 없어서가 아니라 안 팔려서 안 짓는 것일 수 있습니다.';
 }
 /* 굵은 줄(.now = 미래가 처음 섞이는 행)을 표 위쪽 1/3에 놓는다.
    ⚠️ requestAnimationFrame을 쓰지 말 것 — 배경 탭이나 그리지 않는 창에서는

@@ -119,6 +119,23 @@ def demol_q(stats, region):
     return (v[-1] / 4.0) if v else 0.0
 
 
+def unsold_latest(stats, region):
+    """가장 최근 미분양 호수와 그 시점. (호수, 'YYYY.MM') — 없으면 (None, None).
+
+    미분양은 **순위 산식에 넣지 않는다**(결과값이라 재고에서 차감하면 부호가
+    반대고 이중계상된다 — 기존 원칙). 여기서 뽑는 건 화면에 같이 놓을 맥락이다:
+    판정이 '부족'인데 미분양이 쌓인 곳은 지을 데가 없어서가 아니라 안 팔려서
+    안 짓는 것일 수 있다.
+    """
+    s = stats.get('미분양') or {}
+    ser = (s.get('series') or {}).get(region) or []
+    dates = s.get('dates') or []
+    for i in range(len(ser) - 1, -1, -1):
+        if ser[i] is not None:
+            return ser[i], (dates[i] if i < len(dates) else None)
+    return None, None
+
+
 def grade(ratio):
     c = GRADE_CUTS
     if ratio >= c[0]: return 'g4'
@@ -150,6 +167,7 @@ def calc(stats):
     if H <= 0:
         raise ValueError('미래 시야가 0 이하다 (착공 %s, 준공 %s)' % (qkey(S), qkey(L)))
     out, missing = [], []
+    un_prd = None
     for z in ORDER:
         ref = REF_Q[z]
         dn = quarterly(stats, '준공', z)
@@ -166,10 +184,20 @@ def calc(stats):
         need = ref * H
         tot = need - fut - inow
         ratio = tot / need if need else 0.0
+        g = grade(ratio)
+        un, un_p = unsold_latest(stats, z)
+        if un_p:
+            un_prd = un_p
+        # 미분양이 분기 적정물량의 몇 배인가. 판정이 '부족' 쪽인데 이 값이 1을
+        # 넘으면 두 신호가 어긋난 것 — 화면에 ⚠로 드러낸다.
+        um = (un / float(ref)) if (un is not None and ref) else None
         out.append({
             'z': z, 'region': REGION[z], 'agg': z in AGG, 'est': z in EST,
             'ref': ref, 'inow': round(inow), 'fut': round(fut), 'need': need,
-            'tot': round(tot), 'ratio': round(ratio, 4), 'grade': grade(ratio),
+            'tot': round(tot), 'ratio': round(ratio, 4), 'grade': g,
+            'unsold': (None if un is None else round(un)),
+            'um': (None if um is None else round(um, 3)),
+            'uwarn': bool(um is not None and um >= 1.0 and g in ('g4', 'g3', 'g2')),
         })
     if missing:
         import sys as _s
@@ -178,7 +206,7 @@ def calc(stats):
               % (len(missing), ', '.join(missing)), file=_s.stderr)
     return {'L': qkey(L), 'S': qkey(S), 'H': H,
             'lead': LEAD_Q, 'conv': CONV, 'window': BACKLOG_WINDOW,
-            'missing': missing, 'zones': out}
+            'unsold_prd': un_prd, 'missing': missing, 'zones': out}
 
 
 def zone_order(rows):

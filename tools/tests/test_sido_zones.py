@@ -119,3 +119,36 @@ def test_실데이터가_있으면_모든_지역이_나온다():
     got = {z['z'] for z in r['zones']}
     assert got == set(M.ORDER), '빠진 지역: %s' % (set(M.ORDER) - got)
     assert r['H'] > 0
+
+
+def test_미분양은_점수에_안_들어간다():
+    """미분양은 결과값이라 재고에서 차감하면 부호가 반대고 이중계상된다.
+    맥락으로만 싣는지 — 같은 통계를 넣고 빼도 tot가 흔들리지 않아야 한다."""
+    cut = (2026 - 2011) * 12 + 6
+    z = [0] * cut
+    base = _stats({'전국': list(z), '서울': list(z)},
+                  {'전국': list(z), '서울': list(z)}, y0=2011, m0=1)
+    a = M.calc(base)
+    with_un = dict(base)
+    with_un['미분양'] = {'dates': ['2026.06'], 'series': {'전국': [9999], '서울': [9999]}}
+    b = M.calc(with_un)
+    ga = [x for x in a['zones'] if x['z'] == '서울'][0]
+    gb = [x for x in b['zones'] if x['z'] == '서울'][0]
+    assert ga['tot'] == gb['tot'] and ga['grade'] == gb['grade'], '미분양이 점수를 바꿨다'
+    assert gb['unsold'] == 9999 and ga['unsold'] is None
+
+
+def test_모순_표시는_부족_판정에만_붙는다():
+    """공급 여유인데 미분양이 많은 건 모순이 아니라 일관이다(충남)."""
+    cut = (2026 - 2011) * 12 + 6
+    z = [0] * cut
+    s = _stats({'전국': list(z), '서울': list(z)},
+               {'전국': list(z), '서울': list(z)}, y0=2011, m0=1)
+    ref = M.REF_Q['서울']
+    s['미분양'] = {'dates': ['2026.06'], 'series': {'전국': [0], '서울': [ref]}}
+    row = [x for x in M.calc(s)['zones'] if x['z'] == '서울'][0]
+    assert row['grade'] in ('g4', 'g3', 'g2') and row['um'] == 1.0
+    assert row['uwarn'] is True, '부족 + 미분양 1배면 모순 표시'
+    s['미분양']['series']['서울'] = [ref - 1]
+    row2 = [x for x in M.calc(s)['zones'] if x['z'] == '서울'][0]
+    assert row2['uwarn'] is False, '1배 미만이면 표시하지 않는다'

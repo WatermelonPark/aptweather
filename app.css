@@ -755,3 +755,11 @@ table.adv thead th:first-child{text-align:center}
   .zlinks a b{font-weight:600}
   .zlinks a i{font-style:normal;font-size:11px;color:var(--muted);
     margin-left:auto;font-variant-numeric:tabular-nums}
+
+  /* 미분양 줄 — 표 맨 아래 붙박이. 위 칸들을 읽는 맥락이지 점수가 아니다. */
+  #tb-main tfoot td{background:var(--paper);position:sticky;bottom:0;z-index:5;
+    border-top:2px solid var(--ink2)}
+  #tb-main tfoot td:first-child{z-index:6;font-weight:600;color:var(--ink)}
+  #tb-main tfoot .tc b em{font-style:normal;color:#a93226;margin-left:2px;font-size:10px}
+  .zwarn{margin-top:10px;font-size:13px;color:#a93226;line-height:1.65;
+    border-left:3px solid #a93226;padding-left:10px}
