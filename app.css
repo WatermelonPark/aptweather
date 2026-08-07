@@ -623,7 +623,10 @@
   .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted);white-space:nowrap}
   .sc-tier.g4{background:#fdecea;color:#a93226}
   .sc-tier.g3{background:#fbeee9;color:#c0392b}
-  .sc-tier.g2{background:#faf3e7;color:#b9770e}
+  /* 3.34:1이라 10.5px 기준(4.5:1)에 미달했다 — 20곳 중 7곳이 다는 최다
+     배지다(2026-08-07 오딧). 배경 faf3e7은 audit_design DATA_TINTS 예외라
+     그대로 두고 글자만 내렸다: #b9770e → #8f5806 = 5.34:1. */
+  .sc-tier.g2{background:#faf3e7;color:#8f5806}
   .sc-tier.g1{background:#edf0ee;color:#5e6f74}
   .sc-tier.g0{background:#e9f0f7;color:#1a5276}
   /* 좁은 화면: 고정폭 합이 커서 ▸(sc-go)가 화면 밖으로 밀려 가로 스크롤이 생겼다.
@@ -711,6 +714,13 @@ table.adv thead th:first-child{text-align:center}
   /* 표두 지역명 = 상세페이지 링크. 밑줄은 hover에만 — 20개가 늘 밑줄이면 시끄럽다 */
   #tb-main .tb-zl{color:inherit;text-decoration:none}
   #tb-main .tb-zl:hover{text-decoration:underline}
+  /* 허브(/zone/) 진입점. 푸터에만 있어서 표를 보던 사람이 20곳을 나란히
+     견주는 화면으로 갈 길이 없었다(2026-08-07 오딧). 표 다음 동작 자리에 둔다. */
+  .tb-more{margin:12px 0 0;font-size:13px}
+  .tb-more a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line);
+    display:inline-block;padding:6px 0 4px}   /* 22px면 터치 최소선(32px) 미달 */
+  .tb-more a:hover{border-bottom-color:var(--ink)}
+  .zsort{margin-top:12px}
   .tb-foot{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.65}
   .tb-foot sup{font-size:9px}
 

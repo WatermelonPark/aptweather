@@ -338,13 +338,34 @@ def build_hub(calc):
     for o in agg:
         h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
                  % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
-    h.append('</div><h2>17개 시도</h2><p class="zsub">모자란 정도가 큰 순입니다.</p><div class="zlinks">')
+    h.append('</div><h2>17개 시도</h2>'
+             '<div class="tb-seg zsort" id="sido-sort" role="group" aria-label="정렬 기준">'
+             '<button type="button" class="on" data-s="g">등급순</button>'
+             '<button type="button" data-s="a">세대수순</button></div>'
+             '<p class="zsub" id="sido-note">등급순입니다. 같은 등급 안에서는 세대수가 많은 순.</p>'
+             '<div class="zlinks" id="sido-list">')
     for o in sido:
-        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span>'
-                 '<i>%s세대</i></a>'
-                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'],
-                    GRADE_TXT[o['grade']][0], signed(o['tot'])))
+        h.append('<a href="/zone/%s/" data-gi="%d" data-tot="%d"><b>%s</b>'
+                 '<span class="sc-tier %s">%s</span><i>%s세대</i></a>'
+                 % (urllib.parse.quote(o['z']), SZ.GRADE_KEYS.index(o['grade']), o['tot'],
+                    esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0], signed(o['tot'])))
     h.append('</div></div></section>')
+    h.append('<script>(function(){'
+             'var w=document.getElementById("sido-list"),seg=document.getElementById("sido-sort"),'
+             'note=document.getElementById("sido-note");'
+             'if(!w||!seg)return;'
+             'var g=function(e,k){return +e.getAttribute(k)};'
+             'seg.addEventListener("click",function(ev){'
+             'var b=ev.target.closest("button");if(!b)return;var s=b.getAttribute("data-s");'
+             'Array.prototype.forEach.call(seg.children,function(x){x.classList.toggle("on",x===b)});'
+             'var a=Array.prototype.slice.call(w.children);'
+             'a.sort(s==="a"?function(x,y){return g(y,"data-tot")-g(x,"data-tot")}'
+             ':function(x,y){return g(x,"data-gi")-g(y,"data-gi")||g(y,"data-tot")-g(x,"data-tot")});'
+             'a.forEach(function(el){w.appendChild(el)});'
+             'if(note)note.textContent=s==="a"'
+             '?"세대수가 많은 순입니다. 등급은 필요량 대비 비율이라 순서가 다릅니다."'
+             ':"등급순입니다. 같은 등급 안에서는 세대수가 많은 순.";'
+             '});})();</script>')
     h.append(FOOT)
     return ''.join(h)
 

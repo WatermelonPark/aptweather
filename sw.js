@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v63'; // 오딧 2차: 폐어 잔여 + 안 쓰는 localStorage 고지 삭제
+const VERSION = 'v64'; // 오딧 3차: 허브 진입점·정렬 토글·배지 대비
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
