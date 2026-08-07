@@ -37,7 +37,10 @@ def load():
 
 
 def num(v):
-    return format(int(round(v)), ',')
+    # JS Math.round와 같은 half-up. 파이썬 기본 round()는 은행가 반올림이라
+    # 같은 값이 홈과 1 차이가 났다(2026-08-08 감사, zone 페이지와 같은 원인).
+    import math as _m
+    return format(int(_m.floor(float(v) + 0.5)), ',')
 
 
 def updown(a, b, tol=0.03):

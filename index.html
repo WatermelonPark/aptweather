@@ -184,7 +184,7 @@
 <b>빗금</b>은 그 기간 가격 자료가 없는 칸입니다 — 변동이 0인 것과 다릅니다.
 적정물량은 가격이 하락에서 상승으로 돌아선 시점의 입주물량으로 잡은 <b>기준표의 고정 상수</b>입니다 — 해마다 다시 계산하지 않습니다.
 서울·경기·인천은 표에 수도권 하나뿐이라 세대수 비중으로 나눴고, 세종·제주는 세대당 원단위로 추정해 <b>* 표시</b>를 달았습니다.
-표의 기호: <b>0</b>은 그 기간 착공이 실제로 없었다는 뜻, <b>±</b>는 실적과 추정이 섞인 기간,
+표의 기호: <b>0</b>은 그 기간에 실제로 없었다는 뜻(굵은 줄 위는 준공, 아래는 착공), <b>±</b>는 실적과 추정이 섞인 기간,
 <b>·</b>는 기간이 덜 찬 칸(적정물량도 같은 비율로 줄여 견줍니다).
 맨 아래 <b>미분양</b>은 지금 안 팔리고 남은 집이고(한국부동산원), 순위 계산에는 넣지 않습니다 — 결과값이라 공급에서 빼면 이중으로 세입니다.
 <b>⚠</b>는 부족으로 나오는데 미분양이 적정물량 이상 쌓인 곳입니다. 지을 데가 없어서가 아니라 안 팔려서 안 짓는 것일 수 있습니다.
@@ -346,7 +346,7 @@
         <div class="gt"><button class="on" data-v="g" onclick="gtSet('permit','g')">그래프</button><button data-v="t" onclick="gtSet('permit','t')">표</button></div></div>
 
   
-      <p class="adv-note">3~5년 뒤 입주로 이어지는 가장 이른 공급 신호입니다.</p>
+      <p class="adv-note">4~6년 뒤 입주로 이어지는 가장 이른 공급 신호입니다.</p>
       <div class="adv-regsel"><select id="adv-permit-reg" onchange="renderPermitSec()"></select></div>
       <div class="gt-g"><div class="chartwrap sm"><canvas id="permitChart"></canvas></div></div>
       <div class="gt-t">
@@ -1727,6 +1727,9 @@ function setStatsMode(m,push){
   if(push!==false)statsNav(statsHashOf(m));
 }
 function advFmt(v){ return v==null ? '·' : Number(v).toLocaleString('ko-KR'); }
+/* 입주물량 미래 분기는 소수 한 자리로 실려 온다(분기마다 반올림하면 소비자가
+   그걸 다시 더해 홈과 갈리기 때문). 화면에는 정수로 찍는다. */
+function occFmt(v){ return v==null ? '·' : Math.round(v).toLocaleString('ko-KR'); }
 function advSel(id, regions){
   const s=document.getElementById(id);
   if(s.options.length) return s.value;
@@ -1796,7 +1799,7 @@ function renderAdvOcc(){
     regs.forEach((r,j)=>{
       mx.push(`<tr><td>${r}</td>`+O.rows.map(row=>{
         const cls=[occCls(r,row.v[j]),occEst(row)?'fut':''].filter(Boolean).join(' ');
-        return `<td class="${cls}">${advFmt(row.v[j])}</td>`;
+        return `<td class="${cls}">${occFmt(row.v[j])}</td>`;
       }).join('')+'</tr>');
     });
   }else{
@@ -1804,7 +1807,7 @@ function renderAdvOcc(){
     for(let i=O.rows.length-1;i>=0;i--){
       const row=O.rows[i];
       mx.push(`<tr class="${occEst(row)?'fut':''}"><td>${row.p}</td>`+
-        row.v.map((v,j)=>`<td class="${occCls(regs[j],v)}">${advFmt(v)}</td>`).join('')+'</tr>');
+        row.v.map((v,j)=>`<td class="${occCls(regs[j],v)}">${occFmt(v)}</td>`).join('')+'</tr>');
     }
   }
   mx.push('</tbody></table>');
@@ -1815,7 +1818,7 @@ function renderAdvOcc(){
   const cp=['<table class="adv"><thead><tr><th>분기</th><th>'+reg+'</th></tr></thead><tbody>'];
   for(let i=end-1;i>=start;i--){
     const row=rows[i], v=row.v[ri];
-    cp.push(`<tr class="${occEst(row)?'fut':''}"><td>${row.p}</td><td class="${occCls(reg,v)}">${advFmt(v)}</td></tr>`);
+    cp.push(`<tr class="${occEst(row)?'fut':''}"><td>${row.p}</td><td class="${occCls(reg,v)}">${occFmt(v)}</td></tr>`);
   }
   cp.push('</tbody></table>');
   const b=null;   // 적정밴드 폐지(2026-08-07) — 기준선은 적정물량 하나
@@ -2280,7 +2283,7 @@ function drawOccChart(){
   mkChart('occChart',{type:'bar',
     data:{labels:O.rows.map(r=>r.p),datasets:[{label:'입주물량',data:vals,backgroundColor:cols}]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${advFmt(c.raw)} 호`}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${occFmt(c.raw)} 호`}}},
       scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
         y:{grid:{color:GRID},title:{display:true,text:'호 (분기)'}}}},
     plugins:[{id:'occRef',afterDraw(ch){
@@ -2404,7 +2407,11 @@ function tbTint(v,scale){
   if(c===undefined){ c=(v>0?'rgba(198,58,48,':'rgba(38,110,180,')+a.toFixed(3)+')'; TB_TINTC[k]=c; }
   return c;
 }
-function tbPv(a){ return a==null?'자료 없음':((a>0?'+':'')+a.toFixed(1)+'%'); }
+/* toFixed(1)은 -0.04를 '-0.0'으로 만든다. 0.0인데 부호만 붙은 값은 '변동 없음'으로
+   읽히지 않고 오류처럼 보인다(2026-08-08 감사). 반올림 결과로 부호를 정한다. */
+function tbPv(a){ if(a==null) return '자료 없음';
+  var r=Math.round(a*10)/10;
+  return (r>0?'+':'')+(r===0?(0).toFixed(1):r.toFixed(1))+'%'; }
 /* Number.prototype.toLocaleString은 호출마다 포맷터를 새로 세운다. 월 모드는
    칸이 3,000개라 그것만으로 렌더의 절반을 먹었다(2026-08-07 감사). 천단위
    쉼표는 직접 넣는다 — 이 표의 값은 전부 음수 없는 정수 세대수다. */
@@ -2654,6 +2661,9 @@ function renderBubbleSec(){
   (B.regions||Object.keys(B.conv)).forEach(rg=>{
     const cv=B.conv[rg],jr=latest(rg);
     if(cv==null||jr==null)return;
+    /* ⚠️ 소수 한 자리로 찍으면 판정과 표시가 어긋난다. 울산(4.351)과 경남(4.366)이
+       둘 다 '4.4%'로 보이는데 대출금리 4.36% 기준으로 판정은 정반대였다
+       (2026-08-08 감사). 금리를 두 자리로 쓰므로 밴드도 두 자리로 맞춘다. */
     const lo=jr/100*cv,hi=lo*2;
     let cls='',txt='여유 '+(hi-loan).toFixed(1)+'%p';
     if(loan>=hi){cls='hi';txt='상단 초과';nHi++;}
@@ -2663,7 +2673,7 @@ function renderBubbleSec(){
     if(loan>=hi)pos='대출금리가 위험선(월세수익률 2배)을 넘었습니다 — 이자가 임대수익의 2배를 넘는 과열 구간입니다.';
     else if(loan<=lo)pos='대출금리가 월세수익률보다 낮습니다 — 이자가 임대수익보다 싼 매수 신호권입니다.';
     else pos='대출금리는 밴드 안이고, 위험선까지 '+(hi-loan).toFixed(1)+'%p 남았습니다.';
-    const det='밴드: 전세가율 '+jr+'% × 전월세전환율 '+cv+'% = <b>월세수익률 '+lo.toFixed(1)+'%</b> · 그 2배 = <b>위험선 '+hi.toFixed(1)+'%</b>.<br>'
+    const det='밴드: 전세가율 '+jr+'% × 전월세전환율 '+cv+'% = <b>월세수익률 '+lo.toFixed(2)+'%</b> · 그 2배 = <b>위험선 '+hi.toFixed(2)+'%</b>.<br>'
       +'<b>대출금리 '+loan.toFixed(2)+'%</b> — '+pos;
     // 숫자 위치 적응: 파랑=밴드 왼쪽(단 대출금리 검은선과 겹치면 그 선 왼쪽으로), 빨강=밴드 오른쪽(단 우측 공간 없거나 겹치면 밴드 안쪽 왼편). NW=숫자 폭 근사(%)
     const pL=px(lo),pH=px(hi),pN=px(loan),NW=15;
@@ -2672,11 +2682,11 @@ function renderBubbleSec(){
     const blueSt='left:'+blueAnc+'%;transform:translate(calc(-100% - 3px),-50%);color:#1a5276';
     const redSt=redIn?'left:'+pH+'%;transform:translate(calc(-100% - 3px),-50%);color:#a93226':'left:'+pH+'%;transform:translate(3px,-50%);color:#a93226';
     h+='<div class="bb-row" role="button" tabindex="0" aria-expanded="false" onclick="bbToggle(this)" onkeydown="rowKey(event,this)"><span class="bb-lab">'+rg+'</span>'
-      +'<div class="bb-track" title="월세수익률 '+lo.toFixed(1)+'% ~ 위험선 '+hi.toFixed(1)+'% · 대출금리 '+loan.toFixed(2)+'%">'
+      +'<div class="bb-track" title="월세수익률 '+lo.toFixed(2)+'% ~ 위험선 '+hi.toFixed(2)+'% · 대출금리 '+loan.toFixed(2)+'%">'
       +'<div class="bb-band" style="left:'+px(lo)+'%;width:'+Math.max(2,px(hi)-px(lo))+'%"></div>'
       +'<div class="bb-loan" style="left:'+px(loan)+'%"></div>'
-      +'<span class="bb-v" style="'+blueSt+'">'+lo.toFixed(1)+'%</span>'
-      +'<span class="bb-v" style="'+redSt+'">'+hi.toFixed(1)+'%</span></div>'
+      +'<span class="bb-v" style="'+blueSt+'">'+lo.toFixed(2)+'%</span>'
+      +'<span class="bb-v" style="'+redSt+'">'+hi.toFixed(2)+'%</span></div>'
       +'<span class="bb-chip '+cls+'">'+txt+'</span>'
       +'</div>'
       +'<div class="bb-det">'+det+'</div>';

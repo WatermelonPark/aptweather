@@ -309,7 +309,11 @@ def supply_rows(stats):
         v = []
         for z in regs:
             if fut:
-                v.append(round(st[z].get(i - LEAD_Q, 0) * CONV))
+                # ⚠️ 분기마다 반올림하면 소비자가 그걸 다시 더해 홈과 갈린다 —
+                # '2026년 전국 입주물량'이 /moveins/ 215,875 · 통계 탭 215,876 ·
+                # 홈 215,877로 셋이 달랐다(2026-08-08 감사). 표시 직전에 한 번만
+                # 반올림하도록 소수 한 자리로 넘긴다(페이로드 영향은 무시할 수준).
+                v.append(round(st[z].get(i - LEAD_Q, 0) * CONV, 1))
             else:
                 v.append(dn[z].get(i, 0))
         r = {'p': qkey(i), 'v': v}

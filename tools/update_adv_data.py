@@ -258,7 +258,10 @@ REG15 = ['수도권','부산','대구','광주','대전','울산','세종','강�
 # 아파트 인허가(fetch_permits)용 — 수도권 뒤에 하위 서울/경기/인천을 개별로. KOSIS
 # DT_MLTM_1948이 셋을 개별 + 수도권 소계로 모두 주므로(합=수도권) 필터만 열면 된다.
 # REG15는 규모별표(_region_of)가 계속 쓰므로 건드리지 않는다.
-PERMIT_REGIONS = ['수도권', '서울', '경기', '인천'] + [r for r in REG15 if r != '수도권']
+# 형제 탭(입주물량)에는 전국·지방이 있는데 인허가에만 없어 지역 선택이 어긋났다
+# (2026-08-08 감사). 원천 DT_MLTM_1948에 '전국'·'지방소계'가 실재함을 실호출로 확인.
+PERMIT_REGIONS = (['전국', '수도권', '지방', '서울', '경기', '인천']
+                  + [r for r in REG15 if r != '수도권'])
 
 
 def http_json(url, tries=3):
@@ -373,6 +376,7 @@ def _fetch_apt_permits(prd_de):
         if (row.get('C2_NM') or '').strip() != '아파트': continue
         if (row.get('C4_NM') or '').strip() != '아파트': continue
         reg = (row.get('C1_NM') or '').strip()
+        reg = BASIC_REGMAP.get(reg, reg)      # 지방소계 → 지방, 총계 → 전국
         if reg not in PERMIT_REGIONS: continue
         try: out[reg] = int(float(row['DT']))
         except (TypeError, ValueError, KeyError): continue
@@ -443,8 +447,8 @@ def _rone_recent_rows(tbl, need_rows, cycle='WK'):
     return rows
 
 
-def fetch_weekly_rone():
-    weeks = RECENT_WEEKS            # 최근 구간만 — 3년 히스토리는 main() 병합이 보존
+def fetch_weekly_rone(weeks=None):
+    weeks = weeks or RECENT_WEEKS   # 최근 구간만 — 3년 히스토리는 main() 병합이 보존
     need = (weeks + 2) * 240        # 주당 ~236행
     need = max(need, 12000)   # 시군구(236지역)는 최신주 전량이 여러 페이지에 흩어져 있어 넉넉히
     by, by_cls = {}, {}   # by=이름키(시도/서울구), by_cls=CLS_ID키(시군구 지도용)
@@ -584,9 +588,9 @@ def fetch_holidays():
 
 
 # ---- monthly: 월간 아파트 매매·전세·월세 지수 → 전월비 변동률 (R-ONE) ------
-def fetch_monthly_rone():
+def fetch_monthly_rone(months=None):
     """월간 시도·서울구·시군구 변동률을 R-ONE에서 직접 산출한다."""
-    months = RECENT_MONTHS           # 최근 구간만 — 10년 히스토리는 main() 병합이 보존
+    months = months or RECENT_MONTHS  # 최근 구간만 — 10년 히스토리는 main() 병합이 보존
     need = (months + 2) * 260        # 월당 계층 지역 ~234
     by, by_cls = {}, {}   # by=이름키(시도/서울구), by_cls=CLS_ID키(시군구 지도용)
     for key, tbl in RONE_MONTHLY_TBL.items():
@@ -809,6 +813,11 @@ def fetch_bubble():
     rows = kosis(dict(orgId='408', tblId='DT_30404_N0010', itmId='ALL',
                       objL1='ALL', objL2='ALL', prdSe='M', newEstPrdCnt='3'))
     by_prd = {}
+    # ⚠️ 지역을 이름으로만 키잉하면 시도와 시군구가 같은 이름일 때 뒤 행이 앞을 덮는다.
+    # 이 표에도 '광주'가 둘(a11 광주광역시 · a1525 경기 광주시), '제주'가 둘(a23 · a2301
+    # 제주시) 있고 응답 순서가 a11→a1525라 **광주가 경기 광주시 값**이었다
+    # (2026-08-08 감사, 5.71 vs 5.57). _fetch_basic_one과 같은 규칙 — 짧은 코드가 이긴다.
+    won = {}
     for r in rows:
         if (r.get('C1_NM') or '').strip() != '아파트':
             continue
@@ -820,7 +829,13 @@ def fetch_bubble():
             v = round(float(r['DT']), 2)
         except (TypeError, ValueError, KeyError):
             continue
-        by_prd.setdefault(r.get('PRD_DE', ''), {})[rg] = v
+        prd = r.get('PRD_DE', '')
+        code = str(r.get('C2') or '')
+        prev = won.get((prd, rg))
+        if prev is not None and len(prev) <= len(code):
+            continue
+        won[(prd, rg)] = code
+        by_prd.setdefault(prd, {})[rg] = v
     full = [p for p in sorted(by_prd) if len(by_prd[p]) >= 10]   # 값이 충분히 채워진 최신 월
     assert full, '전월세전환율 응답 없음'
     prd, conv = full[-1], by_prd[full[-1]]
@@ -1136,6 +1151,36 @@ def main():
             if D.get('dates'):
                 print('  %s: %s ~ %s (%d개월)' % (k, D['dates'][0], D['dates'][-1], len(D['dates'])))
         return
+    if arg == '--heal-price':
+        # 주간·월간 시세도 **최근 구간만** 다시 받는다(RECENT_WEEKS 20 / RECENT_MONTHS 14).
+        # 그 밖의 과거는 저장분을 그대로 보존하므로, 옛 회차가 잘못 담은 값이 영영 남는다 —
+        # 주간 제주가 2026-03-02 이전 88주 동안 제주도가 아니라 **제주시** 계열이었다
+        # (2026-08-08 감사, 최근 22주는 정상이라 평소 배치로는 안 드러난다).
+        # usage: --heal-price [주] [월]
+        weeks = int(sys.argv[2]) if len(sys.argv) > 2 else 160
+        months = int(sys.argv[3]) if len(sys.argv) > 3 else 130
+        assert RONE_KEY, 'RONE_API_KEY 필요'
+        fixed = 0
+        for kind, fn, depth in (('weekly', fetch_weekly_rone, weeks),
+                                ('monthly', fetch_monthly_rone, months)):
+            cur = adv.get(kind) or {}
+            new = fn(depth)
+            got = {r['p']: r for r in new.get('rows') or []}
+            n = 0
+            for r in cur.get('rows') or []:
+                g = got.get(r['p'])
+                if not g:
+                    continue
+                for f in ('ma', 'je', 'wo'):
+                    if isinstance(g.get(f), list) and r.get(f) != g[f]:
+                        r[f] = g[f]; n += 1
+            print('  %s: %d주/월 조회, %d개 계열행 교정 (%s ~ %s)'
+                  % (kind, len(got), n, min(got or ['-']), max(got or ['-'])))
+            fixed += n
+        if fixed:
+            write_adv(adv)
+        print('heal-price: %d개 행 교정' % fixed)
+        return
     if arg == '--heal-annual':
         # 연간 계열도 ANNUAL_YEARS(3년)만 덮어쓰므로, 그보다 옛 구간은 최초 시딩 때의
         # 판본이 그대로 굳는다. 주택보급률이 2014년까지 **구지표**, 2015년부터 신지표라
@@ -1200,11 +1245,24 @@ def main():
         # 시도 20곳 공급 지표 재계산. STATS만 읽으므로 API 키가 필요 없다 —
         # 산식이나 적정물량 상수를 고친 뒤 데이터를 즉시 맞출 때 쓴다.
         import sido_zones
-        adv['sido'] = sido_zones.calc(read_current_stats())
+        st = read_current_stats()
+        adv['sido'] = sido_zones.calc(st)
         adv.pop('livezone', None)   # 생활권 31곳 체제 잔재 (2026-08-06 폐기)
+        # ⚠️ occupancy(통계 탭 입주물량·/moveins/)도 같은 함수에서 나온다. 여기서 같이
+        # 갱신하지 않으면 산식을 고친 뒤 홈만 새 값, 통계 탭은 옛 값이 된다 —
+        # supply_rows의 반올림을 고쳤는데 --update를 돌리기 전까지 안 따라왔다
+        # (2026-08-08). --seed-sido는 STATS만 읽으므로 API 키가 필요 없다.
+        sup = sido_zones.supply_rows(st)
+        if sup:
+            occ = dict(adv.get('occupancy') or {})
+            occ.update(sup)
+            for dead in ('band', 'band_note', 'ref_note'):
+                occ.pop(dead, None)
+            adv['occupancy'] = occ
         write_adv(adv)
-        print('sido seeded: %d곳, 실적~%s, 착공~%s, 미래 %d분기'
-              % (len(adv['sido']['zones']), adv['sido']['L'], adv['sido']['S'], adv['sido']['H']))
+        print('sido seeded: %d곳, 실적~%s, 착공~%s, 미래 %d분기 (occupancy %s)'
+              % (len(adv['sido']['zones']), adv['sido']['L'], adv['sido']['S'],
+                 adv['sido']['H'], '갱신' if sup else '건너뜀'))
         return
     assert arg == '--update', 'usage: --update | --seed-bubble | --seed-sido | --seed-supply | --heal-basic <계열> [개월] | --heal-annual <계열> [연수] | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'

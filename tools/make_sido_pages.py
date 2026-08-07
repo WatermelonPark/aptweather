@@ -109,6 +109,13 @@ def num(v):
     return format(rnd(v), ',')
 
 
+def disp_tot(row, H):
+    """화면에 찍는 누적 순부족. ADV의 tot는 반올림 전 값들로 계산돼서, 카드에 찍은
+    정수 셋(적정·공급·재고)으로 검산하면 1~2세대가 남는다. 허브 목록과 상세 카드가
+    **같은 정수**를 쓰도록 여기서 한 번만 만든다(2026-08-08 감사에서 4곳이 갈렸다)."""
+    return rnd(row['ref']) * H - rnd(row['fut']) - rnd(row['inow'])
+
+
 def signed(v):
     """부족은 −, 과잉은 + 로 보여준다(홈 표기와 같은 부호 규칙)."""
     d = -v
@@ -160,7 +167,10 @@ def series(stats, z, calc):
         if i <= L:
             rows.append((i, dn.get(i, 0), False))
         else:
-            rows.append((i, rnd(st.get(i - calc['lead'], 0) * calc['conv']), True))
+            # ⚠️ 여기서 반올림하지 않는다. 홈(index.html)은 raw에서 세대수와 %를
+            # 각각 반올림하는데, 여기서 먼저 굳히면 경남 27Q2가 1349.822 → 1350 →
+            # 22.5% → 23%가 되어 홈의 22%와 갈린다(2026-08-08 감사, 1,000칸 중 1칸).
+            rows.append((i, st.get(i - calc['lead'], 0) * calc['conv'], True))
     return rows
 
 
@@ -251,7 +261,7 @@ def build_page(z, calc, stats, pq, others):
     # '어떻게 계산했나' 산식으로 검산하면 20곳 중 12곳이 안 맞았다(2026-08-08 감사).
     # 표시할 정수로 먼저 고정하고, 누적 순부족은 그 정수들로 계산한다.
     d_ref, d_fut, d_inow = rnd(row['ref']), rnd(row['fut']), rnd(row['inow'])
-    d_tot = d_ref * calc['H'] - d_fut - d_inow
+    d_tot = disp_tot(row, calc['H'])
     fut_sum = d_fut
 
     desc = ('%s의 아파트 공급은 적정물량 대비 %s세대(%s). 앞으로 %.0f년 착공 기준 공급 %s세대, '
@@ -331,7 +341,8 @@ def build_page(z, calc, stats, pq, others):
         h.append('<tr%s><td>%s</td><td>%s</td>%s</tr>'
                  % (cls, SZ.qlabel(i), num(v), cells))
     h.append('</tbody></table></div>'
-             '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기 착공이 실제로 없었다는 뜻입니다.</p>'
+             '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기에 실제로 없었다는 뜻입니다'
+             '(굵은 줄 위는 준공, 아래는 착공).</p>'
              '</div></section>' % calc['H'])
 
     # ── 산출 방법 ──
@@ -391,8 +402,10 @@ def build_hub(calc):
     for o in sido:
         h.append('<a href="/zone/%s/" data-gi="%d" data-tot="%d"><b>%s</b>'
                  '<span class="sc-tier %s">%s</span><i>%s세대</i></a>'
-                 % (urllib.parse.quote(o['z']), SZ.GRADE_KEYS.index(o['grade']), o['tot'],
-                    esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0], signed(o['tot'])))
+                 % (urllib.parse.quote(o['z']), SZ.GRADE_KEYS.index(o['grade']),
+                    disp_tot(o, calc['H']),
+                    esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0],
+                    signed(disp_tot(o, calc['H']))))
     h.append('</div></div></section>')
     h.append('<script>(function(){'
              'var w=document.getElementById("sido-list"),seg=document.getElementById("sido-sort"),'
