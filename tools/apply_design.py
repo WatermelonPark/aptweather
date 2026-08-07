@@ -18,7 +18,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FONT_LINK = ('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>\n'
              '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard'
-             '@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">')
+             '@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"'
+             ' media="print" onload="this.media=\'all\'">'
+             '<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/'
+             'orioncactus/pretendard@v1.3.9/dist/web/variable/'
+             'pretendardvariable-dynamic-subset.css"></noscript>')
 
 # app.css와 동일한 값. 페이지마다 다르면 같은 브랜드가 다른 색을 낸다.
 TOKENS = {'--ink': '#131e24', '--ink2': '#4c5f66', '--paper': '#f4f6f5',

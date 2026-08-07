@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v70'; // 3차 감사 수정
+const VERSION = 'v71'; // 4차 감사 수정
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
@@ -62,8 +62,13 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          // ⚠️ res.ok를 안 보면 404/5xx 본문(에러 HTML)이 그대로 캐시에 들어가
+          //    정상 프리캐시본을 덮는다 — 그 뒤 오프라인이면 폴백이 쓰레기를 준다
+          //    (2026-08-07 감사에서 격리 재현). 정적 분기는 원래 이걸 검사한다.
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() => caches.match(req))
@@ -76,8 +81,10 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() => caches.match(req).then((hit) => hit || caches.match('/')))

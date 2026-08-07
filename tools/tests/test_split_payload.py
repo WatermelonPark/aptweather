@@ -18,11 +18,12 @@ def _core():
 def test_build_only_keys_are_not_shipped_to_browser():
     """CORE_ADV가 'permits'를 통째로 복사하므로 permits에 새 하위 키를 넣으면
     아무도 안 막아준 채 홈 페이로드가 커진다 — permits.city(150KB)가 실제로 그렇게
-    새어 data-core가 131KB -> 311KB가 됐다(2026-08-05).
-    done/sched/demol은 건축HUB 파생분으로, 2026-08-06 산식 교체로 점수에서 빠졌다."""
+    새어 data-core가 131KB -> 311KB가 됐다(2026-08-05). 거부목록이던 시절엔 생활권
+    잔재 meas·fwd_far가 계속 실려 나갔고, 테스트도 같은 목록을 돌아 통과했다
+    (2026-08-07 감사) — 이제 허용목록이라 '없어야 할 키'를 열거하지 않는다."""
     adv, _ = _core()
-    for k in S.BUILD_ONLY_PERMITS:
-        assert k not in (adv.get('permits') or {}), 'permits.%s가 홈 페이로드에 있다' % k
+    extra = set((adv.get('permits') or {})) - set(S.KEEP_PERMITS)
+    assert not extra, 'permits에 허용목록 밖 키가 홈 페이로드에 있다: %s' % sorted(extra)
     assert 'livezone' not in adv, '생활권 31곳 체제 잔재 — ADV.sido로 대체됐다'
     assert 'aged30' not in adv, 'aged30은 폐기된 지표다'
 
@@ -78,7 +79,6 @@ def S_strip(a):
     p = a.get('permits')
     if p:
         p = dict(p)
-        for k in S.BUILD_ONLY_PERMITS:
-            p.pop(k, None)
+        p = {k: v for k, v in p.items() if k in S.KEEP_PERMITS}
         a['permits'] = p
     return a

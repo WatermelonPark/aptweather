@@ -704,6 +704,13 @@ table.adv thead th:first-child{text-align:center}
   #tb-main thead th:first-child{z-index:7}
   #tb-main .tc{position:relative;display:block;height:25px;min-width:56px}
   #tb-main .tl{position:absolute;top:0;bottom:0;display:block}
+  /* 칸 안 위치는 여기서 정한다. 예전엔 칸마다 인라인 style로 left/width를 박아
+     월 모드 표 HTML이 890KB였다 — 3,000칸 × 3등분이라 같은 문자열 9,000벌
+     (2026-08-07 감사, 렌더 0.5초). 배경색만 인라인으로 남긴다. */
+  #tb-main .tl.a{left:0;width:33.34%}
+  #tb-main .tl.b{left:33.33%;width:33.34%}
+  #tb-main .tl.c{left:66.66%;right:0}
+  #tb-main .tl.f{left:0;right:0}
   /* 숫자는 세 색을 가로지르므로 종이색 후광으로 띄운다 — 진한 칸에서 안 묻히게 */
   #tb-main .tc b{position:relative;z-index:2;line-height:25px;font-size:11.5px;font-weight:500;
     text-shadow:0 0 3px var(--paper),0 0 2px var(--paper)}

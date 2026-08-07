@@ -78,7 +78,8 @@ SHELL = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"></noscript>
 <title>__TITLE__</title>
 <meta name="description" content="__DESC__">
 <link rel="canonical" href="__URL__">
@@ -180,7 +181,17 @@ def fill(shell, **kw):
     return out
 
 
+def not_before_pub(iso):
+    """dateModified가 datePublished보다 과거가 되지 않게 막는다.
+    두 페이지의 lastmod는 '마지막 실적 분기'에서 오는데(데이터가 안 바뀌면
+    안 움직이게 하려는 의도), 그 분기가 페이지 공개일보다 앞서면
+    '2026-07-29 발행 · 2026-06-01 수정'이라는 불가능한 조합이 나간다
+    (2026-08-07 감사에서 실제로 그 상태였다)."""
+    return max(iso, PUBLISHED)
+
+
 def ld_pack(headline, desc, url, crumb_name, modified):
+    modified = not_before_pub(modified)
     return json.dumps([{
         "@context": "https://schema.org", "@type": "Article",
         "headline": headline,
@@ -295,7 +306,7 @@ def build_jeonse(sts):
                 desc=desc, url=url, body=body,
                 ld=ld_pack('전세가율 — 전국·시도별 현황과 의미', desc, url, '전세가율', prd_iso),
                 src='KOSIS 한국부동산원 매매가격 대비 전세가격비')
-    return html, prd_iso
+    return html, not_before_pub(prd_iso)
 
 
 # ---- 입주물량 (/moveins/) --------------------------------------------------
@@ -415,7 +426,7 @@ def build_moveins(adv):
                 desc=desc, url=url, body=body,
                 ld=ld_pack('아파트 입주물량 — 시도별 입주 예정과 의미', desc, url, '입주물량', mod_iso),
                 src='국토교통부 주택건설실적(준공·착공)')
-    return html, mod_iso
+    return html, not_before_pub(mod_iso)
 
 
 # ---- sitemap ---------------------------------------------------------------

@@ -54,13 +54,12 @@ CORE_STATS = ['전세가율', '준공', '착공']
 # 홈이 통째로 쓰는 ADV 키
 CORE_ADV = ['sido', 'occupancy', 'permits', 'bubble', 'holidays']
 
-# 빌드 전용 하위 키 — data.js(정적 페이지 생성기의 원본)엔 남고 브라우저 페이로드엔
-# 안 실린다. ⚠️ CORE_ADV가 'permits'를 **통째로** 복사하므로, permits에 새 하위 키를
-# 넣으면 아무도 안 막아준 채 홈 페이로드가 커진다 — 실제로 permits.city(150KB)가
-# 그렇게 새어 data-core가 131KB -> 311KB로 부풀었다(2026-08-05 코드리뷰에서 발견).
-# permits에 뭔가 추가할 땐 홈이 정말 읽는지 확인하고, 아니면 여기 등록할 것.
-# done/sched/demol은 건축HUB 파생분 — 2026-08-06 산식 교체로 점수에서 빠졌다.
-BUILD_ONLY_PERMITS = ('units', 'city', 'done', 'sched', 'demol')
+# ⚠️ 거부목록이 아니라 **허용목록**이다. 예전엔 뺄 키를 나열했더니 새로 생긴 키가
+# 아무도 안 막아준 채 홈 페이로드로 새어 나갔다 — permits.city(150KB)로 data-core가
+# 131KB -> 311KB가 됐고(2026-08-05), 생활권 시대 잔재 meas·fwd_far는 그 뒤로도
+# 계속 실려 나갔다(2026-08-07 감사). 홈이 실제로 읽는 건 ref 하나(index.html의
+# `ADV.permits.ref[region]`)이고 나머지는 표기용이다. 여기 없는 키는 자동으로 빠진다.
+KEEP_PERMITS = ('regions', 'ref', 'rows', 'note')
 
 # 홈 통합표가 그리는 구간·지역. 적정물량 기준표와 같은 시작점(2017)이다.
 TABLE_FROM = '2017.01'
@@ -94,8 +93,7 @@ def main():
         p = a.get('permits')
         if p:
             p = dict(p)
-            for k in BUILD_ONLY_PERMITS:
-                p.pop(k, None)
+            p = {k: v for k, v in p.items() if k in KEEP_PERMITS}
             a['permits'] = p
         return a
 

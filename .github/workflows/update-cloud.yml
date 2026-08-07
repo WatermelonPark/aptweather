@@ -205,8 +205,18 @@ jobs:
           fi
           echo "검증 통과 — 페이지 생성으로 진행"
           # ───────────────────────────────────────────────────────────────
-          python3 tools/make_sido_pages.py      || echo "::warning::make_sido_pages 실패 — 데이터만 커밋"
-          python3 tools/make_indicator_pages.py || echo "::warning::make_indicator_pages 실패 — 데이터만 커밋"
+          # ⚠️ 경고로 넘기지 않는다. make_sido_pages는 '점수와 표의 시점이 어긋났다'는
+          # 게이트를 들고 있는데, 실패를 흡수하면 그 게이트가 막으려던 데이터(data.js·
+          # zone·sitemap)를 그대로 커밋해 버린다 — 로컬 배치(run_weekly_update.bat)는
+          # 같은 실패에 전량 중단이라 두 배치의 안전 동작이 정반대였다(2026-08-07 감사).
+          if ! python3 tools/make_sido_pages.py; then
+            echo "::error::make_sido_pages 실패 — 점수·표 시점이 어긋났을 수 있어 커밋하지 않는다"
+            exit 1
+          fi
+          if ! python3 tools/make_indicator_pages.py; then
+            echo "::error::make_indicator_pages 실패 — 커밋하지 않는다"
+            exit 1
+          fi
           # 공유 카드(og:image)도 여기서 재생성한다 — 로컬 배치가 멈추면 /weekly/의
           # 카카오·트위터 미리보기가 옛 주차 지도에 고정된 채 '이번 주'로 배포된다.
           # ⚠️ 경고로만 넘기면 '조용히 안 만들어지는' 상태가 무한히 지속된다.

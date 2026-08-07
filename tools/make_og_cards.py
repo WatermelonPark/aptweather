@@ -157,7 +157,7 @@ def make_brand():
     # 하단 구분선 + 푸터
     fy = 548
     d.line([MX, fy, W - MX, fy], fill=LINE, width=2)
-    d.text((MX, fy + 24), '주간 시세 지도 · 생활권 공급 순위 · 부동산 테스트 · 국가기관 데이터 기반',
+    d.text((MX, fy + 24), '주간 시세 지도 · 시도별 공급 진단 · 부동산 테스트 · 국가기관 데이터 기반',
            font=font(24, 'Medium'), fill=MUTED)
     dom = 'agongmap.co.kr'
     df = font(26, 'Bold')

@@ -184,7 +184,8 @@ def head(z, desc, title, url=None, crumb=None):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"></noscript>
 <title>%(title)s | 아공맵</title>
 <meta name="description" content="%(desc)s">
 <link rel="canonical" href="%(url)s">
@@ -470,6 +471,17 @@ def main():
         raise SystemExit('ABORT: ADV.sido(실적~%s, %d분기)와 STATS(실적~%s, %d분기)의 '
                          '시점이 다르다 — --seed-sido로 점수를 먼저 맞출 것.'
                          % (calc['L'], calc['H'], _live['L'], _live['H']))
+    # ⚠️ L·H는 '전국' 시리즈에서만 나온다. 지역명 개편 등으로 **일부 시도만** 결측이
+    # 되면 L·H는 그대로라 위 게이트를 통과하는데, 그 상태로 구우면 등급 카드는 옛
+    # 점수(24,297세대 부족)인데 분기 표는 전 칸 0인 자가당착 페이지가 나온다
+    # (2026-08-07 감사에서 울산으로 재현). 지역 구성까지 같은지 본다.
+    if _live.get('missing'):
+        raise SystemExit('ABORT: STATS 준공·착공에서 %d곳이 결측이다(%s) — 데이터를 '
+                         '먼저 복구할 것.' % (len(_live['missing']), ', '.join(_live['missing'])))
+    if {z['z'] for z in _live['zones']} != {z['z'] for z in calc['zones']}:
+        raise SystemExit('ABORT: ADV.sido의 지역 구성(%d곳)과 STATS로 다시 센 구성(%d곳)이 '
+                         '다르다 — --seed-sido로 점수를 먼저 맞출 것.'
+                         % (len(calc['zones']), len(_live['zones'])))
     pq = price_quarters(adv)
     names = [z['z'] for z in calc['zones']]
 

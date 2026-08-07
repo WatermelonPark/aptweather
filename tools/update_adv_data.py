@@ -106,6 +106,11 @@ BASIC_MONTHS = 8                      # 최근 8개월 조회(잠정치 소급 �
 # 채로 증감을 계산한다 — 전세가율 서울 2025.09가 저장 54.3 vs 원천 53.0으로
 # 1.3%p 어긋난 채 /jeonse-ratio/의 '1년 전 대비'에 쓰였다(2026-08-07 감사).
 BASIC_MONTHS_DEEP = {'전세가율': 15}   # 계열별 조회 깊이 override
+# ⚠️ 지역을 **이름으로만** 키잉하면 시도와 시군구가 같은 이름일 때 뒤 행이 앞을 덮는다.
+# DT_30404_N0006_R1(아파트)에 '제주'가 둘(C2=c8 제주도 · c801 제주시), '광주'가 둘
+# (C2=b3 광주광역시 · a80404 경기 광주시) 있고, 응답 순서가 c8→c801이라 제주는
+# **제주시 값**이 저장돼 있었다(2026-08-07 감사, 65.9 vs 65.2). 지역코드가 짧을수록
+# 상위 행정단위라는 KOSIS 규칙을 써서 같은 이름이면 짧은 코드를 채택한다.
 
 # ---- 분양·미분양 (기본통계 공급 파이프라인 보강) --------------------------
 # 기본통계 공급 구간이 인허가→착공→준공이라, 실제 단계(인허가→착공→분양→준공)의
@@ -670,18 +675,21 @@ def fetch_monthly():
 
 
 # ---- 기본통계 fetch & merge ----------------------------------------------
-def _fetch_basic_one(name):
+def _fetch_basic_one(name, months=None, upto=None):
+    """upto=(y,m)이 주어지면 그 달을 끝으로 months개월을 받는다(이력 교정용).
+       기본은 오늘 기준 최근 창(BASIC_MONTHS / BASIC_MONTHS_DEEP)."""
     import datetime
     cfg = BASIC_CONF[name]
     base = {'orgId': cfg['org'], 'tblId': cfg['tbl'], 'itmId': 'ALL', 'prdSe': 'M'}
     for k in range(1, cfg['objn'] + 1):
         base['objL%d' % k] = 'ALL'
+    n = months or BASIC_MONTHS_DEEP.get(name, BASIC_MONTHS)
     if cfg['mode'] == 'mltm':
         # objL 4단 × 다월 요청은 40,000셀 초과(err31) → 월별 개별 호출
         data = []
         today = datetime.date.today()
-        y, m = today.year, today.month
-        for _ in range(BASIC_MONTHS_DEEP.get(name, BASIC_MONTHS)):
+        y, m = upto or (today.year, today.month)
+        for _ in range(n):
             prd = '%d%02d' % (y, m)
             try:
                 data += kosis(dict(base, startPrdDe=prd, endPrdDe=prd))
@@ -690,10 +698,17 @@ def _fetch_basic_one(name):
             time.sleep(0.15)
             m -= 1
             if m == 0: y, m = y - 1, 12
+    elif upto:
+        y, m = upto
+        sy, sm = y, m - n + 1
+        while sm <= 0: sy, sm = sy - 1, sm + 12
+        data = kosis(dict(base, startPrdDe='%d%02d' % (sy, sm), endPrdDe='%d%02d' % (y, m)))
     else:
-        data = kosis(dict(base, newEstPrdCnt=str(BASIC_MONTHS_DEEP.get(name, BASIC_MONTHS))))
+        data = kosis(dict(base, newEstPrdCnt=str(n)))
     out = {}    # 확정치 {(y,m): {region: value}}
     rates = {}  # 잠정 증감률(%) — 실거래지수의 최신월은 지수 대신 이것만 발표됨
+    regcol = 'C2' if cfg['mode'] == 'typed' else 'C1'   # 지역축이 실린 컬럼
+    won = {}    # {(ym, region): 채택한 지역코드} — 같은 이름이면 짧은 코드가 이긴다
     for row in data:
         itm = (row.get('ITM_NM') or '').strip()
         if cfg['mode'] == 'flat':
@@ -713,6 +728,11 @@ def _fetch_basic_one(name):
         if cfg['mode'] == 'flat' and itm == '잠정 증감률':
             rates.setdefault(ym, {})[reg] = v
         else:
+            code = str(row.get(regcol) or '')
+            prev = won.get((ym, reg))
+            if prev is not None and len(prev) <= len(code):
+                continue            # 이미 더 상위(짧은) 코드를 잡았다 — 시군구 행은 버린다
+            won[(ym, reg)] = code
             v = round(v, cfg['dec']) if cfg['dec'] else int(round(v))
             out.setdefault(ym, {})[reg] = v
     return out, rates
@@ -1096,6 +1116,34 @@ def main():
             D = st.get(k) or {}
             if D.get('dates'):
                 print('  %s: %s ~ %s (%d개월)' % (k, D['dates'][0], D['dates'][-1], len(D['dates'])))
+        return
+    if arg == '--heal-basic':
+        # 갱신창(BASIC_MONTHS / _DEEP) 밖 이력을 원천과 다시 맞춘다. 창 안만 훑는
+        # 평소 배치로는 옛 달의 오류가 스스로 낫지 않는다 — 전세가율이 2025.03↔04
+        # 경계로 두 판본이 이어 붙어 전북에 +8.9%p 인공 절벽이 있었다(2026-08-07 감사).
+        # usage: --heal-basic <계열> [개월수]
+        import datetime
+        name = sys.argv[2]
+        months = int(sys.argv[3]) if len(sys.argv) > 3 else 60
+        assert name in BASIC_CONF, '계열: %s' % ', '.join(BASIC_CONF)
+        assert KEY, 'KOSIS_API_KEY 환경변수 필요'
+        st = read_current_stats()
+        today = datetime.date.today()
+        y, m = today.year, today.month
+        got, fixed, chunk = 0, 0, 12   # 12개월씩 — 지역×유형 전량이라 한 번에 받으면 40,000셀 초과
+        while got < months:
+            k = min(chunk, months - got)
+            fetched, rates = _fetch_basic_one(name, months=k, upto=(y, m))
+            fixed += merge_basic(st[name], fetched)
+            fixed += merge_prov(st[name], rates, BASIC_CONF[name]['dec'])
+            print('  ~%d.%02d %d개월: %d셀 누적 교정' % (y, m, k, fixed))
+            got += k
+            m -= k
+            while m <= 0: y, m = y - 1, m + 12
+            time.sleep(0.2)
+        if fixed:
+            write_stats(st)
+        print('heal %s: %d개월 조회, %d셀 교정' % (name, months, fixed))
         return
     if arg == '--seed-sido':
         # 시도 20곳 공급 지표 재계산. STATS만 읽으므로 API 키가 필요 없다 —

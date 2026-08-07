@@ -47,7 +47,8 @@
 </script>
 <!-- 홈과 같은 폰트·CSS를 공유한다. 복제하면 반드시 드리프트한다(구 팔레트 사고). -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"></noscript>
 <link rel="stylesheet" href="/app.css">
 <style>b,strong{font-weight:600}
 /* 이 페이지에만 있는 요소. app.css의 토큰을 폴백과 함께 참조한다. */
