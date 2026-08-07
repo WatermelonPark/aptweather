@@ -707,9 +707,12 @@ table.adv thead th:first-child{text-align:center}
   /* 숫자는 세 색을 가로지르므로 종이색 후광으로 띄운다 — 진한 칸에서 안 묻히게 */
   #tb-main .tc b{position:relative;z-index:2;line-height:25px;font-size:11.5px;font-weight:500;
     text-shadow:0 0 3px var(--paper),0 0 2px var(--paper)}
-  #tb-main tbody tr.fut td:first-child{font-style:italic}
-  #tb-main tbody tr.now td{border-top:3px solid var(--ink)}
-  #tb-main tbody tr.now td:first-child{font-weight:700;color:var(--ink);font-style:normal}
+  /* ⚠️ 기간 칸은 th(행 머리)다 — td만 쓰면 굵은 줄이 붙박이 열에서 끊기고
+     현재 분기 강조가 사라진다(2026-08-07 접근성 수정 뒤 실제로 그랬다). */
+  #tb-main tbody tr.fut th:first-child{font-style:italic}
+  #tb-main tbody tr.now td,#tb-main tbody tr.now th{border-top:3px solid var(--ink)}
+  #tb-main tbody tr.now th:first-child{font-weight:700;color:var(--ink);font-style:normal}
+  #tb-main tbody tr.yr td,#tb-main tbody tr.yr th{border-top:1px solid var(--line)}
   #tb-main .tb-mx{font-style:normal;color:var(--muted);font-size:9.5px;margin-left:2px}
   /* 표두 지역명 = 상세페이지 링크. 밑줄은 hover에만 — 20개가 늘 밑줄이면 시끄럽다 */
   #tb-main .tb-zl{color:inherit;text-decoration:none}

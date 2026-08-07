@@ -1756,15 +1756,16 @@ function renderAdvPermits(){
 /* --- 입주물량 --- */
 function occCls(region,v){
   if(v==null) return '';
-  const b=ADV.occupancy.band&&ADV.occupancy.band[region];
-  if(b){ if(v>=b[1])return 'hi'; if(v<=b[0])return 'lo'; return ''; }
+  /* 기준선은 분기 적정물량 하나다. 2026-08-07까지 여기에 '적정밴드'가 하나 더
+     있어서, 같은 제주를 홈·존 페이지는 '매우 부족'이라 하고 이 표는 '밴드 상단
+     초과(과잉)'라고 칠했다(감사 확인 23칸). 밴드는 걷었다. */
   const ref=ADV.occupancy.ref[region]; if(!ref) return '';
   if(v>=ref) return 'hi';
   if(v<=ref*0.6) return 'lo';
   return '';
 }
 function occBandCell(r){
-  const b=ADV.occupancy.band&&ADV.occupancy.band[r];
+  const b=null;   // 적정밴드 폐지(2026-08-07) — 기준선은 적정물량 하나
   return b?advFmt(b[0])+'~'+advFmt(b[1]):'·';
 }
 function occFut(p){
@@ -1804,7 +1805,7 @@ function renderAdvOcc(){
     cp.push(`<tr class="${occEst(row)?'fut':''}"><td>${row.p}</td><td class="${occCls(reg,v)}">${advFmt(v)}</td></tr>`);
   }
   cp.push('</tbody></table>');
-  const b=ADV.occupancy.band&&ADV.occupancy.band[reg];
+  const b=null;   // 적정밴드 폐지(2026-08-07) — 기준선은 적정물량 하나
   document.getElementById('adv-occ-compact').innerHTML=cp.join('')+
     (b?`<div class="src-note" style="padding:8px 12px">적정밴드 ${advFmt(b[0])}~${advFmt(b[1])} · 아래면 공급부족, 위면 공급과잉</div>`:
        (ref?`<div class="src-note" style="padding:8px 12px">분기 수요 기준선 ${advFmt(ref)}</div>`:''));
@@ -2270,7 +2271,7 @@ function drawOccChart(){
       scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10}},
         y:{grid:{color:GRID},title:{display:true,text:'호 (분기)'}}}},
     plugins:[{id:'occRef',afterDraw(ch){
-      const b=ADV.occupancy.band&&ADV.occupancy.band[reg];
+      const b=null;   // 적정밴드 폐지(2026-08-07) — 기준선은 적정물량 하나
       const ctx=ch.ctx,xa=ch.scales.x,ya=ch.scales.y;
       const lines=b?[[b[0],'#3a7bd5','적정 하단'],[b[1],'#e0564a','적정 상단']]:(ref?[[ref,'#9a7000','수요 기준선']]:[]);
       lines.forEach(([v,c,t])=>{

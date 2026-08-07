@@ -539,159 +539,13 @@ def _q_of(p): return (int(p[:4]), int(p[5]))          # '2026Q3' → (2026,3)
 def _qlabel(y, q): return '%dQ%d' % (y, q)
 
 
-def occ_rows():
-    """odcloud 입주예정 데이터셋(OCC_API) 전 행. 페이지 정책을 한 곳으로 모은다.
-
-    ⚠️ 예전엔 같은 데이터셋을 fetch_moveins는 page=1 한 번만, fetch_livezone은
-    1~8페이지를 돌며 읽었다(2026-08-04 감사) — 같은 원천에 커버리지 정책이 둘이라,
-    데이터셋이 1,000행을 넘기면 통계 탭(입주물량)과 생활권 점수가 서로 다른 모집단을
-    보게 된다. totalCount로 종료를 판정해 정책을 하나로 만든다.
-    """
-    out, page, total = [], 1, None
-    while page <= 50:                      # 안전판(perPage 1000 × 50 = 5만행)
-        d = http_json(OCC_API + '?' + urllib.parse.urlencode(
-            {'page': page, 'perPage': 1000, 'serviceKey': DATAGO_KEY}))
-        data = d.get('data') or []
-        out.extend(data)
-        if total is None:
-            total = d.get('totalCount') or d.get('matchCount')
-        if not data:
-            break
-        if isinstance(total, int) and len(out) >= total:
-            break
-        page += 1
-    if isinstance(total, int) and len(out) < total:
-        print('WARN odcloud 입주예정: %d/%d행만 수신(페이지 조기 종료)' % (len(out), total))
-    return out
-
-
-def fetch_moveins(regions):
-    agg = {}
-    for r in occ_rows():
-        ym = str(r.get('입주예정월') or '')
-        if len(ym) < 7 or not ym[5:7].isdigit() or not 1 <= int(ym[5:7]) <= 12:
-            continue   # 입주월 미정 단지는 제외
-        reg = (r.get('지역') or '').strip()
-        try: n = int(r.get('세대수') or 0)
-        except (TypeError, ValueError): continue
-        key = (int(ym[:4]), (int(ym[5:7]) - 1) // 3 + 1)
-        agg.setdefault(key, {x: 0 for x in regions})
-        # 서울/경기/인천은 개별 지역으로 유지하면서 수도권 합계에도 더한다.
-        # (odcloud 미래 데이터엔 '수도권' 소계 행이 없어 직접 합산해야 함)
-        if reg in ('서울', '경기', '인천'):
-            if reg in regions: agg[key][reg] += n
-            if '수도권' in regions: agg[key]['수도권'] += n
-        elif reg in regions:
-            agg[key][reg] += n
-    return agg
-
-
-def fetch_completions(start, end, regions):
-    """(y,m) 범위의 준공실적 → {(y,m): {지역: 호수}} (아파트 기준, 월별 개별 호출)"""
-    out = {}
-    y, m = start
-    while (y, m) <= end:
-        prd = '%d%02d' % (y, m)
-        try:
-            data = kosis({'orgId': '116', 'tblId': 'DT_MLTM_5373',
-                          'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL', 'objL4': 'ALL',
-                          'itmId': 'ALL', 'prdSe': 'M', 'startPrdDe': prd, 'endPrdDe': prd})
-        except RuntimeError as e:
-            if 'err 30' in str(e): data = []
-            else: raise
-        by = {}
-        for row in data:
-            if (row.get('C2_NM') or '').strip() != '아파트': continue
-            reg = (row.get('C1_NM') or '').strip()
-            if reg == '수도권소계': reg = '수도권'
-            if reg not in regions: continue
-            try: by[reg] = int(float(row['DT']))
-            except (TypeError, ValueError, KeyError): continue
-        if by: out[(y, m)] = by
-        time.sleep(0.12)
-        m += 1
-        if m == 13: y, m = y + 1, 1
-    return out
-
-
-def _complete_quarters(comp, regions):
-    """월별 준공 → 3개월이 모두 있는 분기만 합산 {(y,q): {지역: 호수}}"""
-    grp = {}
-    for (y, m), by in comp.items():
-        grp.setdefault((y, (m - 1) // 3 + 1), []).append(by)
-    return {k: {r: sum(b.get(r, 0) for b in v) for r in regions}
-            for k, v in grp.items() if len(v) == 3}
-
-
-def update_occupancy(adv, full=False):
-    if not DATAGO_KEY:
-        print('occupancy skip: DATA_GO_KR_KEY 없음')
-        return []
-    import datetime
-    O = adv['occupancy']
-    regs = O['regions']
-    today = datetime.date.today()
-    if full:
-        start = (2017, 1)
-    else:                       # 최근 3개 분기 재계산 분량만 조회
-        y, m = today.year, today.month
-        for _ in range(10):
-            m -= 1
-            if m == 0: y, m = y - 1, 12
-        start = (y, m)
-    comp = fetch_completions(start, (today.year, today.month), regs)
-    cq = _complete_quarters(comp, regs)
-    mv = fetch_moveins(regs)
-    rows_map = {} if full else {_q_of(r['p']): r['v'] for r in O['rows']}
-    est = set() if full else {_q_of(r['p']) for r in O['rows'] if r.get('e')}
-    for k, by in cq.items():
-        rows_map[k] = [by.get(r) for r in regs]
-        est.discard(k)                          # 실적 확정 → 예정 딱지 제거
-    # ⚠️ 실적 경계는 **뒤로 물러나지 않는다**. last_cq를 이번 회차 응답만으로 잡으면,
-    # KOSIS가 한 달을 빠뜨리거나(err 30 → data=[]) '아파트' 필터가 공치는 회차에
-    # 경계가 뒤로 밀리고, 이미 확정된 분기가 아래 루프에서 odcloud 입주예정 값으로
-    # 덮이며 e=1(미확정, 금색 막대)이 붙는다. 실제 API로 재현했다 — 2026-06 한 달만
-    # 빠져도 2026Q2가 62,010(실적) → 71,021(예정)으로 바뀐다(2026-08-07 감사).
-    # 이미 실적으로 저장된 분기(e 없는 행)의 최대치와 함께 본다.
-    prev_cq = max((_q_of(r['p']) for r in O['rows'] if not r.get('e')), default=None)
-    last_cq = max([x for x in (max(cq) if cq else None, prev_cq) if x], default=None)
-    if cq and prev_cq and max(cq) < prev_cq:
-        print('occupancy NOTE: 이번 회차 준공 실적이 %s까지뿐인데 저장분은 %s까지다 — '
-              '실적 경계를 %s로 유지한다(KOSIS 부분 응답 의심).'
-              % (_qlabel(*max(cq)), _qlabel(*prev_cq), _qlabel(*prev_cq)))
-    # 미래 분기는 입주예정 스냅샷으로 통째로 덮어쓴다. API가 일부 지역을 누락한
-    # 부분 응답을 주면 그 분기 물량이 조용히 반토막 나고, 그대로 '공급 절벽'으로
-    # 렌더된다. livezone과 같은 급감 가드를 둔다.
-    prev_tot = {}
-    if not full:
-        for r in O['rows']:
-            if r.get('e'):
-                prev_tot[_q_of(r['p'])] = sum(v for v in r['v'] if v)
-    for k, by in mv.items():
-        if last_cq and k <= last_cq: continue   # 준공 실적이 있으면 실적 우선
-        new_v = [by.get(r, 0) for r in regs]
-        old_t, new_t = prev_tot.get(k), sum(v for v in new_v if v)
-        if old_t and old_t >= 1000 and new_t < old_t * 0.8:
-            print('occupancy GUARD: %s 입주예정이 %s호 -> %s호로 급감해 채택하지 않음 '
-                  '(API 부분 응답 의심)' % (_qlabel(*k), format(old_t, ','), format(new_t, ',')))
-            continue                            # 기존 값 유지 (rows_map에 이미 있음)
-        rows_map[k] = new_v
-        est.add(k)                              # 입주예정 기반 = 미확정 표시
-    if full and mv:
-        # 준공 이후~입주예정 커버리지 안의 빈 분기는 '예정 없음(0)'으로 채움
-        y, q = last_cq if last_cq else min(mv)
-        while (y, q) < max(mv):
-            q += 1
-            if q == 5: y, q = y + 1, 1
-            if (y, q) not in rows_map:
-                rows_map[(y, q)] = [0] * len(regs)
-                est.add((y, q))
-    keys = sorted(rows_map)
-    O['rows'] = [dict({'p': _qlabel(*k), 'v': rows_map[k]}, **({'e': 1} if k in est else {}))
-                 for k in keys]
-    O['note'] = '분기별 아파트 준공 실적 + 입주예정 물량 · 미래 분기 포함'
-    return ['occupancy(%d)' % len(keys)]
-
+# ── odcloud 입주예정 경로는 2026-08-07에 걷어냈다 ──────────────────────────
+# 통계 탭 '입주물량'과 /moveins/가 이 소스를 쓰는 바람에 같은 서울 2027Q2를 홈은
+# 2,107, 통계 탭은 1,073으로 보여줬고(2배), 기준선도 적정물량·적정밴드·ref 셋이
+# 공존해 제주가 동시에 '매우 부족'이자 '밴드 상단 초과'였다. 지금은 sido_zones.
+# supply_rows()가 홈 표와 **같은 소스**(준공+착공 3년 시프트)로 만든다.
+# 삭제한 것: occ_rows / fetch_moveins / fetch_completions / _complete_quarters /
+# update_occupancy, 그리고 --rebuild-occupancy CLI.
 
 def fetch_holidays():
     """올해+내년 법정공휴일 ['YYYY-MM-DD']. 연말 경계까지 다음 발표일을 계산하려면
@@ -744,8 +598,23 @@ def fetch_monthly_rone():
     if len(dates) < 2:
         raise RuntimeError('R-ONE 월간 데이터 부족')
 
-    def sido(mon, name):   # 월간은 광주/전남이 단독. '지방'만 '지방권'으로.
-        return mon.get({'지방': '지방권'}.get(name, name))
+    def sido(mon, name):
+        """시도 이름 → 그 달의 값. **계층 개편을 자동으로 따라간다.**
+
+        ⚠️ R-ONE은 시도를 상위 묶음 밑으로 옮기곤 한다. 2025-05부터 광주·전남이
+        '광주'·'전남'에서 '전남광주>광주'·'전남광주>전남'으로 바뀌었는데, 이 함수가
+        평평한 이름만 찾아서 두 지역이 **15개월째 전 항목 결측**이었다(2026-08-07 감사).
+        이 프로젝트는 같은 함정에 강원·전북으로 두 번 당했다 — 이름이 안 맞으면
+        '>이름'으로 끝나는 키 중 가장 얕은 것을 쓴다(시군구가 아니라 시도를 집는다).
+        """
+        key = {'지방': '지방권'}.get(name, name)
+        if key in mon:
+            return mon[key]
+        tail = '>' + key
+        cand = [k for k in mon if k.endswith(tail)]
+        if not cand:
+            return None
+        return mon[min(cand, key=lambda k: k.count('>'))]
 
     def seoul_gu(mon):
         out = {}
@@ -1189,17 +1058,6 @@ def main():
         discover(sys.argv[2])
         return
     _, _, _, adv = read_current_adv()
-    if arg == '--rebuild-occupancy':   # 입주물량 시계열 전체 재구축 (준공 2017~ 전량 조회, 1회성)
-        assert KEY and DATAGO_KEY, 'KOSIS_API_KEY, DATA_GO_KR_KEY 필요'
-        ch = update_occupancy(adv, full=True)
-        write_adv(adv)
-        print('rebuilt:', ', '.join(ch))
-        return
-    if arg == '--dry-run':
-        write_adv(adv)  # 동일 데이터 재기록 = 마커·직렬화 왕복 검증
-        print('dry-run ok: permits %d rows, occupancy %d rows' % (
-            len(adv['permits']['rows']), len(adv['occupancy']['rows'])))
-        return
     if arg == '--seed-bubble':   # 버블밴드 최초 시딩 (KOSIS+ECOS 필요)
         adv['bubble'] = fetch_bubble()
         write_adv(adv)
@@ -1317,13 +1175,6 @@ def main():
     except Exception as e:
         failed.append('holidays'); print('holidays skip:', e)
     try:
-        before = json.dumps(adv['occupancy']['rows'], sort_keys=True)
-        occ_ch = update_occupancy(adv)
-        if occ_ch and json.dumps(adv['occupancy']['rows'], sort_keys=True) != before:
-            changed += occ_ch
-    except Exception as e:
-        failed.append('occupancy'); print('occupancy skip:', e)
-    try:
         if ECOS_KEY:
             bub = fetch_bubble()
             if differs(bub, adv.get('bubble')):
@@ -1362,6 +1213,18 @@ def main():
         elif differs(sd, adv.get('sido')):
             adv['sido'] = sd
             changed.append('sido(%d곳, 실적~%s, 미래 %d분기)' % (n_new, sd['L'], sd['H']))
+            write_adv(adv)
+        # 통계 탭 '입주물량'과 /moveins/도 **같은 소스**를 쓴다. 2026-08-07까지
+        # 여기는 odcloud 입주예정이라 같은 서울 2027Q2를 홈은 2,107, 통계 탭은
+        # 1,073으로 보여줬고 기준선도 셋(적정물량·밴드·ref)이 공존했다.
+        sup = sido_zones.supply_rows(read_current_stats())
+        if sup and differs(sup, {k: (adv.get('occupancy') or {}).get(k) for k in sup}):
+            occ = dict(adv.get('occupancy') or {})
+            occ.update(sup)
+            for dead in ('band', 'band_note', 'ref_note'):
+                occ.pop(dead, None)      # 충돌하던 두 번째·세 번째 기준선
+            adv['occupancy'] = occ
+            changed.append('occupancy(공급표와 통일)')
             write_adv(adv)
     except Exception as e:
         failed.append('sido'); print('sido skip:', e)

@@ -307,11 +307,19 @@ def build_moveins(adv):
     # 안 하면 수도권이 '과잉 224%'로 나와 사이트 전체 서사와 정반대가 된다.
     ref = {k: (v * 4 if v else None) for k, v in o['ref'].items()}
     idx = {r: i for i, r in enumerate(regs)}
-    last_act = [r['p'] for r in rows if not r.get('e')][-1]     # 마지막 실적 분기
-    # dateModified·sitemap lastmod는 실적 분기가 아니라 마지막 실적 분기로.
-    # (옛 livezone 월 스탬프는 생활권 체제와 함께 사라졌다 — 2026-08-06)
-    prd = last_act[:4]
-    mod_iso = (prd.replace('.', '-') + '-01') if '.' in prd else prd + '-01-01'
+    last_act = [r['p'] for r in rows if not r.get('e')][-1]     # 마지막 실적 분기 '2026Q2'
+    # ⚠️ 분기를 버리지 말 것. prd=last_act[:4]로 연도만 남기면 '.' 분기가 영영
+    # 거짓이 되어 mod_iso가 그 해 1월 1일로 굳는다 — /moveins/의 dateModified가
+    # datePublished보다 과거가 되고(불가능한 조합) sitemap lastmod가 1년 내내
+    # 안 움직였다(2026-08-07 감사). 분기의 마지막 달 1일로 찍는다.
+    prd = last_act
+    m = re.match(r'^(\d{4})Q([1-4])$', prd)
+    if m:
+        mod_iso = '%s-%02d-01' % (m.group(1), int(m.group(2)) * 3)
+    elif '.' in prd:
+        mod_iso = prd.replace('.', '-') + '-01'
+    else:
+        mod_iso = prd[:4] + '-01-01'
     years = ['2025', '2026', '2027']
 
     def ytot(name, y):

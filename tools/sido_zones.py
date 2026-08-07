@@ -197,6 +197,15 @@ def calc(stats):
     if L is None or S is None:
         raise ValueError('준공·착공 시리즈가 비어 있다')
     H = S + LEAD_Q - L
+    # ⚠️ H는 데이터 가용성에서 유도된다. 착공표(DT_MLTM_5387)가 준공표보다 한 달만
+    # 늦게 들어와도 S가 한 분기 밀려 H=11이 되고, 재고창은 16분기 고정이라 더 작은
+    # need로 나뉘어 **실공급 변화 0인데 전 지역 ratio가 통째로 올라간다**
+    # (2026-08-07 감사). H가 정상값(LEAD_Q)과 다르면 드러낸다.
+    if H != LEAD_Q:
+        import sys as _s
+        print('⚠️ sido_zones: 미래 시야가 %d분기다(정상 %d) — 착공 %s vs 준공 %s. '
+              '재고창은 16분기 고정이라 need만 줄어 전 지역 비율이 함께 움직인다.'
+              % (H, LEAD_Q, qkey(S), qkey(L)), file=_s.stderr)
     if H <= 0:
         raise ValueError('미래 시야가 0 이하다 (착공 %s, 준공 %s)' % (qkey(S), qkey(L)))
     out, missing = [], []
@@ -240,14 +249,26 @@ def calc(stats):
     # (2026-08-07 감사에서 경기 3개월 None으로 11,698호 차이를 실측).
     warn = []
     byz = {x['z']: x for x in out}
+
+    def _cmp(label, ssum, nat, k):
+        if nat and abs(ssum - nat) > max(50, abs(nat) * 0.001):
+            warn.append('%s %s: 합 %s vs %s (차 %s)'
+                        % (label, k, format(int(ssum), ','), format(int(nat), ','),
+                           format(int(ssum - nat), ',')))
     if '전국' in byz:
         for k in ('inow', 'fut', 'tot'):
-            ssum = sum(byz[z][k] for z in ORDER if z not in AGG and z in byz)
-            nat = byz['전국'][k]
-            if nat and abs(ssum - nat) > max(50, abs(nat) * 0.001):
-                warn.append('%s: Σ시도 %s vs 전국 %s (차 %s)'
-                            % (k, format(int(ssum), ','), format(int(nat), ','),
-                               format(int(ssum - nat), ',')))
+            _cmp('전국', sum(byz[z][k] for z in ORDER if z not in AGG and z in byz),
+                 byz['전국'][k], k)
+    # ⚠️ 집계행 자체(수도권·지방)도 대조해야 한다. Σ는 시도만 도니까 '수도권' 열의
+    # 착공이 통째로 빠져도 위 검사는 통과한다 — 실측으로 fut가 143,419호 어긋나고
+    # tot가 41% 틀린 채 무경고 배포됐다(2026-08-07 감사).
+    CAP = ('서울', '경기', '인천')
+    if '수도권' in byz and all(z in byz for z in CAP):
+        for k in ('inow', 'fut', 'tot'):
+            _cmp('수도권', sum(byz[z][k] for z in CAP), byz['수도권'][k], k)
+    if '지방' in byz and '전국' in byz and '수도권' in byz:
+        for k in ('inow', 'fut', 'tot'):
+            _cmp('지방', byz['전국'][k] - byz['수도권'][k], byz['지방'][k], k)
     if warn:
         import sys as _s
         _msg = ('sido_zones: 집계 항등식이 깨졌다 — 어느 지역의 시리즈에 부분 결측이 '
@@ -262,6 +283,44 @@ def calc(stats):
     return {'L': qkey(L), 'S': qkey(S), 'H': H,
             'lead': LEAD_Q, 'conv': CONV, 'window': BACKLOG_WINDOW,
             'unsold_prd': un_prd, 'missing': missing, 'agg_warn': warn, 'zones': out}
+
+
+def supply_rows(stats):
+    """통계 탭 '입주물량'과 /moveins/가 쓸 분기 시계열 — **홈 표와 같은 소스**.
+
+    ⚠️ 2026-08-07까지 이 자리는 odcloud 입주예정(ADV.occupancy)이었다. 그래서
+    같은 서울 2027Q2를 홈은 2,107세대, 통계 탭은 1,073세대로 보여줬고(2배),
+    기준선도 적정물량(REF_Q)·적정밴드(band)·ref 셋이 공존해 제주가 동시에
+    '매우 부족'이자 '밴드 상단 초과'였다(2026-08-07 감사). 소스를 하나로 합친다.
+
+    과거는 준공 실적, 미래는 착공을 LEAD_Q분기 뒤로 밀어 ×CONV. e=1이 미래 표시.
+    """
+    L = last_full_quarter(stats, '준공', '전국')
+    S = last_full_quarter(stats, '착공', '전국')
+    if L is None or S is None:
+        return None
+    regs = [z for z in ORDER]
+    dn = {z: quarterly(stats, '준공', z) for z in regs}
+    st = {z: quarterly(stats, '착공', z) for z in regs}
+    start = qidx(2017, 1)
+    rows = []
+    for i in range(start, S + LEAD_Q + 1):
+        fut = i > L
+        v = []
+        for z in regs:
+            if fut:
+                v.append(round(st[z].get(i - LEAD_Q, 0) * CONV))
+            else:
+                v.append(dn[z].get(i, 0))
+        r = {'p': qkey(i), 'v': v}
+        if fut:
+            r['e'] = 1
+        rows.append(r)
+    return {'regions': regs, 'rows': rows, 'ref': dict(REF_Q),
+            'note': ('분기별 아파트 공급 — 과거는 국토교통부 준공 실적, '
+                     '%s 이후는 착공 실적을 %d년 뒤로 밀어 추정(전환율 %.3f). '
+                     '기준선은 분기 적정물량이며 홈 공급표와 같은 값이다.'
+                     % (qkey(L + 1), LEAD_Q // 4, CONV))}
 
 
 def zone_order(rows):

@@ -361,9 +361,13 @@ def build_hub(calc):
                  % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
     h.append('</div><h2>17개 시도</h2>'
              '<div class="tb-seg zsort" id="sido-sort" role="group" aria-label="정렬 기준">'
-             '<button type="button" class="on" data-s="g">등급순</button>'
-             '<button type="button" data-s="a">세대수순</button></div>'
-             '<p class="zsub" id="sido-note">등급순입니다. 같은 등급 안에서는 세대수가 많은 순.</p>'
+             '<button type="button" class="on" aria-pressed="true" data-s="g">등급순</button>'
+             '<button type="button" aria-pressed="false" data-s="a">세대수순</button></div>'
+             # ⚠️ 정렬은 순부족(tot) 내림차순이다. 공급 여유 등급은 tot가 음수라
+             # '세대수가 많은 순'이라고 쓰면 반대로 읽힌다 — 여유가 가장 큰 충남이
+             # 맨 아래에 온다(2026-08-07 감사). 부호를 포함해 정확히 쓴다.
+             '<p class="zsub" id="sido-note">등급순입니다. 같은 등급 안에서는 '
+             '모자란 세대수가 큰 순(공급 여유 등급에서는 여유가 적은 순).</p>'
              '<div class="zlinks" id="sido-list">')
     for o in sido:
         h.append('<a href="/zone/%s/" data-gi="%d" data-tot="%d"><b>%s</b>'
@@ -378,17 +382,48 @@ def build_hub(calc):
              'var g=function(e,k){return +e.getAttribute(k)};'
              'seg.addEventListener("click",function(ev){'
              'var b=ev.target.closest("button");if(!b)return;var s=b.getAttribute("data-s");'
-             'Array.prototype.forEach.call(seg.children,function(x){x.classList.toggle("on",x===b)});'
+             'Array.prototype.forEach.call(seg.children,function(x){'
+             'var on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false")});'
              'var a=Array.prototype.slice.call(w.children);'
              'a.sort(s==="a"?function(x,y){return g(y,"data-tot")-g(x,"data-tot")}'
              ':function(x,y){return g(x,"data-gi")-g(y,"data-gi")||g(y,"data-tot")-g(x,"data-tot")});'
              'a.forEach(function(el){w.appendChild(el)});'
              'if(note)note.textContent=s==="a"'
-             '?"세대수가 많은 순입니다. 등급은 필요량 대비 비율이라 순서가 다릅니다."'
-             ':"등급순입니다. 같은 등급 안에서는 세대수가 많은 순.";'
+             '?"모자란 세대수가 큰 순입니다(공급 여유 등급은 여유가 적은 순). 등급은 필요량 대비 비율이라 순서가 다릅니다."'
+             ':"등급순입니다. 같은 등급 안에서는 모자란 세대수가 큰 순(공급 여유 등급에서는 여유가 적은 순).";'
              '});})();</script>')
     h.append(FOOT)
     return ''.join(h)
+
+
+HOME_STAMP = os.path.join(ROOT, 'tools', 'data', '.home_stamp')
+
+
+def _home_lastmod(today):
+    """홈·/weekly/의 lastmod. data-core.js 내용이 바뀐 날만 오늘로 민다.
+
+    두 페이지는 data-core.js(ADV.weekly.sgg 최신 주차, ADV.sido)를 그려서 만든다.
+    파일 해시를 도장으로 남겨, 내용이 같은 날은 옛 날짜를 유지한다.
+    """
+    import hashlib
+    try:
+        h = hashlib.sha1(io.open(os.path.join(ROOT, 'data-core.js'), 'rb').read()).hexdigest()[:16]
+    except IOError:
+        return today
+    prev = ''
+    try:
+        prev = io.open(HOME_STAMP, encoding='utf-8').read().strip()
+    except IOError:
+        pass
+    old_h, _, old_d = prev.partition(' ')
+    if old_h == h and old_d:
+        return old_d
+    try:
+        os.makedirs(os.path.dirname(HOME_STAMP), exist_ok=True)
+        io.open(HOME_STAMP, 'w', encoding='utf-8').write('%s %s' % (h, today))
+    except IOError:
+        pass
+    return today
 
 
 def update_sitemap(names, lastmods, hub_lastmod, home_lastmod):
@@ -451,7 +486,12 @@ def main():
     hub_fp = os.path.join(OUT, 'index.html')
     hub, hub_lm, hub_ch = keep_dates(build_hub(calc), read_old(hub_fp), today)
     io.open(hub_fp, 'w', encoding='utf-8', newline='\n').write(hub)
-    update_sitemap(names, lastmods, hub_lm, today if (changed or hub_ch) else None)
+    # ⚠️ 홈·/weekly/ lastmod를 zone 변경에만 묶으면 안 된다. 주간 회차가 새로 들어온
+    # 날 홈 히어로 지도와 /weekly/ 지도는 실제로 바뀌는데 zone 20장은 분기 준공·착공만
+    # 읽으므로 changed=0이 되고, 두 페이지 lastmod가 영영 안 움직인다(2026-08-07 감사).
+    # data-core.js의 내용 해시로 판정한다 — 그게 두 페이지의 실제 입력이다.
+    home_lm = _home_lastmod(today)
+    update_sitemap(names, lastmods, hub_lm, home_lm)
 
     print('지역 페이지 %d개 + 허브 (실적~%s, 미래 %d분기) — 내용 변경 %d개'
           % (len(names), calc['L'], calc['H'], changed))
