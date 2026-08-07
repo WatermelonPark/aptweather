@@ -104,19 +104,52 @@ def quarterly(stats, key, region, full_only=True):
             if not full_only or n == 3}
 
 
+def has_any(stats, key, region):
+    """그 지역 시리즈에 None 아닌 값이 하나라도 있나.
+
+    ⚠️ quarterly()가 비어 있지 않다는 것만으로는 부족하다. 전 기간이 None이어도
+    _series는 (0, 3)을 만들어 분기 키가 생기므로 `if not dn` 가드를 통과하고,
+    그 지역은 준공 0 = 완전 공급절벽으로 계산돼 **순위 1위로 올라온다**.
+    KOSIS 지역명 개편(강원특별자치도·전북특별자치도 전례)으로 merge_basic의
+    지역 필터에 걸려 그 지역만 계속 None으로 append되면 실제로 도달한다
+    (2026-08-07 감사). 진짜 0(대구 2023년 하반기 착공)과는 구분해야 한다 —
+    그건 값이 0이 아니라 KOSIS가 '-'로 준 것이고 여기서는 None이 아니다.
+    """
+    ser = ((stats.get(key) or {}).get('series') or {}).get(region)
+    return any(v is not None for v in (ser or []))
+
+
 def last_full_quarter(stats, key='준공', region='전국'):
     q = quarterly(stats, key, region)
     return max(q) if q else None
 
 
 def demol_q(stats, region):
-    """분기당 아파트 멸실. 원자료가 시도 연간이라 4로 나눈다.
+    """{연도: 분기당 아파트 멸실}과 폴백값. 원자료가 시도 연간이라 4로 나눈다.
 
     ⚠️ '주택멸실'(계)을 쓰면 안 된다 — 단독이 절반이라 아파트 재고에서 과대 차감된다.
+    ⚠️ 예전엔 **최신 1개 연도**를 재고창 16분기 전체에 썼다. 창(2022Q3~2026Q2) 중
+    10분기는 실측이 있는데도 버린 것이라, 광주처럼 2024년이 0이면 2022년 2,796호가
+    통째로 사라지고 경남은 1.0 컷 바로 옆에서 등급이 뒤집혔다(2026-08-07 감사).
+    연도가 맞으면 그 해 값을, 없으면 가장 가까운 해 값을 쓴다.
     """
-    ser = ((stats.get('아파트멸실') or {}).get('series') or {}).get(region)
-    v = [x for x in (ser or []) if x is not None]
-    return (v[-1] / 4.0) if v else 0.0
+    s = stats.get('아파트멸실') or {}
+    ser = (s.get('series') or {}).get(region) or []
+    dates = s.get('dates') or []
+    by = {}
+    for d, v in zip(dates, ser):
+        if v is not None:
+            by[int(str(d)[:4])] = v / 4.0
+    return by
+
+
+def demol_of(by, year):
+    """그 해 멸실. 없으면 가장 가까운 연도(미래는 최신, 과거는 최초)로 채운다."""
+    if not by:
+        return 0.0
+    if year in by:
+        return by[year]
+    return by[min(by, key=lambda y: (abs(y - year), y))]
 
 
 def unsold_latest(stats, region):
@@ -172,14 +205,15 @@ def calc(stats):
         ref = REF_Q[z]
         dn = quarterly(stats, '준공', z)
         st = quarterly(stats, '착공', z)
-        if not dn or not st:
+        if not dn or not st or not has_any(stats, '준공', z) or not has_any(stats, '착공', z):
             # ⚠️ 조용히 넘기면 그 지역이 표·페이지·sitemap에서 통째로 사라진다.
             # update_adv_data의 sido 가드가 '지역 수 감소'를 잡지만, 왜 줄었는지는
             # 여기서만 알 수 있다. 이 프로젝트에서 조용한 소거로 세 번 사고가 났다.
             missing.append(z)
             continue
-        dq = demol_q(stats, z)
-        inow = sum(dn.get(i, 0) - dq - ref for i in range(L - BACKLOG_WINDOW + 1, L + 1))
+        dby = demol_q(stats, z)
+        inow = sum(dn.get(i, 0) - demol_of(dby, qparts(i)[0]) - ref
+                   for i in range(L - BACKLOG_WINDOW + 1, L + 1))
         fut = sum(st.get(i - LEAD_Q, 0) * CONV for i in range(L + 1, L + H + 1))
         need = ref * H
         tot = need - fut - inow
@@ -199,6 +233,27 @@ def calc(stats):
             'um': (None if um is None else round(um, 3)),
             'uwarn': bool(um is not None and um >= 1.0 and g in ('g4', 'g3', 'g2')),
         })
+    # ── 집계 항등식 자가검사 ────────────────────────────────────────────────
+    # 부분 결측은 missing 가드에 안 걸린다. 한 지역의 특정 월만 None이면 그 지역만
+    # 공급이 낮게 잡히는데 지역 수는 그대로라 아무도 모른다. 전국은 별도 시리즈라
+    # 영향을 안 받으므로, Σ시도와 전국을 대조하면 그 어긋남이 드러난다
+    # (2026-08-07 감사에서 경기 3개월 None으로 11,698호 차이를 실측).
+    warn = []
+    byz = {x['z']: x for x in out}
+    if '전국' in byz:
+        for k in ('inow', 'fut', 'tot'):
+            ssum = sum(byz[z][k] for z in ORDER if z not in AGG and z in byz)
+            nat = byz['전국'][k]
+            if nat and abs(ssum - nat) > max(50, abs(nat) * 0.001):
+                warn.append('%s: Σ시도 %s vs 전국 %s (차 %s)'
+                            % (k, format(int(ssum), ','), format(int(nat), ','),
+                               format(int(ssum - nat), ',')))
+    if warn:
+        import sys as _s
+        _msg = ('sido_zones: 집계 항등식이 깨졌다 — 어느 지역의 시리즈에 부분 결측이 '
+                '있을 수 있다(전국은 별도 시리즈라 영향을 안 받는다).')
+        print('⚠️ ' + _msg + chr(10) + '  ' + (chr(10) + '  ').join(warn),
+              file=_s.stderr)
     if missing:
         import sys as _s
         print('⚠️ sido_zones: 준공·착공 시리즈가 없어 빠진 지역 %d곳 — %s '
@@ -206,7 +261,7 @@ def calc(stats):
               % (len(missing), ', '.join(missing)), file=_s.stderr)
     return {'L': qkey(L), 'S': qkey(S), 'H': H,
             'lead': LEAD_Q, 'conv': CONV, 'window': BACKLOG_WINDOW,
-            'unsold_prd': un_prd, 'missing': missing, 'zones': out}
+            'unsold_prd': un_prd, 'missing': missing, 'agg_warn': warn, 'zones': out}
 
 
 def zone_order(rows):

@@ -69,11 +69,20 @@ def live_adv_stats():
     # rest에서 빠졌다. 여기서 합치지 않으면 아래 `if '규모별' in stats` 게이트가
     # 영영 안 걸려 감시가 조용히 꺼진다(2026-08-04 감사에서 실제로 꺼져 있었음).
     # 지연 로드 파일이 늘어나면 이 목록에도 추가할 것.
+    # ⚠️ 조회에 실패하면 **반드시 신호를 남긴다**. 예전엔 print만 하고 넘어가서
+    # 그 계열이 아래 `if '규모별' in stats` 게이트에 안 걸려 감시가 조용히 꺼졌고,
+    # 커버리지 가드는 '초과 계열'만 보므로 원리적으로 못 잡았다(2026-08-07 감사).
+    # SKIPPED에 넣어야 main()의 '절반 넘게 못 봤으면 OK는 근거가 없다' 게이트에도 걸린다.
     for lazy in ('/data-size.json',):
         try:
-            stats.update((get_json(SITE + lazy) or {}).get('STATS') or {})
+            got = (get_json(SITE + lazy) or {}).get('STATS') or {}
+            if not got:
+                SKIPPED.append(lazy + '(빈 응답)')
+                print('  경고: %s 응답에 STATS가 없다 — 그 계열 감시가 꺼진다' % lazy)
+            stats.update(got)
         except Exception as e:
-            print('  경고: %s 조회 실패 (%s) — 그 계열 감시는 이번 회차 건너뜀'
+            SKIPPED.append(lazy)
+            print('  경고: %s 조회 실패 (%s) — 그 계열 감시가 이번 회차 꺼진다'
                   % (lazy, str(e)[:40]))
     return adv, stats
 
@@ -283,6 +292,10 @@ def main():
         fails.append(check(name, last,
                            lambda c=cfg: kosis_latest(c['org'], c['tbl'], c['objn'], 'M'),
                            GRACE_BASIC))
+    if '규모별' not in stats:
+        # 라이브에 있어야 할 계열이 사라진 것 자체가 실패다. 조회 실패로 못 받은
+        # 경우는 위 live_adv_stats가 SKIPPED에 남겨 뒀다.
+        fails.append('규모별이 라이브에 없다 — data-size.json 배포·조회 확인 필요')
     if '규모별' in stats:
         sz = U.SIZE_TBLS[0][1]
         last = (stats['규모별'].get('dates') or [None])[-1]

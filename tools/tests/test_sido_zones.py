@@ -152,3 +152,66 @@ def test_모순_표시는_부족_판정에만_붙는다():
     s['미분양']['series']['서울'] = [ref - 1]
     row2 = [x for x in M.calc(s)['zones'] if x['z'] == '서울'][0]
     assert row2['uwarn'] is False, '1배 미만이면 표시하지 않는다'
+
+
+def test_전_기간_None인_지역은_missing으로_빠진다():
+    """quarterly()가 비어 있지 않다는 것만으로는 부족하다 — 전 기간 None이어도
+    분기 키는 생기므로 그 지역이 준공 0 = 완전 공급절벽으로 1위가 된다."""
+    cut = (2026 - 2011) * 12 + 6
+    z = [0] * cut
+    s = _stats({'전국': list(z), '서울': list(z)},
+               {'전국': list(z), '서울': list(z)}, y0=2011, m0=1)
+    assert '서울' not in M.calc(s)['missing']
+    s['준공']['series']['서울'] = [None] * cut
+    r = M.calc(s)
+    assert '서울' in r['missing'], '전 기간 None을 못 잡았다'
+    assert not [x for x in r['zones'] if x['z'] == '서울']
+
+
+def _full_stats(per_sido=10000):
+    """20개 지역이 전부 있고 전국 = Σ시도가 성립하는 합성 STATS.
+
+    집계 항등식 검사를 시험하려면 애초에 항등식이 성립하는 fixture가 있어야 한다.
+    """
+    cut = (2026 - 2011) * 12 + 6
+    sido = [z for z in M.ORDER if z not in M.AGG]
+    cap = ('서울', '경기', '인천')
+    def mk(v):
+        d = {z: [v] * cut for z in sido}
+        d['전국'] = [v * len(sido)] * cut
+        d['수도권'] = [v * len(cap)] * cut
+        d['지방'] = [v * (len(sido) - len(cap))] * cut
+        return d
+    return _stats(mk(per_sido), mk(0), regions=tuple(M.ORDER), y0=2011, m0=1)
+
+
+def test_부분_결측은_집계_항등식_경고로_드러난다():
+    """한 지역의 특정 월만 None이면 missing에 안 걸리지만 Σ시도 ≠ 전국이 된다."""
+    s = _full_stats()
+    assert M.calc(s)['agg_warn'] == [], '정상 fixture에서는 항등식이 성립해야 한다'
+    # 허용오차가 |전국|의 0.1%라, 결측분이 그보다 커야 경고가 뜬다.
+    # per_sido=10,000이면 3개월 결측 = 30,000 > 6,640(0.1%)이다.
+    s['준공']['series']['경기'][-3:] = [None, None, None]
+    r = M.calc(s)
+    assert r['missing'] == [], '부분 결측은 missing이 아니다'
+    assert r['agg_warn'], '집계 항등식 경고가 안 떴다'
+    assert any('inow' in w for w in r['agg_warn'])
+
+
+def test_멸실은_분기의_연도에_맞춘다():
+    """최신 1개 연도를 창 전체에 쓰면 창 안의 실측을 버린다."""
+    cut = (2026 - 2011) * 12 + 6
+    z = [0] * cut
+    s = _stats({'전국': list(z), '서울': list(z)},
+               {'전국': list(z), '서울': list(z)}, y0=2011, m0=1)
+    s['아파트멸실'] = {'dates': ['2023', '2024'],
+                    'series': {'전국': [0, 0], '서울': [40000, 0]}}
+    by = M.demol_q(s, '서울')
+    assert by == {2023: 10000.0, 2024: 0.0}
+    assert M.demol_of(by, 2023) == 10000.0, '그 해 값을 써야 한다'
+    assert M.demol_of(by, 2026) == 0.0, '창 밖은 가장 가까운 해로 채운다'
+    row = [x for x in M.calc(s)['zones'] if x['z'] == '서울'][0]
+    # 창 2022Q3~2026Q2 = 16분기: 2022(2) 2023(4) 2024(4) 2025(4) 2026(2).
+    # 2022는 가장 가까운 2023 값(10,000), 2025·2026은 2024 값(0)으로 채운다.
+    # → 2×10,000 + 4×10,000 = 60,000이 재고에서 빠진다.
+    assert row['inow'] == -M.REF_Q['서울'] * M.BACKLOG_WINDOW - 60000

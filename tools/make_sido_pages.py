@@ -110,7 +110,13 @@ def load():
 
 
 def price_quarters(adv):
-    """{분기 인덱스: {지역: (매매, 전세, 월세)}} — 월별 변동률을 분기로 합친다."""
+    """{분기 인덱스: {지역: [매매, 전세, 월세]}} — 월별 변동률을 분기로 합친다.
+
+    ⚠️ 자료가 하나도 없는 지역·분기는 **키를 만들지 않고**, 항목별로도 값이 없으면
+    None으로 남긴다. 예전엔 모든 지역에 [0,0,0]을 먼저 깔아 놔서 지수가 결측인 곳이
+    '+0.0%'(완전 보합)로 인쇄됐다 — 광주·전남은 2025-05~2026-06 14개월이 통째로
+    결측인데 최근 4분기가 전부 보합으로 보였다(2026-08-07 감사).
+    """
     mo = (adv.get('monthly') or {})
     regs = mo.get('regions') or []
     out = {}
@@ -119,13 +125,15 @@ def price_quarters(adv):
         i = SZ.qidx(y, (m - 1) // 3 + 1)
         cur = out.setdefault(i, {})
         for k, reg in enumerate(regs):
-            a = cur.setdefault(reg, [0.0, 0.0, 0.0])
             for f, n in (('ma', 0), ('je', 1), ('wo', 2)):
                 v = (r.get(f) or [None] * len(regs))[k]
-                if v is not None:
-                    a[n] += v
+                if v is None:
+                    continue
+                a = cur.get(reg)
+                if a is None:
+                    a = cur[reg] = [None, None, None]
+                a[n] = (a[n] or 0) + v
     return out
-
 
 def series(stats, z, calc):
     """지역 하나의 분기별 공급 — (분기 인덱스, 값, 미래 여부) 목록."""
@@ -141,8 +149,11 @@ def series(stats, z, calc):
     return rows
 
 
-def head(z, desc, title):
-    u = SITE + '/zone/' + urllib.parse.quote(z) + '/'
+def head(z, desc, title, url=None, crumb=None):
+    """⚠️ url을 안 넘기면 z를 지역명으로 보고 /zone/{z}/ 를 만든다. 허브처럼
+    z 자리에 제목을 넘기는 곳은 반드시 url을 주어야 한다 — 안 그러면 canonical·
+    og:url·JSON-LD가 존재하지 않는 /zone/시도별%20공급/ 을 가리킨다(2026-08-07 감사)."""
+    u = url or (SITE + '/zone/' + urllib.parse.quote(z) + '/')
     ld = [
         {"@context": "https://schema.org", "@type": "Article", "headline": title,
          "description": desc,
@@ -154,8 +165,9 @@ def head(z, desc, title):
          "about": {"@type": "Place", "name": z}},
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": "아공맵", "item": SITE + "/"},
-            {"@type": "ListItem", "position": 2, "name": "시도 공급 분석", "item": SITE + "/zone/"},
-            {"@type": "ListItem", "position": 3, "name": z, "item": u}]},
+            {"@type": "ListItem", "position": 2, "name": "시도 공급 분석", "item": SITE + "/zone/"}]
+            + ([] if crumb is False else
+               [{"@type": "ListItem", "position": 3, "name": z, "item": u}])},
     ]
     return '''<!DOCTYPE html>
 <html lang="ko">
@@ -287,7 +299,8 @@ def build_page(z, calc, stats, pq, others):
         else:
             cells = ('<td>%d%%</td>' % pct) + ''.join(
                 '<td style="background:%s">%s</td>'
-                % (tint(p[n] if p else None, 2), ('%+.1f%%' % p[n]) if p else '–')
+                % (tint((p[n] if p else None), 2),
+                   ('%+.1f%%' % p[n]) if (p and p[n] is not None) else '–')
                 for n in (0, 1, 2))
         h.append('<tr%s><td>%s</td><td>%s</td>%s</tr>'
                  % (cls, SZ.qlabel(i), num(v), cells))
@@ -329,7 +342,8 @@ def build_hub(calc):
     desc = ('전국 17개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. '
             '실적은 국토교통부 준공, 앞으로 %d분기는 착공 실적 기준. 기준 %s.'
             % (calc['H'], calc['L']))
-    h = [head('시도별 공급', desc, '시도별 아파트 공급 분석')]
+    h = [head('시도별 공급', desc, '시도별 아파트 공급 분석',
+              url=SITE + '/zone/', crumb=False)]
     h.append('<header class="zhead"><div class="wrap">'
              '<nav class="crumb"><a href="/">아공맵</a> › <b>시도 공급 분석</b></nav>'
              '<h1>시도별 아파트 공급</h1>'

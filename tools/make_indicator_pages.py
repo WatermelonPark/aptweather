@@ -284,7 +284,7 @@ def build_jeonse(sts):
     <a href="/#stats-adv-bubble">버블밴드<span>전세가율로 계산한 지역별 고평가·저평가 밴드</span></a>
     <a href="/#stats-basic">기본통계 차트<span>전세가율 2012년부터 월별 추이를 지역별로</span></a>
     <a href="/moveins/">아파트 입주물량<span>전세가율을 움직이는 원인 — 시도별 입주 예정</span></a>
-    <a href="/zone/">생활권 공급 분석<span>전국 44곳을 부족·과잉 등급으로 — 내 지역 찾기</span></a>
+    <a href="/zone/">시도별 공급 분석<span>17개 시도를 부족·과잉 등급으로</span></a>
     <a href="/cycle/">아파트 사이클 리포트<span>전세가율이 매매를 미는 고리, 데이터 검증</span></a>
   </div>
 </section>
@@ -380,14 +380,14 @@ def build_moveins(adv):
 <section class="wrap">
   <h2>지금 표에서 읽히는 것</h2>
   <p>2026년 적정수요 대비 가장 마른 곳은 <strong>%(lo1)s(%(lo1p)d%%)</strong>, 가장 두터운 곳은 <strong>%(hi1)s(%(hi1p)d%%)</strong>다. 공급이 적정선의 70%%를 밑돌면 전세부터 조여드는 구간, 130%%를 넘으면 입주장이 전세를 누르는 구간으로 본다.</p>
-  <p>수도권은 2026년 %(sudo26)s세대에서 2027년 %(sudo27)s세대로 %(sudodir)s. 다만 시도 합계는 뭉뚱그린 평균이다 — 같은 경기라도 생활권별로 부족과 과잉이 갈리므로, 실제 판단은 생활권 단위로 내려가서 봐야 한다.</p>
+  <p>수도권은 2026년 %(sudo26)s세대에서 2027년 %(sudo27)s세대로 %(sudodir)s. 시도 안에서도 시군구별로 사정이 갈리므로, 이 수치는 시장의 방향을 보는 값이지 개별 단지의 사정을 말해 주지 않는다.</p>
 </section>
 
 <section class="wrap">
   <h2>더 보기</h2>
   <div class="links">
     <a href="/#stats-adv-occ">입주물량 차트<span>분기별 추이와 적정수요 밴드를 지역별로</span></a>
-    <a href="/zone/">생활권 공급 분석<span>시도 평균에 가려진 생활권 44곳의 부족·과잉</span></a>
+    <a href="/zone/">시도별 공급 분석<span>17개 시도의 부족·과잉을 등급으로</span></a>
     <a href="/jeonse-ratio/">전세가율<span>입주물량이 움직이는 결과 — 시도별 현황</span></a>
     <a href="/cycle/">아파트 사이클 리포트<span>입주 → 전세 → 매매로 이어지는 고리, 데이터 검증</span></a>
   </div>
