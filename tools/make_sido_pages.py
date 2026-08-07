@@ -109,6 +109,15 @@ def num(v):
     return format(rnd(v), ',')
 
 
+def pct1(v):
+    """가격 변동률 표기. 홈의 tbPv와 같은 규칙 — **반올림 결과로 부호를 정한다**.
+    '%+.1f'는 -0.04를 '-0.0%'로 만드는데, 0.0인데 부호만 붙은 값은 '변동 없음'이 아니라
+    오류처럼 읽힌다. 홈만 고쳐 놔서 zone 20장에 136칸이 남아 있었다(2026-08-08 감사).
+    파이썬 round()는 은행가 반올림이라 0.15가 홈(+0.2%)과 갈리므로 rnd()를 쓴다."""
+    r = rnd(v * 10) / 10.0
+    return ('%+.1f%%' % r) if r != 0 else '0.0%'
+
+
 def disp_tot(row, H):
     """화면에 찍는 누적 순부족. ADV의 tot는 반올림 전 값들로 계산돼서, 카드에 찍은
     정수 셋(적정·공급·재고)으로 검산하면 1~2세대가 남는다. 허브 목록과 상세 카드가
@@ -226,7 +235,7 @@ def head(z, desc, title, url=None, crumb=None):
 
 FOOT = '''<footer><div class="wrap">
   <b>아공맵</b> — 아파트 · 공급량 · 투자지도<br>
-  <a href="/">agongmap.co.kr</a> · <a href="/about/">아공맵 소개</a> · 자료: 국토교통부 주택건설실적(준공·착공) · 한국부동산원 아파트 실거래가격지수
+  <a href="/">agongmap.co.kr</a> · <a href="/about/">아공맵 소개</a> · 자료: 국토교통부 주택건설실적(준공·착공) · 한국부동산원 「전국주택가격동향조사」 월간 아파트
   <div class="disc">공공 데이터를 가공한 참고 자료이며 투자자문이 아닙니다. 투자 판단과 책임은 이용자에게 있습니다.</div>
 </div></footer>
 
@@ -336,7 +345,7 @@ def build_page(z, calc, stats, pq, others):
             cells = ('<td>%d%%</td>' % pct) + ''.join(
                 '<td style="background:%s">%s</td>'
                 % (tint((p[n] if p else None), 2),
-                   ('%+.1f%%' % p[n]) if (p and p[n] is not None) else '–')
+                   pct1(p[n]) if (p and p[n] is not None) else '–')
                 for n in (0, 1, 2))
         h.append('<tr%s><td>%s</td><td>%s</td>%s</tr>'
                  % (cls, SZ.qlabel(i), num(v), cells))

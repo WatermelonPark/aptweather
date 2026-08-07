@@ -117,21 +117,21 @@ footer a{color:var(--ink)}
     <thead><tr><th>지역</th><th data-num>2025</th><th data-num>2026</th><th data-num>2027</th><th data-num>적정수요/년</th><th data-num>2026 충족률</th></tr></thead>
     <tbody>
 <tr class="agg"><td>수도권</td><td>152,433</td><td>109,889</td><td>143,419</td><td>200,000</td><td class="up">55% 충족</td></tr>
-<tr><td>서울</td><td>49,973</td><td>29,113</td><td>20,904</td><td>74,800</td><td class="up">39% 충족</td></tr>
+<tr><td>서울</td><td>49,973</td><td>29,113</td><td>20,905</td><td>74,800</td><td class="up">39% 충족</td></tr>
 <tr><td>경기</td><td>84,973</td><td>64,107</td><td>95,267</td><td>102,000</td><td class="up">63% 충족</td></tr>
-<tr><td>인천</td><td>17,487</td><td>16,670</td><td>27,248</td><td>23,200</td><td class="mut">72% 충족</td></tr>
-<tr><td>부산</td><td>21,364</td><td>15,875</td><td>15,795</td><td>24,000</td><td class="up">66% 충족</td></tr>
+<tr><td>인천</td><td>17,487</td><td>16,670</td><td>27,247</td><td>23,200</td><td class="mut">72% 충족</td></tr>
+<tr><td>부산</td><td>21,364</td><td>15,875</td><td>15,796</td><td>24,000</td><td class="up">66% 충족</td></tr>
 <tr><td>광주</td><td>8,298</td><td>14,187</td><td>3,646</td><td>10,800</td><td class="dn">131% 충족</td></tr>
 <tr><td>경남</td><td>20,007</td><td>11,170</td><td>8,339</td><td>24,000</td><td class="up">47% 충족</td></tr>
-<tr><td>충남</td><td>15,860</td><td>9,751</td><td>18,037</td><td>14,000</td><td class="up">70% 충족</td></tr>
-<tr><td>경북</td><td>11,626</td><td>8,911</td><td>4,261</td><td>20,000</td><td class="up">45% 충족</td></tr>
+<tr><td>충남</td><td>15,860</td><td>9,751</td><td>18,037</td><td>14,000</td><td class="mut">70% 충족</td></tr>
+<tr><td>경북</td><td>11,626</td><td>8,910</td><td>4,261</td><td>20,000</td><td class="up">45% 충족</td></tr>
 <tr><td>대구</td><td>18,137</td><td>7,784</td><td>5,211</td><td>20,000</td><td class="up">39% 충족</td></tr>
 <tr><td>대전</td><td>11,999</td><td>7,273</td><td>17,867</td><td>8,800</td><td class="mut">83% 충족</td></tr>
 <tr><td>전북</td><td>9,444</td><td>7,090</td><td>5,628</td><td>10,000</td><td class="mut">71% 충족</td></tr>
-<tr><td>충북</td><td>16,698</td><td>6,725</td><td>11,303</td><td>10,800</td><td class="up">62% 충족</td></tr>
+<tr><td>충북</td><td>16,698</td><td>6,725</td><td>11,302</td><td>10,800</td><td class="up">62% 충족</td></tr>
 <tr><td>강원</td><td>10,887</td><td>5,838</td><td>7,639</td><td>10,400</td><td class="up">56% 충족</td></tr>
 <tr><td>전남</td><td>8,826</td><td>5,783</td><td>7,324</td><td>12,000</td><td class="up">48% 충족</td></tr>
-<tr><td>울산</td><td>4,935</td><td>5,039</td><td>3,685</td><td>8,000</td><td class="up">63% 충족</td></tr>
+<tr><td>울산</td><td>4,935</td><td>5,039</td><td>3,684</td><td>8,000</td><td class="up">63% 충족</td></tr>
 <tr><td>제주</td><td>1,185</td><td>562</td><td>2,774</td><td>4,800</td><td class="up">12% 충족</td></tr>
 <tr><td>세종</td><td>389</td><td>0</td><td>3,373</td><td>2,400</td><td class="up">0% 충족</td></tr>
     </tbody>
@@ -176,15 +176,34 @@ footer a{color:var(--ink)}
     var s=row.cells[k].textContent.trim();
     return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||-1e9) : s;
   }
+  /* 마우스로만 정렬되던 것을 키보드에서도 되게 한다 — 안내문이 '표두를 누르면 정렬'인데
+     탭으로는 표두에 닿지도 않았다(2026-08-08 감사). aria-sort로 현재 정렬 상태도 알린다. */
   Array.prototype.forEach.call(ths, function(h,i){
-    h.addEventListener('click', function(){
+    h.setAttribute('scope','col');
+    h.tabIndex=0; h.setAttribute('role','button');
+    h.setAttribute('aria-sort','none');
+    h.title='누르면 이 열로 정렬';
+    function sort(){
       var isNum=h.hasAttribute('data-num');
       dir=(cur===i)?-dir:-1; cur=i;
       var rows=Array.prototype.slice.call(tb.rows).filter(function(r){return !r.classList.contains('agg')});
       var aggs=Array.prototype.slice.call(tb.rows).filter(function(r){return r.classList.contains('agg')});
       rows.sort(function(a,b){var x=val(a,i,isNum),y=val(b,i,isNum);return (x<y?-1:x>y?1:0)*dir;});
       aggs.concat(rows).forEach(function(r){tb.appendChild(r);});
+      Array.prototype.forEach.call(ths,function(o){o.setAttribute('aria-sort','none');});
+      h.setAttribute('aria-sort', dir>0?'ascending':'descending');
+    }
+    h.addEventListener('click', sort);
+    h.addEventListener('keydown', function(e){
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sort(); }
     });
+  });
+  /* 행 머리(지역명)를 프로그램적으로 붙인다 — 20열 표에서 이게 없으면 스크린리더가
+     칸을 읽을 때 어느 지역인지 말하지 않는다. */
+  Array.prototype.forEach.call(tb.rows, function(r){
+    var c=r.cells[0]; if(!c || c.tagName==='TH') return;
+    var th=document.createElement('th'); th.scope='row'; th.innerHTML=c.innerHTML;
+    th.className=c.className; c.parentNode.replaceChild(th,c);
   });
 })();
 </script>

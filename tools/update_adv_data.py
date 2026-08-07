@@ -383,6 +383,35 @@ def _fetch_apt_permits(prd_de):
     return out
 
 
+def permit_ref(regions, rows):
+    """지역별 [연간 저점, 연간 고점]. 인허가 표의 색 판정·참조선·각주가 전부 이걸 쓴다.
+
+    ⚠️ 예전엔 시딩 때 한 번 만들고 손대지 않아, PERMIT_REGIONS에 전국·지방을 넣은
+    회차에 그 둘만 ref가 없었다. 하필 '전국'이 탭의 기본 선택이라, 인허가를 처음
+    여는 사람은 범례만 있고 색도 점선도 각주도 없는 화면을 봤다(2026-08-08 감사).
+    이제 rows에서 매번 다시 만든다 — 지역이 늘면 자동으로 따라온다.
+    """
+    import collections
+    cnt = collections.Counter(r['p'][:4] for r in rows)
+    full = {y for y, n in cnt.items() if n == 2}      # 상·하반기가 다 있는 연도만
+    ann = collections.defaultdict(dict)
+    for r in rows:
+        y = r['p'][:4]
+        if y not in full:
+            continue
+        for k, rg in enumerate(regions):
+            v = r['v'][k]
+            if v is None:
+                continue
+            ann[rg][y] = ann[rg].get(y, 0) + v
+    out = {}
+    for rg in regions:
+        ys = ann.get(rg) or {}
+        if len(ys) >= 2:
+            out[rg] = [min(ys.values()), max(ys.values())]
+    return out
+
+
 def fetch_permits():
     import datetime
     now = datetime.date.today()
@@ -1340,6 +1369,10 @@ def main():
         rows = fetch_permits()
         if rows and len(rows) >= len(adv['permits']['rows']) and differs(rows, adv['permits']['rows']):
             adv['permits']['rows'] = rows
+            adv['permits']['regions'] = list(PERMIT_REGIONS)
+            # ref(저점·고점)를 rows에서 다시 만든다 — 안 그러면 지역을 늘린 회차에
+            # 새 지역만 색·참조선·각주가 통째로 빠진다(2026-08-08 감사).
+            adv['permits']['ref'] = permit_ref(PERMIT_REGIONS, rows)
             changed.append('permits(%d)' % len(rows))
     except Exception as e:
         failed.append('permits'); print('permits skip:', e)

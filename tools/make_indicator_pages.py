@@ -160,15 +160,34 @@ __BODY__
     var s=row.cells[k].textContent.trim();
     return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||-1e9) : s;
   }
+  /* 마우스로만 정렬되던 것을 키보드에서도 되게 한다 — 안내문이 '표두를 누르면 정렬'인데
+     탭으로는 표두에 닿지도 않았다(2026-08-08 감사). aria-sort로 현재 정렬 상태도 알린다. */
   Array.prototype.forEach.call(ths, function(h,i){
-    h.addEventListener('click', function(){
+    h.setAttribute('scope','col');
+    h.tabIndex=0; h.setAttribute('role','button');
+    h.setAttribute('aria-sort','none');
+    h.title='누르면 이 열로 정렬';
+    function sort(){
       var isNum=h.hasAttribute('data-num');
       dir=(cur===i)?-dir:-1; cur=i;
       var rows=Array.prototype.slice.call(tb.rows).filter(function(r){return !r.classList.contains('agg')});
       var aggs=Array.prototype.slice.call(tb.rows).filter(function(r){return r.classList.contains('agg')});
       rows.sort(function(a,b){var x=val(a,i,isNum),y=val(b,i,isNum);return (x<y?-1:x>y?1:0)*dir;});
       aggs.concat(rows).forEach(function(r){tb.appendChild(r);});
+      Array.prototype.forEach.call(ths,function(o){o.setAttribute('aria-sort','none');});
+      h.setAttribute('aria-sort', dir>0?'ascending':'descending');
+    }
+    h.addEventListener('click', sort);
+    h.addEventListener('keydown', function(e){
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sort(); }
     });
+  });
+  /* 행 머리(지역명)를 프로그램적으로 붙인다 — 20열 표에서 이게 없으면 스크린리더가
+     칸을 읽을 때 어느 지역인지 말하지 않는다. */
+  Array.prototype.forEach.call(tb.rows, function(r){
+    var c=r.cells[0]; if(!c || c.tagName==='TH') return;
+    var th=document.createElement('th'); th.scope='row'; th.innerHTML=c.innerHTML;
+    th.className=c.className; c.parentNode.replaceChild(th,c);
   });
 })();
 </script>
@@ -347,8 +366,13 @@ def build_moveins(adv):
         p = t / rf * 100
         # ⚠️ 이 값은 '적정 대비 얼마나 채웠나'(충족률)다. 39%에 ' 부족'을 붙이면
         # '39% 모자라다'로 읽히는데 실제로는 61% 모자란 것이다(2026-08-07 감사).
+        # ⚠️ 색은 **표시값 기준**으로 판정한다. raw로 가르면 69.6%가 '70% 충족'으로
+        # 찍히면서 '70% 미만' 색을 받아, 같은 페이지의 범례와 어긋난다
+        # (충남이 실제로 그랬다, 2026-08-08 감사).
+        shown = num(p)
+        p = float(shown.replace(',', ''))
         cls = 'up' if p < 70 else 'dn' if p > 130 else 'mut'
-        return '<td class="%s">%d%% 충족</td>' % (cls, round(p))
+        return '<td class="%s">%s%% 충족</td>' % (cls, shown)
 
     # ⚠️ regs에는 전국·수도권·지방 집계 3종이 섞여 있다. 그대로 정렬하면 '시도별'
     # 표에 전국·지방이 시도인 척 들어가 이중계상된다(2026-08-07 감사).
