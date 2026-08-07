@@ -133,15 +133,24 @@ jobs:
           # (2026-07-30 실사고). 그래서 '가장 최신 주간/월간을 가진 산출물'을 고른다.
           # 산출물별 최신 weekly(YYYY-MM-DD)를 뽑아 가장 신선한 것을 고른다.
           # 파이썬 heredoc은 YAML 블록 들여쓰기를 깨므로 순수 셸로 짠다.
-          SRC=""; BEST=""
+          SRC=""; BEST=""; BESTMO=""
           for d in _art/data-*; do
             [ -f "$d/data-core.js" ] || continue
             wk=$(grep -oE '"p":"[0-9]{4}-[0-9]{2}-[0-9]{2}"' "$d/data-core.js" \
                  | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | tail -1)
-            echo "후보 $d: weekly=${wk:--}"
-            if [ -n "$wk" ] && { [ -z "$BEST" ] || [ "$wk" \> "$BEST" ]; }; then
-              BEST="$wk"; SRC="$d"
+            # 월간도 같은 아티팩트에서 읽는다 — 2026-08-06부터 ADV.monthly가
+            # data-core.js에 실린다(홈 통합표가 그린다). 주간이 동률일 때 월간만
+            # 뒤처진 러너가 채택되던 구멍을 막는 2차 정렬 키다.
+            mo=$(grep -oE '"p":"[0-9]{4}-[0-9]{2}"' "$d/data-core.js" \
+                 | grep -oE '[0-9]{4}-[0-9]{2}' | sort | tail -1)
+            echo "후보 $d: weekly=${wk:--} monthly=${mo:--}"
+            newer=0
+            if [ -n "$wk" ]; then
+              if [ -z "$BEST" ] || [ "$wk" \> "$BEST" ]; then newer=1
+              elif [ "$wk" = "$BEST" ] && [ -n "$mo" ] && [ "$mo" \> "$BESTMO" ]; then newer=1
+              fi
             fi
+            if [ "$newer" = "1" ]; then BEST="$wk"; BESTMO="$mo"; SRC="$d"; fi
           done
           # weekly를 하나도 못 읽었으면(구조 변경 등) 예전처럼 아무거나
           [ -z "$SRC" ] && SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
@@ -149,12 +158,10 @@ jobs:
             echo "::warning::clean 러너 0개 — 이번 회차 갱신 실패(다음 회차 새 IP가 흡수)"
             exit 0
           fi
-          # ⚠️ 비교 축은 '주간'뿐이다. data-core.js에는 monthly가 실리지 않아
-          # (split_data의 CORE_ADV에 없다) 월간 축은 원리적으로 비교할 수 없다.
-          # 예전 로그는 '최신 주간/월간 보유'라고 적어 월간까지 확인한 것처럼
-          # 읽혔다 — 월간만 뒤처진 러너가 주간 동률로 채택될 수 있다(2026-08-04 감사).
-          # 월간까지 보려면 data-trend.json을 함께 아티팩트로 받아 비교해야 한다.
-          echo "채택: $SRC (주간 $BEST 기준 — 월간은 data-core.js에 없어 비교 대상 아님)"
+          # 비교 축은 주간(1순위) + 월간(동률일 때 2순위)이다. 2026-08-06 이후
+          # data-core.js에 ADV.monthly가 실려 같은 아티팩트에서 둘 다 읽는다 —
+          # 그 전에는 월간 축이 없어 '주간 동률이면 앞 후보 유지'였다(2026-08-07 정정).
+          echo "채택: $SRC (주간 $BEST · 월간 ${BESTMO:--})"
           # split_data.py가 내는 5파일을 모두 옮긴다. data-sgg/data-size가 빠지면
           # checkout된 옛 파일이 그대로 남아 '지연 로드만 몇 주 묵는' 부분배포가 된다
           # (2026-08-04 감사: 두 파일은 어떤 목록에도 없어 사람이 손으로만 커밋돼 왔다).

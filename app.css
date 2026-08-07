@@ -697,7 +697,7 @@ table.adv thead th:first-child{text-align:center}
      td는 position이 없어 스택 문맥을 안 만들므로, 그 안의 숫자가 루트 문맥에서
      붙박이 열과 같은 층으로 경합해 DOM 순서상 나중인 숫자가 이긴다 — 실제로
      기간 열이 뚫려 보였다(2026-08-06). */
-  #tb-main tbody td:first-child,#tb-main thead th:first-child,
+  #tb-main tbody th:first-child,#tb-main thead th:first-child,
   #tb-main tfoot td:first-child{position:sticky;left:0;
     background:var(--paper);z-index:4;text-align:right;padding:0 10px;font-size:11px;
     color:var(--muted);min-width:58px}
@@ -776,3 +776,9 @@ table.adv thead th:first-child{text-align:center}
   #tb-main tfoot .tc b em{font-style:normal;color:#a93226;margin-left:2px;font-size:10px}
   .zwarn{margin-top:10px;font-size:13px;color:#a93226;line-height:1.65;
     border-left:3px solid #a93226;padding-left:10px}
+  /* 스크린리더 전용 — 표 caption처럼 화면엔 없고 음성으로만 읽히는 것 */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  /* 기간 칸이 td에서 th로 바뀌었다(행 머리) — 붙박이·글자 규칙을 그대로 받게 한다 */
+  #tb-main tbody th{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+    padding:0;font-weight:400}

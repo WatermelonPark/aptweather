@@ -155,10 +155,12 @@
     <p class="sec-sub">언제 어디에 얼마나 지어지는가</p>
 
     <div class="tb-bar">
-      <div class="tb-seg" id="tb-per" role="tablist" aria-label="기간 단위">
-        <button data-p="m" onclick="tbPer('m')">월</button>
-        <button data-p="q" class="on" onclick="tbPer('q')">분기</button>
-        <button data-p="y" onclick="tbPer('y')">연</button>
+      <!-- role=tablist는 자식이 role=tab이고 tabpanel을 제어할 때만 맞다. 여기서는
+           같은 표를 다시 그리는 토글이라 group + aria-pressed가 정확하다. -->
+      <div class="tb-seg" id="tb-per" role="group" aria-label="기간 단위">
+        <button type="button" data-p="m" aria-pressed="false" onclick="tbPer('m')">월</button>
+        <button type="button" data-p="q" class="on" aria-pressed="true" onclick="tbPer('q')">분기</button>
+        <button type="button" data-p="y" aria-pressed="false" onclick="tbPer('y')">연</button>
       </div>
       <label class="tb-chk"><input type="checkbox" id="tb-rel" onchange="tbDraw()"> 적정물량 대비로 보기</label>
     </div>
@@ -586,9 +588,12 @@ function showView(v,updateHash){
   window.scrollTo(0,0);
   if(v==='stats'&&!statsInited){
     statsInited=true;
-    /* 버블밴드는 fetch를 기다리지 않는다 — 입력(ADV.bubble, STATS 전세가율·
-       주택멸실)이 전부 data-core.js에 있어 부팅 때 이미 와 있다. 체인 뒤에
-       세우면 탭을 눌렀을 때 이유 없이 빈 채로 보인다. */
+    /* 버블밴드는 fetch를 기다리지 않는다 — 입력(ADV.bubble, STATS 전세가율)이
+       data-core.js에 있어 부팅 때 이미 와 있다. 체인 뒤에 세우면 탭을 눌렀을 때
+       이유 없이 빈 채로 보인다.
+       ⚠️ renderBubbleSec가 읽는 건 이 둘뿐이다. 옛 주석은 주택멸실도 읽는다고
+       적혀 있었는데 사실이 아니어서, 소비자 없는 멸실 2계열이 core에 4.1KB를
+       차지한 채 아무도 못 지웠다(2026-08-07 감사, 지금은 뺐다). */
     renderBubbleSec();renderReleaseInfo();
     loadFullData()
       .then(()=>{ if(typeof renderWeekSec==='function')renderWeekSec();
@@ -2414,8 +2419,11 @@ function tbBuild(){
     for(var k=0;k<regs.length;k++){
       var r=regs[k];
       if(fut){
+        /* ⚠️ 여기서 반올림하지 않는다. 월별로 반올림해 더하면 분기 합이
+           zone 페이지(분기 착공 합 × conv를 한 번만 반올림)와 어긋난다 —
+           미래 240칸 중 51칸이 ±1이었다(2026-08-07 감사). 표시 직전에 한 번만. */
         var j=ki[i-LEAD];
-        sup.push(j==null?0:Math.round(((K.series[r]||[])[j]||0)*S.conv));
+        sup.push(j==null?0:((K.series[r]||[])[j]||0)*S.conv);
       }else{
         var n=di[i];
         sup.push(n==null?0:((D.series[r]||[])[n]||0));
@@ -2464,7 +2472,11 @@ function tbPer(p){
   TB_PER=p;
   TB_ANCHOR=true;      // 행 집합이 통째로 바뀌므로 다시 조준한다
   var seg=document.getElementById('tb-per');
-  if(seg) [].forEach.call(seg.children,function(b){ b.classList.toggle('on',b.dataset.p===p); });
+  if(seg) [].forEach.call(seg.children,function(b){
+    var on=b.dataset.p===p;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');   // 선택 상태를 음성으로도
+  });
   tbDraw();
   if(typeof track==='function') track('supply_table',{period:p});
 }
@@ -2475,14 +2487,20 @@ function tbDraw(){
   var rel=(document.getElementById('tb-rel')||{}).checked;
   var size=TB_SIZE[TB_PER]||3;
   var rows=tbAgg(B.rows,TB_PER);
-  var h='<thead><tr><th>기간</th>';
+  /* 접근성: 열 머리에 scope="col", 기간 칸은 행 머리(th scope="row")로 낸다.
+     칸 안 가격 변동은 배경색으로만 전달되므로 title에 글로도 넣는다 —
+     스크린리더·색각이상 사용자가 공급 세대수만 얻던 문제(2026-08-07 감사). */
+  var h='<caption class="sr-only">기간별 시도 아파트 공급 세대수. '
+    +'각 칸의 배경색은 과거 구간에서는 매매·전세·월세 변동률, 미래 구간에서는 '
+    +'적정물량 대비 부족분을 나타내며, 같은 값을 칸의 설명 텍스트로도 제공합니다.</caption>'
+    +'<thead><tr><th scope="col">기간</th>';
   B.regs.forEach(function(r){
-    h+='<th><a class="tb-zl" href="/zone/'+encodeURIComponent(r)+'/">'+r+'</a>'
+    h+='<th scope="col"><a class="tb-zl" href="/zone/'+encodeURIComponent(r)+'/">'+r+'</a>'
       +(B.est[r]?'<sup title="적정물량이 추정치인 지역">*</sup>':'')+'</th>';
   });
-  h+='</tr><tr class="tb-ref"><th>적정물량</th>';
+  h+='</tr><tr class="tb-ref"><th scope="col">적정물량</th>';
   B.regs.forEach(function(r){
-    h+='<th>'+Math.round(B.refs[r]*size/3).toLocaleString()+'</th>';
+    h+='<th scope="col">'+Math.round(B.refs[r]*size/3).toLocaleString()+'</th>';
   });
   h+='</tr></thead><tbody>';
   var firstFut=true;
@@ -2497,10 +2515,10 @@ function tbDraw(){
     var mark='';
     if(r.mix) mark='<i class="tb-mx" title="실적과 착공 기준 추정이 섞인 기간">±</i>';
     else if(r.part) mark='<i class="tb-mx" title="'+r.n+'개월치만 있는 기간">·</i>';
-    h+='<tr class="'+cls.join(' ')+'"><td>'+tbLabel(r.i,TB_PER)+mark+'</td>';
+    h+='<tr class="'+cls.join(' ')+'"><th scope="row">'+tbLabel(r.i,TB_PER)+mark+'</th>';
     for(var k=0;k<B.regs.length;k++){
       var ref=B.refs[B.regs[k]]*r.n/3, v=r.s[k];
-      var txt=rel?(ref?Math.round(v/ref*100)+'%':'–'):v.toLocaleString();
+      var txt=rel?(ref?Math.round(v/ref*100)+'%':'–'):Math.round(v).toLocaleString();
       var lay;
       if(r.fut){
         lay='<i class="tl" style="left:0;right:0;background:'+tbTint(ref?1-v/ref:null,1)+'"></i>';
@@ -2509,7 +2527,15 @@ function tbDraw(){
            +'<i class="tl" style="left:33.33%;width:33.34%;background:'+tbTint(r.j?r.j[k]:null,TB_PRICE_SCALE)+'"></i>'
            +'<i class="tl" style="left:66.66%;right:0;background:'+tbTint(r.w?r.w[k]:null,TB_PRICE_SCALE)+'"></i>';
       }
-      h+='<td><span class="tc">'+lay+'<b>'+txt+'</b></span></td>';
+      var alt;
+      if(r.fut){
+        alt = ref ? ('적정물량의 '+Math.round(v/ref*100)+'%, 착공 기준 추정') : '착공 기준 추정';
+      }else{
+        var pv=function(a){ return a==null?'자료 없음':((a>0?'+':'')+a.toFixed(1)+'%'); };
+        alt = '매매 '+pv(r.m?r.m[k]:null)+' · 전세 '+pv(r.j?r.j[k]:null)+' · 월세 '+pv(r.w?r.w[k]:null);
+      }
+      h+='<td title="'+B.regs[k]+' '+tbLabel(r.i,TB_PER)+' — '+alt+'">'
+        +'<span class="tc">'+lay+'<b>'+txt+'</b></span></td>';
     }
     h+='</tr>';
   });

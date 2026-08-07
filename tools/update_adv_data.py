@@ -647,7 +647,18 @@ def update_occupancy(adv, full=False):
     for k, by in cq.items():
         rows_map[k] = [by.get(r) for r in regs]
         est.discard(k)                          # 실적 확정 → 예정 딱지 제거
-    last_cq = max(cq) if cq else None
+    # ⚠️ 실적 경계는 **뒤로 물러나지 않는다**. last_cq를 이번 회차 응답만으로 잡으면,
+    # KOSIS가 한 달을 빠뜨리거나(err 30 → data=[]) '아파트' 필터가 공치는 회차에
+    # 경계가 뒤로 밀리고, 이미 확정된 분기가 아래 루프에서 odcloud 입주예정 값으로
+    # 덮이며 e=1(미확정, 금색 막대)이 붙는다. 실제 API로 재현했다 — 2026-06 한 달만
+    # 빠져도 2026Q2가 62,010(실적) → 71,021(예정)으로 바뀐다(2026-08-07 감사).
+    # 이미 실적으로 저장된 분기(e 없는 행)의 최대치와 함께 본다.
+    prev_cq = max((_q_of(r['p']) for r in O['rows'] if not r.get('e')), default=None)
+    last_cq = max([x for x in (max(cq) if cq else None, prev_cq) if x], default=None)
+    if cq and prev_cq and max(cq) < prev_cq:
+        print('occupancy NOTE: 이번 회차 준공 실적이 %s까지뿐인데 저장분은 %s까지다 — '
+              '실적 경계를 %s로 유지한다(KOSIS 부분 응답 의심).'
+              % (_qlabel(*max(cq)), _qlabel(*prev_cq), _qlabel(*prev_cq)))
     # 미래 분기는 입주예정 스냅샷으로 통째로 덮어쓴다. API가 일부 지역을 누락한
     # 부분 응답을 주면 그 분기 물량이 조용히 반토막 나고, 그대로 '공급 절벽'으로
     # 렌더된다. livezone과 같은 급감 가드를 둔다.
