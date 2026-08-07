@@ -59,7 +59,7 @@ CORE_ADV = ['sido', 'occupancy', 'permits', 'bubble', 'holidays']
 # done/sched/demol은 건축HUB 파생분 — 2026-08-06 산식 교체로 점수에서 빠졌다.
 BUILD_ONLY_PERMITS = ('units', 'city', 'done', 'sched', 'demol')
 
-# 홈 통합표가 그리는 구간·지역. 기준표 표와 같은 시작점(2017)이다.
+# 홈 통합표가 그리는 구간·지역. 적정물량 기준표와 같은 시작점(2017)이다.
 TABLE_FROM = '2017.01'
 TABLE_STATS = ('준공', '착공')
 try:
