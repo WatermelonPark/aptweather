@@ -674,6 +674,12 @@ table.adv thead th:first-child{text-align:center}
     background:linear-gradient(90deg,rgba(38,110,180,.78),rgba(38,110,180,.12),
       rgba(198,58,48,.12),rgba(198,58,48,.78))}
   .tk-n{margin-left:2px}
+  /* 표는 1,198px인데 .wrap이 820px이라 1440px 화면에서도 13/21열만 보이고
+     좌우로 310px씩 비어 있었다(2026-08-07 오딧). 자리가 실제로 있을 때만
+     이 섹션의 wrap을 넓힌다 — 표의 칸 폭·색·굵은 줄은 건드리지 않는다.
+     1260 = 표 1198 + 테두리 2 + .wrap 좌우 패딩 48 + 여유 12.
+     1240으로 잡았다가 패딩을 안 세어 20/21열에서 멈췄다(실측). */
+  @media(min-width:1340px){ #sec-score>.wrap{max-width:1260px} }
   .tb-scroll{overflow:auto;max-height:min(70vh,620px);border:1px solid var(--line);
     background:var(--paper)}
   #tb-main{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}

@@ -217,7 +217,7 @@
 
   <div class="home-foot">
     <div class="ft-brand"><b>아공맵</b> — 아파트 · 공급량 · 투자지도</div>
-    <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">전국 생활권 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
+    <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">시도별 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
     <div class="ft-meta"><a href="/about/">아공맵 소개</a> · <a href="/privacy/">개인정보처리방침</a> · 만든이 agongmap@gmail.com</div>
     <div class="legal-disc"><b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div></div>
 </div>
@@ -388,7 +388,7 @@
 
   <div class="minifooter">
     <div class="ft-brand"><b>아공맵</b> — 아파트 · 공급량 · 투자지도</div>
-    <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">전국 생활권 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
+    <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">시도별 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
     <div class="ft-meta"><a href="/about/">아공맵 소개</a> · <a href="/privacy/">개인정보처리방침</a> · 만든이 agongmap@gmail.com</div>
     <div class="legal-disc"><b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div>
   </div>
@@ -448,7 +448,7 @@
   </div>
   <div class="minifooter">
     <div class="ft-brand"><b>아공맵</b> — 아파트 · 공급량 · 투자지도</div>
-    <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">전국 생활권 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
+    <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">시도별 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
     <div class="ft-meta"><a href="/about/">아공맵 소개</a> · <a href="/privacy/">개인정보처리방침</a> · 만든이 agongmap@gmail.com</div>
     <div class="legal-disc"><b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div>
   </div>
@@ -2358,6 +2358,7 @@ var TB_MIN=0.13;          // 0이 아니면 최소 이만큼은 물들인다
 var TB_PRICE_SCALE=2;     // 가격 변동 ±2%가 만색. ±3%로 넓히지 말 것 —
                           // 최근 서울이 진한 건 실제로 공급부족이라서다(사용자 확인).
 var TB_FROM=2017*12;      // 표 시작 = 2017.01 (기준표 표와 같은 구간)
+var TB_ANCHOR=true;       // 다음 렌더에서 굵은 줄로 세로 위치를 맞출지
 var TB_SIZE={m:1,q:3,y:12};
 function tbTint(v,scale){
   if(v==null||v===0) return 'transparent';
@@ -2445,6 +2446,7 @@ function tbAgg(rows,per){
 function tbPer(p){
   if(TB_PER===p) return;
   TB_PER=p;
+  TB_ANCHOR=true;      // 행 집합이 통째로 바뀌므로 다시 조준한다
   var seg=document.getElementById('tb-per');
   if(seg) [].forEach.call(seg.children,function(b){ b.classList.toggle('on',b.dataset.p===p); });
   tbDraw();
@@ -2499,11 +2501,41 @@ function tbDraw(){
   var n=document.getElementById('tb-note');
   if(n) n.textContent=(TB_PER==='y'?'한 해 합계 · ':TB_PER==='m'?'한 달치 · ':'')
     +'과거 칸은 왼쪽부터 매매·전세·월세, 미래 칸은 적정물량 대비';
+  /* 표는 2017Q1부터라, 그냥 두면 첫 화면이 9년 전 숫자다(굵은 줄이 50행 중 39행).
+     '언제 어디에 얼마나 지어지는가'를 묻는 표가 정작 지금을 안 보여준다 —
+     2026-08-07 오딧. 그린 직후 굵은 줄을 위쪽 1/3에 놓아 최근 실적과 추정이
+     한 화면에 같이 들어오게 한다. 스크롤 자체는 그대로 열려 있다. */
+  if(TB_ANCHOR) tbAnchor();
   var f=document.getElementById('tb-foot');
   if(f) f.innerHTML='굵은 줄부터 아래로 착공 실적으로 추정한 미래 공급이 섞입니다(최대 '
     +B.H+'분기 = 3년). 0은 그 기간 착공이 실제로 없었다는 뜻입니다. <b>±</b>는 실적과 추정이 섞인 기간, '
     +'<b>·</b>는 기간이 덜 찬 칸이라 적정물량도 같은 비율로 줄여 견줍니다. '
     +'<sup>*</sup>는 적정물량이 추정치인 지역입니다.';
+}
+/* 굵은 줄(.now = 미래가 처음 섞이는 행)을 표 위쪽 1/3에 놓는다.
+   ⚠️ requestAnimationFrame을 쓰지 말 것 — 배경 탭이나 그리지 않는 창에서는
+   콜백이 영영 안 돈다(2026-08-07 실측: 창이 컴포지팅을 안 하니 스크롤이
+   0인 채였다). getBoundingClientRect가 레이아웃을 동기로 강제하므로
+   innerHTML 직후에 바로 재도 된다.
+   뷰가 숨어 있으면(display:none) 높이가 0이라 계산이 무의미하니, 보일 때
+   한 번 더 부른다. */
+function tbAnchor(){
+  var sc=document.querySelector('.tb-scroll');
+  var nw=sc&&sc.querySelector('#tb-main tbody tr.now');
+  if(!sc||!nw) return;
+  if(!sc.clientHeight||!sc.offsetParent){
+    if(!tbAnchor.io&&window.IntersectionObserver){
+      tbAnchor.io=new IntersectionObserver(function(es){
+        for(var i=0;i<es.length;i++) if(es[i].isIntersecting){
+          tbAnchor.io.disconnect(); tbAnchor.io=null; tbAnchor(); return;
+        }});
+      tbAnchor.io.observe(sc);
+    }
+    return;
+  }
+  TB_ANCHOR=false;
+  var d=nw.getBoundingClientRect().top-sc.getBoundingClientRect().top;
+  sc.scrollTop+=d-sc.clientHeight/3;
 }
 function renderHeroMap(){
   const el=document.getElementById('hero-map');
