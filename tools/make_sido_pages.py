@@ -270,7 +270,11 @@ def build_page(z, calc, stats, pq, others):
     # ── 핵심 수치 ──
     h.append('<section><div class="wrap"><h2>숫자로 보면</h2><div class="zgrid">')
     for k, v, note in (
-        ('누적 순부족', signed(row['tot']) + '세대',
+        # ⚠️ 부호를 뒤집지 않는다. tot는 '양수=부족'인데 signed()로 −를 붙이면
+        # 바로 아래 '어떻게 계산했나'의 산식(필요량 − 지어질 물량 − 재고)으로
+        # 검산했을 때 부호가 반대가 된다(2026-08-07 감사).
+        ('누적 순부족', ('%s세대 부족' % num(row['tot'])) if row['tot'] >= 0
+         else ('%s세대 여유' % num(-row['tot'])),
          '앞으로 %.0f년 필요량에서 이미 쌓인 재고와 지어질 물량을 뺀 값' % yrs),
         ('지난 4년 재고', signed(-row['inow']) + '세대',
          '준공에서 멸실과 적정물량을 뺀 누적. −는 그만큼 모자랐다는 뜻'),
@@ -458,6 +462,14 @@ def main():
     adv, stats = load()
     calc = adv.get('sido')
     assert calc and calc.get('zones'), 'ADV.sido가 없다 — update_adv_data.py --seed-sido 먼저'
+    # ⚠️ 점수(ADV.sido)와 표(STATS)가 같은 시점이어야 한다. sido 가드가 옛 점수를
+    # 보존한 회차에 STATS만 새로 들어오면, 한 페이지 안에 옛 등급과 새 표가 섞여
+    # 스스로 모순된 페이지가 구워진다(2026-08-07 감사).
+    _live = SZ.calc(stats)
+    if _live['L'] != calc['L'] or _live['H'] != calc['H']:
+        raise SystemExit('ABORT: ADV.sido(실적~%s, %d분기)와 STATS(실적~%s, %d분기)의 '
+                         '시점이 다르다 — --seed-sido로 점수를 먼저 맞출 것.'
+                         % (calc['L'], calc['H'], _live['L'], _live['H']))
     pq = price_quarters(adv)
     names = [z['z'] for z in calc['zones']]
 

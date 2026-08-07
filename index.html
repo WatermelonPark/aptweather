@@ -369,8 +369,8 @@
         <div class="adv-tblwrap matrix" id="adv-occ-matrix"></div>
         <div class="adv-tblwrap compact" id="adv-occ-compact"></div>
       </div>
-      <div class="adv-legend"><span><i style="background:#eaf3fb"></i>밴드 상단 초과</span><span><i style="background:#fdecea"></i>밴드 하단 미만</span><span><i style="background:#f6f8f7"></i>입주예정 기반(실적 미확정)</span></div>
-      <div class="src-note">자료: 국토교통부 「주택건설실적통계」 준공실적(지난 분기) + 공공데이터포털 입주예정물량(미래 분기) · 분기 합산 · 매주 자동 갱신</div>
+      <div class="adv-legend"><span><i style="background:#eaf3fb"></i>분기 적정물량 이상</span><span><i style="background:#fdecea"></i>적정물량의 60% 미만</span><span><i style="background:#f6f8f7"></i>착공 기준 추정(실적 미확정)</span></div>
+      <div class="src-note">자료: 국토교통부 「주택건설실적통계」 — 준공실적(지난 분기) + 착공실적을 3년 뒤로 민 추정(미래 분기, 전환율 0.958) · 분기 합산 · 홈 공급표와 같은 값 · 매주 자동 갱신</div>
     </section>
 
 
@@ -736,7 +736,7 @@ function initStats(){
    인구순도 후보였지만 통계 드롭다운엔 지역명만 있고 인구가 없다. 모든 목록에 적용할 수
    있는 건 가나다순뿐이고, 찾는 목적에도 그게 낫다(위치가 이름으로 정해진다).
    전국·수도권 같은 집계 항목은 시도의 동료가 아니므로 맨 앞에 원래 순서로 남긴다. */
-const REG_AGG=['전국','수도권','지방권','6대광역시','5대광역시','9개도','8개도'];
+const REG_AGG=['전국','수도권','지방','6대광역시','5대광역시','9개도','8개도'];
 function regSort(list,label){
   const nameOf=label||(x=>x);
   const agg=list.filter(x=>REG_AGG.indexOf(nameOf(x))>=0);
@@ -830,7 +830,7 @@ function drawStat(){
 }
 function fmtN(v,dec){return (v==null||isNaN(v))?'-':Number(v).toLocaleString('ko-KR',{maximumFractionDigits:dec==null?2:dec});}
 /* PC 표 모드: 전 지역(광역시도) 매트릭스 — 투자지표 인허가 표와 같은 형식 */
-const MATRIX_REGIONS=['전국','수도권','지방','지방권','서울','경기','인천','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];
+const MATRIX_REGIONS=['전국','수도권','지방','서울','경기','인천','부산','대구','광주','대전','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'];
 function buildMatrix(D,idx,parsed){
   const box=document.getElementById('stat-matrix');
   const regs=MATRIX_REGIONS.filter(r=>D.series[r]);
@@ -982,7 +982,9 @@ function drawSizePivot(){
   const cols=[];
   mets.forEach(m=>{
     if(m==='전환율'){
-      const tiers=[...new Set(sizes.map(si=>si>=2?2:si))];
+      /* 전환율 구간(60↓/60~85/85↑)에 6개 규모를 맞춘다. 옛 매핑 si>=2?2:si는
+     '40↓/40~60/60↑' 전제라 si1·si2가 한 칸씩 밀렸다(2026-08-07 감사). */
+    const tiers=[...new Set(sizes.map(si=>si<=1?0:(si===2?1:2)))];
       tiers.forEach((t,j)=>cols.push({m,si:t,lab:short(D.conv_sizes[t]),first:j===0,pct:false}));
     }else{
       sizes.forEach((si,j)=>cols.push({m,si,lab:short(D.sizes[si]),first:j===0,pct:true}));
@@ -1764,10 +1766,6 @@ function occCls(region,v){
   if(v<=ref*0.6) return 'lo';
   return '';
 }
-function occBandCell(r){
-  const b=null;   // 적정밴드 폐지(2026-08-07) — 기준선은 적정물량 하나
-  return b?advFmt(b[0])+'~'+advFmt(b[1]):'·';
-}
 function occFut(p){
   const y=+p.slice(0,4), q=+p.slice(5);
   const now=new Date(), cy=now.getFullYear(), cq=Math.floor(now.getMonth()/3)+1;
@@ -1778,16 +1776,15 @@ function renderAdvOcc(){
   const O=ADV.occupancy, regs=O.regions;
   let mx;
   if(TRANSP.occ){
-    mx=['<table class="adv"><thead><tr><th>지역</th><th class="band-h">적정밴드</th>'+O.rows.map(r=>`<th${occEst(r)?' style="color:#9a7000"':''}>${r.p}</th>`).join('')+'</tr></thead><tbody>'];
+    mx=['<table class="adv"><thead><tr><th>지역</th>'+O.rows.map(r=>`<th${occEst(r)?' style="color:#9a7000"':''}>${r.p}</th>`).join('')+'</tr></thead><tbody>'];
     regs.forEach((r,j)=>{
-      mx.push(`<tr><td>${r}</td><td class="band-c">${occBandCell(r)}</td>`+O.rows.map(row=>{
+      mx.push(`<tr><td>${r}</td>`+O.rows.map(row=>{
         const cls=[occCls(r,row.v[j]),occEst(row)?'fut':''].filter(Boolean).join(' ');
         return `<td class="${cls}">${advFmt(row.v[j])}</td>`;
       }).join('')+'</tr>');
     });
   }else{
     mx=['<table class="adv"><thead><tr><th>분기</th>'+regs.map(r=>`<th>${r}</th>`).join('')+'</tr></thead><tbody>'];
-    mx.push('<tr class="bandrow"><td>적정밴드</td>'+regs.map(r=>`<td>${occBandCell(r)}</td>`).join('')+'</tr>');
     for(let i=O.rows.length-1;i>=0;i--){
       const row=O.rows[i];
       mx.push(`<tr class="${occEst(row)?'fut':''}"><td>${row.p}</td>`+

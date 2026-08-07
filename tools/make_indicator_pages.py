@@ -210,7 +210,7 @@ def build_jeonse(sts):
         v = (ser.get(name) or [None])[i] if name in ser else None
         return v
 
-    aggs = ['전국', '수도권', '지방권']
+    aggs = ['전국', '수도권', '지방']
     rows, vals = [], []
     for name in aggs + SIDO17:
         cur, ago = at(name, li), at(name, li - 12)
@@ -331,12 +331,16 @@ def build_moveins(adv):
         if t is None or not rf:
             return '<td class="mut">·</td>'
         p = t / rf * 100
+        # ⚠️ 이 값은 '적정 대비 얼마나 채웠나'(충족률)다. 39%에 ' 부족'을 붙이면
+        # '39% 모자라다'로 읽히는데 실제로는 61% 모자란 것이다(2026-08-07 감사).
         cls = 'up' if p < 70 else 'dn' if p > 130 else 'mut'
-        tag = ' 부족' if p < 70 else ' 과잉' if p > 130 else ''
-        return '<td class="%s">%d%%%s</td>' % (cls, round(p), tag)
+        return '<td class="%s">%d%% 충족</td>' % (cls, round(p))
 
+    # ⚠️ regs에는 전국·수도권·지방 집계 3종이 섞여 있다. 그대로 정렬하면 '시도별'
+    # 표에 전국·지방이 시도인 척 들어가 이중계상된다(2026-08-07 감사).
+    # 수도권만 맨 위 집계행으로 두고 나머지 집계는 뺀다.
     order = ['수도권', '서울', '경기', '인천'] + sorted(
-        [r for r in regs if r not in ('수도권', '서울', '경기', '인천')],
+        [r for r in SIDO17 if r not in ('서울', '경기', '인천')],
         key=lambda r: -(ytot(r, '2026') or 0))
     trs = []
     for name in order:
@@ -351,7 +355,7 @@ def build_moveins(adv):
     nat27 = sum(ytot(r, '2027') or 0 for r in SIDO17)
     sudo = {y: ytot('수도권', y) for y in years}
     shorts = sorted([(r, (ytot(r, '2026') or 0) / ref[r] * 100)
-                     for r in regs if ref.get(r)], key=lambda x: x[1])
+                     for r in SIDO17 if ref.get(r)], key=lambda x: x[1])
     lo1, hi1 = shorts[0], shorts[-1]
 
     title = '아파트 입주물량 — 2026·2027 전국 시도별 입주 예정 | 아공맵'
@@ -377,24 +381,24 @@ def build_moveins(adv):
 <section class="wrap">
   <h2>시도별 연간 입주물량 (세대)</h2>
   <div class="tbl-wrap"><table id="utable">
-    <thead><tr><th>지역</th><th data-num>2025</th><th data-num>2026</th><th data-num>2027</th><th data-num>적정수요/년</th><th data-num>2026 ÷ 적정</th></tr></thead>
+    <thead><tr><th>지역</th><th data-num>2025</th><th data-num>2026</th><th data-num>2027</th><th data-num>적정수요/년</th><th data-num>2026 충족률</th></tr></thead>
     <tbody>
 %(trs)s
     </tbody>
   </table></div>
-  <div class="note">표두를 누르면 정렬. %(lastact)s까지 실적, 이후는 입주예정 물량. 적정수요는 재고 모형으로 역산한 분기 수요 기준선을 연환산(×4)한 값(세종·제주는 산출 제외). 자료: 한국부동산원 입주예정물량·국토교통부 주택건설실적, 매주 갱신.</div>
+  <div class="note">표두를 누르면 정렬. %(lastact)s까지 준공 실적, 이후는 <b>착공 실적을 3년 뒤로 밀어</b> 추정한 값입니다(전환율 0.958). 적정수요는 가격이 하락에서 상승으로 돌아선 시점의 입주물량을 실측해 잡은 분기 기준선을 연환산(×4)한 고정 상수이며, 서울·경기·인천과 세종·제주는 추정치입니다. 자료: 국토교통부 주택건설실적(준공·착공), 매주 갱신.</div>
 </section>
 
 <section class="wrap">
   <h2>지금 표에서 읽히는 것</h2>
-  <p>2026년 적정수요 대비 가장 마른 곳은 <strong>%(lo1)s(%(lo1p)d%%)</strong>, 가장 두터운 곳은 <strong>%(hi1)s(%(hi1p)d%%)</strong>다. 공급이 적정선의 70%%를 밑돌면 전세부터 조여드는 구간, 130%%를 넘으면 입주장이 전세를 누르는 구간으로 본다.</p>
+  <p>2026년 적정수요를 가장 덜 채운 곳은 <strong>%(lo1)s(%(lo1p)d%% 충족)</strong>, 가장 많이 채운 곳은 <strong>%(hi1)s(%(hi1p)d%% 충족)</strong>다. 공급이 적정선의 70%%를 밑돌면 전세부터 조여드는 구간, 130%%를 넘으면 입주장이 전세를 누르는 구간으로 본다.</p>
   <p>수도권은 2026년 %(sudo26)s세대에서 2027년 %(sudo27)s세대로 %(sudodir)s. 시도 안에서도 시군구별로 사정이 갈리므로, 이 수치는 시장의 방향을 보는 값이지 개별 단지의 사정을 말해 주지 않는다.</p>
 </section>
 
 <section class="wrap">
   <h2>더 보기</h2>
   <div class="links">
-    <a href="/#stats-adv-occ">입주물량 차트<span>분기별 추이와 적정수요 밴드를 지역별로</span></a>
+    <a href="/#stats-adv-occ">입주물량 차트<span>분기별 추이를 적정수요와 견줘 지역별로</span></a>
     <a href="/zone/">시도별 공급 분석<span>17개 시도의 부족·과잉을 등급으로</span></a>
     <a href="/jeonse-ratio/">전세가율<span>입주물량이 움직이는 결과 — 시도별 현황</span></a>
     <a href="/cycle/">아파트 사이클 리포트<span>입주 → 전세 → 매매로 이어지는 고리, 데이터 검증</span></a>
@@ -410,7 +414,7 @@ def build_moveins(adv):
                 ogtitle='아파트 입주물량 — 2026년 전국 %s세대' % num(nat26),
                 desc=desc, url=url, body=body,
                 ld=ld_pack('아파트 입주물량 — 시도별 입주 예정과 의미', desc, url, '입주물량', mod_iso),
-                src='한국부동산원 입주예정물량 · 국토교통부 주택건설실적')
+                src='국토교통부 주택건설실적(준공·착공)')
     return html, mod_iso
 
 

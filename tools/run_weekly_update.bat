@@ -137,7 +137,7 @@ rem A file missing here is silently never deployed (2026-08-04 audit:
 rem data-sgg.json and data-size.json were absent from every list).
 git diff --quiet data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json index.html share\weekly-map.png zone sitemap.xml jeonse-ratio moveins
 if errorlevel 1 (
-  git add data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json index.html share\weekly-map.png zone sitemap.xml jeonse-ratio moveins
+  git add data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json index.html share\weekly-map.png zone sitemap.xml jeonse-ratio moveins tools\data\.home_stamp
   if errorlevel 1 (
     echo ERROR: git add failed
     exit /b 14

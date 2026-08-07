@@ -101,6 +101,11 @@ BASIC_CONF = {
 }
 BASIC_REGMAP = {'지방소계': '지방', '총계': '전국', '수도권소계': '수도권'}   # KOSIS 지역명 → STATS 지역명
 BASIC_MONTHS = 8                      # 최근 8개월 조회(잠정치 소급 정정 커버)
+# ⚠️ '1년 전 대비'를 그리는 계열은 **12개월 전 값도 다시 받아야 한다**. 8개월만
+# 훑으면 KOSIS가 그보다 옛 달을 소급 정정해도 영영 반영되지 않아, 기준점만 옛 값인
+# 채로 증감을 계산한다 — 전세가율 서울 2025.09가 저장 54.3 vs 원천 53.0으로
+# 1.3%p 어긋난 채 /jeonse-ratio/의 '1년 전 대비'에 쓰였다(2026-08-07 감사).
+BASIC_MONTHS_DEEP = {'전세가율': 15}   # 계열별 조회 깊이 override
 
 # ---- 분양·미분양 (기본통계 공급 파이프라인 보강) --------------------------
 # 기본통계 공급 구간이 인허가→착공→준공이라, 실제 단계(인허가→착공→분양→준공)의
@@ -676,7 +681,7 @@ def _fetch_basic_one(name):
         data = []
         today = datetime.date.today()
         y, m = today.year, today.month
-        for _ in range(BASIC_MONTHS):
+        for _ in range(BASIC_MONTHS_DEEP.get(name, BASIC_MONTHS)):
             prd = '%d%02d' % (y, m)
             try:
                 data += kosis(dict(base, startPrdDe=prd, endPrdDe=prd))
@@ -686,7 +691,7 @@ def _fetch_basic_one(name):
             m -= 1
             if m == 0: y, m = y - 1, 12
     else:
-        data = kosis(dict(base, newEstPrdCnt=str(BASIC_MONTHS)))
+        data = kosis(dict(base, newEstPrdCnt=str(BASIC_MONTHS_DEEP.get(name, BASIC_MONTHS))))
     out = {}    # 확정치 {(y,m): {region: value}}
     rates = {}  # 잠정 증감률(%) — 실거래지수의 최신월은 지수 대신 이것만 발표됨
     for row in data:
@@ -1014,14 +1019,29 @@ def update_size(stats):
     for name, _, _ in SIZE_TBLS:
         series[name] = {reg: [metrics[name].get(reg, {}).get(d) for d in ds]
                         for reg in WEEKLY_REGIONS if reg in metrics[name]}
+    # ⚠️ 전면 대체가 아니라 **병합**이다. 예전엔 이 자리에서 통째로 갈아 끼워,
+    # KOSIS가 한 번만 부분 응답을 주면 20지역×60개월이 1지역×5개월로 조용히
+    # 쪼그라들었다(2026-08-07 감사). 기존 계열보다 얕거나 좁으면 채택하지 않는다.
+    _prev = stats.get('규모별') or {}
+    _pd, _pr = _prev.get('dates') or [], _prev.get('regions') or []
+    _nd = ['%s.%s' % (d[:4], d[4:6]) for d in ds]
+    _nr = [r for r in WEEKLY_REGIONS if r in series['매매']]
+    if _pd and (len(_nd) < len(_pd) * 0.8 or len(_nr) < len(_pr) * 0.8):
+        print('규모별 GUARD: %d개월×%d지역 -> %d개월×%d지역으로 급감해 채택하지 않음 '
+              '(KOSIS 부분 응답 의심)' % (len(_pd), len(_pr), len(_nd), len(_nr)))
+        return []
     stats['규모별'] = {
-        'dates': ['%s.%s' % (d[:4], d[4:6]) for d in ds],
+        'dates': _nd,
         'sizes': SIZE_LABELS,
         # 아파트 전월세전환율(N0009)은 자체 3구간(값은 배열 0~2번 슬롯에만) —
         # 가격표 6구간과 경계가 달라 UI가 이 라벨로 매핑해 표기한다.
-        'conv_sizes': ['40㎡↓', '40~60㎡', '60㎡↑'],
+        # ⚠️ 실측(R-ONE A_2024_00159 · KOSIS DT_30404_N0009, 2026-08-07):
+        # 전환율 구간은 '60㎡이하 / 60㎡초과 85㎡이하 / 85㎡초과'다.
+        # 옛 라벨 ['40㎡↓','40~60㎡','60㎡↑']은 셋 다 틀렸고, UI 매핑도 그 전제라
+        # 6개 규모 버튼 중 2개가 다른 평형대 값을 읽었다.
+        'conv_sizes': ['60㎡↓', '60~85㎡', '85㎡↑'],
         'metrics': [n for n, _, _ in SIZE_TBLS],
-        'regions': [r for r in WEEKLY_REGIONS if r in series['매매']],
+        'regions': _nr,
         'unit': '전월 대비 % (전환율은 %)',
         'source': '한국부동산원 전국주택가격동향조사(월간) · 아파트',
         'note': '지수 3종은 전월 대비 변동률, 전월세전환율은 수준(%)',
@@ -1053,7 +1073,9 @@ def write_adv(adv):
 # 근거: docs/superpowers/specs/2026-08-06-sido-supply-table-design.md
 
 def main():
-    arg = sys.argv[1] if len(sys.argv) > 1 else '--dry-run'
+    # 기본값을 --update로. --dry-run 핸들러는 사라졌는데 기본 인자만 남아
+    # 인자 없이 실행하면 AssertionError로 죽었다(2026-08-07 감사).
+    arg = sys.argv[1] if len(sys.argv) > 1 else '--update'
     if arg == '--discover':
         discover(sys.argv[2])
         return
@@ -1085,7 +1107,7 @@ def main():
         print('sido seeded: %d곳, 실적~%s, 착공~%s, 미래 %d분기'
               % (len(adv['sido']['zones']), adv['sido']['L'], adv['sido']['S'], adv['sido']['H']))
         return
-    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-sido | --seed-supply | --dry-run | --discover <kw>'
+    assert arg == '--update', 'usage: --update | --seed-bubble | --seed-sido | --seed-supply | --discover <kw>'
     assert KEY, 'KOSIS_API_KEY 환경변수 필요'
     changed = []
     failed = []     # 어떤 지표 fetch가 죽었는지 집계 — 전량 실패를 '변경 없음'과 구분한다
@@ -1214,6 +1236,12 @@ def main():
             adv['sido'] = sd
             changed.append('sido(%d곳, 실적~%s, 미래 %d분기)' % (n_new, sd['L'], sd['H']))
             write_adv(adv)
+        # ⚠️ 가드에 걸린 회차는 occupancy도 쓰지 않는다. 점수(ADV.sido)만 지키고
+        # 여기서 쓰면 홈 표와 통계 탭이 다시 갈리고, write_adv가 성공해 '변경 있음'이
+        # 되면서 전량실패 회로차단기(len(failed)>=5 and not changed)까지 풀린다
+        # (2026-08-07 감사).
+        if 'sido-shrink' in failed:
+            raise RuntimeError('sido 가드에 걸려 occupancy도 갱신하지 않는다')
         # 통계 탭 '입주물량'과 /moveins/도 **같은 소스**를 쓴다. 2026-08-07까지
         # 여기는 odcloud 입주예정이라 같은 서울 2027Q2를 홈은 2,107, 통계 탭은
         # 1,073으로 보여줬고 기준선도 셋(적정물량·밴드·ref)이 공존했다.

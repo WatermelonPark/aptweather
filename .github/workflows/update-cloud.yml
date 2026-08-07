@@ -216,7 +216,7 @@ jobs:
           else
             echo "::warning::pillow 미설치로 공유 카드 생성을 건너뛴다(인프라 문제)"
           fi
-          TARGETS="data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json zone sitemap.xml jeonse-ratio moveins share"
+          TARGETS="data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json zone sitemap.xml jeonse-ratio moveins share tools/data/.home_stamp"
           git add -A -- $TARGETS
           if git diff --cached --quiet; then
             echo "변경 없음"
