@@ -33,6 +33,7 @@ except Exception:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import update_adv_data as U  # noqa: E402  (표 설정을 배치와 공유 — 단일 출처)
+import split_data as S       # noqa: E402  (지연 로드 분리 규칙을 공유 — 부작용 없는 import)
 
 SITE = 'https://www.agongmap.co.kr'
 UA = {'User-Agent': 'agongmap-watchdog'}
@@ -68,12 +69,13 @@ def live_adv_stats():
     # 2026-08-01 split_data가 '규모별'(186KB)을 data-size.json으로 분리하면서
     # rest에서 빠졌다. 여기서 합치지 않으면 아래 `if '규모별' in stats` 게이트가
     # 영영 안 걸려 감시가 조용히 꺼진다(2026-08-04 감사에서 실제로 꺼져 있었음).
-    # 지연 로드 파일이 늘어나면 이 목록에도 추가할 것.
+    # 지연 로드 파일 목록은 split_data가 실제로 쓰는 경로에서 뽑는다 — 손으로
+    # 옮겨 적으면 분리 파일이 하나 늘 때 감시만 조용히 뒤처진다.
     # ⚠️ 조회에 실패하면 **반드시 신호를 남긴다**. 예전엔 print만 하고 넘어가서
     # 그 계열이 아래 `if '규모별' in stats` 게이트에 안 걸려 감시가 조용히 꺼졌고,
     # 커버리지 가드는 '초과 계열'만 보므로 원리적으로 못 잡았다(2026-08-07 감사).
     # SKIPPED에 넣어야 main()의 '절반 넘게 못 봤으면 OK는 근거가 없다' 게이트에도 걸린다.
-    for lazy in ('/data-size.json',):
+    for lazy in ('/' + os.path.basename(S.SIZE),):
         try:
             got = (get_json(SITE + lazy) or {}).get('STATS') or {}
             if not got:
@@ -126,6 +128,59 @@ def _q_to_date(q):
     m = n * 3
     d = 31 if m in (3, 12) else 30
     return '%04d-%02d-%02d' % (y, m, d)
+
+
+SIDO17 = ['서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
+          '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주']
+
+# 이 검사가 도는 계열 — 원천이 시도별과 독립 '전국' 행을 함께 주는 것들.
+SUM_SERIES = ('준공', '착공', '인허가', '분양', '미분양')
+
+
+def check_sido_sum(stats):
+    """17시도 합(null→0) == 저장된 '전국' 행. **전 구간**을 본다.
+
+    왜 필요한가: 나이·원천 대조는 **최신 시점 하나**만 본다. 그런데 모든 수집이
+    '최근 N개'만 다시 받으므로 그 창 밖 과거는 최초 시딩 판본이 영구히 굳는다
+    (BASIC_MONTHS 8 / ANNUAL_YEARS 3 / RECENT_WEEKS 20 …). 2026-08-08 감사에서
+    전세가율 2,593셀·매매지수 6,041셀·주간 시세 360행(제주도가 아니라 제주시)이
+    그렇게 굳어 있던 게 드러났는데, 그 전까지 감시는 매일 OK였다.
+
+    이 불변식은 **API를 한 번도 부르지 않는다** — 저장분 안에서 시도 합과 전국
+    행을 맞춰보는 것이라 공짜이고, 과거 어느 칸이 오염돼도 그 시점에서 깨진다.
+    2026-08-08 실측으로 준공 191/191·착공 186/186·인허가 234/234·분양 129/129·
+    미분양 241/241 전부 정확히 성립함을 확인하고 넣었다.
+
+    ⚠️ null은 결측이 아니라 0으로 센다(KOSIS 규약, 위 실측이 그 증거다). 다만
+    계열이 그 지역에서 **시작되기 전**의 null은 0이 아니므로, 전국 행이 None인
+    시점은 건너뛴다(세종 2012.07 출범 같은 경우가 여기 걸린다).
+    """
+    out = []
+    print('[저장분 정합 — 17시도 합 == 전국 (API 호출 없음)]')
+    for k in SUM_SERIES:
+        d = stats.get(k)
+        if not d or not d.get('dates') or not (d.get('series') or {}).get('전국'):
+            continue
+        ser, dates, nat = d['series'], d['dates'], d['series']['전국']
+        bad, n = [], 0
+        for i, dt in enumerate(dates):
+            v = nat[i] if i < len(nat) else None
+            if v is None:
+                continue
+            n += 1
+            tot = sum((ser[r][i] or 0) for r in SIDO17
+                      if r in ser and i < len(ser[r]))
+            if abs(tot - v) > 1:               # 반올림 여유 1
+                bad.append('%s(전국 %s vs 합 %s)' % (dt, v, tot))
+        if bad:
+            print('  %-6s %d/%d 일치 — 어긋남 %d건' % (k, n - len(bad), n, len(bad)))
+            out.append('%s 시도합≠전국 %d건: %s%s — 과거 칸이 굳었을 수 있다'
+                       ' (tools/update_adv_data.py --heal-basic %s 로 교정)'
+                       % (k, len(bad), ', '.join(bad[:3]),
+                          ' 외' if len(bad) > 3 else '', k))
+        else:
+            print('  %-6s %d/%d 일치' % (k, n, n))
+    return out
 
 
 def check_age(label, stamp, grace):
@@ -292,10 +347,15 @@ def main():
         fails.append(check(name, last,
                            lambda c=cfg: kosis_latest(c['org'], c['tbl'], c['objn'], 'M'),
                            GRACE_BASIC))
-    if '규모별' not in stats:
-        # 라이브에 있어야 할 계열이 사라진 것 자체가 실패다. 조회 실패로 못 받은
-        # 경우는 위 live_adv_stats가 SKIPPED에 남겨 뒀다.
-        fails.append('규모별이 라이브에 없다 — data-size.json 배포·조회 확인 필요')
+    # 지연 로드로 뺀 계열은 split_data.LAZY_STATS가 정본이다. 목록을 여기 손으로
+    # 옮겨 적으면 거기 계열이 하나 늘 때 감시만 조용히 뒤처진다 — '규모별'이
+    # data-size.json으로 빠졌을 때 실제로 그렇게 감시가 꺼져 있었다(2026-08-04).
+    # 라이브에 있어야 할 계열이 사라진 것 자체가 실패다. 조회 실패로 못 받은
+    # 경우는 위 live_adv_stats가 SKIPPED에 남겨 뒀다.
+    for name in S.LAZY_STATS:
+        if name not in stats:
+            fails.append('%s이(가) 라이브에 없다 — %s 배포·조회 확인 필요'
+                         % (name, os.path.basename(S.SIZE)))
     if '규모별' in stats:
         sz = U.SIZE_TBLS[0][1]
         last = (stats['규모별'].get('dates') or [None])[-1]
@@ -356,11 +416,13 @@ def main():
     except Exception as e:
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 
+    fails.extend(check_sido_sum(stats))
+
     # 커버리지 가드: 라이브에 있는데 위에서 한 번도 대조 안 한 계열을 잡는다.
     # 분양·미분양이 SUPPLY_CONF에 있다는 이유로 몇 주간 감시 밖에 있었다 — 사람이
     # 기억으로 막을 일이 아니라서, 새 계열이 늘면 감시가 스스로 실패하게 둔다.
     covered = (set(U.BASIC_CONF) | set(U.ANNUAL_CONF) | set(U.SUPPLY_CONF)
-               | {'규모별', '금리'})
+               | set(S.LAZY_STATS) | {'금리'})
     uncovered = sorted(set(stats) - covered)
     if uncovered:
         fails.append('감시 누락 계열 %s — check_freshness.py에 대조를 추가할 것'
