@@ -2739,7 +2739,15 @@ function mapFill(r){
 function renderSidoMap(){
   var el=document.getElementById('map-wrap');
   if(!el||el.dataset.done) return;
-  if(typeof SIDO_GEO==='undefined'||!ADV.sido||!ADV.sido.zones) return;
+  if(typeof SIDO_GEO==='undefined'||!ADV.sido||!ADV.sido.zones){
+    /* 지도는 기본 모드다 — sido-geo.js가 안 오면(404·차단) 조용히 빠지면
+       홈 첫 화면이 빈 상자가 된다(2026-08-08 감사 세션 지적). 표로 폴백하고
+       지도 버튼은 잠근다. 그래프·표는 이 파일 없이도 온전하다. */
+    if(TB_VIEW==='map') tbView('table');
+    var mb=document.querySelector('#tb-view [data-v="map"]');
+    if(mb){ mb.disabled=true; mb.title='지도 데이터를 불러오지 못했습니다'; }
+    return;
+  }
   var Z={}; ADV.sido.zones.forEach(function(z){ Z[z.z]=z; });
   var h='<div class="map-agg">';
   ['전국','수도권','지방'].forEach(function(n){
