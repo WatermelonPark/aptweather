@@ -793,7 +793,8 @@ function drawStat(){
     idx=idx.filter(i=>parsed[i].y>cutY||(parsed[i].y===cutY&&parsed[i].m>=cutM));
   }
   const labels=idx.map(i=>parsed[i].label);
-  const vals=idx.map(i=>dsV(raw[i]));   // 진짜 0인 달을 차트가 건너뛰지 않게
+  const rawFirst=dsFirst(raw);
+  const vals=idx.map(i=>dsV(raw[i],i,rawFirst));   // 진짜 0인 달을 차트가 건너뛰지 않게
   /* 표를 차트보다 먼저 그린다(2026-08-03). 예전엔 차트 생성이 먼저라, 캔버스
      소유권이 꼬여 'Canvas is already in use'가 터지면 buildMatrix까지 못 가서
      행열 전환이 조용히 죽었다(인허가·착공·분양·준공·미분양에서 실측). */
@@ -858,8 +859,9 @@ function buildMatrix(D,idx,parsed){
   if(TRANSP.basicmain){
     h=['<table class="adv"><thead><tr><th>지역</th>'+idx.map(i=>`<th>${parsed[i].label}</th>`).join('')+'</tr></thead><tbody>'];
     regs.forEach(r=>{
+      const f=dsFirst(D.series[r]);
       h.push(`<tr><td>${r}</td>`+idx.map(i=>{
-        const v=dsV(D.series[r][i]);
+        const v=dsV(D.series[r][i],i,f);
         return `<td>${v==null?'·':fmtN(v)}</td>`;
       }).join('')+'</tr>');
     });
@@ -868,7 +870,7 @@ function buildMatrix(D,idx,parsed){
     for(let k=idx.length-1;k>=0;k--){
       const i=idx[k];
       h.push(`<tr><td>${parsed[i].label}</td>`+regs.map(r=>{
-        const v=dsV(D.series[r][i]);
+        const v=dsV(D.series[r][i],i,dsFirst(D.series[r]));
         return `<td>${v==null?'·':fmtN(v)}</td>`;
       }).join('')+'</tr>');
     }
@@ -883,7 +885,17 @@ function buildMatrix(D,idx,parsed){
    null은 '·'로 떠 자기모순이었다. tools/sido_zones.py _series가 이미 (v or 0)으로
    세고 있어, 안 맞추면 홈 공급표·등급과 통계 탭이 같은 원천을 반대로 해석한다. */
 const DS_ZERO=new Set(['준공','착공','인허가','분양']);
-function dsV(v){ return (v==null&&DS_ZERO.has(ST.ds))?0:v; }
+/* ⚠️ null 두 종류를 갈라야 한다. 계열이 그 지역에서 **시작되기 전**의 null은
+   '진짜 0'이 아니라 '아직 없던 지역·기간'이다 — 세종은 2012.07 출범이라
+   준공 null 73개 중 23개, 미분양 null 76개 중 73개가 출범 이전이다.
+   전부 0으로 찍으면 없던 도시의 0이 그래프에 그려진다. 첫 실측값 **이후**의
+   null만 0으로 본다(2026-08-08 자체 점검). */
+function dsFirst(arr){ for(let i=0;i<arr.length;i++) if(arr[i]!=null) return i; return -1; }
+function dsV(v,i,first){
+  if(v!=null) return v;
+  if(!DS_ZERO.has(ST.ds)) return null;
+  return (first>=0&&i>=first)?0:null;
+}
 /* 인허가는 **연내 누계**다(1월부터 누적, 12월이 연간 합계). 여기에 flow용
    '전기 대비'를 그대로 적용하면 12월 누계 → 1월 누계에서 -98%짜리 없는 급락이
    찍히고, 2월 이후 %도 분자는 그 달 실적·분모는 전월까지 누적이라 의미가 없다
@@ -896,9 +908,9 @@ function buildTable(D,labels,vals,idx,parsed){
   thead.innerHTML=`<tr><th>${isMonthly?'연월':'연도'}</th><th>${DS_LABEL[ST.ds]}</th><th>${cum?'전년 동월 대비':'전기 대비'}</th></tr>`;
   let html='';
   for(let k=labels.length-1;k>=0;k--){
-    const v=dsV(vals[k]); if(v==null)continue;
+    const v=vals[k]; if(v==null)continue;   // drawStat에서 이미 dsV를 거쳤다
     let chg='';
-    const prev=(k>=lag)?dsV(vals[k-lag]):null;
+    const prev=(k>=lag)?vals[k-lag]:null;
     if(prev!=null){
       const d=v-prev;
       const cls=d>0?'chg-up':(d<0?'chg-dn':'');
