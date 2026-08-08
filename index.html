@@ -2791,12 +2791,22 @@ function grSet(r){
 }
 function renderSidoGraph(){
   var el=document.getElementById('graph-wrap');
-  if(!el||el.dataset.done) return;
+  if(!el) return;
+  /* 좁음/넓음 판정이 done 캐시에 갇히면 모바일에서 그린 360 viewBox가
+     데스크톱 전환 뒤에도 남는다(실측) — 렌더 때의 폭 버킷을 기록하고
+     달라졌으면 다시 그린다. */
+  var nb=((el.clientWidth||360)<520)?'1':'0';
+  if(el.dataset.done&&el.dataset.nw!==nb) el.dataset.done='';
+  if(el.dataset.done) return;
+  el.dataset.nw=nb;
   var B=tbBuild(); if(!B) return;
   var rows=tbAgg(B.rows,'q');
   var k=B.regs.indexOf(GR_REG); if(k<0){ GR_REG='전국'; k=0; }
   var ref=B.refs[GR_REG];
-  var W=640,H=210,PT=14,PB=22,PL=8,PR=10;
+  /* 640×210 고정 비율은 327px 화면에서 높이 107px — 너무 작다(2026-08-08
+     사용자). 좁으면 360×250으로 그린다. 회전·리사이즈는 아래 재렌더가 받는다. */
+  var narrow=(el.clientWidth||360)<520;
+  var W=narrow?360:640, H=narrow?250:210, PT=14,PB=22,PL=8,PR=10;
   var iw=W-PL-PR, ih=H-PT-PB;
   var mx=ref; rows.forEach(function(r){ if(r.s[k]>mx) mx=r.s[k]; });
   mx*=1.06;
@@ -2834,10 +2844,7 @@ function renderSidoGraph(){
        정보를 안 날랐다(2026-08-08 사용자). 미래를 흐리게 하지 않는 이유:
        옅은 빨강이 '덜 부족'으로 읽혀 인코딩이 오염된다 — 구분은 배경 워시가 한다. */
     h+='<rect x="'+(x+0.5).toFixed(1)+'" y="'+(y0-bh).toFixed(1)+'" width="'+(bw-1).toFixed(1)
-      +'" height="'+bh.toFixed(1)+'" class="gb" fill="'+mapFill(ref?1-v/ref:null)
-      +'" data-q="'+tbLabel(r.i,'q')+'" data-v="'+v.toLocaleString('en-US')+'"'+(r.nf>0?' data-f="1"':'')+'>'
-      +'<title>'+tbLabel(r.i,'q')+' '+v.toLocaleString('en-US')+'세대'
-      +(r.nf>0?' · 착공 기준 추정':'')+' (적정 '+ref.toLocaleString('en-US')+')</title></rect>';
+      +'" height="'+bh.toFixed(1)+'" class="gb" fill="'+mapFill(ref?1-v/ref:null)+'"></rect>';
   });
   // 적정 기준선 — 존 페이지 분기 차트의 파선과 같은 어휘
   var ry=y0-ih*ref/mx;
@@ -2850,6 +2857,17 @@ function renderSidoGraph(){
     // 주기 라벨이 마지막 라벨과 4칸 이내로 붙으면 겹친다(29Q1/29Q2 실측) — 생략
     if(!last&&(i%8!==0||i>rows.length-5)) return;
     h+='<text x="'+(PL+i*bw+bw/2).toFixed(1)+'" y="'+(H-6)+'" class="gr-xt">'+tbLabel(r.i,'q')+'</text>';
+  });
+  /* 탭 표적 — 막대는 화면에서 ~3px 폭이라 손가락으로 못 집는다(2026-08-08
+     사용자: "눌렀을 때 숫자가 안 보임"). 분기 전체 높이를 덮는 투명 렉트가
+     탭·호버·title을 받는다(존 시세 차트 .px-hit와 같은 패턴). 맨 위층. */
+  rows.forEach(function(r,i){
+    var v=Math.round(r.s[k]*3/r.n);
+    h+='<rect class="gr-hit" x="'+(PL+i*bw).toFixed(1)+'" y="'+PT+'" width="'+bw.toFixed(1)
+      +'" height="'+ih+'" fill="transparent" data-q="'+tbLabel(r.i,'q')
+      +'" data-v="'+v.toLocaleString('en-US')+'"'+(r.nf>0?' data-f="1"':'')+'>'
+      +'<title>'+tbLabel(r.i,'q')+' '+v.toLocaleString('en-US')+'세대'
+      +(r.nf>0?' · 착공 기준 추정':'')+' (적정 '+ref.toLocaleString('en-US')+')</title></rect>';
   });
   h+='</svg><div class="gr-tip" hidden></div></div>'
     +'<p class="gr-note">막대는 분기 공급 세대수 — 붉을수록 적정물량보다 모자라고, 푸를수록 남습니다. 세로선 오른쪽은 착공 실적으로 추정한 미래입니다.</p>';
@@ -2878,16 +2896,25 @@ function grWireTip(el){
     tip.style.left=x+'px'; tip.style.top=y+'px';
   }
   svg.addEventListener('click',function(e){
-    var rc=e.target.closest&&e.target.closest('rect.gb'); if(!rc)return;
+    var rc=e.target.closest&&e.target.closest('rect.gr-hit'); if(!rc)return;
     e.stopPropagation(); show(rc);
   });
   svg.addEventListener('pointerover',function(e){
     if(e.pointerType&&e.pointerType!=='mouse')return;
-    var rc=e.target.closest&&e.target.closest('rect.gb'); if(rc)show(rc);
+    var rc=e.target.closest&&e.target.closest('rect.gr-hit'); if(rc)show(rc);
   });
   svg.addEventListener('mouseleave',hide);
   if(!grWireTip.doc){
     grWireTip.doc=1;
+    // 회전·창 크기 변경 → 좁음/넓음 판정이 바뀌면 다시 그린다(그래프 표시 중일 때만)
+    var rt2;
+    window.addEventListener('resize',function(){
+      clearTimeout(rt2);
+      rt2=setTimeout(function(){
+        var w=document.getElementById('graph-wrap');
+        if(w&&w.dataset.done&&TB_VIEW==='graph'){ w.dataset.done=''; renderSidoGraph(); }
+      },250);
+    });
     var out=function(e){
       var w=document.getElementById('graph-wrap');
       if(w&&!w.contains(e.target)){ var t=w.querySelector('.gr-tip'); if(t)t.hidden=true; }

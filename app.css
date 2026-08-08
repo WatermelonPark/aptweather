@@ -691,6 +691,13 @@ table.adv thead th:first-child{text-align:center}
   /* 지도 좌상단 오버레이(서해 빈 공간). 세로로 쌓고, 밑의 탭을 막지 않는다. */
   .map-key{position:absolute;top:2px;left:0;z-index:2;pointer-events:none;
     flex-direction:column;align-items:flex-start;gap:4px;margin:0;text-align:left}
+  /* 범례는 HTML이라 지도(SVG)처럼 줄지 않는다 — 좁은 화면에서는 지도가 작아진
+     만큼 범례가 상대적으로 커져 경기·서울을 덮는다(2026-08-08 실기기).
+     모바일은 오버레이를 풀고 지도 위 정적 줄로. */
+  @media(max-width:560px){
+    .map-key{position:static;flex-direction:row;align-items:center;gap:4px 10px;
+      margin:0 0 10px;pointer-events:auto}
+  }
   .map-key .mk-r{display:inline-flex;align-items:center;gap:6px}
   .map-key .tk-ramp{width:56px}
   .map-key .tk-n{font-size:10.5px;line-height:1.4;margin:0}
@@ -711,6 +718,7 @@ table.adv thead th:first-child{text-align:center}
   .gr-box .gr-rt{font-size:10.5px;fill:var(--ink);text-anchor:end}  /* 차트 안쪽 오른끝 정렬 */
   .gr-box .gr-gl{stroke:var(--line)}
   .gr-box .gr-yt{font-size:9.5px;fill:var(--muted)}
+  .gr-box .gr-hit{cursor:pointer}
   /* 막대 탭 값 표시 — 존 페이지 .q-tip과 같은 어휘 */
   .gr-tip{position:absolute;background:var(--ink);color:#fff;padding:6px 9px;border-radius:3px;
     font-size:12px;line-height:1.4;z-index:4;transform:translate(-50%,-100%);
