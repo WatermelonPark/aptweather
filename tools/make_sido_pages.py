@@ -223,14 +223,60 @@ def head(z, desc, title, url=None, crumb=None):
 <meta property="og:title" content="%(title)s">
 <meta property="og:description" content="%(desc)s">
 <meta property="og:url" content="%(url)s">
-<meta property="og:image" content="%(site)s/share/weekly-map.png">
+<meta property="og:image" content="%(ogimg)s">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">%(ld)s</script>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
 ''' % {'ga': GA, 'title': esc(title), 'desc': esc(desc), 'url': u, 'site': SITE,
+       # 지역 카드(make_zone_cards.py 산출물). 없으면 브랜드 카드로 떨어진다 —
+       # 카드를 아직 안 구웠거나 지역이 새로 생긴 회차에도 미리보기가 깨지지 않게.
+       'ogimg': ((SITE + '/share/zone-' + urllib.parse.quote(z) + '.png')
+                 if os.path.exists(os.path.join(ROOT, 'share', 'zone-%s.png' % z))
+                 else SITE + '/og-brand.png'),
        'ld': json.dumps(ld, ensure_ascii=False)}
+
+
+def share_section(z):
+    """지역 공유. 지역 단톡방이 이 리포트의 자연 유통 경로라 공유를 한 번의 탭으로
+    만든다. 카카오 SDK는 싣지 않는다 — 지역 페이지는 SEO 랜딩이라 가벼워야 하고,
+    Web Share API를 쓰면 모바일에서 카톡 포함 네이티브 시트가 열려 결과가 같으면서
+    스크립트가 0바이트다. 링크만 건너가면 카톡이 og:image(share/zone-<지역>.png)를
+    읽어 지역명 카드를 띄운다. 데스크톱은 클립보드로 폴백한다."""
+    e = esc(z)
+    return (
+        '<section class="zshare"><div class="wrap">'
+        '<p class="zsub" style="text-align:center;margin-bottom:10px">'
+        '이 지역에 관심 있는 사람에게 보내보세요</p>'
+        '<button class="zshare-btn" onclick="shareZone()">'
+        '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        'stroke-linejoin="round" d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M8 7l4-4 4 4"/>'
+        '</svg>%s 리포트 공유하기</button>'
+        '</div></section>'
+        '<style>.zshare{padding:4px 0 26px}'
+        '.zshare-btn{display:flex;align-items:center;justify-content:center;gap:8px;'
+        'width:100%%;max-width:400px;margin:0 auto;background:#fff;color:var(--ink);'
+        'border:1.5px solid var(--ink);border-radius:3px;cursor:pointer;font-family:inherit;'
+        'font-size:15px;font-weight:600;padding:13px 20px}</style>'
+        '<script>function shareZone(){'
+        'var nm=%s;'
+        'var u=location.origin+location.pathname+'
+        '"?utm_source=zone_share&utm_medium=viral&utm_campaign=zone";'
+        'var t=nm+" 아파트 공급 분석 — 아공맵";'
+        'var x=nm+"에 필요한 집과 앞으로 들어올 집, 국가 통계로 확인해보세요.";'
+        'try{gtag("event","share",{content_type:"zone",'
+        'method:navigator.share?"web_share":"copy",region:nm});}catch(e){}'
+        'if(navigator.share){navigator.share({title:t,text:x,url:u}).catch(function(){});return;}'
+        'var b=document.querySelector(".zshare-btn");'
+        'function done(m){if(!b)return;var o=b.innerHTML;b.textContent=m;'
+        'setTimeout(function(){b.innerHTML=o;},2000);}'
+        'if(navigator.clipboard&&navigator.clipboard.writeText){'
+        'navigator.clipboard.writeText(t+"\\n"+u).then(function(){done("링크가 복사됐어요");})'
+        '.catch(function(){done("복사 실패 — 주소창을 복사하세요");});}'
+        'else{done("복사 실패 — 주소창을 복사하세요");}}</script>'
+        % (e, json.dumps(z, ensure_ascii=False)))
 
 
 FOOT = '''<footer><div class="wrap">
@@ -378,6 +424,7 @@ def build_page(z, calc, stats, pq, others):
                  % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
     h.append('</div><p class="zsub" style="margin-top:14px">'
              '<a href="/">← 전국 공급 표로 돌아가기</a></p></div></section>')
+    h.append(share_section(z))
     h.append(FOOT)
     return ''.join(h)
 
