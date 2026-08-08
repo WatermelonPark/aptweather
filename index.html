@@ -632,6 +632,15 @@ function goStats(m){showView('stats',false);setStatsMode(m);}
 // /#score로 홈의 sec-score를 가리키고 있어서, 여기 넣으면 그 링크가
 // /cycle/로 튕긴다(위 score 분기가 먼저 잡지만 순서에 기대지 않는다).
 const R2C=new Set(["report", "c4", "c5", "c6", "cFlow", "cL1", "cL3", "cL6", "cMelt", "cRate", "cStr", "cSuper", "link1", "link2", "link3", "link45", "link6", "ref1", "ref2", "ref3", "ref4", "summary", "ztog"]);
+/* '레이아웃이 잡힌 뒤에' 할 일. rAF 대신 타이머를 쓰는 이유는 rAF가 배경 탭·
+   비렌더링 맥락에서 아예 돌지 않기 때문이다 — 표 초기 위치에서 실제로 그
+   함정을 밟았다(IntersectionObserver 콜백 0건, 커밋 0677fb0).
+   ⚠️ 다만 여기 세 곳(해시 앵커 2·차트 리플로 1)이 rAF 때문에 고장 나 있었다는
+   증거는 없다. 전환은 예방적 통일이다 — 2026-08-08에 '/#score가 안 된다'고
+   판단했던 건 측정 환경 탓이었다(그 창은 window.scrollTo(0,500)조차 무시했다).
+   같은 실수를 반복하지 않으려고 남긴다: 창 스크롤을 재기 전에 창이 스크롤
+   되는지부터 확인할 것. */
+function afterLayout(fn){ setTimeout(fn, 0); }
 function applyHash(){
   const h=location.hash.replace('#','');
   if(!h){showView('home',false);return;}
@@ -644,14 +653,14 @@ function applyHash(){
     else if(sm[1]==='adv')setAdvTab(sm[2]||'occ',false);
     return;
   }
-  if(h==='score'){showView('home',false);requestAnimationFrame(()=>{const el=document.getElementById('sec-score');if(el)el.scrollIntoView();});return;}
+  if(h==='score'){showView('home',false);afterLayout(()=>{const el=document.getElementById('sec-score');if(el)el.scrollIntoView();});return;}
   if(h==='test'){showView('test',false);backToPick(true);return;}
   if(h==='home'||h==='stats'||h==='test'){showView(h,false);return;}
   // 리포트는 /cycle/로 이전했다. 옛 해시로 들어온 링크·북마크를 넘긴다.
   // replace를 쓰는 이유: push면 뒤로가기가 이 페이지로 되돌아와 무한 왕복한다.
   if(R2C.has(h)){location.replace('/cycle/'+(h==='report'?'':'#'+h));return;}
   const el=document.getElementById(h);
-  if(el){requestAnimationFrame(()=>el.scrollIntoView());}
+  if(el){afterLayout(()=>el.scrollIntoView());}
 }
 window.addEventListener('hashchange',applyHash);
 
@@ -1752,7 +1761,7 @@ function setStatsMode(m,push){
     document.getElementById('stats-'+k).style.display = k===m ? '' : 'none';
   });
   if(m==='adv' && !advRendered){ renderAdvAll(); advRendered=true; }
-  if(m==='basic'||m==='market'){ requestAnimationFrame(()=>window.dispatchEvent(new Event('resize'))); }
+  if(m==='basic'||m==='market'){ afterLayout(()=>window.dispatchEvent(new Event('resize'))); }
   track('stats_mode',{mode:m});
   if(push!==false)statsNav(statsHashOf(m));
 }

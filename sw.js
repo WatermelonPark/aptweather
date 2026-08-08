@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v79'; // 표 초기 위치를 타이머 재시도로 (IO 의존 제거)
+const VERSION = 'v80'; // rAF -> afterLayout 통일
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
