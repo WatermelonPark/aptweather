@@ -2881,7 +2881,7 @@ function renderSidoGraph(){
       +' (적정 '+ref.toLocaleString('en-US')+')</title></rect>';
   });
   h+='</svg><div class="gr-tip" hidden></div></div>'
-    +'<p class="gr-note">높이는 분기 공급량. 색은 과거 = 매매가 등락, 미래 = 적정물량 대비 — 표와 같은 규칙입니다.</p>';
+    +'<p class="gr-note">색은 과거엔 매매가의 등락을, 미래엔 적정물량 대비 남고 모자람을 나타냅니다.</p>';
   el.innerHTML=h;
   el.dataset.done='1';
   grWireTip(el);
