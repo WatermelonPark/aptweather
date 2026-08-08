@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.js')
-TOOLS_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')   # tools/data (hub_permits.json, code_bdong.json)
+TOOLS_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')   # tools/data (lawd.json, rate_shock.json)
 API = 'https://kosis.kr/openapi/Param/statisticsParameterData.do'
 LIST_API = 'https://kosis.kr/openapi/statisticsList.do'
 KEY = os.environ.get('KOSIS_API_KEY', '')
