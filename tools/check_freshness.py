@@ -130,8 +130,24 @@ def _q_to_date(q):
     return '%04d-%02d-%02d' % (y, m, d)
 
 
+# ⚠️ 여기 17곳은 **실제 행정구역만**이다. 저장분에는 집계 행이 섞여 있어
+# (STATS 22곳 = 17시도 + 전국·수도권·지방·기타광역시·기타지방,
+#  ADV.sido 20곳 = 17시도 + 전국·수도권·지방) 전부 더하면 전국의 세 배가 나온다.
+# 개수가 20/22/17로 달라 보이는 건 집계를 몇 개 안고 있느냐의 차이일 뿐이다.
 SIDO17 = ['서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
           '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주']
+CAPITAL3 = ['서울', '경기', '인천']
+LOCAL14 = [r for r in SIDO17 if r not in CAPITAL3]
+
+# 검사할 (부분들, 전체) 쌍. 시도합=전국 하나만 보면 '어딘가 틀렸다'까지만 알지만,
+# 집계 관계를 함께 보면 수도권/지방 중 어느 쪽인지 갈려 범위가 1/3로 줄어든다.
+# 넷 다 2026-08-08 실측으로 전 구간 성립을 확인하고 넣었다.
+SUM_RULES = (
+    (SIDO17, '전국', '17시도합=전국'),
+    (CAPITAL3, '수도권', '수도권=서울+경기+인천'),
+    (LOCAL14, '지방', '지방=나머지14'),
+    (['수도권', '지방'], '전국', '전국=수도권+지방'),
+)
 
 # 이 검사가 도는 계열 — 원천이 시도별과 독립 '전국' 행을 함께 주는 것들.
 SUM_SERIES = ('준공', '착공', '인허가', '분양', '미분양')
@@ -156,30 +172,46 @@ def check_sido_sum(stats):
     시점은 건너뛴다(세종 2012.07 출범 같은 경우가 여기 걸린다).
     """
     out = []
-    print('[저장분 정합 — 17시도 합 == 전국 (API 호출 없음)]')
+    print('[저장분 정합 — 합계 관계 4종 (API 호출 없음)]')
     for k in SUM_SERIES:
         d = stats.get(k)
         if not d or not d.get('dates') or not (d.get('series') or {}).get('전국'):
             continue
-        ser, dates, nat = d['series'], d['dates'], d['series']['전국']
-        bad, n = [], 0
-        for i, dt in enumerate(dates):
-            v = nat[i] if i < len(nat) else None
-            if v is None:
+        ser, dates = d['series'], d['dates']
+        # 시도 행이 통째로 사라진 것 자체가 사고다(2026-08-06 세종 36110이 존
+        # 매핑에서 소거된 전례). 그 경우 아래 합계는 자연히 어긋나지만, 원인이
+        # '값이 틀렸다'가 아니라 '행이 없다'라는 걸 따로 말해줘야 헤매지 않는다.
+        gone = [r for r in SIDO17 if r not in ser]
+        if gone:
+            out.append('%s 시도 행 결측: %s — 수집이 그 지역을 통째로 흘렸다'
+                       % (k, ', '.join(gone)))
+        marks = []
+        for parts, whole, label in SUM_RULES:
+            # 행이 빠졌으면 합을 **검증할 수 없다**. 없는 걸 0으로 세고 비교하면
+            # '값이 틀렸다'는 오탐이 되고, 진짜 원인(행 결측)은 위 `gone`이 말한다.
+            if whole not in ser or any(p not in ser for p in parts):
+                marks.append('%s(축없음)' % label)
                 continue
-            n += 1
-            tot = sum((ser[r][i] or 0) for r in SIDO17
-                      if r in ser and i < len(ser[r]))
-            if abs(tot - v) > 1:               # 반올림 여유 1
-                bad.append('%s(전국 %s vs 합 %s)' % (dt, v, tot))
-        if bad:
-            print('  %-6s %d/%d 일치 — 어긋남 %d건' % (k, n - len(bad), n, len(bad)))
-            out.append('%s 시도합≠전국 %d건: %s%s — 과거 칸이 굳었을 수 있다'
-                       ' (tools/update_adv_data.py --heal-basic %s 로 교정)'
-                       % (k, len(bad), ', '.join(bad[:3]),
-                          ' 외' if len(bad) > 3 else '', k))
-        else:
-            print('  %-6s %d/%d 일치' % (k, n, n))
+            bad, n = [], 0
+            for i, dt in enumerate(dates):
+                v = ser[whole][i] if i < len(ser[whole]) else None
+                if v is None:
+                    continue
+                n += 1
+                # 없는 행은 0으로 센다 — 행 자체의 결측은 위 `gone`이 따로 보고한다.
+                tot = sum((ser[p][i] or 0) for p in parts
+                          if p in ser and i < len(ser[p]))
+                if abs(tot - v) > 1:           # 소수 계열의 반올림 여유
+                    bad.append('%s(%s %s vs 합 %s)' % (dt, whole, v, tot))
+            if bad:
+                marks.append('%s ❌%d' % (label, len(bad)))
+                out.append('%s %s 어긋남 %d건: %s%s — 과거 칸이 굳었을 수 있다'
+                           ' (tools/update_adv_data.py --heal-basic %s 로 교정)'
+                           % (k, label, len(bad), ', '.join(bad[:3]),
+                              ' 외' if len(bad) > 3 else '', k))
+            else:
+                marks.append('%s %d/%d' % (label, n, n))
+        print('  %-5s %s' % (k, ' · '.join(marks)))
     return out
 
 
