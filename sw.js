@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v83'; // 히어로 5블록 -> 2블록
+const VERSION = 'v84'; // 네비: 퀴즈 -> 지역
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
