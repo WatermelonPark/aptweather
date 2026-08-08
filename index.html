@@ -2665,29 +2665,28 @@ function tbDraw(){
     +B.H+'분기 = 3년). 맨 아래 <b>미분양</b>('+(B.uprd||'')+')과 <b>⚠</b>는 순위에 넣지 않은 참고 수치입니다.';
 }
 /* 굵은 줄(.now = 미래가 처음 섞이는 행)을 표 위쪽 1/3에 놓는다.
-   ⚠️ requestAnimationFrame을 쓰지 말 것 — 배경 탭이나 그리지 않는 창에서는
-   콜백이 영영 안 돈다(2026-08-07 실측: 창이 컴포지팅을 안 하니 스크롤이
-   0인 채였다). getBoundingClientRect가 레이아웃을 동기로 강제하므로
-   innerHTML 직후에 바로 재도 된다.
-   뷰가 숨어 있으면(display:none) 높이가 0이라 계산이 무의미하니, 보일 때
-   한 번 더 부른다. */
-function tbAnchor(){
+   ⚠️ 렌더링 생명주기에 묶인 것은 쓰지 말 것 — requestAnimationFrame도
+   IntersectionObserver도 '그리지 않는 창'에서는 콜백이 영영 안 온다.
+   2026-08-07에 rAF를 걷어내면서 뷰가 숨은 경우를 IO로 처리했는데, 같은
+   함정을 다시 들인 것이었다(2026-08-08 실측: 명백히 보이는 요소에 새로
+   붙인 관찰자도 600ms 동안 콜백 0건 — 그 사이 표는 2017Q1에서 열렸다).
+   타이머는 렌더링과 무관하게 돌므로 재시도는 setTimeout으로 한다.
+   getBoundingClientRect가 레이아웃을 동기로 강제하니 측정 자체는 즉시 된다. */
+var TB_TRY=[0,50,150,400,900,1800];
+function tbAnchor(n){
   var sc=document.querySelector('.tb-scroll');
   var nw=sc&&sc.querySelector('#tb-main tbody tr.now');
-  if(!sc||!nw) return;
-  if(!sc.clientHeight||!sc.offsetParent){
-    if(!tbAnchor.io&&window.IntersectionObserver){
-      tbAnchor.io=new IntersectionObserver(function(es){
-        for(var i=0;i<es.length;i++) if(es[i].isIntersecting){
-          tbAnchor.io.disconnect(); tbAnchor.io=null; tbAnchor(); return;
-        }});
-      tbAnchor.io.observe(sc);
-    }
+  n=n||0;
+  if(sc&&nw&&sc.clientHeight&&sc.offsetParent){
+    TB_ANCHOR=false;
+    var d=nw.getBoundingClientRect().top-sc.getBoundingClientRect().top;
+    sc.scrollTop+=d-sc.clientHeight/3;
     return;
   }
-  TB_ANCHOR=false;
-  var d=nw.getBoundingClientRect().top-sc.getBoundingClientRect().top;
-  sc.scrollTop+=d-sc.clientHeight/3;
+  /* 아직 잴 수 없다(뷰가 숨었거나 레이아웃 전). 몇 번만 다시 본다 —
+     무한 재시도는 하지 않는다. 그 사이 사용자가 표를 스크롤했다면
+     TB_ANCHOR가 false라 자리를 뺏지 않는다. */
+  if(n<TB_TRY.length) setTimeout(function(){ if(TB_ANCHOR) tbAnchor(n+1); }, TB_TRY[n]);
 }
 function renderHeroMap(){
   const el=document.getElementById('hero-map');
