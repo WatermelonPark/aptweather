@@ -121,3 +121,72 @@ def test_live_data_satisfies_every_rule():
     st = json.loads(re.search(r'const STATS\s*=\s*(\{.*?\});?\s*(?:/\*|const |$)',
                               src, re.S).group(1))
     assert C.check_sido_sum(st) == []
+
+
+# ---------------------------------------------------------------------------
+# 파생 페이지 — 화면이 데이터와 같은 시점으로 구워졌는가
+# ---------------------------------------------------------------------------
+
+import urllib.parse as _up
+
+
+class _FakeWeb:
+    """라이브 대신 미리 정한 페이지를 돌려준다."""
+
+    def __init__(self, pages):
+        self.pages = pages
+
+    def __call__(self, req, timeout=0):
+        url = getattr(req, 'full_url', req)
+        body = self.pages.get(url, '')
+        return type('R', (), {'read': lambda _self: body.encode('utf-8')})()
+
+
+def _derived(monkeypatch, seoul, gyeonggi, jr='2026.06 기준', mv='2026-07-29'):
+    pages = {
+        C.SITE + '/zone/' + _up.quote('서울') + '/': seoul,
+        C.SITE + '/zone/' + _up.quote('경기') + '/': gyeonggi,
+        C.SITE + '/jeonse-ratio/': jr,
+        C.SITE + '/moveins/': '"dateModified": "%s"' % mv,
+    }
+    monkeypatch.setattr(C.urllib.request, 'urlopen', _FakeWeb(pages))
+    adv = {'sido': {'zones': [{'z': '전국'}, {'z': '서울'}, {'z': '경기'}]},
+           'occupancy': {'rows': [{'p': '2026Q2', 'e': False}]}}
+    stats = {'준공': {'dates': ['2026.06'], 'series': {}},
+             '전세가율': {'dates': ['2026.06'], 'series': {}}}
+    return C.check_derived_pages(adv, stats)
+
+
+OKP = '<p>2026.06 기준 · 분기 적정물량</p>'
+OLDP = '<p>2026.05 기준 · 분기 적정물량</p>'
+
+
+def test_derived_pages_pass_when_fresh(monkeypatch):
+    assert _derived(monkeypatch, OKP, OKP) == []
+
+
+def test_derived_pages_catch_a_partially_stale_bake(monkeypatch):
+    """생성기가 도중에 죽으면 일부만 새 시점이 된다 — data.js만 보는 감시로는
+    원리적으로 못 잡던 상태다."""
+    f = _derived(monkeypatch, OKP, OLDP)
+    assert len(f) == 1 and '경기(2026.05)' in f[0], f
+
+
+def test_derived_pages_treat_missing_marker_as_failure(monkeypatch):
+    """표기가 사라지면 페이지 구조가 바뀐 것이다 — 조용히 통과시키면 감시가 꺼진
+    채로 남는다."""
+    f = _derived(monkeypatch, OKP, '<p>없음</p>')
+    assert len(f) == 1 and '표기 없음' in f[0], f
+
+
+def test_indicator_dateModified_respects_the_publish_clamp(monkeypatch):
+    """dateModified는 datePublished보다 과거가 되지 않게 클램프된다. 그 규칙을
+    모르고 비교하면 매일 오탐이 난다(2026-08-08 예행에서 실제로 그랬다)."""
+    assert _derived(monkeypatch, OKP, OKP, mv=C.INDICATOR_PUBLISHED) == []
+    f = _derived(monkeypatch, OKP, OKP, mv='2025-01-01')
+    assert any('moveins' in x for x in f), f
+
+
+def test_aggregate_regions_have_no_page(monkeypatch):
+    """전국·수도권·지방은 집계라 페이지가 없다 — 조회하면 전부 실패로 뜬다."""
+    assert _derived(monkeypatch, OKP, OKP) == []

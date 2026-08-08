@@ -215,6 +215,109 @@ def check_sido_sum(stats):
     return out
 
 
+INDICATOR_PUBLISHED = '2026-07-29'   # make_indicator_pages.PUBLISHED와 같은 값
+
+
+def check_derived_pages(adv, stats):
+    """라이브 정적 페이지가 **실제로 지금 데이터로 구워졌는지**.
+
+    지금까지 감시는 data.js만 봤다. 그런데 배포되는 건 그걸로 구운 페이지들이고,
+    생성기가 실패해도 데이터 커밋은 진행되던 시절이 있었다(2026-08-07에 exit 1로
+    바뀌기 전). 그러면 **데이터는 새 시점, 화면은 옛 시점**인 채로 배포된다 —
+    data.js만 보는 감시로는 원리적으로 못 잡는다. 사람이 20장을 열어볼 수도 없다.
+
+    각 페이지가 이미 화면에 찍고 있는 시점 표기를 읽어 데이터와 맞춰본다.
+    표기가 아예 없으면 그것도 실패다 — 페이지 구조가 바뀌었는데 감시가 옛 자리를
+    보고 있다는 뜻이라, 조용히 통과시키면 감시가 꺼진 채로 남는다.
+    """
+    out = []
+    print('[파생 페이지 — 화면이 데이터와 같은 시점인가]')
+    try:
+        # zones는 이름 목록이 아니라 지역 딕셔너리 리스트다({'z':'서울', ...}).
+        # 집계 셋(전국·수도권·지방)은 별도 페이지가 없으므로 뺀다.
+        zones = (adv.get('sido') or {}).get('zones') or []
+        names = [z.get('z') for z in zones if isinstance(z, dict)]
+        names = [n for n in names if n and n not in ('전국', '수도권', '지방')]
+        exp = (stats.get('준공') or {}).get('dates', [None])[-1]
+        if not names or not exp:
+            SKIPPED.append('파생 페이지')
+            print('  판정 못 함 — sido.zones 또는 STATS.준공이 비었다')
+            return out
+        bad = []
+        for n in names:
+            try:
+                h = urllib.request.urlopen(urllib.request.Request(
+                    SITE + '/zone/' + urllib.parse.quote(n) + '/', headers=UA),
+                    timeout=60).read().decode('utf-8', 'replace')
+            except Exception as e:
+                bad.append('%s(조회실패 %s)' % (n, str(e)[:20]))
+                continue
+            m = re.search(r'(\d{4}\.\d{2}) 기준 · 분기 적정물량', h)
+            if not m:
+                bad.append('%s(시점 표기 없음)' % n)
+            elif m.group(1) != exp:
+                bad.append('%s(%s)' % (n, m.group(1)))
+        if bad:
+            print('  지역 %d/%d 일치 — 어긋남: %s' % (len(names) - len(bad), len(names),
+                                                 ', '.join(bad[:5])))
+            out.append('지역 페이지 %d곳이 데이터(%s)와 다른 시점: %s%s'
+                       ' — 생성기가 실패했거나 배포가 안 된 것'
+                       % (len(bad), exp, ', '.join(bad[:5]),
+                          ' 외' if len(bad) > 5 else ''))
+        else:
+            print('  지역 %d/%d 일치 (%s)' % (len(names), len(names), exp))
+    except Exception as e:
+        SKIPPED.append('파생 페이지(지역)')
+        print('  지역 판정 못 함 — %s' % str(e)[:60])
+
+    # 지표 페이지 둘. 전세가율은 화면 문구, 입주물량은 JSON-LD의 dateModified를 쓴다
+    # (화면에 시점 문구가 없다). ⚠️ dateModified는 datePublished보다 과거가 되지
+    # 않도록 클램프된다 — 그 규칙을 모르고 비교하면 매일 오탐이 난다(실제로 처음에
+    # 그렇게 짰다가 2026-08-08 예행에서 잡았다).
+    try:
+        jr = (stats.get('전세가율') or {}).get('dates', [None])[-1]
+        h = urllib.request.urlopen(urllib.request.Request(
+            SITE + '/jeonse-ratio/', headers=UA), timeout=60).read().decode('utf-8', 'replace')
+        m = re.search(r'(\d{4}\.\d{2}) 기준', h)
+        if not m:
+            out.append('/jeonse-ratio/에 시점 표기가 없다 — 페이지 구조가 바뀌었는지 확인')
+            print('  전세가율  시점 표기 없음')
+        elif jr and m.group(1) != jr:
+            out.append('/jeonse-ratio/가 %s인데 데이터는 %s' % (m.group(1), jr))
+            print('  전세가율  %s (데이터 %s) — 어긋남' % (m.group(1), jr))
+        else:
+            print('  전세가율  %s 일치' % m.group(1))
+    except Exception as e:
+        SKIPPED.append('파생 페이지(전세가율)')
+        print('  전세가율  판정 못 함 — %s' % str(e)[:60])
+
+    try:
+        o = adv.get('occupancy') or {}
+        act = [r['p'] for r in (o.get('rows') or []) if not r.get('e')]
+        want = None
+        if act:
+            m = re.match(r'^(\d{4})Q([1-4])$', act[-1])
+            if m:
+                want = max('%s-%02d-01' % (m.group(1), int(m.group(2)) * 3),
+                           INDICATOR_PUBLISHED)
+        h = urllib.request.urlopen(urllib.request.Request(
+            SITE + '/moveins/', headers=UA), timeout=60).read().decode('utf-8', 'replace')
+        m = re.search(r'"dateModified":\s*"(\d{4}-\d{2}-\d{2})"', h)
+        if not m:
+            out.append('/moveins/에 dateModified가 없다 — 페이지 구조가 바뀌었는지 확인')
+            print('  입주물량  dateModified 없음')
+        elif want and m.group(1) != want:
+            out.append('/moveins/ dateModified가 %s인데 데이터 기준으로는 %s'
+                       % (m.group(1), want))
+            print('  입주물량  %s (기대 %s) — 어긋남' % (m.group(1), want))
+        else:
+            print('  입주물량  %s 일치' % m.group(1))
+    except Exception as e:
+        SKIPPED.append('파생 페이지(입주물량)')
+        print('  입주물량  판정 못 함 — %s' % str(e)[:60])
+    return out
+
+
 def check_age(label, stamp, grace):
     """수집 시점 도장(YYYY-MM-DD)이 grace일보다 오래됐으면 실패 사유를 반환.
 
@@ -449,6 +552,7 @@ def main():
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 
     fails.extend(check_sido_sum(stats))
+    fails.extend(check_derived_pages(adv, stats))
 
     # 커버리지 가드: 라이브에 있는데 위에서 한 번도 대조 안 한 계열을 잡는다.
     # 분양·미분양이 SUPPLY_CONF에 있다는 이유로 몇 주간 감시 밖에 있었다 — 사람이
