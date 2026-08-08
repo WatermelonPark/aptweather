@@ -439,13 +439,14 @@
   table.adv th,table.adv td{padding:6px 9px;border-bottom:1px solid var(--paper2);text-align:center;
     font-variant-numeric:tabular-nums}
   table.adv thead th{background:var(--paper2);color:var(--ink2);font-weight:600;position:sticky;top:0}
+  table.adv tbody th{font-weight:400;color:inherit;background:#fff}
   table.adv th:first-child,table.adv td:first-child{position:sticky;left:0;background:#fff;text-align:left;/*td만*/
     font-weight:600;color:var(--ink);border-right:1px solid var(--line);z-index:1}
   table.adv thead th:first-child{background:var(--paper2);z-index:2}
   table.adv td.hi{background:#eaf3fb;color:#1a5276;font-weight:600}
   table.adv td.lo{background:#fdecea;color:#a93226;font-weight:600}
-  table.adv tr.fut td{background:#f6f8f7}
-  table.adv tr.fut td:first-child{color:var(--muted)}
+  table.adv tr.fut td,table.adv tr.fut th{background:#f6f8f7}
+  table.adv tr.fut td:first-child,table.adv tr.fut th:first-child{color:var(--muted)}
   table.adv td.up{color:#c0392b}
   table.adv td.dn{color:#1a5276}
   .adv-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
@@ -693,8 +694,14 @@ table.adv thead th:first-child{text-align:center}
   #tb-main thead th sup{font-size:9px;color:var(--muted)}
   /* 적정물량 줄은 이름칸만 th(scope=row)이고 수치는 td다 — 둘 다 잡아야 한다
      (2026-08-08 접근성 수정). 예전에 td→th 바꾸고 CSS를 안 따라가 줄이 깨진 전례. */
+  /* ⚠️ position·background·z-index까지 같이 줘야 한다. th일 때는 위의
+     `#tb-main thead th{position:sticky}`가 대신 걸어줬는데, td로 바꾸면서 그게 빠져
+     스크롤하면 수치 20칸만 위로 사라지고 '적정물량' 라벨이 남의 분기 줄에 얹혔다
+     (2026-08-08 감사). td→th를 바꿀 때 CSS를 안 따라간 세 번째 사례다. */
   #tb-main thead tr.tb-ref th,#tb-main thead tr.tb-ref td{top:30px;font-weight:400;font-size:10.5px;color:var(--muted);
-    padding:3px 9px;border-bottom:2px solid var(--ink2)}
+    padding:3px 9px;border-bottom:2px solid var(--ink2);
+    position:sticky;background:var(--paper);z-index:6}
+  #tb-main thead tr.tb-ref th{z-index:7}
   /* ⚠️ 붙박이 열의 z-index는 칸 안 숫자(.tc b, z-index:2)보다 커야 한다. 데이터
      td는 position이 없어 스택 문맥을 안 만들므로, 그 안의 숫자가 루트 문맥에서
      붙박이 열과 같은 층으로 경합해 DOM 순서상 나중인 숫자가 이긴다 — 실제로

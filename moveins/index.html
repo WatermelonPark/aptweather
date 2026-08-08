@@ -77,10 +77,13 @@ p:last-child{margin-bottom:0}
 .note{font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px}
 .tbl-wrap{overflow-x:auto;margin:6px 0 2px}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
-th{font-size:12.5px;font-weight:600;color:var(--muted);text-align:right;padding:7px 8px;border-bottom:1.5px solid var(--ink);white-space:nowrap;cursor:pointer;user-select:none}
+/* ⚠️ thead에 한정한다. 행 머리(지역명)를 th로 바꾸면서 이 규칙이 tbody까지 먹어
+   모든 줄이 표두처럼 렌더됐다(2026-08-08 감사). */
+thead th{font-size:12.5px;font-weight:600;color:var(--muted);text-align:right;padding:7px 8px;border-bottom:1.5px solid var(--ink);white-space:nowrap;cursor:pointer;user-select:none}
+tbody th{font-weight:400;color:var(--ink);font-size:14px;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-tr.agg td{background:var(--paper2);font-weight:600}
+tr.agg td,tr.agg th{background:var(--paper2);font-weight:600}
 .up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--muted)}
 .links{display:grid;gap:10px;margin-top:6px}
 .links a{display:block;background:#fff;border:1px solid var(--line);padding:13px 16px;text-decoration:none;color:var(--ink);font-weight:600;font-size:14.5px}
@@ -180,7 +183,10 @@ footer a{color:var(--ink)}
      탭으로는 표두에 닿지도 않았다(2026-08-08 감사). aria-sort로 현재 정렬 상태도 알린다. */
   Array.prototype.forEach.call(ths, function(h,i){
     h.setAttribute('scope','col');
-    h.tabIndex=0; h.setAttribute('role','button');
+    /* ⚠️ role="button"을 주면 columnheader 역할이 사라져 열 머리 연결이 끊기고
+       aria-sort도 무효가 된다(columnheader/rowheader에서만 유효). 키보드 접근은
+       tabindex + keydown으로 충분하다(2026-08-08 감사). */
+    h.tabIndex=0;
     h.setAttribute('aria-sort','none');
     h.title='누르면 이 열로 정렬';
     function sort(){

@@ -169,7 +169,8 @@ try{
     el.className='mm-tile';
     el.style.background=bg;
     el.style.animationDelay=(i*22)+'ms';
-    el.innerHTML='<b style="color:'+tc+'">'+d[1]+'</b><span style="color:'+tc+'">'+(v>0?'+':'')+v.toFixed(2)+'%</span>';
+    var rv=Math.round(v*100)/100;   // 0.00인데 부호만 남는 '-0.00%' 방지
+    el.innerHTML='<b style="color:'+tc+'">'+d[1]+'</b><span style="color:'+tc+'">'+(rv>0?'+':'')+rv.toFixed(2)+'%</span>';
     grid.appendChild(el);
   });
   if(!grid.children.length)return;
@@ -188,7 +189,7 @@ try{
   if(best){
     var cls=best.v>0?'up':'dn';
     document.getElementById('wk-head').innerHTML='이번 주, <em class="'+cls+'">'
-      +best.nm+' '+(best.v>0?'+':'')+best.v.toFixed(2)+'%</em>';
+      +best.nm+' '+((Math.round(best.v*100)/100)>0?'+':'')+(Math.round(best.v*100)/100).toFixed(2)+'%</em>';
   }
   document.getElementById('wk-minimap').hidden=false;
 }catch(e){}
