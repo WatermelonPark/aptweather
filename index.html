@@ -2721,10 +2721,10 @@ function tbSigned(v){ return (v>0?'\u2212':v<0?'+':'')+Math.abs(v).toLocaleStrin
 /* 지도 채움색 — 표의 미래 칸과 같은 규칙(적정 대비, 100%p 만색, TB_MIN 바닥)을
    지면색에 합성해 '불투명'하게 만든다. 시도 도형이 겹쳐 그려지므로(경기 위에
    서울·인천) 반투명을 그대로 쓰면 겹친 곳만 색이 이중으로 쌓인다. */
-function mapFill(r){
+function mapFill(r,sc){
   if(r==null) return 'var(--paper2)';
   if(r===0) return 'var(--paper)';
-  var a=(TB_MIN+(1-TB_MIN)*Math.min(1,Math.abs(r)))*0.8;
+  var a=(TB_MIN+(1-TB_MIN)*Math.min(1,Math.abs(r)/(sc||1)))*0.8;
   var C=r>0?[198,58,48]:[38,110,180], P=[244,246,245];
   return 'rgb('+Math.round(P[0]+(C[0]-P[0])*a)+','+Math.round(P[1]+(C[1]-P[1])*a)+','
     +Math.round(P[2]+(C[2]-P[2])*a)+')';
@@ -2843,11 +2843,13 @@ function renderSidoGraph(){
     var v=Math.round(r.s[k]*3/r.n);            // 덜 찬 분기는 분기치로 환산
     var bh=Math.max(v>0?1:0,ih*v/mx);
     var x=PL+i*bw;
-    /* 색 = 지도·표 미래 칸과 같은 규칙(적정 대비, 붉을수록 부족). 회색 막대는
-       정보를 안 날랐다(2026-08-08 사용자). 미래를 흐리게 하지 않는 이유:
-       옅은 빨강이 '덜 부족'으로 읽혀 인코딩이 오염된다 — 구분은 배경 워시가 한다. */
+    /* 색 문법은 홈 표 그대로(2026-08-08 사용자): 과거 칸 = 그 분기의 매매가
+       등락(±2% 만색), 미래 칸 = 적정 대비 부족. 높이는 공급량 — 표의 '숫자'가
+       여기선 높이다. 가격 결측 분기는 회색(paper2). */
+    var fill=r.nf>0?mapFill(ref?1-v/ref:null)
+      :mapFill(r.m?r.m[k]:null,TB_PRICE_SCALE);
     h+='<rect x="'+(x+0.5).toFixed(1)+'" y="'+(y0-bh).toFixed(1)+'" width="'+(bw-1).toFixed(1)
-      +'" height="'+bh.toFixed(1)+'" class="gb" fill="'+mapFill(ref?1-v/ref:null)+'"></rect>';
+      +'" height="'+bh.toFixed(1)+'" class="gb" fill="'+fill+'"></rect>';
   });
   // 적정 기준선 — 존 페이지 분기 차트의 파선과 같은 어휘
   var ry=y0-ih*ref/mx;
@@ -2860,21 +2862,26 @@ function renderSidoGraph(){
     var last=i===rows.length-1;
     // 주기 라벨이 마지막 라벨과 4칸 이내로 붙으면 겹친다(29Q1/29Q2 실측) — 생략
     if(!last&&(i%8!==0||i>rows.length-5)) return;
-    h+='<text x="'+(PL+i*bw+bw/2).toFixed(1)+'" y="'+(H-6)+'" class="gr-xt">'+tbLabel(r.i,'q')+'</text>';
+    // 과거는 연도로(2017 · 2019 …), 미래는 분기 표기 유지(2026-08-08 사용자)
+    var xl=r.nf>0?tbLabel(r.i,'q'):String(Math.floor(r.i/12));
+    h+='<text x="'+(PL+i*bw+bw/2).toFixed(1)+'" y="'+(H-6)+'" class="gr-xt">'+xl+'</text>';
   });
   /* 탭 표적 — 막대는 화면에서 ~3px 폭이라 손가락으로 못 집는다(2026-08-08
      사용자: "눌렀을 때 숫자가 안 보임"). 분기 전체 높이를 덮는 투명 렉트가
      탭·호버·title을 받는다(존 시세 차트 .px-hit와 같은 패턴). 맨 위층. */
   rows.forEach(function(r,i){
     var v=Math.round(r.s[k]*3/r.n);
+    var pm=(r.nf===0&&r.m&&r.m[k]!=null)?tbPv(r.m[k]):null;
     h+='<rect class="gr-hit" x="'+(PL+i*bw).toFixed(1)+'" y="'+PT+'" width="'+bw.toFixed(1)
       +'" height="'+ih+'" fill="transparent" data-q="'+tbLabel(r.i,'q')
-      +'" data-v="'+v.toLocaleString('en-US')+'"'+(r.nf>0?' data-f="1"':'')+'>'
+      +'" data-v="'+v.toLocaleString('en-US')+'"'
+      +(pm?' data-p="'+pm+'"':'')+(r.nf>0?' data-f="1"':'')+'>'
       +'<title>'+tbLabel(r.i,'q')+' '+v.toLocaleString('en-US')+'세대'
-      +(r.nf>0?' · 착공 기준 추정':'')+' (적정 '+ref.toLocaleString('en-US')+')</title></rect>';
+      +(pm?' · 매매 '+pm:'')+(r.nf>0?' · 착공 기준 추정':'')
+      +' (적정 '+ref.toLocaleString('en-US')+')</title></rect>';
   });
   h+='</svg><div class="gr-tip" hidden></div></div>'
-    +'<p class="gr-note">막대는 분기 공급 세대수 — 붉을수록 적정물량보다 모자라고, 푸를수록 남습니다. 세로선 오른쪽은 착공 실적으로 추정한 미래입니다.</p>';
+    +'<p class="gr-note">높이는 분기 공급량. 색은 과거 = 매매가 등락, 미래 = 적정물량 대비 — 표와 같은 규칙입니다.</p>';
   el.innerHTML=h;
   el.dataset.done='1';
   grWireTip(el);
@@ -2890,6 +2897,7 @@ function grWireTip(el){
   function hide(){ tip.hidden=true; }
   function show(rc){
     tip.innerHTML=rc.getAttribute('data-q')+' <b>'+rc.getAttribute('data-v')+'</b>세대'
+      +(rc.getAttribute('data-p')?' <span>· 매매 '+rc.getAttribute('data-p')+'</span>':'')
       +(rc.getAttribute('data-f')?' <span>· 추정</span>':'');
     tip.hidden=false;
     var br=rc.getBoundingClientRect(),wr=box.getBoundingClientRect();
