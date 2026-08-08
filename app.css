@@ -662,6 +662,49 @@ table.adv thead th:first-child{text-align:center}
      행=기간, 열=시도 20곳. 칸 배경은 과거=가격 변동 세로 3등분, 미래=적정물량 대비.
      20열이라 가로 스크롤이 전제다 — 기간 열과 표두는 붙박이로 둔다. */
   .tb-bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:16px 0 10px}
+  /* ── 홈 3모드(지도/그래프/표) — 표시 여부는 섹션의 vm-* 클래스가 정한다.
+     표 전용 컨트롤(기간·대비·범례·각주)은 표 모드에서만 보인다. */
+  .tb-view{margin-left:auto}
+  #sec-score:not(.vm-table) #tb-per,
+  #sec-score:not(.vm-table) .tb-chk,
+  #sec-score:not(.vm-table) .tb-key:not(.map-key),
+  #sec-score:not(.vm-table) .tb-scroll,
+  #sec-score:not(.vm-table) #tb-foot{display:none}
+  #sec-score:not(.vm-map) #map-wrap{display:none}
+  #sec-score:not(.vm-graph) #graph-wrap{display:none}
+  .map-agg{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);margin:0 0 12px}
+  .map-agg a{flex:1;background:var(--paper);padding:9px 12px;text-decoration:none;color:var(--ink);
+    display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13px;min-height:44px}
+  .map-agg a:hover{background:var(--paper2)}
+  .map-agg a b{font-weight:600}
+  .map-agg a i{font-style:normal;font-size:11px;color:var(--muted);margin-left:auto;
+    font-variant-numeric:tabular-nums}
+  .map-box{max-width:480px;margin:0 auto}
+  .map-box svg{display:block;width:100%;height:auto}
+  .map-box path{stroke:var(--paper);stroke-width:1.2;transition:filter .12s}
+  .map-box a{cursor:pointer}
+  .map-box a:hover path,.map-box a:focus-visible path{filter:brightness(.92);stroke:var(--ink);stroke-width:1.4}
+  .map-box a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .map-box text{font-size:13px;font-weight:600;fill:var(--ink);text-anchor:middle;
+    pointer-events:none;paint-order:stroke;stroke:var(--paper);stroke-width:3px;stroke-linejoin:round}
+  .map-box text.ml-s{font-size:10.5px}
+  .map-key{margin:12px 0 0}
+  .gr-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+  .gr-lab{font-size:12.5px;color:var(--muted)}
+  .gr-bar select{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink);border-radius:0;min-height:36px}
+  .gr-more{margin-left:auto;font-size:12.5px;color:var(--ink);text-decoration:none;
+    border-bottom:1px solid var(--line);display:inline-block;padding:6px 0 4px}
+  .gr-more:hover{border-bottom-color:var(--ink)}
+  .gr-box{border:1px solid var(--line);background:var(--paper)}
+  .gr-box svg{display:block;width:100%;height:auto}
+  .gr-box .gb{fill:var(--ink2)}
+  .gr-box .gb.f{fill:var(--ink2);opacity:.38}
+  .gr-box .gr-ref{stroke:var(--ink);stroke-dasharray:4 3;stroke-width:1}
+  .gr-box .gr-now{stroke:var(--ink);stroke-width:2}
+  .gr-box .gr-rt{font-size:10.5px;fill:var(--ink)}
+  .gr-box .gr-xt{font-size:10.5px;fill:var(--muted);text-anchor:middle}
+  .gr-note{margin:10px 0 0;font-size:11.5px;color:var(--muted)}
   .tb-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-touch);overflow:hidden}
   .tb-seg button{border:0;background:transparent;color:var(--muted);padding:6px 15px;
     font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;border-right:1px solid var(--line)}

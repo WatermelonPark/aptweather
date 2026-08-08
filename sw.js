@@ -3,12 +3,13 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v80'; // rAF -> afterLayout 통일
+const VERSION = 'v81'; // 홈 3모드: 지도(기본)/그래프/표
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
   '/',
   '/data-core.js',   // 홈이 실제로 읽는 것
+  '/sido-geo.js',    // 홈 지도 모드 경계(기본 모드라 프리캐시)
   '/app.css',
   '/chart-4.4.1.umd.js',
   '/cycle/',
