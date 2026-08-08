@@ -583,7 +583,6 @@
     mask-image:radial-gradient(ellipse 70% 62% at 50% 44%,#000 34%,transparent 80%)}
   .home-hero>.wrap{position:relative;z-index:1}
   .home-hero .wrap{position:relative;z-index:1}
-  .home-eyebrow{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:14px}
   .home-hero h1{font-size:clamp(30px,6.4vw,48px);line-height:1.12;font-weight:700;
     letter-spacing:-.01em;margin-bottom:16px}
   .home-hero .sub{font-size:16px;color:var(--ink2);max-width:440px;margin:0 auto;line-height:1.6}
@@ -651,12 +650,8 @@ a.nav-btn,a.home-cta{text-decoration:none}
 
 /* 표 헤더는 항상 중앙정렬(2026-07-22 원칙) — 고정컬럼 헤더의 좌측 예외 무효화 */
 table.adv thead th:first-child{text-align:center}
-/* 제목이 모바일에서 '남나' 한 글자만 넘어가 못생겼다 — 부제로 분리(2026-08-02). */
-.sec-sub{color:var(--muted);font-size:13.5px}
 #sec-score{padding-top:22px}
-#sec-score h2{margin-bottom:4px}
 #sec-score .thead{margin-top:18px}
-.sec-sub{margin:0 0 0}
 
   /* ===== 공급·가격 통합표 (홈, 2026-08-06) =====================================
      행=기간, 열=시도 20곳. 칸 배경은 과거=가격 변동 세로 3등분, 미래=적정물량 대비.

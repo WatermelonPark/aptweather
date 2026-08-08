@@ -146,14 +146,13 @@
 
 <div id="view-home">
   <header class="home-hero"><div class="hero-map" id="hero-map" aria-hidden="true"></div><div class="wrap">
-    <div class="home-eyebrow" style="color:var(--muted)">아파트 · 공급량 · 투자지도</div>
     <h1>아공맵</h1>
-    <p class="sub">국가 통계로 전국 아파트의 공급과 시세를 추적합니다. 매주 자동 갱신.</p>
+    <p class="sub">언제 어디에 얼마나 지어지는가 — 전국 아파트 공급과 시세, 국가 통계로 매주 갱신</p>
   </div></header>
 
-  <section class="home-sec vm-map" id="sec-score"><div class="wrap">
-    <h2 class="h2-bal">전국 공급 지도</h2>
-    <p class="sec-sub">언제 어디에 얼마나 지어지는가</p>
+  <!-- 제목 텍스트는 히어로가 대신한다(2026-08-08 사용자: "텍스트 합치고 심플하게").
+       보이는 h2 없이도 이름은 남긴다 — 스크린리더·#score 목적지. -->
+  <section class="home-sec vm-map" id="sec-score" aria-label="전국 공급 지도"><div class="wrap">
 
     <div class="tb-bar">
       <!-- role=tablist는 자식이 role=tab이고 tabpanel을 제어할 때만 맞다. 여기서는

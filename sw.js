@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v81'; // 홈 3모드: 지도(기본)/그래프/표
+const VERSION = 'v83'; // 히어로 5블록 -> 2블록
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
@@ -28,8 +28,13 @@ const PRECACHE = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      // 일부 자원이 실패해도 설치가 깨지지 않도록 개별 처리
-      .then((c) => Promise.all(PRECACHE.map((u) => c.add(u).catch(() => null))))
+      // 일부 자원이 실패해도 설치가 깨지지 않도록 개별 처리.
+      // ⚠️ cache:'reload' — 기본 모드면 c.add()가 **브라우저 HTTP 캐시**를 탄다.
+      //    GitHub Pages가 max-age=600을 주므로, 배포 직후 VERSION을 올려 설치되는
+      //    회차가 옛 자산을 집어 새 캐시에 넣을 수 있다. 그러면 cache-first 자산은
+      //    다음 VERSION 범프까지 스테일이 굳는다(2026-08-08 디자인 세션 제보).
+      .then((c) => Promise.all(PRECACHE.map(
+        (u) => c.add(new Request(u, { cache: 'reload' })).catch(() => null))))
       .then(() => self.skipWaiting())
   );
 });
@@ -56,9 +61,11 @@ self.addEventListener('fetch', (e) => {
   //    깨진 중간 상태가 보인다. 그 원자성을 유지한다.
   //  - chart-4.4.1.umd.js는 파일명에 버전이 박혀 있어 cache-first로 안전하다.
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
+  //  - sido-geo.js는 도구로 재생성하는데 **파일명에 버전이 없다**. cache-first로 두면
+  //    경계를 고쳐도 VERSION을 올리기 전까지 옛 지도가 남는다(13.7KB라 비용도 작다).
   if (url.pathname === '/data.js' || url.pathname === '/app.css'
       || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json'
-      || url.pathname === '/data-size.json'
+      || url.pathname === '/data-size.json' || url.pathname === '/sido-geo.js'
       || url.pathname === '/data-trend.json' || url.pathname === '/data-sgg.json') {
     e.respondWith(
       fetch(req)
