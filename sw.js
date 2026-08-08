@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v85'; // 지도 자산 404 폴백
+const VERSION = 'v86'; // 네비 라벨: 리포트 -> 사이클
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
