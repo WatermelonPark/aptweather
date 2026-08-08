@@ -833,6 +833,8 @@ table.adv thead th:first-child{text-align:center}
   .tb-more a:hover{background:#000}
   .tb-more a:active{transform:scale(.98)}
   .zsort{margin-top:12px}
+  /* 허브: '17개 시도' 제목이 위 집계 박스에 붙어 있었다(2026-08-08 사용자) */
+  .z17{margin-top:36px}
 
   /* ===== 시도 상세 페이지 (2026-08-06) ======================================
      생활권 31곳 시절의 .zsec/.ztab 계열을 대체한다. 페이지가 6섹션에서

@@ -465,7 +465,10 @@ def build_page(z, calc, stats, pq, others):
 
 def build_hub(calc):
     agg = [z for z in calc['zones'] if z['agg']]
-    sido = SZ.zone_order(calc['zones'])
+    # 기본 정렬은 세대수순(2026-08-08 사용자) — 서버가 그 순서로 굽고,
+    # 등급순은 토글이 만든다. JS 정렬 키(data-gi/tot)는 순서와 무관하게 실린다.
+    sido = sorted([z for z in calc['zones'] if not z['agg']],
+                  key=lambda x: -disp_tot(x, calc['H']))
     desc = ('전국 17개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. '
             '실적은 국토교통부 준공, 앞으로 %d분기는 착공 실적 기준. 기준 %s.'
             % (calc['H'], calc['L']))
@@ -479,15 +482,15 @@ def build_hub(calc):
     for o in agg:
         h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
                  % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
-    h.append('</div><h2>17개 시도</h2>'
+    h.append('</div><h2 class="z17">17개 시도</h2>'
              '<div class="tb-seg zsort" id="sido-sort" role="group" aria-label="정렬 기준">'
-             '<button type="button" class="on" aria-pressed="true" data-s="g">등급순</button>'
-             '<button type="button" aria-pressed="false" data-s="a">세대수순</button></div>'
+             '<button type="button" class="on" aria-pressed="true" data-s="a">세대수순</button>'
+             '<button type="button" aria-pressed="false" data-s="g">등급순</button></div>'
              # ⚠️ 정렬은 순부족(tot) 내림차순이다. 공급 여유 등급은 tot가 음수라
              # '세대수가 많은 순'이라고 쓰면 반대로 읽힌다 — 여유가 가장 큰 충남이
              # 맨 아래에 온다(2026-08-07 감사). 부호를 포함해 정확히 쓴다.
-             '<p class="zsub" id="sido-note">등급순입니다. 같은 등급 안에서는 '
-             '모자란 세대수가 큰 순(공급 여유 등급에서는 여유가 적은 순).</p>'
+             '<p class="zsub" id="sido-note">모자란 세대수가 큰 순입니다'
+             '(공급 여유 등급은 여유가 적은 순).</p>'
              '<div class="zlinks" id="sido-list">')
     for o in sido:
         h.append('<a href="/zone/%s/" data-gi="%d" data-tot="%d"><b>%s</b>'
@@ -511,7 +514,7 @@ def build_hub(calc):
              ':function(x,y){return g(x,"data-gi")-g(y,"data-gi")||g(y,"data-tot")-g(x,"data-tot")});'
              'a.forEach(function(el){w.appendChild(el)});'
              'if(note)note.textContent=s==="a"'
-             '?"모자란 세대수가 큰 순입니다(공급 여유 등급은 여유가 적은 순). 등급은 필요량 대비 비율이라 순서가 다릅니다."'
+             '?"모자란 세대수가 큰 순입니다(공급 여유 등급은 여유가 적은 순)."'
              ':"등급순입니다. 같은 등급 안에서는 모자란 세대수가 큰 순(공급 여유 등급에서는 여유가 적은 순).";'
              '});})();</script>')
     h.append(FOOT)
