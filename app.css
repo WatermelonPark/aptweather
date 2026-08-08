@@ -701,7 +701,7 @@ table.adv thead th:first-child{text-align:center}
   .gr-more{margin-left:auto;font-size:12.5px;color:var(--ink);text-decoration:none;
     border-bottom:1px solid var(--line);display:inline-block;padding:6px 0 4px}
   .gr-more:hover{border-bottom-color:var(--ink)}
-  .gr-box{border:1px solid var(--line);background:var(--paper)}
+  .gr-box{border:1px solid var(--line);background:var(--paper);position:relative}
   .gr-box svg{display:block;width:100%;height:auto}
   /* 막대 색은 칸마다 적정 대비로 칠한다(인라인 fill, 50개뿐이라 비용 없음).
      미래 구분은 흐림이 아니라 배경 워시 — 옅은 색=덜 부족으로 읽히는 오염 방지. */
@@ -709,6 +709,13 @@ table.adv thead th:first-child{text-align:center}
   .gr-box .gr-ref{stroke:var(--ink);stroke-dasharray:4 3;stroke-width:1}
   .gr-box .gr-now{stroke:var(--ink);stroke-width:2}
   .gr-box .gr-rt{font-size:10.5px;fill:var(--ink);text-anchor:end}  /* 차트 안쪽 오른끝 정렬 */
+  .gr-box .gr-gl{stroke:var(--line)}
+  .gr-box .gr-yt{font-size:9.5px;fill:var(--muted)}
+  /* 막대 탭 값 표시 — 존 페이지 .q-tip과 같은 어휘 */
+  .gr-tip{position:absolute;background:var(--ink);color:#fff;padding:6px 9px;border-radius:3px;
+    font-size:12px;line-height:1.4;z-index:4;transform:translate(-50%,-100%);
+    pointer-events:none;white-space:nowrap}
+  .gr-tip span{color:#c9d4d0;font-size:10.5px}
   .gr-box .gr-xt{font-size:10.5px;fill:var(--muted);text-anchor:middle}
   .gr-note{margin:10px 0 0;font-size:11.5px;color:var(--muted)}
   .tb-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-touch);overflow:hidden}

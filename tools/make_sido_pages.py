@@ -342,6 +342,10 @@ def build_page(z, calc, stats, pq, others):
     # (2026-08-08 사용자). 방법론 전문은 홈 '산출 방법' 접힘이 담당한다.
     if z in AGG_NOTE:
         h.append('<p class="znote">%s</p>' % esc(AGG_NOTE[z]))
+    # 홈 그래프 연동 — 이 지역을 보고 홈으로 돌아가면 그래프가 이 지역으로
+    # 열린다(2026-08-08 사용자). sessionStorage라 탭을 닫으면 사라진다.
+    h.append('<script>try{sessionStorage.setItem("agong_gr",%s)}catch(e){}</script>'
+             % json.dumps(z, ensure_ascii=False))
     h.append('</div></header>')
 
     # ── 핵심 수치 ──

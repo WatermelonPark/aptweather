@@ -2780,7 +2780,15 @@ function renderSidoMap(){
 /* 그래프 = 시간축. 분기 공급 막대 + 적정 기준선. 지도가 잃는 시간축을 이 모드가
    담당한다. 데이터는 표와 같은 tbBuild/tbAgg — 세 모드가 한 원장을 쓴다. */
 var GR_REG='전국';
-function grSet(r){ GR_REG=r; var el=document.getElementById('graph-wrap'); if(el) el.dataset.done=''; renderSidoGraph(); }
+/* 시도 상세를 보고 돌아오면 그래프가 그 지역으로 열린다(2026-08-08 사용자).
+   sessionStorage: 탭을 닫으면 사라지는 화면 상태라 영구 수집이 아니다. */
+try{ GR_REG=sessionStorage.getItem('agong_gr')||'전국'; }catch(e){}
+function grSet(r){
+  GR_REG=r;
+  try{ sessionStorage.setItem('agong_gr',r); }catch(e){}
+  var el=document.getElementById('graph-wrap'); if(el) el.dataset.done='';
+  renderSidoGraph();
+}
 function renderSidoGraph(){
   var el=document.getElementById('graph-wrap');
   if(!el||el.dataset.done) return;
@@ -2800,6 +2808,16 @@ function renderSidoGraph(){
   h+='<div class="gr-box"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'
     +GR_REG+' 분기별 아파트 공급과 적정물량">';
   var y0=PT+ih;
+  /* y축 눈금 — 적정선 하나로는 막대의 절대 크기를 가늠할 기준이 없다
+     (2026-08-08 사용자 승인). 보기 좋은 단위로 2~3줄, 적정선과 겹치면 생략. */
+  var st=(function(x){ var p=Math.pow(10,Math.floor(Math.log(x)/Math.LN10));
+    var u=x/p; return (u>=5?5:u>=2.5?2.5:u>=2?2:1)*p; })(mx/3);
+  for(var gv=st;gv<mx*0.97;gv+=st){
+    if(Math.abs(gv-ref)/mx<0.05) continue;
+    var gy=y0-ih*gv/mx;
+    h+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(PL+iw)+'" y2="'+gy.toFixed(1)+'" class="gr-gl"></line>'
+      +'<text x="'+(PL+3)+'" y="'+(gy-3).toFixed(1)+'" class="gr-yt">'+gv.toLocaleString('en-US')+'</text>';
+  }
   // 실적/추정 경계 — 막대보다 먼저 그려야 워시가 뒤로 깔린다
   var fi=-1; rows.some(function(r,i){ if(r.nf>0){ fi=i; return true; } return false; });
   if(fi>=0){
@@ -2816,7 +2834,8 @@ function renderSidoGraph(){
        정보를 안 날랐다(2026-08-08 사용자). 미래를 흐리게 하지 않는 이유:
        옅은 빨강이 '덜 부족'으로 읽혀 인코딩이 오염된다 — 구분은 배경 워시가 한다. */
     h+='<rect x="'+(x+0.5).toFixed(1)+'" y="'+(y0-bh).toFixed(1)+'" width="'+(bw-1).toFixed(1)
-      +'" height="'+bh.toFixed(1)+'" class="gb" fill="'+mapFill(ref?1-v/ref:null)+'">'
+      +'" height="'+bh.toFixed(1)+'" class="gb" fill="'+mapFill(ref?1-v/ref:null)
+      +'" data-q="'+tbLabel(r.i,'q')+'" data-v="'+v.toLocaleString('en-US')+'"'+(r.nf>0?' data-f="1"':'')+'>'
       +'<title>'+tbLabel(r.i,'q')+' '+v.toLocaleString('en-US')+'세대'
       +(r.nf>0?' · 착공 기준 추정':'')+' (적정 '+ref.toLocaleString('en-US')+')</title></rect>';
   });
@@ -2832,10 +2851,50 @@ function renderSidoGraph(){
     if(!last&&(i%8!==0||i>rows.length-5)) return;
     h+='<text x="'+(PL+i*bw+bw/2).toFixed(1)+'" y="'+(H-6)+'" class="gr-xt">'+tbLabel(r.i,'q')+'</text>';
   });
-  h+='</svg></div>'
+  h+='</svg><div class="gr-tip" hidden></div></div>'
     +'<p class="gr-note">막대는 분기 공급 세대수 — 붉을수록 적정물량보다 모자라고, 푸를수록 남습니다. 세로선 오른쪽은 착공 실적으로 추정한 미래입니다.</p>';
   el.innerHTML=h;
   el.dataset.done='1';
+  grWireTip(el);
+}
+/* 막대 탭 → 값 표시. title은 데스크톱 호버 전용이라 모바일에서 개별 값을
+   볼 수 없었다(2026-08-08 사용자 승인). 규칙은 존 페이지 툴팁에서 실기기로
+   다진 그대로: click은 무조건 show, hover는 마우스 포인터일 때만(터치의 합성
+   mouseenter 상쇄 함정), 닫기는 바깥 pointerdown(iOS는 비인터랙티브 탭으로
+   document click이 안 온다). 문서 레벨 리스너는 한 번만 단다. */
+function grWireTip(el){
+  var tip=el.querySelector('.gr-tip'),svg=el.querySelector('svg'),box=el.querySelector('.gr-box');
+  if(!tip||!svg) return;
+  function hide(){ tip.hidden=true; }
+  function show(rc){
+    tip.innerHTML=rc.getAttribute('data-q')+' <b>'+rc.getAttribute('data-v')+'</b>세대'
+      +(rc.getAttribute('data-f')?' <span>· 추정</span>':'');
+    tip.hidden=false;
+    var br=rc.getBoundingClientRect(),wr=box.getBoundingClientRect();
+    tip.style.left='0px'; tip.style.top='0px';
+    var tw=tip.offsetWidth;
+    var x=br.left-wr.left+br.width/2, y=Math.max(br.top-wr.top,14)-6;
+    x=Math.max(tw/2+2,Math.min(x,wr.width-tw/2-2));
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  }
+  svg.addEventListener('click',function(e){
+    var rc=e.target.closest&&e.target.closest('rect.gb'); if(!rc)return;
+    e.stopPropagation(); show(rc);
+  });
+  svg.addEventListener('pointerover',function(e){
+    if(e.pointerType&&e.pointerType!=='mouse')return;
+    var rc=e.target.closest&&e.target.closest('rect.gb'); if(rc)show(rc);
+  });
+  svg.addEventListener('mouseleave',hide);
+  if(!grWireTip.doc){
+    grWireTip.doc=1;
+    var out=function(e){
+      var w=document.getElementById('graph-wrap');
+      if(w&&!w.contains(e.target)){ var t=w.querySelector('.gr-tip'); if(t)t.hidden=true; }
+    };
+    document.addEventListener('pointerdown',out);
+    document.addEventListener('click',out);
+  }
 }
 function renderHeroMap(){
   const el=document.getElementById('hero-map');
