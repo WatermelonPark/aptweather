@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v87'; // 표 정비 6건: 밴드·기호 정리
+const VERSION = 'v88'; // 밴드 톤다운·버튼 박스·접힘 리스트
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

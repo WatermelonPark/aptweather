@@ -620,6 +620,11 @@
   .sc-how[open] summary .t::after{content:' ▴'}
   .sc-how .src{font-size:11.5px;font-weight:500;color:var(--muted)}
   .sc-how .body{margin-top:9px;font-size:13px;line-height:1.9;color:var(--ink2)}
+  /* 통짜 서술 13줄이 정신없다(2026-08-08 사용자) — 항목별 왼쪽 괘선 리스트.
+     왼쪽 세로선은 .w-lead(존 페이지 리드)와 같은 어휘다. */
+  .sc-how .how-ls{list-style:none;margin:0;padding:0}
+  .sc-how .how-ls li{margin:9px 0;padding:2px 0 2px 13px;border-left:2px solid var(--line);line-height:1.75}
+  .sc-how .how-ls li>b:first-child{color:var(--ink)}
   .sc-tier{flex:none;width:62px;text-align:center;font-size:10.5px;font-weight:600;border-radius:0;padding:3px 2px;background:#f1f3f5;color:var(--muted);white-space:nowrap}
   .sc-tier.g4{background:#fdecea;color:#a93226}
   .sc-tier.g3{background:#fbeee9;color:#c0392b}
@@ -773,10 +778,12 @@ table.adv thead th:first-child{text-align:center}
   /* 실적/추정 경계 — 3px 선을 '말하는 밴드'로(2026-08-08 사용자). 문구는
      sticky로 가로 스크롤해도 시야에 남는다. 첫 칸 붙박이 규칙(td:first-child,
      (1,1,2))보다 특이도를 높여야 배경·정렬이 안 뒤집힌다 → tr 클래스 포함 (1,1,3). */
-  #tb-main tbody tr.tb-nowrow td{background:var(--ink);color:var(--paper);text-align:left;
-    padding:0;border-right:0;min-width:0}
+  /* 먹색 채움은 너무 진했다(2026-08-08 사용자) — 경계는 원래의 3px 먹선이
+     지고, 그 아래 흰 띠에 유색 설명이 얹힌다. */
+  #tb-main tbody tr.tb-nowrow td{background:var(--paper);text-align:left;
+    padding:0;border-right:0;min-width:0;border-top:3px solid var(--ink)}
   #tb-main tbody tr.tb-nowrow span{position:sticky;left:0;display:inline-block;
-    font-size:10.5px;font-weight:600;line-height:1;padding:5px 12px;white-space:nowrap}
+    font-size:10.5px;font-weight:600;color:var(--ink2);line-height:1;padding:5px 12px;white-space:nowrap}
   #tb-main tbody tr.now th:first-child{font-weight:700;color:var(--ink);font-style:normal}
   #tb-main tbody tr.yr td,#tb-main tbody tr.yr th{border-top:1px solid var(--line)}
   #tb-main .tb-mx{font-style:normal;color:var(--muted);font-size:9.5px;margin-left:2px}
@@ -785,10 +792,16 @@ table.adv thead th:first-child{text-align:center}
   #tb-main .tb-zl:hover{text-decoration:underline}
   /* 허브(/zone/) 진입점. 푸터에만 있어서 표를 보던 사람이 20곳을 나란히
      견주는 화면으로 갈 길이 없었다(2026-08-07 오딧). 표 다음 동작 자리에 둔다. */
-  .tb-more{margin:12px 0 0;font-size:13px}
-  .tb-more a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line);
-    display:inline-block;padding:6px 0 4px}   /* 22px면 터치 최소선(32px) 미달 */
-  .tb-more a:hover{border-bottom-color:var(--ink)}
+  /* 맨몸 텍스트 링크는 너무 없어 보인다(2026-08-08 사용자) — 카드 어휘의
+     박스 버튼으로. 표와의 간격도 벌린다. */
+  /* ⚠️ .home-sec p{margin:0 auto}(0,1,1)가 .tb-more(0,1,0)를 이긴다 — 기존
+     12px 간격도 사실 한 번도 적용된 적이 없었다(2026-08-08 실측: computed 0).
+     p를 붙여 특이도를 맞추고, auto를 살려 .home-sec p의 max-width:520px 안에서
+     가운데 정렬을 유지한다. */
+  .home-sec p.tb-more{margin:18px auto 0}
+  .tb-more a{display:block;text-align:center;border:1px solid var(--line);background:var(--paper);
+    color:var(--ink);text-decoration:none;font-size:13.5px;font-weight:600;padding:13px 16px}
+  .tb-more a:hover{border-color:var(--ink);background:var(--paper2)}
   .zsort{margin-top:12px}
 
   /* ===== 시도 상세 페이지 (2026-08-06) ======================================
