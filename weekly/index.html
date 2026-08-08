@@ -163,8 +163,9 @@ try{
     var v=row.ma[j]; if(v==null)return;
     if(d[0]!=='a0'&&(!best||Math.abs(v)>Math.abs(best.v)))best={nm:d[1],v:v};
     var a=Math.min(.78,.10+Math.abs(v)*2.4);
-    var bg=v>0?'rgba(224,86,74,'+a.toFixed(2)+')':(v<0?'rgba(58,123,213,'+a.toFixed(2)+')':'#e9edeb');
-    var tc=Math.abs(v)>=0.2?'#fff':(v>0?'#8f2318':(v<0?'#123c5c':'#5e6f74'));
+    var rv0=Math.round(Math.abs(v)*100)/100*(v<0?-1:1);   // 표시값이 0.00이면 색도 무색
+    var bg=rv0>0?'rgba(224,86,74,'+a.toFixed(2)+')':(rv0<0?'rgba(58,123,213,'+a.toFixed(2)+')':'#e9edeb');
+    var tc=Math.abs(v)>=0.2?'#fff':(rv0>0?'#8f2318':(rv0<0?'#123c5c':'#5e6f74'));
     var el=document.createElement('div');
     el.className='mm-tile';
     el.style.background=bg;
