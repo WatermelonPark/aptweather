@@ -703,11 +703,12 @@ table.adv thead th:first-child{text-align:center}
   .gr-more:hover{border-bottom-color:var(--ink)}
   .gr-box{border:1px solid var(--line);background:var(--paper)}
   .gr-box svg{display:block;width:100%;height:auto}
-  .gr-box .gb{fill:var(--ink2)}
-  .gr-box .gb.f{fill:var(--ink2);opacity:.38}
+  /* 막대 색은 칸마다 적정 대비로 칠한다(인라인 fill, 50개뿐이라 비용 없음).
+     미래 구분은 흐림이 아니라 배경 워시 — 옅은 색=덜 부족으로 읽히는 오염 방지. */
+  .gr-box .gr-futbg{fill:rgba(19,30,36,.05)}
   .gr-box .gr-ref{stroke:var(--ink);stroke-dasharray:4 3;stroke-width:1}
   .gr-box .gr-now{stroke:var(--ink);stroke-width:2}
-  .gr-box .gr-rt{font-size:10.5px;fill:var(--ink)}
+  .gr-box .gr-rt{font-size:10.5px;fill:var(--ink);text-anchor:end}  /* 차트 안쪽 오른끝 정렬 */
   .gr-box .gr-xt{font-size:10.5px;fill:var(--muted);text-anchor:middle}
   .gr-note{margin:10px 0 0;font-size:11.5px;color:var(--muted)}
   .tb-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-touch);overflow:hidden}
@@ -729,7 +730,7 @@ table.adv thead th:first-child{text-align:center}
   .tk-n{margin-left:2px}
   /* 과거 칸의 3등분(매매|전세|월세)을 말 대신 모양으로 — 실제 칸의 축소판 */
   .tk-tri{display:inline-flex;border:1px solid var(--line);cursor:help}
-  .tk-tri i{width:17px;height:15px;font-style:normal;font-size:9.5px;color:var(--muted);
+  .tk-tri i{width:30px;height:18px;font-style:normal;font-size:10.5px;color:var(--ink2);
     display:inline-flex;align-items:center;justify-content:center;background:var(--paper)}
   .tk-tri i+i{border-left:1px solid var(--line)}
   /* 표는 1,198px인데 .wrap이 820px이라 1440px 화면에서도 13/21열만 보이고
