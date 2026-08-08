@@ -349,9 +349,13 @@ jobs:
           N=$(gh issue list --state open --search "$TITLE in:title" --limit 1 --json number --jq '.[0].number' 2>/dev/null || true)
           if [ -z "$N" ] || [ "$N" = "null" ]; then
             # 담당자로 지정해 두면 그 이슈에 자동 구독된다 — 멘션과 겹치는 안전장치다.
-            N=$(gh issue create --title "$TITLE" --assignee "$OWNER" \
+            # `gh issue create`는 --json 미지원(unknown flag). 첫 실전(2026-08-08 20:33)에서
+            # 그 플래그로 죽었는데 2>/dev/null이 에러를 삼켜 경고 한 줄만 남았다.
+            # 생성 출력은 이슈 URL — 끝의 숫자를 잘라 쓰고, 에러는 더 이상 숨기지 않는다.
+            URL=$(gh issue create --title "$TITLE" --assignee "$OWNER" \
                   --body "매일 배치 결과가 코멘트로 쌓입니다. 이 이슈를 구독하면 알림을 받습니다. 닫아도 다음 회차에 새로 만들어집니다." \
-                  --json number --jq .number 2>/dev/null || true)
+                  || true)
+            N=$(echo "$URL" | grep -oE '[0-9]+$' || true)
           fi
           if [ -n "$N" ] && [ "$N" != "null" ]; then
             gh issue comment "$N" --body-file _report.md && echo "이슈 #$N 에 보고" || echo "::warning::이슈 코멘트 실패 — Step Summary에는 남았다"
