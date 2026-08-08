@@ -2753,7 +2753,16 @@ function renderSidoMap(){
   /* 라벨: 도 9곳은 도형 안에 들어가고, 광역시·세종 8곳은 도형이 작아 흰 테두리
      글자(halo)로 위에 얹는다. 탭 표적도 그 8곳만 투명 원으로 넓힌다. */
   var SMALL={'서울':1,'인천':1,'대전':1,'광주':1,'대구':1,'부산':1,'울산':1,'세종':1};
-  h+='<div class="map-box"><svg viewBox="0 0 '+SIDO_GEO.w+' '+SIDO_GEO.h
+  /* 범례는 지도 좌상단(서해 빈 공간) 오버레이 — 지도 아래 한 줄로 떨어져
+     있으면 지도와 안 붙어 읽힌다(2026-08-08 사용자). pointer-events:none이라
+     밑의 경기 북부 탭을 막지 않는다. */
+  h+='<div class="map-box">'
+    +'<div class="tb-key map-key"><span class="mk-r"><span class="tk"><i class="tk-d"></i>공급 여유</span>'
+    +'<span class="tk-ramp" aria-hidden="true"></span>'
+    +'<span class="tk"><i class="tk-u"></i>공급 부족</span></span>'
+    +'<span class="tk-n">적정물량 대비 누적 순부족 · 기준 '+ADV.sido.L+'</span>'
+    +'<span class="tk-n">지역을 누르면 상세 리포트</span></div>'
+    +'<svg viewBox="0 0 '+SIDO_GEO.w+' '+SIDO_GEO.h
     +'" role="img" aria-label="시도별 아파트 공급 부족 지도 — 붉을수록 부족, 푸를수록 여유">';
   SIDO_GEO.p.forEach(function(a){
     var z=Z[a.n]||{};
@@ -2764,11 +2773,7 @@ function renderSidoMap(){
       +'<text x="'+a.x+'" y="'+a.y+'" class="'+(SMALL[a.n]?'ml-s':'ml')+'">'+a.n+'</text>'
       +'<title>'+lab+'</title></a>';
   });
-  h+='</svg></div>'
-    +'<div class="tb-key map-key"><span class="tk"><i class="tk-d"></i>공급 여유</span>'
-    +'<span class="tk-ramp" aria-hidden="true"></span>'
-    +'<span class="tk"><i class="tk-u"></i>공급 부족</span>'
-    +'<span class="tk-n">적정물량 대비 누적 순부족 · 기준 '+ADV.sido.L+' · 지역을 누르면 상세 리포트</span></div>';
+  h+='</svg></div>';
   el.innerHTML=h;
   el.dataset.done='1';
 }

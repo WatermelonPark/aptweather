@@ -679,7 +679,7 @@ table.adv thead th:first-child{text-align:center}
   .map-agg a b{font-weight:600}
   .map-agg a i{font-style:normal;font-size:11px;color:var(--muted);margin-left:auto;
     font-variant-numeric:tabular-nums}
-  .map-box{max-width:480px;margin:0 auto}
+  .map-box{max-width:480px;margin:0 auto;position:relative}
   .map-box svg{display:block;width:100%;height:auto}
   .map-box path{stroke:var(--paper);stroke-width:1.2;transition:filter .12s}
   .map-box a{cursor:pointer}
@@ -688,7 +688,12 @@ table.adv thead th:first-child{text-align:center}
   .map-box text{font-size:13px;font-weight:600;fill:var(--ink);text-anchor:middle;
     pointer-events:none;paint-order:stroke;stroke:var(--paper);stroke-width:3px;stroke-linejoin:round}
   .map-box text.ml-s{font-size:10.5px}
-  .map-key{margin:12px 0 0}
+  /* 지도 좌상단 오버레이(서해 빈 공간). 세로로 쌓고, 밑의 탭을 막지 않는다. */
+  .map-key{position:absolute;top:2px;left:0;z-index:2;pointer-events:none;
+    flex-direction:column;align-items:flex-start;gap:4px;margin:0;text-align:left}
+  .map-key .mk-r{display:inline-flex;align-items:center;gap:6px}
+  .map-key .tk-ramp{width:56px}
+  .map-key .tk-n{font-size:10.5px;line-height:1.4;margin:0}
   .gr-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
   .gr-lab{font-size:12.5px;color:var(--muted)}
   .gr-bar select{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
@@ -792,16 +797,19 @@ table.adv thead th:first-child{text-align:center}
   #tb-main .tb-zl:hover{text-decoration:underline}
   /* 허브(/zone/) 진입점. 푸터에만 있어서 표를 보던 사람이 20곳을 나란히
      견주는 화면으로 갈 길이 없었다(2026-08-07 오딧). 표 다음 동작 자리에 둔다. */
-  /* 맨몸 텍스트 링크는 너무 없어 보인다(2026-08-08 사용자) — 카드 어휘의
-     박스 버튼으로. 표와의 간격도 벌린다. */
+  /* 회색 테두리 상자는 어떤 기존 어휘에도 안 속해 따로 놀았다(2026-08-08
+     사용자: "어색하고 눈에 안 띔") — 히어로 주 CTA(.home-cta: 먹색 채움·
+     radius 3px)와 같은 계열로, 섹션의 마무리 동작임을 분명히 한다. */
   /* ⚠️ .home-sec p{margin:0 auto}(0,1,1)가 .tb-more(0,1,0)를 이긴다 — 기존
      12px 간격도 사실 한 번도 적용된 적이 없었다(2026-08-08 실측: computed 0).
      p를 붙여 특이도를 맞추고, auto를 살려 .home-sec p의 max-width:520px 안에서
      가운데 정렬을 유지한다. */
   .home-sec p.tb-more{margin:18px auto 0}
-  .tb-more a{display:block;text-align:center;border:1px solid var(--line);background:var(--paper);
-    color:var(--ink);text-decoration:none;font-size:13.5px;font-weight:600;padding:13px 16px}
-  .tb-more a:hover{border-color:var(--ink);background:var(--paper2)}
+  .tb-more a{display:block;text-align:center;background:var(--ink);color:var(--paper);
+    text-decoration:none;font-size:14.5px;font-weight:600;padding:14px 16px;
+    border-radius:var(--r-touch);transition:.15s}
+  .tb-more a:hover{background:#000}
+  .tb-more a:active{transform:scale(.98)}
   .zsort{margin-top:12px}
 
   /* ===== 시도 상세 페이지 (2026-08-06) ======================================
