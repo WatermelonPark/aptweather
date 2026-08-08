@@ -121,6 +121,7 @@ if errorlevel 1 (
 )
 
 python tools\make_indicator_pages.py
+python toolsefresh_cycle_data.py
 if errorlevel 1 (
   echo ERROR: make_indicator_pages failed
   exit /b 18
