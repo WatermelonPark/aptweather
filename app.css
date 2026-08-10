@@ -668,8 +668,7 @@ table.adv thead th:first-child{text-align:center}
   #sec-score:not(.vm-table) #tb-per,
   #sec-score:not(.vm-table) .tb-chk,
   #sec-score:not(.vm-table) .tb-key:not(.map-key),
-  #sec-score:not(.vm-table) .tb-scroll,
-  #sec-score:not(.vm-table) #tb-foot{display:none}
+  #sec-score:not(.vm-table) .tb-scroll{display:none}
   #sec-score:not(.vm-map) #map-wrap{display:none}
   #sec-score:not(.vm-graph) #graph-wrap{display:none}
   .map-agg{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);margin:0 0 12px}
@@ -710,8 +709,8 @@ table.adv thead th:first-child{text-align:center}
   .gr-more:hover{border-bottom-color:var(--ink)}
   .gr-box{border:1px solid var(--line);background:var(--paper);position:relative}
   .gr-box svg{display:block;width:100%;height:auto}
-  /* 막대 색은 칸마다 적정 대비로 칠한다(인라인 fill, 50개뿐이라 비용 없음).
-     미래 구분은 흐림이 아니라 배경 워시 — 옅은 색=덜 부족으로 읽히는 오염 방지. */
+  /* 막대 색은 홈 표와 같은 문법(21ba32f) — 과거=그 분기 매매 등락, 미래=적정 대비.
+     인라인 fill(50개뿐이라 비용 없음). 미래 구분은 흐림이 아니라 배경 워시. */
   .gr-box .gr-futbg{fill:rgba(19,30,36,.05)}
   .gr-box .gr-ref{stroke:var(--ink);stroke-dasharray:4 3;stroke-width:1.5}  /* 가시성(사용자) */
   .gr-box .gr-now{stroke:var(--ink);stroke-width:2}

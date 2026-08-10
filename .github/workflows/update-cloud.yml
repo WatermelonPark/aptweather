@@ -183,7 +183,13 @@ jobs:
           # split_data.py가 내는 5파일을 모두 옮긴다. data-sgg/data-size가 빠지면
           # checkout된 옛 파일이 그대로 남아 '지연 로드만 몇 주 묵는' 부분배포가 된다
           # (2026-08-04 감사: 두 파일은 어떤 목록에도 없어 사람이 손으로만 커밋돼 왔다).
-          cp "$SRC/data.js" "$SRC/data-core.js" "$SRC/data-rest.json" "$SRC/data-trend.json" .
+          # ⚠️ 기본 셸이 bash -e라, 여기서 죽으면 ❌ 기록 없이 스텝이 즉사하고
+          # always() 보고가 앞선 ✅ 줄만 담아 '전부 성공' 코멘트를 보낸다(2026-08-10
+          # 리뷰). 실패를 리포트에 남기고 죽는다.
+          if ! cp "$SRC/data.js" "$SRC/data-core.js" "$SRC/data-rest.json" "$SRC/data-trend.json" .; then
+            rep "❌ 산출물 복사 실패 — 아티팩트가 불완전하다(러너 $SRC)"
+            exit 1
+          fi
           for f in data-sgg.json data-size.json; do
             [ -f "$SRC/$f" ] && cp "$SRC/$f" . || echo "::warning::$f 산출물 없음(구 러너?) — 기존 파일 유지"
           done
@@ -267,7 +273,7 @@ jobs:
             echo "::warning::pillow 미설치로 공유 카드 생성을 건너뛴다(인프라 문제)"
           fi
           TARGETS="data.js data-core.js data-rest.json data-trend.json data-sgg.json data-size.json zone sitemap.xml jeonse-ratio moveins cycle share tools/data/.home_stamp"
-          git add -A -- $TARGETS
+          git add -A -- $TARGETS || { rep "❌ git add 실패 — TARGETS 경로 확인"; exit 1; }
           if git diff --cached --quiet; then
             rep "➖ 커밋 없음 — 원천이 그대로라 바뀐 파일이 없다(정상)"
             echo "변경 없음"
@@ -276,7 +282,7 @@ jobs:
           NF=$(git diff --cached --name-only | wc -l | tr -d ' ')
           git config user.name  "stats-bot"
           git config user.email "actions@users.noreply.github.com"
-          git commit -m "데이터 자동 갱신 (클라우드 冗長)"
+          git commit -m "데이터 자동 갱신 (클라우드 冗長)" || { rep "❌ git commit 실패"; exit 1; }
           # 경합 대비 pull --rebase 후 push.
           # ⚠️ 예전엔 `-X theirs`로 충돌을 자동 해소했는데, data.js는 STATS가 **한 줄에
           #    170만 자**라 사람이 그 줄을 손대면 봇과 항상 같은 훅에서 부딪힌다. 그때

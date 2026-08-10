@@ -33,6 +33,9 @@ SIZE = os.path.join(ROOT, 'data-size.json')
 # 기본통계 세그먼트에서 그걸 실제로 누른 사람만 필요하므로 별도 지연 파일로 뺀다
 # (2026-08-01: rest 408KB → 250KB). index.html ensureSizeStats()가 받아 채운다.
 LAZY_STATS = ['규모별']
+# 파일 → 그 파일이 싣는 계열. 감시(check_freshness)가 이걸로 조회 목록을 만든다 —
+# 지연 파일이 늘면 여기만 늘리면 감시가 자동으로 따라온다(파일명 하드코딩 금지).
+LAZY_FILES = {os.path.basename(SIZE): list(LAZY_STATS)}
 
 # 시군구·서울구 전체 시계열은 '구를 실제로 고른 사람'만 필요하다. trend에 통째로
 # 실으면 통계 탭을 여는 모든 방문자가 4배 큰 파일을 받는다(실측 91→418KB gzip).

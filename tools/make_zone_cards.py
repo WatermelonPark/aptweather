@@ -149,7 +149,7 @@ def main():
         os.makedirs(OUT_DIR)
     names = zone_names()
     if not names:
-        print('zone/ 에 생활권 디렉토리가 없다 — make_zone_pages.py를 먼저 실행할 것')
+        print('zone/ 에 지역 디렉토리가 없다 — make_sido_pages.py를 먼저 실행할 것')
         return 1
     for n in names:
         make(n)

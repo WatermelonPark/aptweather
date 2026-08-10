@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v95'; // 그래프 안내문 다듬기
+const VERSION = 'v96'; // 코드리뷰 10건 수정(감시 교정·표 지연 렌더·sido-geo SWR)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
@@ -61,11 +61,13 @@ self.addEventListener('fetch', (e) => {
   //    깨진 중간 상태가 보인다. 그 원자성을 유지한다.
   //  - chart-4.4.1.umd.js는 파일명에 버전이 박혀 있어 cache-first로 안전하다.
   // 정적 자산 규칙보다 반드시 먼저 판정할 것.
-  //  - sido-geo.js는 도구로 재생성하는데 **파일명에 버전이 없다**. cache-first로 두면
-  //    경계를 고쳐도 VERSION을 올리기 전까지 옛 지도가 남는다(13.7KB라 비용도 작다).
+  //  - sido-geo.js는 여기 넣지 않는다(2026-08-10 리뷰로 정정). 아래 정적 자산
+  //    분기가 '캐시 즉시 응답 + 백그라운드 갱신'이라 재생성분은 다음 방문에
+  //    따라온다 — 경계선이 한 방문 늦는 건 데이터 스테일과 달리 무해하고,
+  //    network-first로 두면 파서 블로킹 스크립트가 매 방문 네트워크 왕복을 기다린다.
   if (url.pathname === '/data.js' || url.pathname === '/app.css'
       || url.pathname === '/data-core.js' || url.pathname === '/data-rest.json'
-      || url.pathname === '/data-size.json' || url.pathname === '/sido-geo.js'
+      || url.pathname === '/data-size.json'
       || url.pathname === '/data-trend.json' || url.pathname === '/data-sgg.json') {
     e.respondWith(
       fetch(req)

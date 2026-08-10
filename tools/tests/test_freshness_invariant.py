@@ -129,6 +129,9 @@ def test_live_data_satisfies_every_rule():
 
 import urllib.parse as _up
 
+OKP = '<p>2026.06 기준 · 분기 적정물량</p>'
+OLDP = '<p>2026.05 기준 · 분기 적정물량</p>'
+
 
 class _FakeWeb:
     """라이브 대신 미리 정한 페이지를 돌려준다."""
@@ -142,23 +145,24 @@ class _FakeWeb:
         return type('R', (), {'read': lambda _self: body.encode('utf-8')})()
 
 
-def _derived(monkeypatch, seoul, gyeonggi, jr='2026.06 기준', mv='2026-07-29'):
+def _derived(monkeypatch, seoul, gyeonggi, jr='2026.06 기준', mv='2026-07-29',
+             nat=None):
     pages = {
+        C.SITE + '/zone/' + _up.quote('전국') + '/': (nat if nat is not None else OKP),
         C.SITE + '/zone/' + _up.quote('서울') + '/': seoul,
         C.SITE + '/zone/' + _up.quote('경기') + '/': gyeonggi,
         C.SITE + '/jeonse-ratio/': jr,
         C.SITE + '/moveins/': '"dateModified": "%s"' % mv,
     }
     monkeypatch.setattr(C.urllib.request, 'urlopen', _FakeWeb(pages))
-    adv = {'sido': {'zones': [{'z': '전국'}, {'z': '서울'}, {'z': '경기'}]},
+    # ⚠️ 기대 시점은 준공이 아니라 unsold_prd다 — 페이지가 찍는 문자열('기준 ·
+    # 분기 적정물량')의 날짜가 미분양 기준월이기 때문(2026-08-10 리뷰로 교정).
+    adv = {'sido': {'zones': [{'z': '전국'}, {'z': '서울'}, {'z': '경기'}],
+                    'unsold_prd': '2026.06'},
            'occupancy': {'rows': [{'p': '2026Q2', 'e': False}]}}
     stats = {'준공': {'dates': ['2026.06'], 'series': {}},
              '전세가율': {'dates': ['2026.06'], 'series': {}}}
     return C.check_derived_pages(adv, stats)
-
-
-OKP = '<p>2026.06 기준 · 분기 적정물량</p>'
-OLDP = '<p>2026.05 기준 · 분기 적정물량</p>'
 
 
 def test_derived_pages_pass_when_fresh(monkeypatch):
@@ -187,6 +191,9 @@ def test_indicator_dateModified_respects_the_publish_clamp(monkeypatch):
     assert any('moveins' in x for x in f), f
 
 
-def test_aggregate_regions_have_no_page(monkeypatch):
-    """전국·수도권·지방은 집계라 페이지가 없다 — 조회하면 전부 실패로 뜬다."""
-    assert _derived(monkeypatch, OKP, OKP) == []
+def test_aggregate_regions_are_monitored_too(monkeypatch):
+    """전국·수도권·지방도 페이지가 **있다**(zone/전국/ 등) — 예전엔 '없다'는 틀린
+    전제로 감시에서 빼서, 유입이 가장 많은 전국 페이지의 스테일을 원리적으로
+    못 잡았다(2026-08-10 리뷰). 집계 페이지만 옛 시점이어도 잡혀야 한다."""
+    f = _derived(monkeypatch, OKP, OKP, nat=OLDP)
+    assert len(f) == 1 and '전국(2026.05)' in f[0], f

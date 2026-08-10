@@ -33,6 +33,8 @@ except Exception:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import update_adv_data as U  # noqa: E402  (표 설정을 배치와 공유 — 단일 출처)
+import sido_zones as SZ      # noqa: E402  (지역 정의의 정본 — 손 목록 금지)
+import make_indicator_pages as I  # noqa: E402  (공개일·클램프 규칙 공유)
 import split_data as S       # noqa: E402  (지연 로드 분리 규칙을 공유 — 부작용 없는 import)
 
 SITE = 'https://www.agongmap.co.kr'
@@ -75,7 +77,7 @@ def live_adv_stats():
     # 그 계열이 아래 `if '규모별' in stats` 게이트에 안 걸려 감시가 조용히 꺼졌고,
     # 커버리지 가드는 '초과 계열'만 보므로 원리적으로 못 잡았다(2026-08-07 감사).
     # SKIPPED에 넣어야 main()의 '절반 넘게 못 봤으면 OK는 근거가 없다' 게이트에도 걸린다.
-    for lazy in ('/' + os.path.basename(S.SIZE),):
+    for lazy in ('/' + f for f in S.LAZY_FILES):
         try:
             got = (get_json(SITE + lazy) or {}).get('STATS') or {}
             if not got:
@@ -134,9 +136,10 @@ def _q_to_date(q):
 # (STATS 22곳 = 17시도 + 전국·수도권·지방·기타광역시·기타지방,
 #  ADV.sido 20곳 = 17시도 + 전국·수도권·지방) 전부 더하면 전국의 세 배가 나온다.
 # 개수가 20/22/17로 달라 보이는 건 집계를 몇 개 안고 있느냐의 차이일 뿐이다.
-SIDO17 = ['서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
-          '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주']
-CAPITAL3 = ['서울', '경기', '인천']
+# 손으로 옮겨 적으면 정본(개칭·구성 변경)에서 갈라져 합계 검사가 행을 조용히
+# 건너뛴다 — 이 파일이 LAZY_STATS에서 겪은 그 패턴이라 sido_zones에서 유도한다.
+SIDO17 = [z for z in SZ.ORDER if z not in SZ.AGG]
+CAPITAL3 = [z for z in SIDO17 if SZ.REGION[z] == '수도권']
 LOCAL14 = [r for r in SIDO17 if r not in CAPITAL3]
 
 # 검사할 (부분들, 전체) 쌍. 시도합=전국 하나만 보면 '어딘가 틀렸다'까지만 알지만,
@@ -205,17 +208,22 @@ def check_sido_sum(stats):
                     bad.append('%s(%s %s vs 합 %s)' % (dt, whole, v, tot))
             if bad:
                 marks.append('%s ❌%d' % (label, len(bad)))
+                # ⚠️ 교정 명령은 계열 소속대로. 분양·미분양은 SUPPLY_CONF 소속이라
+                # --heal-basic이 assert로 죽는다 — R-ONE 전량 재시딩(--seed-supply)이 경로다.
+                heal = ('--seed-supply' if k in U.SUPPLY_CONF else '--heal-basic %s' % k)
                 out.append('%s %s 어긋남 %d건: %s%s — 과거 칸이 굳었을 수 있다'
-                           ' (tools/update_adv_data.py --heal-basic %s 로 교정)'
+                           ' (tools/update_adv_data.py %s 로 교정)'
                            % (k, label, len(bad), ', '.join(bad[:3]),
-                              ' 외' if len(bad) > 3 else '', k))
+                              ' 외' if len(bad) > 3 else '', heal))
             else:
                 marks.append('%s %d/%d' % (label, n, n))
         print('  %-5s %s' % (k, ' · '.join(marks)))
     return out
 
 
-INDICATOR_PUBLISHED = '2026-07-29'   # make_indicator_pages.PUBLISHED와 같은 값
+# 공개일은 생성기의 것을 그대로 쓴다 — 값 사본은 한쪽만 바뀌는 순간 클램프
+# 기대값이 갈라져 매일 오탐이거나 진짜 스테일이 가려진다.
+INDICATOR_PUBLISHED = I.PUBLISHED
 
 
 def check_derived_pages(adv, stats):
@@ -234,23 +242,38 @@ def check_derived_pages(adv, stats):
     print('[파생 페이지 — 화면이 데이터와 같은 시점인가]')
     try:
         # zones는 이름 목록이 아니라 지역 딕셔너리 리스트다({'z':'서울', ...}).
-        # 집계 셋(전국·수도권·지방)은 별도 페이지가 없으므로 뺀다.
+        # ⚠️ 집계 셋(전국·수도권·지방)도 페이지가 **있다**(zone/전국/ 등, 같은
+        # 생성기가 굽는다). 예전엔 '없다'는 틀린 전제로 빼서, 유입이 가장 많은
+        # 전국 페이지의 스테일을 원리적으로 못 잡았다(2026-08-10 리뷰).
         zones = (adv.get('sido') or {}).get('zones') or []
-        names = [z.get('z') for z in zones if isinstance(z, dict)]
-        names = [n for n in names if n and n not in ('전국', '수도권', '지방')]
-        exp = (stats.get('준공') or {}).get('dates', [None])[-1]
+        names = [z.get('z') for z in zones if isinstance(z, dict) and z.get('z')]
+        # ⚠️ 기대 시점은 페이지가 실제로 찍는 그 값이어야 한다. 정규식이 잡는
+        # '기준 · 분기 적정물량' 문자열의 날짜는 **미분양 기준월**(ADV.sido.unsold_prd)
+        # 이다 — 준공 최신월과 비교하면 두 표의 발표 시점이 어긋나는 회차(별개
+        # 표라 매년 가능)에 정상 페이지 17곳이 전부 오탐, 반대 조합이면 진짜
+        # 스테일을 놓친다(2026-08-10 리뷰).
+        exp = (adv.get('sido') or {}).get('unsold_prd')
         if not names or not exp:
             SKIPPED.append('파생 페이지')
-            print('  판정 못 함 — sido.zones 또는 STATS.준공이 비었다')
+            print('  판정 못 함 — sido.zones 또는 sido.unsold_prd가 비었다')
             return out
-        bad = []
-        for n in names:
+        # 20페이지를 직렬로 돌면 CDN이 느릴 때 최대 20×60s — 잡 타임아웃을 스스로
+        # 넘겨 진짜 신호가 가려진다(2026-08-10 리뷰). 병렬 8 + 15s면 정상시 2 RTT.
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _get(n):
             try:
-                h = urllib.request.urlopen(urllib.request.Request(
+                return n, urllib.request.urlopen(urllib.request.Request(
                     SITE + '/zone/' + urllib.parse.quote(n) + '/', headers=UA),
-                    timeout=60).read().decode('utf-8', 'replace')
+                    timeout=15).read().decode('utf-8', 'replace')
             except Exception as e:
-                bad.append('%s(조회실패 %s)' % (n, str(e)[:20]))
+                return n, e
+        with ThreadPoolExecutor(8) as ex:
+            got = list(ex.map(_get, names))
+        bad = []
+        for n, h in got:
+            if isinstance(h, Exception):
+                bad.append('%s(조회실패 %s)' % (n, str(h)[:20]))
                 continue
             m = re.search(r'(\d{4}\.\d{2}) 기준 · 분기 적정물량', h)
             if not m:
@@ -487,10 +510,11 @@ def main():
     # data-size.json으로 빠졌을 때 실제로 그렇게 감시가 꺼져 있었다(2026-08-04).
     # 라이브에 있어야 할 계열이 사라진 것 자체가 실패다. 조회 실패로 못 받은
     # 경우는 위 live_adv_stats가 SKIPPED에 남겨 뒀다.
-    for name in S.LAZY_STATS:
-        if name not in stats:
-            fails.append('%s이(가) 라이브에 없다 — %s 배포·조회 확인 필요'
-                         % (name, os.path.basename(S.SIZE)))
+    for fname, series in S.LAZY_FILES.items():
+        for name in series:
+            if name not in stats:
+                fails.append('%s이(가) 라이브에 없다 — %s 배포·조회 확인 필요'
+                             % (name, fname))
     if '규모별' in stats:
         sz = U.SIZE_TBLS[0][1]
         last = (stats['규모별'].get('dates') or [None])[-1]
