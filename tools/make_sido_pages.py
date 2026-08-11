@@ -461,12 +461,10 @@ def build_page(z, calc, stats, pq, others):
                        ('%.0f%%' % (row['pmr'] * 100)) if row.get('pmr') is not None else '–'))
     if foot:
         h.append('<tfoot>' + ''.join(foot) + '</tfoot>')
+    # 표 아래 설명 문단은 2026-08-11 사용자 결정으로 삭제 — 굵은 줄은 보면 알고,
+    # 미분양·인허가는 행을 누르면 열리는 탭 안내(zrefnote)가 설명을 맡는다.
     h.append('</table></div>'
-             '<p class="tb-refnote" id="zrefnote" hidden></p>'
-             '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기에 실제로 없었다는 뜻입니다'
-             '(굵은 줄 위는 준공, 아래는 착공). 맨 아래 미분양·인허가 두 줄은 '
-             '순위에 넣지 않은 참고 수치입니다 — 적정 대비 칸은 미분양이 분기, '
-             '인허가가 연간 적정물량 기준입니다.</p>' % calc['H'])
+             '<p class="tb-refnote" id="zrefnote" hidden></p>')
     # 표의 기본 화면을 맨 아래(미래 분기)로 — 공급을 보러 온 사람이 매번 28행을
     # 내리게 하지 않는다(2026-08-11 사용자). 과거가 궁금하면 위로 올리면 된다.
     # 참고 행 탭 안내(2026-08-11 사용자) — 데스크톱 호버가 없는 모바일에서도
