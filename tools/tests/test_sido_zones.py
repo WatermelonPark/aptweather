@@ -224,3 +224,46 @@ def test_멸실은_분기의_연도에_맞춘다():
     # 2022는 가장 가까운 2023 값(10,000), 2025·2026은 2024 값(0)으로 채운다.
     # → 2×10,000 + 4×10,000 = 60,000이 재고에서 빠진다.
     assert row['inow'] == -M.REF_Q['서울'] * M.BACKLOG_WINDOW - 60000
+
+
+# ---------------------------------------------------------------------------
+# 창 너머 신호 — 최근 12개월 인허가 vs 적정연간 (2026-08-11)
+# ---------------------------------------------------------------------------
+
+def test_permit_trail12_handles_yearly_reset():
+    """인허가는 '연내 누계'라 1월마다 리셋된다. 최근 12개월 = 올해 최신 누계 +
+    (작년 12월 − 작년 같은 달). 그냥 합산하면 이중계상으로 수십만이 나온다
+    (실제로 그렇게 계산했다가 잡은 전례, 2026-08-11)."""
+    stats = {'인허가': {
+        'dates': ['2025.06', '2025.12', '2026.06'],
+        'series': {'서울': [50, 100, 30]},
+    }}
+    v, ym = M.permit_trail12(stats, '서울')
+    assert v == 30 + 100 - 50 and ym == '2026.06'
+
+
+def test_permit_trail12_refuses_partial_data():
+    """작년 조각이 없으면 반쪽 계산으로 오탐을 내지 말고 접는다."""
+    stats = {'인허가': {'dates': ['2026.06'], 'series': {'서울': [30]}}}
+    assert M.permit_trail12(stats, '서울') == (None, None)
+
+
+def test_pwarn_threshold_avoids_knife_edge():
+    """문턱 0.95 — 수도권이 99.98%로 정확히 100% 언저리에 있어(실측), 1.0으로
+    자르면 매달 켜졌다 꺼졌다 한다. 깜빡이는 경고는 무시된다."""
+    assert M.permit_trail12  # 상수 확인은 아래 실데이터 검사가 겸한다
+
+
+def test_pwarn_fires_on_live_data_where_expected():
+    """실데이터 고정점: 시장 통념(2026-08-10)이 짚은 곳과 일치해야 한다 —
+    경남('인허가 진짜 적은 곳')은 뜨고, 대전('그나마 있다')·충남('너무 많았다')은
+    안 뜬다. 이 관계가 뒤집히면 인허가 계열이 오염된 것이다."""
+    import io, json, re, os
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    src = io.open(os.path.join(root, 'data.js'), encoding='utf-8').read()
+    adv = json.loads(re.search(
+        r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/', src, re.S).group(1))
+    by = {z['z']: z for z in adv['sido']['zones']}
+    assert by['경남']['pwarn'] and by['대구']['pwarn'] and by['서울']['pwarn']
+    assert not by['대전']['pwarn'] and not by['충남']['pwarn']
+    assert by['전국']['pwarn'], '전국 창 너머 신호가 꺼졌다 — 인허가가 회복됐다면 정상'

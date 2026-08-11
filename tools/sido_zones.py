@@ -169,6 +169,44 @@ def unsold_latest(stats, region):
     return None, None
 
 
+def permit_trail12(stats, region):
+    """최근 12개월 인허가 합. (호, 'YYYY.MM') — 계산 불가면 (None, None).
+
+    인허가는 **순위 산식에 넣지 않는다**(삽을 안 뜬 계획이 섞여 착공 기반 대비
+    1.29~1.68배 부푼다 — 재편 때 실측). 여기서 뽑는 건 화면에 같이 놓을
+    **창 너머 신호**다: 판정은 앞으로 3년(착공이 닿는 데까지)을 보는데, 인허가는
+    3~4년 뒤 입주라 판정 창 밖의 공급을 미리 보여준다. 등급이 '다소 부족'인데
+    시장에서는 '역대급 부족'을 말하는 온도차가 정확히 이 창 차이였다(2026-08-11
+    사용자 — 등급은 실측 앵커라 두고, 부족한 시야를 이 줄이 나른다).
+
+    ⚠️ 인허가 계열은 '호 (연내 누계)' — 1월마다 리셋된다. 최근 12개월 =
+    올해 최신 누계 + (작년 12월 누계 − 작년 같은 달 누계). 이 셋 중 하나라도
+    없으면 None을 돌려주고 배지를 접는다(반쪽 계산으로 오탐을 내지 않는다).
+    """
+    s = stats.get('인허가') or {}
+    ser = (s.get('series') or {}).get(region) or []
+    dates = s.get('dates') or []
+    last = None
+    for i in range(len(ser) - 1, -1, -1):
+        if ser[i] is not None:
+            last = i
+            break
+    if last is None:
+        return None, None
+    ym = dates[last]
+    y, m = ym.split('.')
+    py = str(int(y) - 1)
+    idx = {d: j for j, d in enumerate(dates)}
+    pieces = [ser[last]]
+    for key in (py + '.12', py + '.' + m):
+        j = idx.get(key)
+        v = ser[j] if (j is not None and j < len(ser)) else None
+        if v is None:
+            return None, None
+        pieces.append(v)
+    return pieces[0] + pieces[1] - pieces[2], ym
+
+
 def grade(ratio):
     c = GRADE_CUTS
     if ratio >= c[0]: return 'g4'
@@ -234,6 +272,12 @@ def calc(stats):
         # 미분양이 분기 적정물량의 몇 배인가. 판정이 '부족' 쪽인데 이 값이 1을
         # 넘으면 두 신호가 어긋난 것 — 화면에 ⚠로 드러낸다.
         um = (un / float(ref)) if (un is not None and ref) else None
+        # 창 너머 신호: 최근 12개월 인허가 ÷ 적정연간. 인허가는 부풀려지는 지표라
+        # (착공 기반 대비 1.29~1.68배) 그런데도 적정에 못 미치면 3년 창이 끝난
+        # 뒤의 공급은 확실히 얇다 — 보수적 기준이라 오탐이 없다. 문턱은 0.95:
+        # 100% 언저리(수도권 99.98% 실측)가 매달 켜졌다 꺼졌다 하면 경고가 무시된다.
+        pm, _ = permit_trail12(stats, z)
+        pmr = (pm / float(ref * 4)) if (pm is not None and ref) else None
         out.append({
             'z': z, 'region': REGION[z], 'agg': z in AGG, 'est': z in EST,
             'ref': ref, 'inow': round(inow), 'fut': round(fut), 'need': need,
@@ -241,6 +285,8 @@ def calc(stats):
             'unsold': (None if un is None else round(un)),
             'um': (None if um is None else round(um, 3)),
             'uwarn': bool(um is not None and um >= 1.0 and g in ('g4', 'g3', 'g2')),
+            'pmr': (None if pmr is None else round(pmr, 3)),
+            'pwarn': bool(pmr is not None and pmr < 0.95),
         })
     # ── 집계 항등식 자가검사 ────────────────────────────────────────────────
     # 부분 결측은 missing 가드에 안 걸린다. 한 지역의 특정 월만 None이면 그 지역만
