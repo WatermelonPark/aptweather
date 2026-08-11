@@ -285,6 +285,7 @@ def calc(stats):
             'unsold': (None if un is None else round(un)),
             'um': (None if um is None else round(um, 3)),
             'uwarn': bool(um is not None and um >= 1.0 and g in ('g4', 'g3', 'g2')),
+            'pm12': (None if pm is None else round(pm)),
             'pmr': (None if pmr is None else round(pmr, 3)),
             'pwarn': bool(pmr is not None and pmr < 0.95),
         })

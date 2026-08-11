@@ -267,3 +267,14 @@ def test_pwarn_fires_on_live_data_where_expected():
     assert by['경남']['pwarn'] and by['대구']['pwarn'] and by['서울']['pwarn']
     assert not by['대전']['pwarn'] and not by['충남']['pwarn']
     assert by['전국']['pwarn'], '전국 창 너머 신호가 꺼졌다 — 인허가가 회복됐다면 정상'
+
+
+def test_table_footer_shows_unsold_and_permits_everywhere():
+    """표 하단 맥락 두 숫자(2026-08-11 사용자) — 배지(경고)와 달리 전 지역에
+    항상 붙는다. 표만 보고 떠나는 사람이 함께 봐야 할 값이라서다."""
+    import io, os
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    for z in ('서울', '대전', '충남'):     # 배지가 뜨는 곳과 안 뜨는 곳 모두
+        h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
+        assert '미분양 ' in h and '최근 1년 인허가 ' in h, z
+        assert 'scrollTop=e.scrollHeight' in h, '%s: 표 기본 화면이 맨 아래가 아니다' % z

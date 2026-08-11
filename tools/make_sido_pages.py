@@ -442,8 +442,26 @@ def build_page(z, calc, stats, pq, others):
                  % (cls, SZ.qlabel(i), num(v), cells))
     h.append('</tbody></table></div>'
              '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기에 실제로 없었다는 뜻입니다'
-             '(굵은 줄 위는 준공, 아래는 착공).</p>'
-             '</div></section>' % calc['H'])
+             '(굵은 줄 위는 준공, 아래는 착공).</p>' % calc['H'])
+    # 표 하단 맥락 두 숫자(2026-08-11 사용자) — 미분양(지금 안 팔린 재고)과
+    # 최근 1년 인허가(표의 마지막 분기 너머 신호). 둘 다 산식 밖이지만 표만 보고
+    # 떠나는 사람이 함께 봐야 할 값이라 표 바로 아래에 붙인다.
+    ctx = []
+    if row.get('unsold') is not None and row.get('um') is not None:
+        ctx.append('<b>미분양 %s호</b> — 분기 적정물량의 %.1f배'
+                   % (num(row['unsold']), row['um']))
+    if row.get('pm12') is not None and row.get('pmr') is not None:
+        ctx.append('<b>최근 1년 인허가 %s호</b> — 적정 연간(%s호)의 %.0f%%'
+                   % (num(row['pm12']), num(row['ref'] * 4), row['pmr'] * 100))
+    if ctx:
+        h.append('<p class="zsub" style="margin-top:6px">%s. '
+                 '인허가는 3~4년 뒤 입주로 이어져 이 표의 마지막 분기 너머를 미리 보여줍니다.</p>'
+                 % ' · '.join(ctx))
+    # 표의 기본 화면을 맨 아래(미래 분기)로 — 공급을 보러 온 사람이 매번 28행을
+    # 내리게 하지 않는다(2026-08-11 사용자). 과거가 궁금하면 위로 올리면 된다.
+    h.append('<script>document.querySelectorAll(".ztb-scroll").forEach('
+             'function(e){e.scrollTop=e.scrollHeight});</script>'
+             '</div></section>')
 
     # ── 산출 방법 ──
     h.append('<section><div class="wrap"><h2>어떻게 계산했나</h2>'
