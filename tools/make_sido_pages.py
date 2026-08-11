@@ -440,23 +440,30 @@ def build_page(z, calc, stats, pq, others):
                 for n in (0, 1, 2))
         h.append('<tr%s><td>%s</td><td>%s</td>%s</tr>'
                  % (cls, SZ.qlabel(i), num(v), cells))
-    h.append('</tbody></table></div>'
+    h.append('</tbody>')
+    # 참고 2행(2026-08-11 사용자) — 홈 표의 미분양·인허가 줄과 같은 자리를 여기도
+    # 만든다. 둘 다 순위 산식 밖이고(미분양=결과값·이중계상, 인허가=착공 대비 부풂)
+    # 색·표식은 두르지 않는다(2026-08-08 사용자). 위 칸은 분기 값인데 미분양은
+    # 시점 재고, 인허가는 최근 12개월 합이라 라벨과 설명 칸에 창을 박는다.
+    foot = []
+    if row.get('unsold') is not None:
+        foot.append('<tr class="zref"><td>미분양</td><td>%s</td><td>%s</td>'
+                    '<td colspan="3" class="zfut">%s 기준 · 지금 안 팔리고 남은 재고</td></tr>'
+                    % (num(row['unsold']),
+                       ('%.1f배' % row['um']) if row.get('um') is not None else '–',
+                       calc.get('unsold_prd') or ''))
+    if row.get('pm12') is not None:
+        foot.append('<tr class="zref"><td>인허가 1년</td><td>%s</td><td>%s</td>'
+                    '<td colspan="3" class="zfut">3~4년 뒤 입주로 이어지는 선행 물량</td></tr>'
+                    % (num(row['pm12']),
+                       ('%.0f%%' % (row['pmr'] * 100)) if row.get('pmr') is not None else '–'))
+    if foot:
+        h.append('<tfoot>' + ''.join(foot) + '</tfoot>')
+    h.append('</table></div>'
              '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기에 실제로 없었다는 뜻입니다'
-             '(굵은 줄 위는 준공, 아래는 착공).</p>' % calc['H'])
-    # 표 하단 맥락 두 숫자(2026-08-11 사용자) — 미분양(지금 안 팔린 재고)과
-    # 최근 1년 인허가(표의 마지막 분기 너머 신호). 둘 다 산식 밖이지만 표만 보고
-    # 떠나는 사람이 함께 봐야 할 값이라 표 바로 아래에 붙인다.
-    ctx = []
-    if row.get('unsold') is not None and row.get('um') is not None:
-        ctx.append('<b>미분양 %s호</b> — 분기 적정물량의 %.1f배'
-                   % (num(row['unsold']), row['um']))
-    if row.get('pm12') is not None and row.get('pmr') is not None:
-        ctx.append('<b>최근 1년 인허가 %s호</b> — 적정 연간(%s호)의 %.0f%%'
-                   % (num(row['pm12']), num(row['ref'] * 4), row['pmr'] * 100))
-    if ctx:
-        h.append('<p class="zsub" style="margin-top:6px">%s. '
-                 '인허가는 3~4년 뒤 입주로 이어져 이 표의 마지막 분기 너머를 미리 보여줍니다.</p>'
-                 % ' · '.join(ctx))
+             '(굵은 줄 위는 준공, 아래는 착공). 맨 아래 미분양·인허가 두 줄은 '
+             '순위에 넣지 않은 참고 수치입니다 — 적정 대비 칸은 미분양이 분기, '
+             '인허가가 연간 적정물량 기준입니다.</p>' % calc['H'])
     # 표의 기본 화면을 맨 아래(미래 분기)로 — 공급을 보러 온 사람이 매번 28행을
     # 내리게 하지 않는다(2026-08-11 사용자). 과거가 궁금하면 위로 올리면 된다.
     h.append('<script>document.querySelectorAll(".ztb-scroll").forEach('

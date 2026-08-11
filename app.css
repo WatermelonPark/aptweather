@@ -868,6 +868,8 @@ table.adv thead th:first-child{text-align:center}
   .ztb tr.znow td{border-top:3px solid var(--ink)}
   .ztb tr.znow td:first-child{font-weight:700;color:var(--ink)}
   .ztb .zfut{text-align:center;color:var(--muted);font-size:11px}
+  /* 참고 2행(미분양·인허가) — 본문과 2px 선으로만 가른다. 색·표식 금지(2026-08-08). */
+  .ztb tfoot tr:first-child td{border-top:2px solid var(--line)}
 
   .zlinks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);margin-top:12px}

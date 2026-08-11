@@ -270,11 +270,24 @@ def test_pwarn_fires_on_live_data_where_expected():
 
 
 def test_table_footer_shows_unsold_and_permits_everywhere():
-    """표 하단 맥락 두 숫자(2026-08-11 사용자) — 배지(경고)와 달리 전 지역에
-    항상 붙는다. 표만 보고 떠나는 사람이 함께 봐야 할 값이라서다."""
+    """표 하단 참고 2행(2026-08-11 사용자, 텍스트 줄→표 행으로 승격) — 배지(경고)와
+    달리 전 지역에 항상 붙는다. 표만 보고 떠나는 사람이 함께 봐야 할 값이라서다.
+    스크롤 기본값이 맨 아래라 이 두 행이 첫 화면에 들어온다."""
     import io, os
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     for z in ('서울', '대전', '충남'):     # 배지가 뜨는 곳과 안 뜨는 곳 모두
         h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
-        assert '미분양 ' in h and '최근 1년 인허가 ' in h, z
+        assert '<tfoot><tr class="zref"><td>미분양</td>' in h, z
+        assert '<tr class="zref"><td>인허가 1년</td>' in h, z
         assert 'scrollTop=e.scrollHeight' in h, '%s: 표 기본 화면이 맨 아래가 아니다' % z
+
+
+def test_home_table_has_both_reference_rows():
+    """홈 표 tfoot도 같은 2행(미분양+인허가 1년)이어야 한다 — 지역 페이지와 홈이
+    다른 참고 값을 보여주면 사용자가 둘 중 하나를 오독한다."""
+    import io, os
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    src = io.open(os.path.join(root, 'index.html'), encoding='utf-8').read()
+    assert src.count('<tr class="tb-un">') == 2, 'tfoot 참고 행은 정확히 2개'
+    assert '>인허가 1년</th>' in src and '>미분양</th>' in src
+    assert 'pm[z.z]=z.pm12' in src, '인허가 값이 TB_BCACHE에 실리지 않았다'

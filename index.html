@@ -2553,10 +2553,10 @@ function tbBuild(){
   /* um·uw(부족+미분양 경고)는 표 정비(2026-08-08 사용자: '참고 행에 색·표식을
      두르지 않는다')로 소비처가 사라져 걷어냈다 — 경고문은 지역 페이지(zwarn)가
      본문으로 말한다. */
-  var un={};
-  S.zones.forEach(function(z){ un[z.z]=z.unsold; });
+  var un={},pm={};
+  S.zones.forEach(function(z){ un[z.z]=z.unsold; pm[z.z]=z.pm12; });
   return TB_BCACHE={regs:regs,refs:refs,est:est,rows:rows,H:S.H,L:S.L,
-          un:un,uprd:S.unsold_prd};
+          un:un,pm:pm,uprd:S.unsold_prd};
 }
 /* 월 원장 → 기간 단위. n(합친 달 수)을 같이 돌려줘야 부분 기간의 적정물량이
    같은 비율로 줄어든다 — 안 그러면 2029년(2분기치)이 1년치 기준과 비교돼
@@ -2683,6 +2683,15 @@ function tbDraw(){
   for(var u=0;u<B.regs.length;u++){
     var uv=B.un[B.regs[u]];
     h+='<td><span class="tc"><b>'+(uv==null?'–':tbNum(uv))+'</b></span></td>';
+  }
+  h+='</tr>';
+  /* 인허가 줄(2026-08-11 사용자) — 미분양과 같은 참고 행. 위 칸들은 분기(또는 토글
+     단위) 값인데 인허가는 최근 12개월 합이라 라벨에 창을 박는다. 3~4년 뒤 입주로
+     이어지는 선행 물량이라, 표의 마지막 분기 너머를 미리 보여주는 유일한 줄이다. */
+  h+='<tr class="tb-un"><th scope="row" title="최근 12개월 합 · 3~4년 뒤 입주로 이어지는 선행 물량 · 순위에 넣지 않은 참고 수치">인허가 1년</th>';
+  for(var u2=0;u2<B.regs.length;u2++){
+    var pv=B.pm[B.regs[u2]];
+    h+='<td><span class="tc"><b>'+(pv==null?'–':tbNum(pv))+'</b></span></td>';
   }
   h+='</tr></tfoot>';
   el.innerHTML=h;
