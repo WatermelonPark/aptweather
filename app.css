@@ -868,8 +868,13 @@ table.adv thead th:first-child{text-align:center}
   .ztb tr.znow td{border-top:3px solid var(--ink)}
   .ztb tr.znow td:first-child{font-weight:700;color:var(--ink)}
   .ztb .zfut{text-align:center;color:var(--muted);font-size:11px}
-  /* 참고 2행(미분양·인허가) — 본문과 2px 선으로만 가른다. 색·표식 금지(2026-08-08). */
+  /* 참고 2행(미분양·인허가) — 본문과 2px 선으로만 가른다. 색·표식 금지(2026-08-08).
+     ⓘ와 커서는 '누르면 설명이 열린다'는 안내 장치(2026-08-11 사용자) — 경고 기호가
+     아니라 정보 진입점이므로 참고 행 무표식 원칙과 충돌하지 않는다. */
   .ztb tfoot tr:first-child td{border-top:2px solid var(--line)}
+  .ztb tr.zref,#tb-main tr.tb-un{cursor:pointer}
+  .ri{font-style:normal;color:var(--muted);font-size:10px;margin-left:3px;vertical-align:1px}
+  .tb-refnote{margin:6px 0 0;font-size:12px;line-height:1.55;color:var(--muted)}
 
   .zlinks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);margin-top:12px}

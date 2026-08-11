@@ -277,17 +277,22 @@ def test_table_footer_shows_unsold_and_permits_everywhere():
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     for z in ('서울', '대전', '충남'):     # 배지가 뜨는 곳과 안 뜨는 곳 모두
         h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
-        assert '<tfoot><tr class="zref"><td>미분양</td>' in h, z
-        assert '<tr class="zref"><td>인허가 1년</td>' in h, z
+        assert '<tfoot><tr class="zref" data-ref="un"><td>미분양' in h, z
+        assert '<tr class="zref" data-ref="pm"><td>인허가 1년' in h, z
         assert 'scrollTop=e.scrollHeight' in h, '%s: 표 기본 화면이 맨 아래가 아니다' % z
+        # 탭 안내(2026-08-11 사용자) — 모바일엔 호버가 없어 행을 누르면 설명이 열린다
+        assert 'id="zrefnote"' in h and 'ZREFNOTE' in h, '%s: 참고 행 탭 안내가 없다' % z
 
 
 def test_home_table_has_both_reference_rows():
     """홈 표 tfoot도 같은 2행(미분양+인허가 1년)이어야 한다 — 지역 페이지와 홈이
-    다른 참고 값을 보여주면 사용자가 둘 중 하나를 오독한다."""
+    다른 참고 값을 보여주면 사용자가 둘 중 하나를 오독한다. 탭 안내·기본 스크롤
+    맨 아래(2026-08-11 사용자)도 함께 잠근다."""
     import io, os
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     src = io.open(os.path.join(root, 'index.html'), encoding='utf-8').read()
-    assert src.count('<tr class="tb-un">') == 2, 'tfoot 참고 행은 정확히 2개'
-    assert '>인허가 1년</th>' in src and '>미분양</th>' in src
+    assert src.count('<tr class="tb-un" data-ref=') == 2, 'tfoot 참고 행은 정확히 2개'
+    assert '>인허가 1년<i class="ri"' in src and '>미분양<i class="ri"' in src
     assert 'pm[z.z]=z.pm12' in src, '인허가 값이 TB_BCACHE에 실리지 않았다'
+    assert 'TB_REFNOTE' in src and 'id="tb-refnote"' in src, '참고 행 탭 안내가 없다'
+    assert 'sc.scrollTop=sc.scrollHeight' in src, '표 모드 기본 화면이 맨 아래가 아니다'

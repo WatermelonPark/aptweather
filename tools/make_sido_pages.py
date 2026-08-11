@@ -447,27 +447,46 @@ def build_page(z, calc, stats, pq, others):
     # 시점 재고, 인허가는 최근 12개월 합이라 라벨과 설명 칸에 창을 박는다.
     foot = []
     if row.get('unsold') is not None:
-        foot.append('<tr class="zref"><td>미분양</td><td>%s</td><td>%s</td>'
+        foot.append('<tr class="zref" data-ref="un"><td>미분양'
+                    '<i class="ri" aria-hidden="true">ⓘ</i></td><td>%s</td><td>%s</td>'
                     '<td colspan="3" class="zfut">%s 기준 · 지금 안 팔리고 남은 재고</td></tr>'
                     % (num(row['unsold']),
                        ('%.1f배' % row['um']) if row.get('um') is not None else '–',
                        calc.get('unsold_prd') or ''))
     if row.get('pm12') is not None:
-        foot.append('<tr class="zref"><td>인허가 1년</td><td>%s</td><td>%s</td>'
+        foot.append('<tr class="zref" data-ref="pm"><td>인허가 1년'
+                    '<i class="ri" aria-hidden="true">ⓘ</i></td><td>%s</td><td>%s</td>'
                     '<td colspan="3" class="zfut">3~4년 뒤 입주로 이어지는 선행 물량</td></tr>'
                     % (num(row['pm12']),
                        ('%.0f%%' % (row['pmr'] * 100)) if row.get('pmr') is not None else '–'))
     if foot:
         h.append('<tfoot>' + ''.join(foot) + '</tfoot>')
     h.append('</table></div>'
+             '<p class="tb-refnote" id="zrefnote" hidden></p>'
              '<p class="zsub">굵은 줄 아래 %d분기가 미래입니다. 0은 그 분기에 실제로 없었다는 뜻입니다'
              '(굵은 줄 위는 준공, 아래는 착공). 맨 아래 미분양·인허가 두 줄은 '
              '순위에 넣지 않은 참고 수치입니다 — 적정 대비 칸은 미분양이 분기, '
              '인허가가 연간 적정물량 기준입니다.</p>' % calc['H'])
     # 표의 기본 화면을 맨 아래(미래 분기)로 — 공급을 보러 온 사람이 매번 28행을
     # 내리게 하지 않는다(2026-08-11 사용자). 과거가 궁금하면 위로 올리면 된다.
+    # 참고 행 탭 안내(2026-08-11 사용자) — 데스크톱 호버가 없는 모바일에서도
+    # 행을 누르면 표 아래에 설명이 열린다. 홈 표의 TB_REFNOTE와 같은 문구.
     h.append('<script>document.querySelectorAll(".ztb-scroll").forEach('
-             'function(e){e.scrollTop=e.scrollHeight});</script>'
+             'function(e){e.scrollTop=e.scrollHeight});'
+             "var ZREFNOTE={un:'미분양은 다 짓고도 팔리지 않아 남아 있는 집입니다"
+             "(국토교통부 월간 집계). 이미 지어진 재고에 들어 있어 순위 계산에 다시 "
+             "넣으면 이중계산이라, 참고로만 보여줍니다.',"
+             "pm:'인허가는 \"짓겠다\"고 허가받은 단계의 물량으로, 보통 3~4년 뒤 입주로 "
+             "이어져 이 표의 마지막 분기 너머를 미리 보여줍니다. 월별 들쭉날쭉이 커서 "
+             "최근 12개월 합으로 묶어 연간 적정물량과 견주고, 실제 착공은 이보다 적어 "
+             "순위 계산에는 착공만 씁니다.'};"
+             'document.querySelectorAll(".ztb tfoot tr.zref").forEach(function(tr){'
+             'tr.addEventListener("click",function(){'
+             'var p=document.getElementById("zrefnote");if(!p)return;'
+             'var k=tr.getAttribute("data-ref");'
+             'if(!p.hidden&&p.dataset.k===k){p.hidden=true;return;}'
+             'p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;});});'
+             '</script>'
              '</div></section>')
 
     # ── 산출 방법 ──

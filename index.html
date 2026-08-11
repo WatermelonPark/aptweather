@@ -180,6 +180,7 @@
       <span class="tk-n" id="tb-note"></span>
     </div>
     <div class="tb-scroll"><table id="tb-main"></table></div>
+    <p class="tb-refnote" id="tb-refnote" hidden></p>
     <p class="tb-more"><a href="/zone/">시도별로 자세히 보기 →</a></p>
 
     <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">국토교통부 · 한국부동산원 · 매주 갱신</span></summary><div class="body"><ul class="how-ls">
@@ -2678,8 +2679,8 @@ function tbDraw(){
      색·표식도 두르지 않는다(2026-08-08 사용자) — 참고 행이 색을 입으면
      점수 행처럼 읽히고, ⚠ 같은 기호는 뜻을 알 길이 없다. 설명은 '산출 방법'
      접힘이 맡는다. */
-  h+='</tbody><tfoot><tr class="tb-un"><th scope="row" title="'+(B.uprd||'')
-    +' 기준 · 순위에 넣지 않은 참고 수치">미분양</th>';
+  h+='</tbody><tfoot><tr class="tb-un" data-ref="un"><th scope="row" title="'+(B.uprd||'')
+    +' 기준 · 순위에 넣지 않은 참고 수치">미분양<i class="ri" aria-hidden="true">ⓘ</i></th>';
   for(var u=0;u<B.regs.length;u++){
     var uv=B.un[B.regs[u]];
     h+='<td><span class="tc"><b>'+(uv==null?'–':tbNum(uv))+'</b></span></td>';
@@ -2688,22 +2689,36 @@ function tbDraw(){
   /* 인허가 줄(2026-08-11 사용자) — 미분양과 같은 참고 행. 위 칸들은 분기(또는 토글
      단위) 값인데 인허가는 최근 12개월 합이라 라벨에 창을 박는다. 3~4년 뒤 입주로
      이어지는 선행 물량이라, 표의 마지막 분기 너머를 미리 보여주는 유일한 줄이다. */
-  h+='<tr class="tb-un"><th scope="row" title="최근 12개월 합 · 3~4년 뒤 입주로 이어지는 선행 물량 · 순위에 넣지 않은 참고 수치">인허가 1년</th>';
+  h+='<tr class="tb-un" data-ref="pm"><th scope="row" title="최근 12개월 합 · 3~4년 뒤 입주로 이어지는 선행 물량 · 순위에 넣지 않은 참고 수치">인허가 1년<i class="ri" aria-hidden="true">ⓘ</i></th>';
   for(var u2=0;u2<B.regs.length;u2++){
     var pv=B.pm[B.regs[u2]];
     h+='<td><span class="tc"><b>'+(pv==null?'–':tbNum(pv))+'</b></span></td>';
   }
   h+='</tr></tfoot>';
   el.innerHTML=h;
+  /* 참고 행 탭 안내(2026-08-11 사용자) — title 툴팁은 데스크톱 호버 전용이라
+     모바일에서는 뜻을 알 길이 없다. 행을 누르면 표 아래에 설명이 열린다.
+     리스너는 테이블 노드에 한 번만 건다(innerHTML은 자식만 갈아끼운다). */
+  if(!el.dataset.refbound){
+    el.dataset.refbound='1';
+    el.addEventListener('click',function(ev){
+      var tr=ev.target&&ev.target.closest?ev.target.closest('tr.tb-un'):null;
+      if(!tr) return;
+      var p=document.getElementById('tb-refnote');
+      if(!p) return;
+      var k=tr.getAttribute('data-ref');
+      if(!p.hidden&&p.dataset.k===k){ p.hidden=true; return; }
+      p.dataset.k=k; p.textContent=TB_REFNOTE[k]||''; p.hidden=false;
+    });
+  }
   var n=document.getElementById('tb-note');
   if(n) n.textContent=TB_PER==='y'?'한 해 합계':TB_PER==='m'?'한 달치':'';
-  /* 표는 2017Q1부터라, 그냥 두면 첫 화면이 9년 전 숫자다(굵은 줄이 50행 중 39행).
-     '언제 어디에 얼마나 지어지는가'를 묻는 표가 정작 지금을 안 보여준다 —
-     2026-08-07 오딧. 그린 직후 굵은 줄을 위쪽 1/3에 놓아 최근 실적과 추정이
-     한 화면에 같이 들어오게 한다. 스크롤 자체는 그대로 열려 있다. */
+  /* 표는 2017Q1부터라, 그냥 두면 첫 화면이 9년 전 숫자다. 기본 화면을 맨
+     아래(최근 실적 → 미래 추정 → 참고 2행)로 연다 — 지역 페이지 표와 같은
+     규칙(2026-08-11 사용자, 굵은 줄 1/3 조준을 대체). 스크롤은 열려 있다. */
   if(TB_ANCHOR) tbAnchor();
 }
-/* 굵은 줄(.now = 미래가 처음 섞이는 행)을 표 위쪽 1/3에 놓는다.
+/* 표의 기본 화면을 맨 아래로 민다.
    ⚠️ 렌더링 생명주기에 묶인 것은 쓰지 말 것 — requestAnimationFrame도
    IntersectionObserver도 '그리지 않는 창'에서는 콜백이 영영 안 온다.
    2026-08-07에 rAF를 걷어내면서 뷰가 숨은 경우를 IO로 처리했는데, 같은
@@ -2714,12 +2729,10 @@ function tbDraw(){
 var TB_TRY=[0,50,150,400,900,1800];
 function tbAnchor(n){
   var sc=document.querySelector('.tb-scroll');
-  var nw=sc&&sc.querySelector('#tb-main tbody tr.now');
   n=n||0;
-  if(sc&&nw&&sc.clientHeight&&sc.offsetParent){
+  if(sc&&sc.clientHeight&&sc.offsetParent&&sc.scrollHeight>sc.clientHeight){
     TB_ANCHOR=false;
-    var d=nw.getBoundingClientRect().top-sc.getBoundingClientRect().top;
-    sc.scrollTop+=d-sc.clientHeight/3;
+    sc.scrollTop=sc.scrollHeight;
     return;
   }
   /* 아직 잴 수 없다(뷰가 숨었거나 레이아웃 전). 몇 번만 다시 본다 —
@@ -2729,6 +2742,10 @@ function tbAnchor(n){
 }
 /* ── 홈 보기 전환: 지도(공간)/그래프(시간)/표(시간×공간) — 2026-08-08 ── */
 var TB_VIEW='map';
+var TB_REFNOTE={
+  un:'미분양은 다 짓고도 팔리지 않아 남아 있는 집입니다(국토교통부 월간 집계). 이미 지어진 재고에 들어 있어 순위 계산에 다시 넣으면 이중계산이라, 참고로만 보여줍니다.',
+  pm:'인허가는 "짓겠다"고 허가받은 단계의 물량으로, 보통 3~4년 뒤 입주로 이어져 이 표의 마지막 분기 너머를 미리 보여줍니다. 월별 들쭉날쭉이 커서 최근 12개월 합으로 묶어 연간 적정물량과 견주고, 실제 착공은 이보다 적어 순위 계산에는 착공만 씁니다.'
+};
 var TB_GRADE={g4:'매우 부족',g3:'부족',g2:'다소 부족',g1:'균형',g0:'공급 여유'};
 function tbView(v){
   if(TB_VIEW===v) return;
