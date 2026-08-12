@@ -668,6 +668,7 @@ table.adv thead th:first-child{text-align:center}
   #sec-score:not(.vm-table) #tb-per,
   #sec-score:not(.vm-table) .tb-chk,
   #sec-score:not(.vm-table) .tb-key:not(.map-key),
+  #sec-score:not(.vm-table) #tb-refnote,
   #sec-score:not(.vm-table) .tb-scroll{display:none}
   #sec-score:not(.vm-map) #map-wrap{display:none}
   #sec-score:not(.vm-graph) #graph-wrap{display:none}
@@ -885,10 +886,18 @@ table.adv thead th:first-child{text-align:center}
   .zlinks a i{font-style:normal;font-size:11px;color:var(--muted);
     margin-left:auto;font-variant-numeric:tabular-nums}
 
-  /* 미분양 줄 — 표 맨 아래 붙박이. 위 칸들을 읽는 맥락이지 점수가 아니다.
+  /* 참고 2행(미분양·인허가 1년) — 표 맨 아래 붙박이. 위 칸들을 읽는 맥락이지
+     점수가 아니다.
      ⚠️ 첫 칸은 위 first-child 규칙에 tfoot을 함께 넣어야 한다. 빼면 글자가
-     16px 기본값으로 튀고 가로 스크롤에서 라벨이 따라오지 않는다(2026-08-07). */
-  #tb-main tfoot td,#tb-main tfoot th{background:var(--paper);position:sticky;bottom:0;z-index:5;
+     16px 기본값으로 튀고 가로 스크롤에서 라벨이 따라오지 않는다(2026-08-07).
+     ⚠️ sticky는 행끼리 안 쌓인다 — 둘 다 bottom:0이면 같은 자리에 포개져
+     한 줄만 읽힌다(2026-08-12 리뷰 실측). 첫 행을 마지막 행 높이(.tc 25px +
+     border-bottom 1px + 반올림 여유)만큼 띄운다. 표두 둘째 줄의 top:30px와
+     같은 수법이며, .tc 높이를 바꾸면 여기도 같이 바꿀 것.
+     2px 구분선은 블록 첫 행에만 — 행 사이에도 그으면 참고 2행이 한 덩이로
+     안 읽힌다(지역 페이지 표와 같은 문법). */
+  #tb-main tfoot td,#tb-main tfoot th{background:var(--paper);position:sticky;bottom:0;z-index:5}
+  #tb-main tfoot tr:first-child td,#tb-main tfoot tr:first-child th{bottom:27px;
     border-top:2px solid var(--ink2)}
   #tb-main tfoot th:first-child{z-index:6;font-weight:600;color:var(--ink);line-height:25px}
   #tb-main tfoot .tc b em{font-style:normal;color:#a93226;margin-left:2px;font-size:10px}

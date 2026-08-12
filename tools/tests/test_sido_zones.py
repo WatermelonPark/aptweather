@@ -296,3 +296,21 @@ def test_home_table_has_both_reference_rows():
     assert 'pm[z.z]=z.pm12' in src, '인허가 값이 TB_BCACHE에 실리지 않았다'
     assert 'TB_REFNOTE' in src and 'id="tb-refnote"' in src, '참고 행 탭 안내가 없다'
     assert 'sc.scrollTop=sc.scrollHeight' in src, '표 모드 기본 화면이 맨 아래가 아니다'
+    assert "querySelector('#tb-main tbody tr.now')" in src, \
+        '굵은 줄 클램프가 없다 — 월 모드(미래 36행)에서 현재가 시야 밖으로 나간다'
+
+
+def test_home_css_avoids_reviewed_regressions():
+    """2026-08-12 리뷰 4건 재발 방지 — CSS 쪽 세 가지를 문자열로 잠근다.
+    ① tfoot 두 행이 모두 bottom:0이면 sticky가 같은 자리에 포개진다,
+    ② 표 밖 모드에서 참고 설명(#tb-refnote)이 남는다,
+    ③ 2px 구분선이 행 사이에도 그어져 참고 블록이 안 묶인다."""
+    import io, os
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    css = io.open(os.path.join(root, 'app.css'), encoding='utf-8').read()
+    assert '#tb-main tfoot tr:first-child td' in css, 'tfoot 첫 행 띄우기(스택)가 없다'
+    assert '#sec-score:not(.vm-table) #tb-refnote' in css, \
+        '지도·그래프 모드에서 참고 설명이 숨지 않는다'
+    stuck = [l for l in css.splitlines()
+             if '#tb-main tfoot td' in l and 'border-top:2px' in l]
+    assert not stuck, '2px 구분선이 tfoot 전체에 걸려 있다(첫 행 한정이어야 한다)'

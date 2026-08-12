@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v98'; // 참고 2행 탭 안내(ⓘ) + 홈 표 기본 스크롤 맨 아래
+const VERSION = 'v99'; // 리뷰 4건: tfoot 겹침·월모드 조준·설명 잔류·구분선 중복
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
