@@ -180,7 +180,7 @@
       <span class="tk-n" id="tb-note"></span>
     </div>
     <div class="tb-scroll"><table id="tb-main"></table></div>
-    <p class="tb-refnote" id="tb-refnote" hidden></p>
+    <p class="tb-refnote" id="tb-refnote" aria-live="polite" hidden></p>
     <p class="tb-more"><a href="/zone/">시도별로 자세히 보기 →</a></p>
 
     <details class="sc-how"><summary><span class="t">산출 방법</span><span class="src">국토교통부 · 한국부동산원 · 매주 갱신</span></summary><div class="body"><ul class="how-ls">
@@ -2680,7 +2680,7 @@ function tbDraw(){
      점수 행처럼 읽히고, ⚠ 같은 기호는 뜻을 알 길이 없다. 설명은 '산출 방법'
      접힘이 맡는다. */
   h+='</tbody><tfoot><tr class="tb-un" data-ref="un"><th scope="row" title="'+(B.uprd||'')
-    +' 기준 · 순위에 넣지 않은 참고 수치">미분양<i class="ri" aria-hidden="true">ⓘ</i></th>';
+    +' 기준 · 순위에 넣지 않은 참고 수치">'+refBtn('미분양')+'</th>';
   for(var u=0;u<B.regs.length;u++){
     var uv=B.un[B.regs[u]];
     h+='<td><span class="tc"><b>'+(uv==null?'–':tbNum(uv))+'</b></span></td>';
@@ -2689,7 +2689,7 @@ function tbDraw(){
   /* 인허가 줄(2026-08-11 사용자) — 미분양과 같은 참고 행. 위 칸들은 분기(또는 토글
      단위) 값인데 인허가는 최근 12개월 합이라 라벨에 창을 박는다. 3~4년 뒤 입주로
      이어지는 선행 물량이라, 표의 마지막 분기 너머를 미리 보여주는 유일한 줄이다. */
-  h+='<tr class="tb-un" data-ref="pm"><th scope="row" title="최근 12개월 합 · 3~4년 뒤 입주로 이어지는 선행 물량 · 순위에 넣지 않은 참고 수치">인허가 1년<i class="ri" aria-hidden="true">ⓘ</i></th>';
+  h+='<tr class="tb-un" data-ref="pm"><th scope="row" title="최근 12개월 합 · 3~4년 뒤 입주로 이어지는 선행 물량 · 순위에 넣지 않은 참고 수치">'+refBtn('인허가 1년')+'</th>';
   for(var u2=0;u2<B.regs.length;u2++){
     var pv=B.pm[B.regs[u2]];
     h+='<td><span class="tc"><b>'+(pv==null?'–':tbNum(pv))+'</b></span></td>';
@@ -2707,10 +2707,14 @@ function tbDraw(){
       var p=document.getElementById('tb-refnote');
       if(!p) return;
       var k=tr.getAttribute('data-ref');
-      if(!p.hidden&&p.dataset.k===k){ p.hidden=true; return; }
-      p.dataset.k=k; p.textContent=TB_REFNOTE[k]||''; p.hidden=false;
+      if(!p.hidden&&p.dataset.k===k){ p.hidden=true; }
+      else{ p.dataset.k=k; p.textContent=TB_REFNOTE[k]||''; p.hidden=false; }
+      tbRefSync();
     });
   }
+  /* 기간을 바꾸면 tfoot이 새로 그려져 버튼의 aria-expanded가 false로 돌아간다 —
+     설명이 열린 채라면 상태를 다시 맞춘다. */
+  tbRefSync();
   var n=document.getElementById('tb-note');
   if(n) n.textContent=TB_PER==='y'?'한 해 합계':TB_PER==='m'?'한 달치':'';
   /* 표는 2017Q1부터라, 그냥 두면 첫 화면이 9년 전 숫자다. 기본 화면을 맨
@@ -2755,6 +2759,23 @@ function tbAnchor(n){
 }
 /* ── 홈 보기 전환: 지도(공간)/그래프(시간)/표(시간×공간) — 2026-08-08 ── */
 var TB_VIEW='map';
+/* 참고 행 라벨은 진짜 <button>이다 — tr에 tabindex를 얹으면 Enter/Space와
+   역할 안내를 직접 다시 만들어야 하는데, 버튼은 브라우저가 다 해준다
+   (2026-08-12 리뷰: 클릭 전용이라 키보드로는 설명에 닿을 길이 없었다). */
+function refBtn(label){
+  return '<button type="button" class="rbtn" aria-expanded="false" '
+    +'aria-controls="tb-refnote">'+label+'<i class="ri" aria-hidden="true">ⓘ</i></button>';
+}
+function tbRefSync(){
+  var p=document.getElementById('tb-refnote');
+  [].forEach.call(document.querySelectorAll('#tb-main tfoot .rbtn'),function(b){
+    var own=b.parentNode.parentNode.getAttribute('data-ref');
+    b.setAttribute('aria-expanded',(p&&!p.hidden&&own===p.dataset.k)?'true':'false');
+  });
+}
+/* ⚠️ 아래 두 문구는 tools/make_sido_pages.py의 REFNOTE를 옮긴 거울이다 —
+   홈은 정적 파일이라 생성기가 주입할 수 없다. 한쪽만 고치면 테스트가 깨진다
+   (test_refnote_copy_is_identical_on_home_and_zone). */
 var TB_REFNOTE={
   un:'미분양은 다 짓고도 팔리지 않아 남아 있는 집입니다(국토교통부 월간 집계). 이미 지어진 재고에 들어 있어 순위 계산에 다시 넣으면 이중계산이라, 참고로만 보여줍니다.',
   pm:'인허가는 "짓겠다"고 허가받은 단계의 물량으로, 보통 3~4년 뒤 입주로 이어져 이 표의 마지막 분기 너머를 미리 보여줍니다. 월별 들쭉날쭉이 커서 최근 12개월 합으로 묶어 연간 적정물량과 견주고, 실제 착공은 이보다 적어 순위 계산에는 착공만 씁니다.'

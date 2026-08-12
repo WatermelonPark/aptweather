@@ -277,8 +277,9 @@ def test_table_footer_shows_unsold_and_permits_everywhere():
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     for z in ('서울', '대전', '충남'):     # 배지가 뜨는 곳과 안 뜨는 곳 모두
         h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
-        assert '<tfoot><tr class="zref" data-ref="un"><td>미분양' in h, z
-        assert '<tr class="zref" data-ref="pm"><td>인허가 1년' in h, z
+        assert '<tfoot><tr class="zref" data-ref="un"><td><button' in h, z
+        assert '<tr class="zref" data-ref="pm"><td><button' in h, z
+        assert '>미분양<' in h and '>인허가 1년<' in h, z
         assert 'scrollTop=e.scrollHeight' in h, '%s: 표 기본 화면이 맨 아래가 아니다' % z
         # 탭 안내(2026-08-11 사용자) — 모바일엔 호버가 없어 행을 누르면 설명이 열린다
         assert 'id="zrefnote"' in h and 'ZREFNOTE' in h, '%s: 참고 행 탭 안내가 없다' % z
@@ -292,12 +293,68 @@ def test_home_table_has_both_reference_rows():
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     src = io.open(os.path.join(root, 'index.html'), encoding='utf-8').read()
     assert src.count('<tr class="tb-un" data-ref=') == 2, 'tfoot 참고 행은 정확히 2개'
-    assert '>인허가 1년<i class="ri"' in src and '>미분양<i class="ri"' in src
+    assert "refBtn('인허가 1년')" in src and "refBtn('미분양')" in src
     assert 'pm[z.z]=z.pm12' in src, '인허가 값이 TB_BCACHE에 실리지 않았다'
     assert 'TB_REFNOTE' in src and 'id="tb-refnote"' in src, '참고 행 탭 안내가 없다'
     assert 'sc.scrollTop=sc.scrollHeight' in src, '표 모드 기본 화면이 맨 아래가 아니다'
     assert "querySelector('#tb-main tbody tr.now')" in src, \
         '굵은 줄 클램프가 없다 — 월 모드(미래 36행)에서 현재가 시야 밖으로 나간다'
+
+
+def test_refnote_copy_is_identical_on_home_and_zone():
+    """참고 행 안내 문구는 make_sido_pages.REFNOTE가 정본이고 홈은 거울이다.
+    홈이 정적 파일이라 생성기가 주입할 수 없어, 등급 JS 미러처럼 테스트로 묶는다 —
+    한쪽만 고치면 같은 표의 같은 줄이 두 화면에서 다른 말을 하게 된다."""
+    import io, json, os, re, sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    import make_sido_pages as M
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+
+    src = io.open(os.path.join(root, 'index.html'), encoding='utf-8').read()
+    body = re.search(r'var TB_REFNOTE=\{(.*?)\n\};', src, re.S).group(1)
+    home = dict(re.findall(r"(\w+):'((?:[^'\\]|\\.)*)'", body))
+    assert set(home) == set(M.REFNOTE), '홈과 정본의 항목이 다르다: %s' % sorted(home)
+    for k in M.REFNOTE:
+        assert home[k] == M.REFNOTE[k], '%s 문구가 갈렸다\n홈  : %s\n정본: %s' % (
+            k, home[k], M.REFNOTE[k])
+
+    # 지역 페이지는 정본을 JSON으로 실어 나른다 — 옮겨 적기 자체가 없어야 한다.
+    z = io.open(os.path.join(root, 'zone', '서울', 'index.html'), encoding='utf-8').read()
+    baked = json.loads(re.search(r'var ZREFNOTE=(\{.*?\});', z, re.S).group(1))
+    assert baked == M.REFNOTE, '지역 페이지에 구운 문구가 정본과 다르다'
+
+
+def test_unsold_ratio_reads_the_same_everywhere():
+    """같은 미분양 배수가 카드와 표에서 다르게 보이면 안 된다(2026-08-12 리뷰:
+    0.38배 / 0.4배). 1 미만은 둘째 자리까지 — 0.01배를 '0.0배'로 뭉개면 0과
+    구별이 안 된다."""
+    import io, os, re, sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    import make_sido_pages as M
+    assert M.umx(0.384) == '0.38배' and M.umx(0.01) == '0.01배'
+    assert M.umx(2.44) == '2.4배' and M.umx(1.0) == '1.0배'
+
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    for z in ('수도권', '제주', '세종'):
+        h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
+        seen = set(re.findall(r'분기 적정물량(?:\([\d,]+호\))?의 ([\d.]+배)', h))
+        seen |= set(re.findall(r'data-ref="un">.*?</td><td>[\d,]+</td><td>([\d.]+배)', h))
+        assert len(seen) <= 1, '%s: 같은 배수가 여러 표기로 보인다 %s' % (z, sorted(seen))
+
+
+def test_reference_rows_are_keyboard_reachable():
+    """클릭 전용이면 키보드 사용자는 설명에 닿을 길이 없다(2026-08-12 리뷰).
+    라벨이 진짜 <button>이라야 Tab 도달·Enter/Space 실행을 브라우저가 해준다."""
+    import io, os
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    src = io.open(os.path.join(root, 'index.html'), encoding='utf-8').read()
+    assert 'aria-controls="tb-refnote"' in src and 'class="rbtn"' in src
+    assert 'aria-live="polite"' in src, '열린 설명이 읽히지 않는다'
+    assert 'tbRefSync' in src, 'aria-expanded가 상태를 따라가지 않는다'
+    for z in ('서울', '세종'):
+        h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
+        assert h.count('<button type="button" class="rbtn"') == 2, z
+        assert 'aria-controls="zrefnote"' in h and 'aria-live="polite"' in h, z
 
 
 def test_home_css_avoids_reviewed_regressions():

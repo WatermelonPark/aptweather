@@ -64,6 +64,40 @@ AGG_NOTE = {
 #   대전과 통합하는 안도 실측 후 기각: 세종을 못 고치고(통합 저점 1.99배)
 #   대전의 정확한 보정(0.90·0.93)만 망친다. 성장이 끝나가며 배율이 수렴 중
 #   (5.9 → 2.2)이라 앞으로는 맞아갈 수 있다 — 그때 이 공시를 다시 판단할 것.
+# 참고 2행(미분양·인허가) 안내문 — **정본은 여기 하나**다. 홈 index.html의
+# TB_REFNOTE는 이 사전을 손으로 옮긴 거울이고, 어긋나면 테스트가 깨진다
+# (test_refnote_copy_is_identical_on_home_and_zone). 홈은 정적 파일이라
+# 생성기가 주입할 수 없어, 등급 JS 미러와 같은 방식으로 잠근다.
+REFNOTE = {
+    'un': '미분양은 다 짓고도 팔리지 않아 남아 있는 집입니다(국토교통부 월간 집계). '
+          '이미 지어진 재고에 들어 있어 순위 계산에 다시 넣으면 이중계산이라, '
+          '참고로만 보여줍니다.',
+    'pm': '인허가는 "짓겠다"고 허가받은 단계의 물량으로, 보통 3~4년 뒤 입주로 이어져 '
+          '이 표의 마지막 분기 너머를 미리 보여줍니다. 월별 들쭉날쭉이 커서 최근 12개월 '
+          '합으로 묶어 연간 적정물량과 견주고, 실제 착공은 이보다 적어 순위 계산에는 '
+          '착공만 씁니다.',
+}
+
+
+def umx(v):
+    """미분양 배수 표기 — 한 페이지 안에서 같은 값이 다르게 보이지 않게 한 곳에서만
+    정한다(2026-08-12 리뷰: 같은 값이 카드 0.38배 / 표 0.4배로 갈렸다).
+    1 미만은 소수 둘째 자리까지 — 0.01배(세종)를 '0.0배'로 뭉개면 0과 구별이 안 된다.
+    1 이상은 첫째 자리로 충분하다(2.4배).
+    """
+    return ('%.2f배' if v < 1 else '%.1f배') % v
+
+
+def refbtn(label):
+    """참고 행 라벨 — 진짜 <button>이라야 키보드로 도달·실행된다(2026-08-12 리뷰).
+    tr에 tabindex를 얹는 방법도 있지만 Enter/Space 처리와 역할 안내를 직접 다시
+    만들어야 해서, 브라우저가 이미 다 해주는 버튼을 쓴다. ⓘ는 aria-hidden —
+    스크린리더에는 버튼이라는 사실 자체가 안내라 기호를 두 번 읽힐 필요가 없다."""
+    return ('<button type="button" class="rbtn" aria-expanded="false" '
+            'aria-controls="zrefnote">%s<i class="ri" aria-hidden="true">ⓘ</i>'
+            '</button>' % label)
+
+
 MODEL_LIMIT_NOTE = {
     '세종': '⚠ 세종은 2012년 출범한 계획도시로, 도시가 공급과 함께 커진 곳입니다. '
             '공급으로 사이클을 읽는 이 지표가 세종의 과거와는 잘 맞지 않았습니다 — '
@@ -364,9 +398,9 @@ def build_page(z, calc, stats, pq, others):
         # 어긋나면 그 사실을 숨기지 않는다 — 제주가 '매우 부족'인데 미분양이
         # 적정물량의 2.4배인 건 읽는 사람이 알아야 한다(2026-08-07).
         h.append('<p class="zwarn">⚠ 부족으로 나오지만 <b>미분양이 %s호</b> 쌓여 '
-                 '있습니다(분기 적정물량의 %.1f배). 지을 데가 없어서가 아니라 '
+                 '있습니다(분기 적정물량의 %s). 지을 데가 없어서가 아니라 '
                  '안 팔려서 안 짓는 것일 수 있습니다.</p>'
-                 % (num(row['unsold']), row['um']))
+                 % (num(row['unsold']), umx(row['um'])))
     # est(적정물량 추정 지역) 안내문은 싣지 않는다 — "기준표에 없어 추정",
     # "세대수 비중으로 나눴다"는 일반 유저가 이해 못 할 내부 방법론이다
     # (2026-08-08 사용자). 방법론 전문은 홈 '산출 방법' 접힘이 담당한다.
@@ -407,8 +441,8 @@ def build_page(z, calc, stats, pq, others):
         ('미분양', (num(row['unsold']) + '호') if row.get('unsold') is not None else '–',
          # ⚠️ '기준 · 분기 적정물량' 접두는 check_freshness의 파생 페이지 감시가
          # 정규식으로 잡는 문자열이다 — 문구를 바꿀 땐 그 패턴을 보존할 것.
-         ('%s 기준 · 분기 적정물량(%s호)의 %.2f배'
-          % (calc.get('unsold_prd') or '', num(d_ref), row['um']))
+         ('%s 기준 · 분기 적정물량(%s호)의 %s'
+          % (calc.get('unsold_prd') or '', num(d_ref), umx(row['um'])))
          if row.get('um') is not None else '자료 없음'),
     ):
         h.append('<div class="zcell"><b>%s</b><span>%s</span><i>%s</i></div>' % (k, v, note))
@@ -447,43 +481,40 @@ def build_page(z, calc, stats, pq, others):
     # 시점 재고, 인허가는 최근 12개월 합이라 라벨과 설명 칸에 창을 박는다.
     foot = []
     if row.get('unsold') is not None:
-        foot.append('<tr class="zref" data-ref="un"><td>미분양'
-                    '<i class="ri" aria-hidden="true">ⓘ</i></td><td>%s</td><td>%s</td>'
+        foot.append('<tr class="zref" data-ref="un"><td>%s</td><td>%s</td><td>%s</td>'
                     '<td colspan="3" class="zfut">%s 기준 · 지금 안 팔리고 남은 재고</td></tr>'
-                    % (num(row['unsold']),
-                       ('%.1f배' % row['um']) if row.get('um') is not None else '–',
+                    % (refbtn('미분양'), num(row['unsold']),
+                       umx(row['um']) if row.get('um') is not None else '–',
                        calc.get('unsold_prd') or ''))
     if row.get('pm12') is not None:
-        foot.append('<tr class="zref" data-ref="pm"><td>인허가 1년'
-                    '<i class="ri" aria-hidden="true">ⓘ</i></td><td>%s</td><td>%s</td>'
+        foot.append('<tr class="zref" data-ref="pm"><td>%s</td><td>%s</td><td>%s</td>'
                     '<td colspan="3" class="zfut">3~4년 뒤 입주로 이어지는 선행 물량</td></tr>'
-                    % (num(row['pm12']),
+                    % (refbtn('인허가 1년'), num(row['pm12']),
                        ('%.0f%%' % (row['pmr'] * 100)) if row.get('pmr') is not None else '–'))
     if foot:
         h.append('<tfoot>' + ''.join(foot) + '</tfoot>')
     # 표 아래 설명 문단은 2026-08-11 사용자 결정으로 삭제 — 굵은 줄은 보면 알고,
     # 미분양·인허가는 행을 누르면 열리는 탭 안내(zrefnote)가 설명을 맡는다.
     h.append('</table></div>'
-             '<p class="tb-refnote" id="zrefnote" hidden></p>')
+             '<p class="tb-refnote" id="zrefnote" aria-live="polite" hidden></p>')
     # 표의 기본 화면을 맨 아래(미래 분기)로 — 공급을 보러 온 사람이 매번 28행을
     # 내리게 하지 않는다(2026-08-11 사용자). 과거가 궁금하면 위로 올리면 된다.
     # 참고 행 탭 안내(2026-08-11 사용자) — 데스크톱 호버가 없는 모바일에서도
     # 행을 누르면 표 아래에 설명이 열린다. 홈 표의 TB_REFNOTE와 같은 문구.
+    # 안내 문구는 REFNOTE 정본을 JSON으로 그대로 실어 손으로 옮기지 않는다.
     h.append('<script>document.querySelectorAll(".ztb-scroll").forEach('
              'function(e){e.scrollTop=e.scrollHeight});'
-             "var ZREFNOTE={un:'미분양은 다 짓고도 팔리지 않아 남아 있는 집입니다"
-             "(국토교통부 월간 집계). 이미 지어진 재고에 들어 있어 순위 계산에 다시 "
-             "넣으면 이중계산이라, 참고로만 보여줍니다.',"
-             "pm:'인허가는 \"짓겠다\"고 허가받은 단계의 물량으로, 보통 3~4년 뒤 입주로 "
-             "이어져 이 표의 마지막 분기 너머를 미리 보여줍니다. 월별 들쭉날쭉이 커서 "
-             "최근 12개월 합으로 묶어 연간 적정물량과 견주고, 실제 착공은 이보다 적어 "
-             "순위 계산에는 착공만 씁니다.'};"
+             'var ZREFNOTE=' + json.dumps(REFNOTE, ensure_ascii=False) + ';'
              'document.querySelectorAll(".ztb tfoot tr.zref").forEach(function(tr){'
              'tr.addEventListener("click",function(){'
              'var p=document.getElementById("zrefnote");if(!p)return;'
              'var k=tr.getAttribute("data-ref");'
-             'if(!p.hidden&&p.dataset.k===k){p.hidden=true;return;}'
-             'p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;});});'
+             'if(!p.hidden&&p.dataset.k===k){p.hidden=true;}'
+             'else{p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;}'
+             'document.querySelectorAll(".ztb tfoot .rbtn").forEach(function(b){'
+             'var own=b.parentNode.parentNode.getAttribute("data-ref");'
+             'b.setAttribute("aria-expanded",'
+             '(!p.hidden&&own===p.dataset.k)?"true":"false");});});});'
              '</script>'
              '</div></section>')
 
