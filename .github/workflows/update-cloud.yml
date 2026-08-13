@@ -1,23 +1,48 @@
 name: 데이터 자동 갱신 (클라우드 冗長)
 
 # 집 PC 없이 완전 자동. KOSIS는 GitHub 러너의 Azure IP 일부를 간헐 차단해
-# 단일 러너면 ~12.5% 확률로 그날 전면 실패한다(2026-07 실측). 쿼리 크기 문제가
-# 아니라 IP 룰렛이라 청크 쪼개기로는 못 푼다. 대신 병렬 3러너(=서로 다른 IP)를
-# 띄워 오염 안 된 러너의 산출물만 커밋한다 — 3러너 동시 실패 확률 ≈0.2%.
+# 단일 러너면 그날 전면 실패한다. 쿼리 크기 문제가 아니라 IP 룰렛이라 청크
+# 쪼개기로는 못 푼다. 대신 병렬 3러너(=서로 다른 IP)를 띄워 오염 안 된 러너의
+# 산출물만 커밋한다.
+#
+# ⚠️ 개별 러너 실패율은 시기에 따라 크게 출렁인다 — 2026-07 실측 ~12.5%였다가
+# 2026-08-07~13 실측 38%(21러너 중 8 실패, 3러너 전멸 확률 ≈5.5%). 게다가 실패가
+# 독립이 아니다: 같은 회차의 러너들이 같이 좋거나 같이 나빠(08-13 17시 3/3 vs
+# 20시 1/3), KOSIS 부하(시간대)에 연동된 스로틀링으로 보인다. 그래서 러너를 더
+# 늘리는 것보다 **시간을 바꿔 다시 던지는** retry 잡이 전멸의 주 방어선이다.
+# 실패 형태도 거부가 아니라 무응답 hang이다(정상 응답 2~3초 vs 실패 15초 타임아웃
+# 만료) — 같은 IP 재시도는 무의미하고, 프리플라이트 타임아웃을 늘려도 못 건진다.
 on:
   schedule:
-    # 주간 발표(목)가 정오보다 늦게 R-ONE에 반영되는 경우가 있어(2026-07-23 13시에도
-    # 미반영 확인) 목요일은 오후·저녁 2회로 잡는다. 놓쳐도 다음 일일 런이 흡수.
-    - cron: '0 11 * * *'   # 매일 20:00 KST — 월간·KOSIS 셀프힐 + 목 저녁 주간 반영
-    - cron: '0 7 * * 4'    # 목 16:00 KST — 주간 발표 반영 1차 시도
-  workflow_dispatch: {}
+    # 시간대(2026-08-14 재배치): 저녁(20:00 KST)은 KOSIS 스로틀 피크와 겹치는
+    # 정황이 있어(위 실측) 일일 런을 17:00 KST로 옮겼다. 주간 발표(목)는 정오보다
+    # 늦게 R-ONE에 반영되는 경우가 있어(2026-07-23 13시에도 미반영) 목요일은
+    # 오전·오후에 이어 저녁 백스톱까지 3회 — 17시 런이 이미 반영분을 실었으면
+    # 20시 런은 '커밋 없음'으로 끝나 무해하다.
+    - cron: '0 8 * * *'    # 매일 17:00 KST — 월간·KOSIS 셀프힐 (+ 목 주간 2차)
+    - cron: '0 2 * * 4'    # 목 11:00 KST — 주간 발표 반영 1차 시도
+    - cron: '0 11 * * 4'   # 목 20:00 KST — 주간 늦반영 백스톱(옛 일일 시각)
+  workflow_dispatch:
+    inputs:
+      attempt:
+        description: '재시도 카운터(자동 재트리거용, 사람은 기본값으로 둘 것)'
+        type: string
+        default: '1'
   # push 트리거는 두지 않는다. 워크플로를 한 줄만 고쳐도 3러너 40분 배치가 돌고,
   # 예정에 없던 시각에 데이터가 커밋된다(산출물 채택 로직 검증 때 임시로 썼고
   # 검증이 끝나 제거). 수동 확인이 필요하면 workflow_dispatch를 쓴다.
 
+# 재시도가 생기면서 두 실행이 겹칠 수 있다(재시도 런이 도는 중에 정기 크론이
+# 도착하는 등). 커밋 잡 둘이 같은 파일에 push 경쟁하지 않게 직렬화한다.
+# cancel-in-progress는 끈다 — 도는 배치를 죽이면 그 회차 데이터가 유실된다.
+concurrency:
+  group: update-cloud
+  cancel-in-progress: false
+
 permissions:
   contents: write
   issues: write          # 매 회차 결과 보고를 전용 이슈에 코멘트로 남긴다(아래 '결과 보고')
+  actions: write         # retry 잡이 자신을 workflow_dispatch로 재트리거한다
 
 jobs:
   fetch:
@@ -114,6 +139,8 @@ jobs:
     needs: fetch
     if: always()
     runs-on: ubuntu-latest
+    outputs:
+      need_retry: ${{ steps.main.outputs.need_retry }}
     steps:
       - uses: actions/checkout@v5
 
@@ -126,6 +153,9 @@ jobs:
         continue-on-error: true    # clean 러너 0개면 아무것도 안 받음
 
       - name: 변경 있으면 커밋·푸시
+        id: main
+        env:
+          ATTEMPT: ${{ github.event.inputs.attempt || '1' }}
         run: |
           # ── 항목별 결과 기록 ────────────────────────────────────────────
           # 이 잡은 중간에 `exit 1`로 끊기는 지점이 여럿이라, 결과를 마지막에
@@ -171,8 +201,15 @@ jobs:
           [ -z "$SRC" ] && SRC=$(ls -d _art/data-* 2>/dev/null | head -1 || true)
           NRUN=$(ls -d _art/data-* 2>/dev/null | wc -l | tr -d ' ')
           if [ -z "$SRC" ]; then
-            rep "❌ 러너 0/3 clean — 이번 회차 갱신 없음 (KOSIS IP 룰렛, 다음 회차가 흡수)"
-            echo "::warning::clean 러너 0개 — 이번 회차 갱신 실패(다음 회차 새 IP가 흡수)"
+            # 전멸 = KOSIS 스로틀이 이 시간대를 조이고 있다는 뜻일 가능성이 크다.
+            # retry 잡이 35분 뒤 새 런(새 IP + 다른 시각)으로 재도전한다(최대 3시도).
+            if [ "${ATTEMPT:-1}" -lt 3 ]; then
+              rep "❌ 러너 0/3 clean (시도 ${ATTEMPT:-1}/3) — 35분 뒤 자동 재시도"
+              echo "need_retry=true" >> "$GITHUB_OUTPUT"
+            else
+              rep "❌ 러너 0/3 clean (시도 3/3 소진) — 이번 회차 갱신 없음, 다음 크론이 흡수"
+              echo "::warning::재시도 3회 전멸 — 원천 광역 장애 가능성, 다음 크론 회차가 흡수"
+            fi
             exit 0
           fi
           rep "✅ 러너 ${NRUN}/3 clean · 채택 주간 ${BEST:--} / 월간 ${BESTMO:--} / 공급 ${BESTSL:--}"
@@ -368,4 +405,31 @@ jobs:
           else
             echo "::warning::보고 이슈를 찾지도 만들지도 못했다 — Step Summary에는 남았다"
           fi
+
+  # 3러너 전멸(0/3 clean) 시 자기 재트리거. 러너 추가가 아니라 '시간을 바꿔
+  # 다시 던지기'인 이유: 실패가 러너 간 독립이 아니라 시간대에 상관돼 있어서다
+  # (파일 머리 주석의 실측). 35분이면 IP도 스로틀 창도 새로 뽑는다.
+  # 무한루프 방지 2중: ①attempt 카운터(최대 3시도) — 여기서 걸러도, commit 잡이
+  # 시도 3/3이면 need_retry 자체를 안 세운다 ②workflow_dispatch는 GITHUB_TOKEN
+  # 재귀 차단의 예외라 동작하는 대신, 그만큼 카운터가 유일한 제동이다.
+  retry:
+    needs: commit
+    if: needs.commit.outputs.need_retry == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 35분 뒤 새 IP·새 시각으로 재트리거
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTEMPT: ${{ github.event.inputs.attempt || '1' }}
+        run: |
+          NEXT=$((ATTEMPT + 1))
+          if [ "$NEXT" -gt 3 ]; then
+            echo "시도 한도 도달 — 재트리거하지 않음(방어선, 정상이라면 commit 잡이 이미 걸렀다)"
+            exit 0
+          fi
+          echo "시도 ${ATTEMPT} 전멸 — 35분 대기 후 시도 ${NEXT} 디스패치"
+          sleep 2100
+          gh workflow run update-cloud.yml --ref main -f attempt="$NEXT" -R "$GITHUB_REPOSITORY"
+          echo "디스패치 완료(attempt=$NEXT)"
 
