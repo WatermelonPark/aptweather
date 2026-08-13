@@ -463,6 +463,11 @@ def build_page(z, calc, stats, pq, others):
         cls = ''
         if isfut and first_fut:
             cls = ' class="znow"'; first_fut = False
+            # 실적/추정 경계는 홈 표와 같은 '말하는 밴드'(2026-08-14 검수) —
+            # 같은 개념이 화면마다 다른 방식이면 안 된다. 문구는 sticky로
+            # 가로 스크롤에도 시야에 남는다.
+            h.append('<tr class="ztb-nowrow"><td colspan="6"><span>'
+                     '▼ 아래는 착공 실적으로 추정한 미래입니다</span></td></tr>')
         pct = rnd(v / float(row['ref']) * 100) if row['ref'] else 0
         gap = (1 - v / float(row['ref'])) if row['ref'] else None
         p = (pq.get(i) or {}).get(z)
