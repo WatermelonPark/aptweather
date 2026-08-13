@@ -236,6 +236,29 @@ def test_persistent_outage_still_alarms(monkeypatch):
     _reset_retry()
 
 
+def test_gate_arithmetic_survives_the_retry_pass(monkeypatch):
+    """SKIPPED 목록만 보면 부족하다 — 판정은 'SKIPPED×2 > len(fails)' 산식이
+    한다. 첫 구현이 재시도 결과(None)를 fails에 그대로 append해 분모를 부풀렸고,
+    2026-08-12 시나리오(18계열 중 14 지속 실패)가 28>32 거짓으로 **OK를 찍었다**
+    (2026-08-13 리뷰에서 재현·확정). main()의 산식을 그대로 복제해 잠근다."""
+    _reset_retry()
+    monkeypatch.setattr(C.time, 'sleep', lambda s: None)
+
+    def dead():
+        raise OSError('timed out')
+
+    fails = []
+    for i in range(18):
+        getter = dead if i < 14 else (lambda: '2026.06')
+        fails.append(C.check('s%02d' % i, '2026.06', getter, 50))
+    C.retry_failed(fails, wait=0)
+    assert len(C.SKIPPED) == 14
+    assert not [f for f in fails if f], '뒤처짐이 아니라 조회 실패다 — bad는 비어야 한다'
+    assert len(C.SKIPPED) * 2 > len(fails), \
+        '지속 광역 장애가 OK로 통과한다 — 재시도가 분모를 부풀렸는지 확인'
+    _reset_retry()
+
+
 def test_retry_still_catches_a_genuinely_stale_series(monkeypatch):
     """재시도에 살아난 원천이 더 최신이면 뒤처짐 검사는 그대로 받아야 한다 —
     재시도가 '봐주기'가 되면 감시가 켜진 채 아무것도 안 보게 된다."""

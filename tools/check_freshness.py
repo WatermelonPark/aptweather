@@ -496,7 +496,14 @@ def retry_failed(fails, wait=None):
     time.sleep(w)
     FETCH_TIMEOUT = 20
     for label, ours, getter, grace in RETRYQ:
-        fails.append(check(label, ours, getter, grace, _retry=False))
+        # ⚠️ 뒤처짐(진짜 사유)만 fails에 넣는다. None까지 넣으면 계열당 항목이
+        # 두 개가 되어 'SKIPPED×2 > len(fails)' 게이트의 분모가 부풀고, 지속
+        # 광역 장애(14/18)가 28>32 거짓으로 **OK를 찍는다** — 감시가 켜진 채
+        # 아무것도 안 보는 상태다(2026-08-13 리뷰에서 재현·확정한 회귀).
+        r = check(label, ours, getter, grace, _retry=False)
+        if r:
+            fails.append(r)
+    del RETRYQ[:]
 
 
 def main():
