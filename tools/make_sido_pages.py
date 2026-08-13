@@ -84,8 +84,11 @@ def umx(v):
     정한다(2026-08-12 리뷰: 같은 값이 카드 0.38배 / 표 0.4배로 갈렸다).
     1 미만은 소수 둘째 자리까지 — 0.01배(세종)를 '0.0배'로 뭉개면 0과 구별이 안 된다.
     1 이상은 첫째 자리로 충분하다(2.4배).
+    분기는 원값이 아니라 **첫째 자리로 반올림한 표기**로 정한다 — 0.996을 원값(<1)으로
+    가르면 '1.00배'가 되어 1.0의 '1.0배'와 자릿수가 갈린다(2026-08-13 리뷰 경계 케이스).
     """
-    return ('%.2f배' if v < 1 else '%.1f배') % v
+    s = '%.1f' % v
+    return (s if float(s) >= 1 else '%.2f' % v) + '배'
 
 
 def refbtn(label):
@@ -510,7 +513,10 @@ def build_page(z, calc, stats, pq, others):
              'var p=document.getElementById("zrefnote");if(!p)return;'
              'var k=tr.getAttribute("data-ref");'
              'if(!p.hidden&&p.dataset.k===k){p.hidden=true;}'
-             'else{p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;}'
+             'else{p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;'
+             # 탭한 행이 화면 맨 밑이면 설명이 폴드 아래 열린다(모바일) —
+             # nearest라 이미 보이면 안 움직인다.
+             'p.scrollIntoView({block:"nearest"});}'
              'document.querySelectorAll(".ztb tfoot .rbtn").forEach(function(b){'
              'var own=b.parentNode.parentNode.getAttribute("data-ref");'
              'b.setAttribute("aria-expanded",'

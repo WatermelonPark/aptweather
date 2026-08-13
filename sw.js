@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v100'; // 참고 행 키보드 접근 + 안내문 정본화 + 배수 표기 통일
+const VERSION = 'v101'; // 설명 열릴 때 nearest 스크롤 + 배수 경계 표기
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

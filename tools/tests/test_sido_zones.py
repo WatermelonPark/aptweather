@@ -333,6 +333,9 @@ def test_unsold_ratio_reads_the_same_everywhere():
     import make_sido_pages as M
     assert M.umx(0.384) == '0.38배' and M.umx(0.01) == '0.01배'
     assert M.umx(2.44) == '2.4배' and M.umx(1.0) == '1.0배'
+    # 경계: 첫째 자리로 1.0이 되는 값은 1.0배로 — 0.996이 '1.00배'로 나와
+    # 1.0의 '1.0배'와 자릿수가 갈리면 안 된다(2026-08-13 리뷰).
+    assert M.umx(0.996) == '1.0배' and M.umx(0.95) == '0.95배'
 
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     for z in ('수도권', '제주', '세종'):
@@ -351,10 +354,14 @@ def test_reference_rows_are_keyboard_reachable():
     assert 'aria-controls="tb-refnote"' in src and 'class="rbtn"' in src
     assert 'aria-live="polite"' in src, '열린 설명이 읽히지 않는다'
     assert 'tbRefSync' in src, 'aria-expanded가 상태를 따라가지 않는다'
+    # 열릴 때 nearest 스크롤 — 탭한 행이 화면 맨 밑이면 설명이 폴드 아래
+    # 열려 아무 일도 없는 것처럼 보인다(2026-08-13 리뷰, 모바일).
+    assert 'scrollIntoView' in src, '열린 설명이 시야 밖에 남을 수 있다'
     for z in ('서울', '세종'):
         h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
         assert h.count('<button type="button" class="rbtn"') == 2, z
         assert 'aria-controls="zrefnote"' in h and 'aria-live="polite"' in h, z
+        assert 'scrollIntoView' in h, '%s: 열린 설명이 시야 밖에 남을 수 있다' % z
 
 
 def test_home_css_avoids_reviewed_regressions():

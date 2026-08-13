@@ -2708,7 +2708,12 @@ function tbDraw(){
       if(!p) return;
       var k=tr.getAttribute('data-ref');
       if(!p.hidden&&p.dataset.k===k){ p.hidden=true; }
-      else{ p.dataset.k=k; p.textContent=TB_REFNOTE[k]||''; p.hidden=false; }
+      else{
+        p.dataset.k=k; p.textContent=TB_REFNOTE[k]||''; p.hidden=false;
+        /* 탭한 행이 화면 맨 밑이면 설명이 폴드 아래 열린다(모바일) —
+           nearest라 이미 보이면 안 움직인다. */
+        p.scrollIntoView({block:'nearest'});
+      }
       tbRefSync();
     });
   }
