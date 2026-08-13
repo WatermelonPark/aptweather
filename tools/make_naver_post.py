@@ -50,6 +50,13 @@ def kdate(p):
     return '%d월 %d일' % (int(m), int(d))
 
 
+def iga(w):
+    """이/가 조사. 옛 지역명은 전부 '권'으로 끝나 '이' 고정이 맞았지만,
+    시도명은 제주·경기처럼 받침 없는 이름이 있다('제주이' 오류, 2026-08-14 실측)."""
+    c = ord(w[-1])
+    return '이' if 0xAC00 <= c <= 0xD7A3 and (c - 0xAC00) % 28 else '가'
+
+
 def esc(s):
     return (str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
 
@@ -286,10 +293,10 @@ def draft_weekly(adv, sts, rows):
                 '<tr><th>순위</th><th>지역</th><th>판정</th></tr></thead>'
                 '<tbody>%s</tbody></table>' % topHtml)
     lead_z = top[0]
-    body.append('<p><b>%s</b>이 가장 모자란 곳으로 나왔습니다. '
+    body.append('<p><b>%s</b>%s 가장 모자란 곳으로 나왔습니다. '
                 '공급 부족이 곧 가격 상승을 뜻하지는 않지만, '
                 '금리·수요와 함께 가격을 밀어올리는 힘 가운데 하나입니다.</p>'
-                % esc(lead_z['z']))
+                % (esc(lead_z['z']), iga(lead_z['z'])))
 
     # ── ④ 다른 지표(4주 로테이션). 매주 같은 각도만 보여주면 사이트의 폭이 안 드러난다.
     if extra_html:
