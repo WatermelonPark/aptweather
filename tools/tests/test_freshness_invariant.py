@@ -191,6 +191,71 @@ def test_indicator_dateModified_respects_the_publish_clamp(monkeypatch):
     assert any('moveins' in x for x in f), f
 
 
+# ---------------------------------------------------------------------------
+# 원천 조회 재시도 — 광역 장애(2026-08-12)는 IP를 바꿔도 소용없다
+# ---------------------------------------------------------------------------
+
+def _reset_retry():
+    C.RETRYQ.clear()
+    C.SKIPPED.clear()
+    C.FETCH_TIMEOUT = 60
+
+
+def test_transient_origin_outage_recovers_on_retry(monkeypatch):
+    """1차 조회가 죽었다 재시도에 살아나면 건너뜀도 실패도 아니어야 한다 —
+    2026-08-12 KOSIS·R-ONE 광역 타임아웃(14/18)이 정확히 이 모양이었다."""
+    _reset_retry()
+    monkeypatch.setattr(C.time, 'sleep', lambda s: None)
+    calls = {'n': 0}
+
+    def flaky():
+        calls['n'] += 1
+        if calls['n'] == 1:
+            raise OSError('timed out')
+        return '2026.06'
+
+    fails = [C.check('월간', '2026.06', flaky, 50)]
+    assert C.RETRYQ and not C.SKIPPED, '1차 실패는 확정이 아니라 재시도 대기여야 한다'
+    C.retry_failed(fails, wait=0)
+    assert not C.SKIPPED and not [f for f in fails if f]
+    assert calls['n'] == 2
+
+
+def test_persistent_outage_still_alarms(monkeypatch):
+    """재시도까지 죽으면 SKIPPED로 확정 — 게이트를 무디게 하는 게 아니다.
+    표 ID 변경·키 만료는 여기로 와야 잡힌다."""
+    _reset_retry()
+    monkeypatch.setattr(C.time, 'sleep', lambda s: None)
+
+    def dead():
+        raise OSError('timed out')
+
+    fails = [C.check('월간', '2026.06', dead, 50)]
+    C.retry_failed(fails, wait=0)
+    assert C.SKIPPED == ['월간'], '재시도까지 실패하면 기존 게이트로 가야 한다'
+    _reset_retry()
+
+
+def test_retry_still_catches_a_genuinely_stale_series(monkeypatch):
+    """재시도에 살아난 원천이 더 최신이면 뒤처짐 검사는 그대로 받아야 한다 —
+    재시도가 '봐주기'가 되면 감시가 켜진 채 아무것도 안 보게 된다."""
+    _reset_retry()
+    monkeypatch.setattr(C.time, 'sleep', lambda s: None)
+    calls = {'n': 0}
+
+    def flaky_and_newer():
+        calls['n'] += 1
+        if calls['n'] == 1:
+            raise OSError('timed out')
+        return '2026.07'
+
+    fails = [C.check('월간', '2026.05', flaky_and_newer, 50)]
+    C.retry_failed(fails, wait=0)
+    bad = [f for f in fails if f]
+    assert bad and '월간' in bad[0], '뒤처짐이 재시도 뒤에도 잡혀야 한다'
+    _reset_retry()
+
+
 def test_aggregate_regions_are_monitored_too(monkeypatch):
     """전국·수도권·지방도 페이지가 **있다**(zone/전국/ 등) — 예전엔 '없다'는 틀린
     전제로 감시에서 빼서, 유입이 가장 많은 전국 페이지의 스테일을 원리적으로

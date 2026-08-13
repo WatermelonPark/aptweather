@@ -22,6 +22,12 @@ name: 데이터 신선도 감시 (배치 실패 알림)
 # ⚠️ recheck는 절대 삼키지 말 것. 재시도까지 나쁜 IP면 red가 맞다. 양쪽 다 관대하게
 # 두면 '감시가 켜진 채 아무것도 안 보는' 상태가 되고, 그게 이 워크플로가 막으려는 것이다.
 # check_freshness.py의 SKIPPED 게이트도 같은 이유로 손대지 말 것 — 그건 정상 동작이다.
+#
+# 잡 재시도(새 IP)와 별개로, 스크립트 안에도 재시도가 한 층 있다(2026-08-13):
+# 원천 **자체**가 잠깐 죽으면 IP를 바꿔도 소용없다(2026-08-12: KOSIS·R-ONE 광역
+# 타임아웃으로 14/18 실패 → 다음 날 자연 회복). check_freshness.py가 실패 계열만
+# 75초 쉬었다 한 번 더 보고 판정한다. 게이트 자체는 그대로다 — 재시도까지 실패하면
+# red. timeout-minutes 30은 그 예산이다(1차 최악 ~15분 + 대기 + 재시도 ~5분).
 
 on:
   schedule:
@@ -35,7 +41,7 @@ jobs:
   # 1차: 실패해도 red로 만들지 않는다. 판정은 recheck가 한다.
   freshness:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30    # 스크립트 내부 재시도 예산 포함(위 주석)
     outputs:
       ok: ${{ steps.check.outputs.ok }}
     steps:
@@ -96,7 +102,7 @@ jobs:
     needs: freshness
     if: needs.freshness.outputs.ok != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30    # 스크립트 내부 재시도 예산 포함(위 주석)
     steps:
       - uses: actions/checkout@v5
 

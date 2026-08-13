@@ -23,6 +23,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -40,7 +41,11 @@ import split_data as S       # noqa: E402  (지연 로드 분리 규칙을 공�
 SITE = 'https://www.agongmap.co.kr'
 UA = {'User-Agent': 'agongmap-watchdog'}
 TODAY = datetime.date.today()
-SKIPPED = []           # 원천 조회 실패로 판정하지 못한 계열
+SKIPPED = []           # 원천 조회 실패로 판정하지 못한 계열(재시도까지 실패)
+RETRYQ = []            # 1차 조회 실패 — 한 텀 쉬고 다시 볼 (label, ours, getter, grace)
+RETRY_WAIT = 75        # 초. 순간 장애는 넘기고, 잡 타임아웃(30분) 예산 안에 든다.
+FETCH_TIMEOUT = 60     # 원천 호출 타임아웃. 재시도 패스에서는 20으로 줄인다 —
+                       # 광역 장애면 어차피 다 실패하는데 60s×14계열=14분을 또 쓸 이유가 없다.
 
 # 계열별 정상 최대 나이(일). 이 안쪽이면 '발표 직후 배치 전'일 수 있어 봐준다.
 # 주간 9는 감시를 배치 뒤(22시)에 돌린다는 전제에 기댄다. 기준일은 월요일이고
@@ -54,7 +59,8 @@ GRACE_BASIC = 100      # 인허가·착공·준공이 약 2개월 지연(정상 
 
 def get_json(url):
     return json.loads(urllib.request.urlopen(
-        urllib.request.Request(url, headers=UA), timeout=60).read().decode('utf-8', 'replace'))
+        urllib.request.Request(url, headers=UA), timeout=FETCH_TIMEOUT
+    ).read().decode('utf-8', 'replace'))
 
 
 def live_adv_stats():
@@ -439,14 +445,23 @@ def age_days(period):
     return (TODAY - d).days
 
 
-def check(label, ours, getter, grace):
+def check(label, ours, getter, grace, _retry=True):
     """원천이 더 최신이고 grace를 넘겨 뒤처졌으면 실패 사유를 반환."""
     if not ours:
         return '%s: 라이브 값이 비어 있음' % label
     try:
         src = getter()
     except Exception as e:
-        # 원천이 잠깐 죽는 건 흔하다 — 한둘은 넘기고, 대량 건너뜀만 아래에서 잡는다.
+        if _retry:
+            # 바로 '건너뜀'으로 확정하지 않는다 — 2026-08-12 원천(KOSIS·R-ONE)
+            # 광역 타임아웃 때 잡 2개(=IP 2개)가 다 죽어 오경보가 났다. 실패분을
+            # 모아 한 텀 쉬고 retry_failed()가 다시 본다. 그래도 실패하면 그때
+            # SKIPPED에 들어가 아래 게이트가 잡는다.
+            RETRYQ.append((label, ours, getter, grace))
+            print('  %-12s %-12s 원천 조회 실패 (%s) — 막판에 재시도'
+                  % (label, ours, str(e)[:40]))
+            return None
+        # 재시도까지 실패 — 한둘은 넘기고, 대량 건너뜀만 아래에서 잡는다.
         SKIPPED.append(label)
         print('  %-12s %-12s 원천 조회 건너뜀 (%s)' % (label, ours, str(e)[:40]))
         return None
@@ -462,6 +477,26 @@ def check(label, ours, getter, grace):
         mark += ' (발표 직후 가능 — grace %d일 내)' % grace
     print('  %-12s %-12s %s일%s' % (label, ours, age, mark))
     return None
+
+
+def retry_failed(fails, wait=None):
+    """1차에서 원천 조회에 실패한 계열만 한 텀 쉬고 다시 대조한다.
+
+    잡 단위 재시도(새 IP)는 KOSIS의 IP 차단용이고, 이건 **원천 자체가 잠깐
+    죽는** 경우용이다(2026-08-12: 양쪽 IP 모두 타임아웃 → 다음 날 자연 회복).
+    판정 게이트를 무디게 하는 게 아니다 — 재시도까지 실패하면 SKIPPED에 들어가
+    기존 게이트가 그대로 잡고, 성공하면 뒤처짐 검사도 그대로 받는다.
+    """
+    global FETCH_TIMEOUT
+    if not RETRYQ:
+        return
+    w = RETRY_WAIT if wait is None else wait
+    print('')
+    print('[재시도 — 원천 조회 실패 %d계열, %d초 쉬고 다시]' % (len(RETRYQ), w))
+    time.sleep(w)
+    FETCH_TIMEOUT = 20
+    for label, ours, getter, grace in RETRYQ:
+        fails.append(check(label, ours, getter, grace, _retry=False))
 
 
 def main():
@@ -588,6 +623,8 @@ def main():
         fails.append('감시 누락 계열 %s — check_freshness.py에 대조를 추가할 것'
                      % ', '.join(uncovered))
 
+    retry_failed(fails)
+
     bad = [f for f in fails if f]
     print('')
     if bad:
@@ -600,8 +637,8 @@ def main():
     if len(SKIPPED) * 2 > len(fails):
         # 절반 넘게 못 봤으면 'OK'는 근거가 없다. 통과시키면 감시가 켜져 있는
         # 채로 아무것도 안 보는 상태가 된다 — 그게 가장 위험한 실패다.
-        print('FAIL: %d/%d 계열을 원천과 대조하지 못했습니다 — %s'
-              % (len(SKIPPED), len(fails), ', '.join(SKIPPED)))
+        print('FAIL: %d/%d 계열을 원천과 대조하지 못했습니다(%d초 쉬고 재시도까지 실패) — %s'
+              % (len(SKIPPED), len(fails), RETRY_WAIT, ', '.join(SKIPPED)))
         print('  → API 키 만료·표 ID 변경·원천 장애 여부 확인')
         sys.exit(1)
     if SKIPPED:
