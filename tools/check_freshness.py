@@ -43,6 +43,11 @@ UA = {'User-Agent': 'agongmap-watchdog'}
 TODAY = datetime.date.today()
 SKIPPED = []           # 원천 조회 실패로 판정하지 못한 계열(재시도까지 실패)
 RETRYQ = []            # 1차 조회 실패 — 한 텀 쉬고 다시 볼 (label, ours, getter, grace)
+# 조회 **자체**가 실패한 것. SKIPPED가 대부분을 덮지만 SKIPPED는 'SKIPPED×2 >
+# len(fails)' 게이트의 분자로도 쓰이므로, 그 산수를 건드리지 않으려고 별도로 둔다.
+# 이 목록이 비어 있다는 건 "네트워크는 멀쩡했고 판정은 순수히 데이터로 났다"는 뜻이고,
+# 그때는 새 IP로 다시 봐도 답이 같다(아래 EXIT_DETERMINISTIC).
+FETCH_FAIL = []
 RETRY_WAIT = 75        # 초. 순간 장애는 넘기고, 잡 타임아웃(30분) 예산 안에 든다.
 FETCH_TIMEOUT = 25     # 원천 호출 타임아웃. 재시도 패스에서는 20으로 줄인다 —
                        # 광역 장애면 어차피 다 실패하는데 같은 시간을 또 쓸 이유가 없다.
@@ -530,6 +535,33 @@ def retry_failed(fails, wait=None):
     del RETRYQ[:]
 
 
+EXIT_RETRYABLE = 1      # 조회가 한 군데라도 실패했다 — 새 IP로 다시 볼 가치가 있다
+EXIT_DETERMINISTIC = 2  # 네트워크는 멀쩡했다 — 다시 봐도 답이 같다
+
+
+def _verdict_exit():
+    """실패를 '다시 볼 값어치가 있는가'로 갈라 종료 코드를 정한다.
+
+    왜: watchdog.yml은 1차(freshness)를 '의심'으로만 쓰고 판정을 recheck에
+    넘긴다 — 새 러너=새 IP라 KOSIS IP 차단을 걸러내려는 설계다. 그런데 실패가
+    **순수 뒤처짐**(조회는 다 성공했고 우리 데이터가 늦은 것)일 때는 IP와
+    아무 상관이 없다. 그 경우 recheck는 결정론적인 답을 확인하려고 21회 호출과
+    최대 30분을 다시 쓴다. 장애 밤에는 두 층이 곱해져 84회가 된다.
+
+    ⚠️ 안전 방향: **애매하면 EXIT_RETRYABLE**이다. 잘못 분류해도 양쪽 다
+    빨간불은 뜬다(재시도로 잘못 보내면 오늘과 똑같고, 결정론으로 잘못 보내면
+    즉시 red다) — 어느 쪽도 감시가 조용해지지 않는다. 이 성질이 이 변경의
+    전제이므로, 여기에 '조용히 통과' 분기를 추가하지 말 것.
+    """
+    trouble = list(SKIPPED) + list(FETCH_FAIL)
+    if trouble:
+        print('VERDICT=retry  (조회 실패 %d건: %s — 새 IP로 재확인할 값어치가 있다)'
+              % (len(trouble), ', '.join(trouble[:6])))
+        sys.exit(EXIT_RETRYABLE)
+    print('VERDICT=final  (조회는 전부 성공 — 데이터 자체의 문제라 재확인해도 답이 같다)')
+    sys.exit(EXIT_DETERMINISTIC)
+
+
 def main():
     # 키가 비면 모든 원천 조회가 '건너뜀'이 되어 감시가 조용히 통과한다.
     # 감시자가 무력해진 것을 감시할 사람은 없으니 여기서 바로 실패시킨다.
@@ -537,7 +569,9 @@ def main():
                if not os.environ.get(k)]
     if missing:
         print('FAIL: %s 없음 — 원천 대조를 할 수 없습니다 (시크릿 확인)' % ', '.join(missing))
-        sys.exit(1)
+        # 시크릿은 두 잡이 같은 저장소 것을 읽으므로 새 IP로 다시 봐도 똑같이 없다.
+        print('VERDICT=final  (시크릿 부재는 재확인 대상이 아니다)')
+        sys.exit(EXIT_DETERMINISTIC)
 
     adv, stats = live_adv_stats()
     fails = []
@@ -639,6 +673,9 @@ def main():
             fails.append(check_age('시도 지표', None if not sido.get('L') else
                                    _q_to_date(sido['L']), 200))
     except Exception as e:
+        # 이건 조회 실패다 — SKIPPED에는 안 넣는다(위 게이트의 분자를 바꾸면
+        # 안 되므로). 대신 FETCH_FAIL에 남겨 '새 IP로 재확인' 쪽으로 분류되게 한다.
+        FETCH_FAIL.append('ADV.sido')
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 
     fails.extend(check_sido_sum(stats))
@@ -664,16 +701,17 @@ def main():
         for b in bad:
             print('  - %s' % b)
         print('  → update-cloud 실행 이력, 해당 KOSIS 표 ID 변경/폐지 여부 확인')
-        sys.exit(1)
+        _verdict_exit()
     if len(SKIPPED) * 2 > len(fails):
         # 절반 넘게 못 봤으면 'OK'는 근거가 없다. 통과시키면 감시가 켜져 있는
         # 채로 아무것도 안 보는 상태가 된다 — 그게 가장 위험한 실패다.
         print('FAIL: %d/%d 계열을 원천과 대조하지 못했습니다(%d초 쉬고 재시도까지 실패) — %s'
               % (len(SKIPPED), len(fails), RETRY_WAIT, ', '.join(SKIPPED)))
         print('  → API 키 만료·표 ID 변경·원천 장애 여부 확인')
-        sys.exit(1)
+        _verdict_exit()
     if SKIPPED:
         print('참고: %s 계열은 원천 조회 실패로 건너뜀' % ', '.join(SKIPPED))
+    print('VERDICT=ok')
     print('OK: 모든 계열이 원천과 같은 시점입니다.')
 
 

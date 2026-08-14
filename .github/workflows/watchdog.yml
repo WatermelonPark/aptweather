@@ -53,12 +53,20 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  # 1차: 실패해도 red로 만들지 않는다. 판정은 recheck가 한다.
+  # 1차: 스스로 red가 되지 않는다(종료코드를 삼킨다). 판정은 아래 두 잡이 나눠 맡는다.
+  #
+  # verdict 세 값과 그 뒤에 도는 잡:
+  #   ok    → 아무 잡도 안 돈다 → green
+  #   retry → recheck(새 러너=새 IP)가 판정한다  ← 조회 실패가 섞였을 때
+  #   final → alert가 즉시 red를 만든다          ← 조회는 다 됐고 데이터 문제일 때
+  # 그 외(빈 값·모르는 값·이 잡이 타임아웃으로 죽음) → **retry로 떨어진다.**
+  # 조건을 `== 'retry'`가 아니라 `!= 'ok' && != 'final'`로 쓴 이유가 이것이다 —
+  # 판정을 못 남기고 죽은 회차가 조용히 넘어가면 안 된다.
   freshness:
     runs-on: ubuntu-latest
     timeout-minutes: 30    # 스크립트 내부 재시도 예산 포함(위 주석)
     outputs:
-      ok: ${{ steps.check.outputs.ok }}
+      verdict: ${{ steps.check.outputs.verdict }}
     steps:
       - uses: actions/checkout@v5
 
@@ -103,19 +111,34 @@ jobs:
           RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
         run: |
-          # 여기서 exit 1로 죽으면 잡이 red가 되고 GitHub이 메일을 보낸다.
-          # 1차는 '의심'까지만 하고 판정은 recheck에 넘기므로 종료코드를 삼킨다.
-          if python tools/check_freshness.py; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
+          # 여기서 종료코드로 죽으면 잡이 red가 되므로 삼킨다 — 판정은 아래 잡이 한다.
+          # 종료코드: 0 정상 · 2 결정론적 실패(재확인 무의미) · 그 외 조회 실패 섞임.
+          RC=0
+          python tools/check_freshness.py || RC=$?
+          if [ "$RC" = "0" ]; then
+            echo "verdict=ok" >> "$GITHUB_OUTPUT"
+          elif [ "$RC" = "2" ]; then
+            # 조회는 전부 성공했고 데이터 자체가 문제다. 새 IP로 다시 봐도 답이
+            # 같으므로 recheck를 건너뛰고 바로 경보한다 — 예전엔 이 경우에도
+            # 21회 호출과 최대 30분을 다시 썼다(2026-08-15 리뷰).
+            echo "verdict=final" >> "$GITHUB_OUTPUT"
+            echo "::warning::1차 대조 실패(결정론) — 재확인 없이 바로 경보한다"
           else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "verdict=retry" >> "$GITHUB_OUTPUT"
             echo "::warning::1차 대조 실패 — 새 러너(=새 IP)로 재확인한다"
           fi
 
-  # 2차: 여기가 진짜 판정자. 실패하면 그대로 red → GitHub 실패 메일.
+  # 2차: 조회 실패가 섞였을 때의 판정자. 실패하면 그대로 red → GitHub 실패 메일.
+  #
+  # ⚠️ 조건이 `== 'retry'`가 아니라 `!= 'ok' && != 'final'`인 것이 핵심이다.
+  # 1차가 판정을 못 남기고 죽는 경로가 실재한다 — 프리플라이트가 '나쁜 IP'로
+  # 대조 스텝을 건너뛰면 verdict가 비고, 잡이 timeout-minutes에 걸려 죽어도 빈다.
+  # `== 'retry'`로 썼으면 그 회차들이 **아무 경보 없이 통과**한다. `!cancelled()`도
+  # 같은 이유다 — 커스텀 if를 쓰면 needs 잡이 실패했을 때 기본적으로 건너뛰는데,
+  # 1차가 죽은 회차야말로 재확인이 필요한 회차다.
   recheck:
     needs: freshness
-    if: needs.freshness.outputs.ok != 'true'
+    if: ${{ !cancelled() && needs.freshness.outputs.verdict != 'ok' && needs.freshness.outputs.verdict != 'final' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30    # 스크립트 내부 재시도 예산 포함(위 주석)
     steps:
@@ -131,3 +154,21 @@ jobs:
           RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
         run: python tools/check_freshness.py
+
+  # 3차 아님 — recheck의 **대안**이다. 둘 중 정확히 하나만 돈다.
+  # 조회가 전부 성공했는데 실패가 났다면 원인은 데이터 쪽이고, 새 IP로 다시 봐도
+  # 답이 같다. 그 확인에 21회 호출과 30분을 또 쓰는 대신 여기서 바로 red를 만든다.
+  # 사유는 freshness 잡 로그의 FAIL 목록에 그대로 있다.
+  alert:
+    needs: freshness
+    if: ${{ !cancelled() && needs.freshness.outputs.verdict == 'final' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 결정론적 실패 — 즉시 경보
+        run: |
+          echo "::error::라이브 데이터 대조 실패(결정론) — 원천 조회는 전부 성공했다."
+          echo "새 IP로 재확인해도 결과가 같으므로 recheck를 건너뛰었다."
+          echo "실패 목록은 이 실행의 'freshness' 잡 로그 맨 아래 FAIL 항목을 볼 것."
+          echo "→ update-cloud 실행 이력, KOSIS 표 ID 변경/폐지 여부 확인"
+          exit 1
