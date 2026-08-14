@@ -20,7 +20,7 @@ drafts/ 는 .gitignore 대상이다(사이트에 공개될 초안이 아니라 �
 2026-08-06 시도 재편(생활권 44곳 → 시도 20곳, 인허가 4년 → 착공 3년)으로 한 번
 전면 재작성했다. 다음에 모델이 바뀌면 '설명 구조'가 그대로인지부터 확인할 것.
 """
-import io, os, re, sys, json, datetime
+import io, os, re, sys, json, datetime, subprocess
 from urllib.parse import quote
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -50,11 +50,23 @@ def kdate(p):
     return '%d월 %d일' % (int(m), int(d))
 
 
+def batchim(w):
+    """마지막 글자에 받침이 있나. 조사 선택은 전부 이걸로 갈린다."""
+    c = ord(w[-1])
+    return 0xAC00 <= c <= 0xD7A3 and (c - 0xAC00) % 28 != 0
+
+
 def iga(w):
     """이/가 조사. 옛 지역명은 전부 '권'으로 끝나 '이' 고정이 맞았지만,
     시도명은 제주·경기처럼 받침 없는 이름이 있다('제주이' 오류, 2026-08-14 실측)."""
-    c = ord(w[-1])
-    return '이' if 0xAC00 <= c <= 0xD7A3 and (c - 0xAC00) % 28 else '가'
+    return '이' if batchim(w) else '가'
+
+
+def eunneun(w):
+    """은/는 조사. iga()와 같은 사고가 한 군데 더 있었다 — ②는 17개 시도를
+    순회하는데 '%s은'이 박여 있어 대구·광주·경기·제주에서 '대구은'이 된다.
+    다음 순번이 대구라 발행 전에 잡았다(2026-08-15)."""
+    return '은' if batchim(w) else '는'
 
 
 def esc(s):
@@ -377,9 +389,13 @@ def draft_zone(adv, r, seq, total, total_zones):
                 '대신 시도 안에서도 시군구별 사정은 갈립니다.</p>')
 
     body.append('<h3>결론부터</h3>')
-    body.append('<p>이 지역의 적정 공급량과 견주면, %s은 현재 '
+    body.append('<p>이 지역의 적정 공급량과 견주면, %s%s 현재 '
                 '<b>%s세대가 %s</b> 상태입니다. 판정은 <b>%s</b>입니다.</p>' % (
-                    esc(nm), num(abs(t)), state, SZ.GRADE_LABS[r['grade']]))
+                    esc(nm), eunneun(nm), num(abs(t)), state,
+                    SZ.GRADE_LABS[r['grade']]))
+    # 캡처는 이 바로 뒤에 온다 — 앞 문장이 말한 숫자가 화면에 그대로 찍혀 있어
+    # 글이 주장한 것을 곧바로 확인시켜 준다.
+    body.append('<p>[여기에 리포트 캡처 이미지를 넣어 주세요]</p>')
 
     # ⚠️ 2026-08-06 시도 재편 반영. 폐기된 것: 3구간 가중평균(55/35/10),
     # 인허가 기반 미래 공급, 생활권 단위. 지금은 착공 실적을 LEAD_Q만큼 미래로
@@ -451,9 +467,15 @@ def draft_zone(adv, r, seq, total, total_zones):
     # 채널 주제는 유지된다. '입주물량'은 넣지 않는다 — 분양 확정분을 뜻하는
     # 말이라 착공 추정인 우리 숫자와 어긋난다(제목에서 뺀 것과 같은 이유).
     tags = [nm + '아파트', nm + '부동산', '아파트공급', '집값전망', '아공맵']
-    return dict(title=title, body='\n'.join(body), tags=tags, img=None,
-                kw='%s 아파트 공급물량' % nm,
-                imgnote='이미지 없음 — 필요하면 사이트 리포트 화면을 캡처해 넣으세요',
+    shot, err = (None, '--no-shot 로 건너뜀')
+    if '--no-shot' not in sys.argv:
+        shot, err = capture_zone(nm)
+    note = ('%s 화면을 떴습니다. 본문의 [여기에 리포트 캡처] 자리에 끌어다 놓으세요. '
+            '네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 파일을 직접 올려야 '
+            '합니다.' % nm) if shot else ('캡처 없음 — %s. 본문의 자리 표시자를 '
+                                          '지우거나 직접 캡처해 넣으세요.' % err)
+    return dict(title=title, body='\n'.join(body), tags=tags, img=shot,
+                kw='%s 아파트 공급물량' % nm, imgnote=note,
                 seq='%d / %d번째 지역' % (seq, total))
 
 
@@ -574,6 +596,114 @@ document.querySelectorAll('button[data-t]').forEach(function(b){
   };
 });
 """
+
+
+CHROME_PATHS = (
+    r'%s\Google\Chrome\Application\chrome.exe' % os.environ.get('ProgramFiles', ''),
+    r'%s\Google\Chrome\Application\chrome.exe' % os.environ.get('ProgramFiles(x86)', ''),
+    r'%s\Google\Chrome\Application\chrome.exe' % os.environ.get('LOCALAPPDATA', ''),
+    r'%s\Microsoft\Edge\Application\msedge.exe' % os.environ.get('ProgramFiles(x86)', ''),
+    r'%s\Microsoft\Edge\Application\msedge.exe' % os.environ.get('ProgramFiles', ''),
+)
+
+# 화면 크기. 높이 1100은 제목·판정·경고·'숫자로 보면' 카드까지 담기는 값이다
+# (경고가 0~2줄로 지역마다 달라 여유를 뒀다). 하단 네비게이션은 position:fixed라
+# 창 높이와 무관하게 항상 바닥에 깔리므로, 그 높이만큼 잘라낸다.
+SHOT_W, SHOT_H, SHOT_SCALE = 1100, 1100, 2
+NAV_CSS_H = 112
+
+
+def find_chrome():
+    for p in CHROME_PATHS:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def capture_zone(z):
+    """지역 리포트 화면을 떠서 초안에 넣을 이미지를 만든다.
+
+    매주 사람이 브라우저를 열어 캡처하고 하단 네비게이션을 잘라내던 작업이다.
+    17개 시도를 도는 시리즈라 17주 내내 반복된다 — 자동화할 값이 충분하다.
+
+    합성 이미지를 그리지 않고 **실제 화면**을 뜨는 이유: 블로그 독자가 사이트를
+    알아보게 하려는 것이다. 숫자만 필요하면 본문 표로 충분하다.
+
+    Chrome이 없거나 실패하면 None을 돌려주고 초안은 그대로 나간다 —
+    이미지 때문에 발행이 막히면 안 된다.
+    """
+    exe = find_chrome()
+    if not exe:
+        return None, 'Chrome/Edge를 찾지 못했습니다'
+    out = os.path.join(OUT, 'capture-%s.png' % z)
+    url = '%s/zone/%s/' % (SITE, quote(z))
+    try:
+        subprocess.run(
+            [exe, '--headless=new', '--disable-gpu', '--hide-scrollbars',
+             '--force-device-scale-factor=%d' % SHOT_SCALE,
+             '--window-size=%d,%d' % (SHOT_W, SHOT_H),
+             '--screenshot=%s' % out, url],
+            timeout=90, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        return None, '캡처 실행 실패: %s' % e
+    if not os.path.exists(out):
+        return None, '캡처 파일이 생기지 않았습니다(네트워크 확인)'
+    try:
+        from PIL import Image
+        im = Image.open(out).convert('RGB')
+        w, h = im.size
+        im = im.crop((0, 0, w, max(1, h - NAV_CSS_H * SHOT_SCALE)))
+        im.crop((0, 0, w, _cut_after_cards(im))).save(out)
+    except Exception as e:
+        return os.path.relpath(out, ROOT), '다듬기 실패(원본 그대로): %s' % e
+    return os.path.relpath(out, ROOT), None
+
+
+def _cut_after_cards(im):
+    """'숫자로 보면' 카드 블록 바로 뒤에서 자를 y를 찾는다.
+
+    고정 좌표로 자를 수 없다. 경고 문구가 지역마다 0~2줄이라 내용이 위아래로
+    밀린다 — 경기(경고 없음)로 뜨면 아래 표가 중간에 잘렸다(2026-08-15 실측).
+
+    카드를 색으로 찾을 수는 없다 — 카드 안쪽이 페이지 배경과 같은 색이고
+    얇은 테두리로만 구분된다(실측). 대신 **덩어리 길이**로 찾는다. 머리말과
+    경고는 짧게 끊기지만 카드 블록은 여백 없이 길게 이어진다.
+
+    실측(폭 2200, 배율 2): 카드 블록 506px 연속, 머리말·경고 덩어리는 최대
+    166px. 섹션 사이 여백 75px, 줄 사이 40px 안팎이라 70에서 갈린다.
+    그래서 '450px 이상 이어진 첫 덩어리'가 카드 블록이고, 그 뒤에서 자른다.
+    """
+    w, h = im.size
+    px = im.load()
+    bg = px[5, 5]
+    xs = list(range(0, w, max(1, w // 200)))
+    GAP, BLOCK, PAD = 70, 450, 24
+
+    def is_bg(y):
+        return all(abs(px[x, y][0] - bg[0]) + abs(px[x, y][1] - bg[1])
+                   + abs(px[x, y][2] - bg[2]) <= 24 for x in xs)
+
+    flags = [is_bg(y) for y in range(h)]
+    y = 0
+    while y < h:
+        if flags[y]:                       # 여백은 건너뛴다
+            y += 1
+            continue
+        s = y
+        while y < h:                       # 내용 덩어리의 끝을 찾는다
+            if flags[y]:
+                g = y
+                while g < h and flags[g]:
+                    g += 1
+                if g - y >= GAP:           # 섹션 여백을 만났다 → 덩어리 끝
+                    break
+                y = g                      # 줄 사이 여백은 덩어리 안으로 본다
+            else:
+                y += 1
+        if y - s >= BLOCK:
+            return min(h, y + PAD)
+        y += 1
+    return h                               # 못 찾으면 건드리지 않는다
 
 
 def rivals(keyword, n=5):
