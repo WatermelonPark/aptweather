@@ -480,13 +480,34 @@ code{background:#f1eee6;padding:1px 5px;border-radius:4px;font-size:12.5px}
 """
 
 JS = """
+// 스마트에디터는 <p>와 <p> 사이의 CSS 여백을 그대로 가져오지 않는다.
+// 화면에선 문단이 갈라져 보이는데 붙여넣으면 줄줄이 붙는 이유가 이것이다
+// (2026-08-14 사용자 실측). 그래서 여백에 기대지 않고 빈 문단을 실제로
+// 끼워 넣은 복제본을 만들어 그걸 복사한다. 화면의 초안은 건드리지 않는다.
+function spaced(el){
+  if(el.children.length<2) return null;      // 제목·태그는 한 덩어리라 해당 없음
+  var c=el.cloneNode(true);
+  var kids=Array.prototype.slice.call(c.children);
+  kids.forEach(function(k,i){
+    if(i<kids.length-1){
+      var gap=document.createElement('p');
+      gap.appendChild(document.createElement('br'));
+      c.insertBefore(gap,k.nextSibling);
+    }
+  });
+  c.style.position='fixed'; c.style.left='-9999px'; c.style.top='0';
+  document.body.appendChild(c);
+  return c;
+}
 document.querySelectorAll('button[data-t]').forEach(function(b){
   b.onclick=function(){
     var el=document.getElementById(b.dataset.t);
-    var r=document.createRange(); r.selectNodeContents(el);
+    var tmp=spaced(el);
+    var r=document.createRange(); r.selectNodeContents(tmp||el);
     var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
     try{document.execCommand('copy');}catch(e){}
     s.removeAllRanges();
+    if(tmp) document.body.removeChild(tmp);
     b.textContent='\\uBCF5\\uC0AC\\uB428'; b.className='done';
     setTimeout(function(){b.textContent='\\uBCF5\\uC0AC';b.className='';},1500);
   };
