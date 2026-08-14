@@ -242,7 +242,11 @@ def draft_weekly(adv, sts, rows):
         gu = sorted(zip(S['regions'], sr['ma']), key=lambda x: -(x[1] or -9))[:3]
 
     ymd = p.split('-')
-    title = '%s년 %s월 %s주 아파트 시세 | 서울 %s, 전국 %s' % (
+    # 검색어를 맨 앞에 둔다. 2026-08-14 네이버 검색 실측에서 이 자리를 차지한
+    # 블로그 글이 '한국부동산원 주간동향｜8월 1주 전국 아파트 시세 분석' 형태였고,
+    # 웹문서 1위도 부동산원 공식 '주간아파트가격동향'이다. 출처명이 검색어로
+    # 같이 쓰인다는 뜻이라, 본문에만 있던 '한국부동산원'을 제목으로 끌어올렸다.
+    title = '주간 아파트 시세 %s년 %s월 %s주 | 한국부동산원 기준, 서울 %s 전국 %s' % (
         ymd[0], int(ymd[1]), (int(ymd[2]) - 1) // 7 + 1, pct(seoul[0]), pct(nat[0]))
 
     # 아공맵 상위 — 사이트 표준 순서를 그대로 쓴다.
@@ -332,7 +336,7 @@ def draft_weekly(adv, sts, rows):
     tags = ['아파트시세', '주간아파트시세', '부동산시세', '집값전망', '서울아파트',
             '아파트매매', '전세시세', '부동산데이터', '아파트공급', '입주물량',
             '내집마련', '부동산공부', '아공맵']
-    return dict(title=title, body='\n'.join(body), tags=tags,
+    return dict(title=title, body='\n'.join(body), tags=tags, kw='주간 아파트 시세',
                 img=r'share\weekly-map.png', imgnote='본문의 [여기에 시세 지도] 자리')
 
 
@@ -347,7 +351,14 @@ def draft_zone(adv, r, seq, total, total_zones):
     state = '모자란' if lack else '남아도는'
     yrs = SZ.LEAD_Q // 4
 
-    title = '%s 아파트, 앞으로 얼마나 %s | 준공·착공 실적으로 본 수급' % (nm, ask)
+    # '수급'은 우리가 쓰는 말이지 검색되는 말이 아니다. 2026-08-14 실측에서
+    # 이 주제의 상위 글은 전부 '연도 + 지역 + 아파트 공급물량 + 전망' 형태였다
+    # (1위 '2026년 부산 아파트 공급물량과 향후 부동산 시장 전망은').
+    # '입주물량'이 검색량은 더 크지만 그건 분양 확정분을 뜻하는 말이라,
+    # 착공 실적으로 추정하는 우리 숫자에 붙이면 기대와 다른 글이 된다.
+    yr = (adv.get('weekly', {}).get('rows') or [{}])[-1].get('p', '')[:4]
+    title = '%s%s 아파트 공급물량 전망 | 앞으로 %d년 얼마나 %s' % (
+        (yr + '년 ') if yr else '', nm, yrs, ask)
 
     body = []
     body.append('<p>전국 <b>%d개 시도</b>의 아파트 수급을 같은 기준으로 보고 있습니다. '
@@ -430,6 +441,7 @@ def draft_zone(adv, r, seq, total, total_zones):
     tags = [nm, nm + '아파트', nm + '부동산', '아파트공급', '입주물량', '아파트착공',
             '부동산데이터', '집값전망', '내집마련', '부동산공부', '아공맵']
     return dict(title=title, body='\n'.join(body), tags=tags, img=None,
+                kw='%s 아파트 공급물량' % nm,
                 imgnote='이미지 없음 — 필요하면 사이트 리포트 화면을 캡처해 넣으세요',
                 seq='%d / %d번째 지역' % (seq, total))
 
@@ -460,6 +472,11 @@ button.done{background:#1f8a70;border-color:#1f8a70}
 .note{background:#fff8e6;border-left:3px solid #dca214;padding:9px 12px;
   font-size:13px;margin:10px 0 0;border-radius:0 6px 6px 0}
 code{background:#f1eee6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.rival{background:#f4f7f4;border:1px solid #d8e2d8;border-radius:6px;
+  padding:10px 13px;margin:0 0 12px;font-size:13px}
+.rival ol{margin:7px 0 6px;padding-left:20px}
+.rival li{margin:3px 0;line-height:1.45}
+.src{color:#7b8a7b;font-size:12px}
 """
 
 JS = """
@@ -475,6 +492,42 @@ document.querySelectorAll('button[data-t]').forEach(function(b){
   };
 });
 """
+
+
+def rivals(keyword, n=5):
+    """그 키워드로 지금 상위에 있는 블로그 글 제목을 가져온다.
+
+    제목을 다듬는 순간에 정작 경쟁 글이 안 보인다는 게 지금까지의 병목이었다.
+    브라우저를 따로 열어 검색하고 초안으로 돌아오는 왕복이 매주 반복된다.
+    같은 화면에 붙여두면 (1) 어떤 각도가 이미 점령됐는지, (2) 우리 제목이
+    상위 글과 너무 닮지 않았는지(유사문서)를 한눈에 본다.
+
+    키가 없거나 네트워크가 막히면 조용히 건너뛴다 — 부가 정보 때문에
+    초안 생성 자체가 실패하면 주객이 전도된다.
+    """
+    try:
+        import naver_serp as NS
+        d = NS._get('blog', keyword, display=n)
+        return [(NS._clean(it.get('title', '')), NS._clean(it.get('bloggername', '')))
+                for it in (d.get('items') or [])]
+    except Exception:
+        return None
+
+
+def rival_panel(keyword):
+    rows = rivals(keyword)
+    if rows is None:
+        return ('<p class="note">🔍 <b>%s</b> 경쟁 글을 못 불러왔습니다. '
+                'NAVER_CLIENT_ID/SECRET 환경변수를 확인하세요 '
+                '(없어도 초안 자체는 정상입니다).</p>' % esc(keyword))
+    if not rows:
+        return '<p class="note">🔍 <b>%s</b> 상위 결과 없음.</p>' % esc(keyword)
+    li = ''.join('<li>%s <span class="src">%s</span></li>' % (esc(t), esc(b))
+                 for t, b in rows)
+    return ('<div class="rival"><b>🔍 지금 “%s” 상위 글</b>'
+            '<ol>%s</ol>'
+            '<span class="src">제목이 이 중 하나와 닮았다면 바꾸세요 — '
+            '유사문서로 묶이면 둘 다 손해입니다.</span></div>' % (esc(keyword), li))
 
 
 def field(lab, tid, html, cls=''):
@@ -495,6 +548,7 @@ def render(p, d1, d2):
     for i, (head, d) in enumerate([('① 주간 시세 + 아공맵 해설', d1),
                                    ('② 지역 심층 — %s' % d2.get('seq', ''), d2)], 1):
         S.append('<section class="draft"><h2>%s</h2>' % head)
+        S.append(rival_panel(d['kw']))
         S.append(field('제목', 't%d' % i, esc(d['title']), 't'))
         S.append(field('본문', 'b%d' % i, d['body']))
         S.append(field('태그 (붙여넣고 쉼표로 구분)', 'g%d' % i,
@@ -533,10 +587,34 @@ def main():
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
     path = os.path.join(OUT, 'naver-%s.html' % p)
+
+    # 손댄 초안은 덮지 않는다. drafts/는 gitignore라 덮어쓰면 되돌릴 데가 없다
+    # (2026-08-14에 실제로 날렸다 — 트랜스크립트에서 겨우 건졌다).
+    # 판별은 해석 자리 표시자의 유무로 한다. 그게 사라졌다면 사람이 채운 것이다.
+    if os.path.exists(path) and '--force' not in sys.argv:
+        old = io.open(path, encoding='utf-8').read()
+        if INTERP_PLACEHOLDER[:20] not in old:
+            alt = path[:-5] + '.new.html'
+            io.open(alt, 'w', encoding='utf-8', newline='\n').write(render(p, d1, d2))
+            print('⚠ %s 는 이미 손댄 흔적이 있어 그대로 뒀다.' % os.path.basename(path))
+            print('  새 초안은 %s 에 썼다. 비교 후 필요한 것만 옮길 것.'
+                  % os.path.relpath(alt, ROOT))
+            print('  덮어쓰려면 --force.')
+            return 0
+
     io.open(path, 'w', encoding='utf-8', newline='\n').write(render(p, d1, d2))
     print('네이버 초안 생성: %s' % os.path.relpath(path, ROOT))
     print('  ① %s' % d1['title'])
     print('  ② %s  (%s)' % (d2['title'], d2['seq']))
+
+    # 바로 연다. 터미널의 경로를 손으로 찾아 여는 왕복이 매주 반복될 이유가 없다.
+    # 배치에서 부르는 도구가 아니라 사람이 발행 직전에 돌리는 도구다.
+    if '--no-open' not in sys.argv:
+        try:
+            import webbrowser
+            webbrowser.open('file:///' + path.replace('\\', '/'))
+        except Exception:
+            pass
     return 0
 
 
