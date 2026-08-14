@@ -10,6 +10,12 @@
       ],
       "port": 8321,
       "autoPort": true
+    },
+    {
+      "name": "agongmap-8321",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8321"],
+      "port": 8321
     }
   ]
 }
