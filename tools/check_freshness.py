@@ -53,10 +53,23 @@ FETCH_TIMEOUT = 25     # 원천 호출 타임아웃. 재시도 패스에서는 2
 # 넘긴다. 넘기는 순간 `steps.check.outputs.ok`가 안 찍혀 판정 없이 잡이 죽고,
 # recheck가 `!= 'true'` 조건에 걸려 같은 30분을 또 쓴다. **하필 재시도 층을 넣은
 # 이유(어느 계열이 문제인지 말해주기)가 그때 사라진다.**
-# 25초 근거: 정상 응답은 2~3초다(update-cloud.yml 머리 주석의 실측). 10배 여유를
-# 두고도 1차 최악이 21×25 ≈ 9분이라, 전체가 17분대로 예산 안에 든다.
+# 25초 근거: 정상 응답은 2~3초다(update-cloud.yml 머리 주석의 실측). 10배 여유다.
 # 근본 대책은 268행대 파생 페이지 감시처럼 ThreadPoolExecutor로 병렬화하는 것이다
 # (그러면 1차가 1분대로 떨어져 timeout-minutes도 되돌릴 수 있다).
+
+# 우리 사이트(GitHub Pages) 조회 타임아웃. 원천과 달리 여기는 우리가 띄운 정적
+# 파일이라 훨씬 빠르다 — 2026-08-15 실측으로 data.js(2.1MB) 0.46초, 나머지는 전부
+# 0.3초대다. 그런데 6곳에 60초가 박혀 있었다(실측의 120배). 예산 계산에서 이게
+# 5×60 = 5분을 차지해, FETCH_TIMEOUT만 내려서는 산수가 안 맞았다.
+# 20초면 실측의 40배 여유이고 1차 최악에서 200초를 덜어낸다.
+SITE_TIMEOUT = 20
+
+# 전체 예산(광역 장애로 전부 타임아웃을 꽉 채우는 최악):
+#   1차 = 원천 21회×25s(8.8분) + 사이트 5회×20s(1.7분) + 파생 20p 병렬8×15s(~0.8분)
+#       ≈ 11분  →  대기 75초  →  재시도 21회×20s ≈ 7분   합계 ≈ 19분
+# watchdog.yml의 timeout-minutes: 30 안에 든다. 이 숫자들을 바꿀 땐 **곱해서**
+# 다시 확인할 것 — 주석의 "최악 N분"은 두 번 다 과소평가였다(원래 "~15분"이라고
+# 적혀 있었으나 실제로는 30분을 넘겼다).
 
 # 계열별 정상 최대 나이(일). 이 안쪽이면 '발표 직후 배치 전'일 수 있어 봐준다.
 # 주간 9는 감시를 배치 뒤(22시)에 돌린다는 전제에 기댄다. 기준일은 월요일이고
@@ -77,7 +90,7 @@ def get_json(url):
 def live_adv_stats():
     """라이브 data.js(ADV) + data-rest.json·data-size.json(STATS)."""
     txt = urllib.request.urlopen(
-        urllib.request.Request(SITE + '/data.js', headers=UA), timeout=60
+        urllib.request.Request(SITE + '/data.js', headers=UA), timeout=SITE_TIMEOUT
     ).read().decode('utf-8', 'replace')
     m = re.search(r'/\*ADV_DATA_START\*/const ADV=(\{.*?\});', txt, re.S)
     if not m:
@@ -124,7 +137,7 @@ def live_card_basis():
     키와 값을 NUL 하나로 이어 붙인 형태다.
     """
     raw = urllib.request.urlopen(
-        urllib.request.Request(SITE + '/share/weekly-map.png', headers=UA), timeout=60).read()
+        urllib.request.Request(SITE + '/share/weekly-map.png', headers=UA), timeout=SITE_TIMEOUT).read()
     if raw[:8] != PNG_SIG:
         return None
     i = 8
@@ -317,7 +330,7 @@ def check_derived_pages(adv, stats):
     try:
         jr = (stats.get('전세가율') or {}).get('dates', [None])[-1]
         h = urllib.request.urlopen(urllib.request.Request(
-            SITE + '/jeonse-ratio/', headers=UA), timeout=60).read().decode('utf-8', 'replace')
+            SITE + '/jeonse-ratio/', headers=UA), timeout=SITE_TIMEOUT).read().decode('utf-8', 'replace')
         m = re.search(r'(\d{4}\.\d{2}) 기준', h)
         if not m:
             out.append('/jeonse-ratio/에 시점 표기가 없다 — 페이지 구조가 바뀌었는지 확인')
@@ -341,7 +354,7 @@ def check_derived_pages(adv, stats):
                 want = max('%s-%02d-01' % (m.group(1), int(m.group(2)) * 3),
                            INDICATOR_PUBLISHED)
         h = urllib.request.urlopen(urllib.request.Request(
-            SITE + '/moveins/', headers=UA), timeout=60).read().decode('utf-8', 'replace')
+            SITE + '/moveins/', headers=UA), timeout=SITE_TIMEOUT).read().decode('utf-8', 'replace')
         m = re.search(r'"dateModified":\s*"(\d{4}-\d{2}-\d{2})"', h)
         if not m:
             out.append('/moveins/에 dateModified가 없다 — 페이지 구조가 바뀌었는지 확인')
@@ -609,7 +622,7 @@ def main():
     try:
         core = urllib.request.urlopen(
             urllib.request.Request(SITE + '/data-core.js', headers=UA),
-            timeout=60).read().decode('utf-8', 'replace')
+            timeout=SITE_TIMEOUT).read().decode('utf-8', 'replace')
         # ⚠️ 정규식으로 'L' 값만 긁지 않는다 — 키 순서가 바뀌면 조용히 못 찾는다.
         # ADV 블록을 통째로 파싱해 지역 수까지 본다.
         m = re.search(r'const ADV=(\{.*?\});\s*const STATS', core, re.S)
