@@ -255,9 +255,9 @@ def test_pwarn_threshold_avoids_knife_edge():
 
 
 def test_pwarn_fires_on_live_data_where_expected():
-    """실데이터 고정점: 시장 통념(2026-08-10)이 짚은 곳과 일치해야 한다 —
-    경남('인허가 진짜 적은 곳')은 뜨고, 대전('그나마 있다')·충남('너무 많았다')은
-    안 뜬다. 이 관계가 뒤집히면 인허가 계열이 오염된 것이다."""
+    """실데이터 고정점(2026-08-10 시장 통념과 대조): 경남(인허가가 특히 적은 곳)은
+    뜨고, 대전(그나마 있다)·충남(너무 많았다)은 안 뜬다. 이 관계가 뒤집히면
+    인허가 계열이 오염된 것이다."""
     import io, json, re, os
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     src = io.open(os.path.join(root, 'data.js'), encoding='utf-8').read()
