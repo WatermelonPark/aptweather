@@ -2709,7 +2709,17 @@ function tbDraw(){
       var k=tr.getAttribute('data-ref');
       if(!p.hidden&&p.dataset.k===k){ p.hidden=true; }
       else{
-        p.dataset.k=k; p.textContent=TB_REFNOTE[k]||''; p.hidden=false;
+        /* 미분양의 기준 시점(B.uprd)은 <th>의 title=에만 있었다 — 그건 데스크톱
+           호버 전용이라 모바일에서는 뜻을 알 길이 없다. 지역 페이지는 같은 값을
+           '2026.06 기준'이라고 눈에 보이는 칸으로 찍는데, 홈만 빠져 있어서
+           모바일 방문자는 월간 재고를 이번 분기 값으로 읽었다(2026-08-15 리뷰).
+           정본 문구(REFNOTE)는 홈·지역이 글자까지 같아야 하므로 상수는 건드리지
+           않고, 여는 시점에 시점만 덧붙인다. */
+        /* B는 표를 그리는 함수의 지역 변수라 여기선 못 본다 — tbBuild()는
+           TB_BCACHE로 메모이즈돼 있어 다시 불러도 같은 객체다. */
+        var note=TB_REFNOTE[k]||'', BB=tbBuild();
+        if(k==='un'&&BB&&BB.uprd) note=BB.uprd+' 기준. '+note;
+        p.dataset.k=k; p.textContent=note; p.hidden=false;
         /* 탭한 행이 화면 맨 밑이면 설명이 폴드 아래 열린다(모바일) —
            nearest라 이미 보이면 안 움직인다. */
         p.scrollIntoView({block:'nearest'});

@@ -249,9 +249,17 @@ def test_permit_trail12_refuses_partial_data():
 
 
 def test_pwarn_threshold_avoids_knife_edge():
-    """문턱 0.95 — 수도권이 99.98%로 정확히 100% 언저리에 있어(실측), 1.0으로
-    자르면 매달 켜졌다 꺼졌다 한다. 깜빡이는 경고는 무시된다."""
-    assert M.permit_trail12  # 상수 확인은 아래 실데이터 검사가 겸한다
+    """문턱 0.95 — 수도권이 100% 언저리에 있어(실측), 1.0으로 자르면 매달 켜졌다
+    꺼졌다 한다. 깜빡이는 경고는 무시된다.
+
+    ⚠️ 이 테스트는 원래 `assert M.permit_trail12`(함수 객체 → 항상 참)여서
+    아무것도 검사하지 않았다. 문턱을 지킨다고 이름만 붙어 있고 실제로는
+    1.0으로 되돌려도 초록이었다(2026-08-15 리뷰). 상수와 동작을 함께 잠근다."""
+    assert M.PWARN_CUT == 0.95
+    assert M.PWARN_CUT < 1.0, '1.0이면 100% 언저리 지역이 매달 깜빡인다'
+    # 동작으로도 확인 — 100% 언저리는 안 뜨고, 확실히 얇은 쪽만 뜬다.
+    assert not (1.0 < M.PWARN_CUT) and not (0.999 < M.PWARN_CUT)
+    assert 0.90 < M.PWARN_CUT, '너무 낮추면 진짜 얇은 곳도 못 잡는다'
 
 
 def test_pwarn_fires_on_live_data_where_expected():
@@ -264,9 +272,25 @@ def test_pwarn_fires_on_live_data_where_expected():
     adv = json.loads(re.search(
         r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/', src, re.S).group(1))
     by = {z['z']: z for z in adv['sido']['zones']}
-    assert by['경남']['pwarn'] and by['대구']['pwarn'] and by['서울']['pwarn']
-    assert not by['대전']['pwarn'] and not by['충남']['pwarn']
-    assert by['전국']['pwarn'], '전국 창 너머 신호가 꺼졌다 — 인허가가 회복됐다면 정상'
+    thin = ('경남', '대구', '서울')      # 실측 pmr 0.23~0.42 — 컷에서 0.5 이상 떨어져 있다
+    thick = ('대전', '충남')             # 실측 pmr 1.84~1.90 — 역시 멀다
+    for z in thin:
+        assert by[z]['pwarn'], '%s 경고가 꺼졌다 — 인허가 계열 오염 의심' % z
+    for z in thick:
+        assert not by[z]['pwarn'], '%s 경고가 켜졌다 — 인허가 계열 오염 의심' % z
+    # 오염 판정의 본체는 문턱 통과 여부가 아니라 **관계**다. 얇은 쪽이 두꺼운 쪽보다
+    # 확실히 낮아야 한다 — 이 부등식은 문턱과 무관해 시장이 움직여도 안 깨진다.
+    assert max(by[z]['pmr'] for z in thin) < min(by[z]['pmr'] for z in thick) / 2
+
+    # ⚠️ 전국·수도권·부산은 **일부러 단정하지 않는다.** 실측 pmr이 전국 0.853,
+    # 부산 0.925, 수도권 1.000으로 컷(0.95)에서 0.03~0.10밖에 안 떨어져 있다.
+    # 인허가는 월별로 들쭉날쭉한 계열이라 정상적인 회복만으로도 부호가 뒤집힌다.
+    # 이 테스트는 update-cloud.yml의 배포 게이트(exit 1)라, 여기서 단정하면
+    # **시장이 정상적으로 움직인 날 배치 전체가 커밋을 못 한다** — data.js·지역
+    # 20페이지·sitemap이 통째로 얼고, 다음 날 감시가 그 정지를 다시 빨간불로
+    # 보고한다. 값이 실려 있고 범위가 온전한지만 확인한다(2026-08-15 리뷰).
+    for z in ('전국', '수도권', '부산'):
+        assert isinstance(by[z]['pmr'], float) and 0 < by[z]['pmr'] < 5, z
 
 
 def test_table_footer_shows_unsold_and_permits_everywhere():

@@ -33,8 +33,14 @@ STATE = os.path.join(OUT, '.rotation.json')
 SITE = 'https://www.agongmap.co.kr'
 
 
-def num(n):
-    return format(int(round(n)), ',')
+# 숫자·이스케이프는 사이트가 쓰는 정본을 그대로 가져다 쓴다. 여기 사본을 두면
+# 발행 글과 사이트가 조용히 갈린다(2026-08-15 리뷰에서 둘 다 실제로 갈려 있었다):
+#  · 옛 num은 int(round(...)) — 파이썬 기본은 은행가 반올림이라 정확히 x.5인 칸에서
+#    사이트(M.rnd, half-up)와 1씩 어긋났다.
+#  · 옛 esc는 큰따옴표를 안 막았는데 data-tag="%s"·value="%s" 속성 안에서 쓰였다.
+#    값에 "가 섞이는 순간 속성이 그 자리에서 닫혀 태그 칩이 깨진다.
+num = M.num
+esc = M.esc
 
 
 def pct(v):
@@ -67,10 +73,6 @@ def eunneun(w):
     순회하는데 '%s은'이 박여 있어 대구·광주·경기·제주에서 '대구은'이 된다.
     다음 순번이 대구라 발행 전에 잡았다(2026-08-15)."""
     return '은' if batchim(w) else '는'
-
-
-def esc(s):
-    return (str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
 
 
 # ---------------------------------------------------------------- 순회 상태
@@ -113,11 +115,17 @@ def pick_zone(rows):
         done, rest = [], pool
     pick = rest[0]
     done.append(pick['z'])
-    if not os.path.isdir(OUT):
-        os.makedirs(OUT)
-    io.open(STATE, 'w', encoding='utf-8').write(
-        json.dumps({'done': done}, ensure_ascii=False))
-    return pick, len(done), len(pool)
+
+    # ⚠️ 순회 기록은 여기서 쓰지 않는다 — 초안이 실제로 저장된 뒤에 commit()을
+    # 부른다. 고르자마자 기록하면 뒤 단계(캡처·렌더·쓰기)가 죽거나 "이미 손댄
+    # 초안이라 그대로 뒀다"로 빠질 때 그 지역이 조용히 소비된다. 17주 순회에서
+    # 어떤 시도는 글이 한 번도 안 나가고, 화면에 찍히는 (seq/total)도 틀어진다.
+    def commit():
+        if not os.path.isdir(OUT):
+            os.makedirs(OUT)
+        io.open(STATE, 'w', encoding='utf-8').write(
+            json.dumps({'done': done}, ensure_ascii=False))
+    return pick, len(done), len(pool), commit
 
 
 # ---------------------------------------------------------- 로테이션·해석 자리
@@ -240,18 +248,23 @@ def draft_weekly(adv, sts, rows):
     seoul = g('서울'), g('서울', 1)
     nat = g('전국'), g('전국', 1)
 
-    # 시도만 추려 상승·하락 정렬(전국·수도권·지방 같은 집계 항목 제외)
-    AGG = {'전국', '수도권', '지방'}
-    sido = [(k, v[0]) for k, v in val.items() if k not in AGG and v[0] is not None]
-    up = sorted(sido, key=lambda x: -x[1])[:3]
-    dn = sorted(sido, key=lambda x: x[1])[:3]
+    # 시도만 추려 상승·하락 정렬(전국·수도권·지방 같은 집계 항목 제외).
+    # 집계 이름은 SZ.AGG가 정본이다 — 여기에 사본을 두면 정본이 늘 때 이 글만
+    # 옛 목록으로 남는다.
+    sido = [(k, v[0]) for k, v in val.items() if k not in SZ.AGG and v[0] is not None]
+    up = [t for t in sorted(sido, key=lambda x: -x[1])[:3] if t[1] > 0]
+    dn = [t for t in sorted(sido, key=lambda x: x[1])[:3] if t[1] < 0]
 
     # 서울 구별
     gu = []
     S = W.get('seoul') or {}
     if S.get('rows'):
         sr = S['rows'][-1]
-        gu = sorted(zip(S['regions'], sr['ma']), key=lambda x: -(x[1] or -9))[:3]
+        # ⚠️ `x[1] or -9`로 쓰면 안 된다 — 보합(0.00%)도 거짓값이라 하락한 구보다
+        # 뒤로 밀린다. 결측(None)만 맨 뒤로 보내는 게 의도다.
+        gu = sorted(zip(S['regions'], sr['ma']),
+                    key=lambda x: -(x[1] if x[1] is not None else -9))[:3]
+        gu = [t for t in gu if t[1] is not None and t[1] > 0]
 
     ymd = p.split('-')
     # 검색어를 맨 앞에 둔다. 2026-08-14 네이버 검색 실측에서 이 자리를 차지한
@@ -298,9 +311,20 @@ def draft_weekly(adv, sts, rows):
     body.append('<table border="1" cellspacing="0" cellpadding="6"><thead>'
                 '<tr><th>지역</th><th>매매</th><th>전세</th></tr></thead>'
                 '<tbody>%s</tbody></table>' % rowsHtml)
-    body.append('<p>이번 주 가장 많이 오른 곳은 %s입니다. 반대로 %s는 내렸습니다.</p>' % (
-        ' · '.join('<b>%s %s</b>' % (k, pct(v)) for k, v in up),
-        ' · '.join('%s %s' % (k, pct(v)) for k, v in dn)))
+    # ⚠️ up/dn은 상위·하위 3개일 뿐 부호를 보장하지 않는다. 전 지역이 내린 주에
+    # "가장 많이 오른 곳은 세종 -0.01%"라고 쓰면, 숫자가 검증 가능하다는 게 이
+    # 채널의 유일한 밑천인데 그 자리에서 무너진다. 부호로 걸러 문장을 만든다.
+    sent = []
+    if up:
+        sent.append('이번 주 가장 많이 오른 곳은 %s입니다.'
+                    % ' · '.join('<b>%s %s</b>' % (k, pct(v)) for k, v in up))
+    if dn:
+        sent.append('%s%s는 내렸습니다.'
+                    % ('반대로 ' if up else '',
+                       ' · '.join('%s %s' % (k, pct(v)) for k, v in dn)))
+    if not sent:
+        sent.append('이번 주는 전 지역이 보합입니다.')
+    body.append('<p>%s</p>' % ' '.join(sent))
     if gu:
         body.append('<p>서울 안에서는 %s 순으로 올랐습니다.</p>' %
                     ' · '.join('<b>%s %s</b>' % (k, pct(v)) for k, v in gu))
@@ -424,11 +448,14 @@ def draft_zone(adv, r, seq, total, total_zones):
     if r.get('unsold'):
         body.append('<h3>미분양은 어떤가</h3>')
         if r.get('uwarn'):
-            body.append('<p>%s의 미분양은 <b>%s호</b>로 적정 물량 대비 높은 편입니다. '
-                        '부족 판정과 어긋나 보이지만 모순이 아닙니다 — 미분양이 쌓이면 '
+            # ⚠️ 경고 **문장 자체는 M.unsold_warn 정본**을 쓴다. 그 docstring이
+            # 사본을 두지 말라고 명시한 자리인데(사이트는 경고하는데 블로그는
+            # 다르게 쓰는 사고), 초안 ①은 정본을 쓰면서 여기 ②만 사본이었다
+            # (2026-08-15 리뷰). 초안 고유의 부연은 정본 뒤에 잇는다.
+            body.append('<p>%s%s %s</p>' % (esc(nm), eunneun(nm), M.unsold_warn(r)))
+            body.append('<p>부족 판정과 어긋나 보이지만 모순이 아닙니다 — 미분양이 쌓이면 '
                         '건설사가 착공을 멈추고, 그래서 <b>앞으로 지을 물량이 줄어듭니다.</b> '
-                        '지금 남는 것과 3년 뒤 모자라는 것은 다른 이야기입니다.</p>'
-                        % (esc(nm), num(r['unsold'])))
+                        '지금 남는 것과 3년 뒤 모자라는 것은 다른 이야기입니다.</p>')
         else:
             body.append('<p>%s의 미분양은 <b>%s호</b>입니다. 미분양은 공급이 수요를 '
                         '넘어선 흔적이라, 쌓이면 분양가와 입주장 전세가에 먼저 '
@@ -637,8 +664,16 @@ def capture_zone(z):
         return None, 'Chrome/Edge를 찾지 못했습니다'
     out = os.path.join(OUT, 'capture-%s.png' % z)
     url = '%s/zone/%s/' % (SITE, quote(z))
+    # ⚠️ 지난주 캡처를 먼저 지운다. drafts/는 gitignore라 파일이 계속 남는데,
+    # exists()만 보면 크롬이 이번에 아무것도 못 써도 옛 파일이 성공으로 통과한다.
+    # 그 결과가 "몇 주 전 화면을 발행 글에 끌어다 놓기"라 조용히 틀린다.
     try:
-        subprocess.run(
+        if os.path.exists(out):
+            os.remove(out)
+    except OSError as e:
+        return None, '지난 캡처를 지우지 못했습니다: %s' % e
+    try:
+        proc = subprocess.run(
             [exe, '--headless=new', '--disable-gpu', '--hide-scrollbars',
              '--force-device-scale-factor=%d' % SHOT_SCALE,
              '--window-size=%d,%d' % (SHOT_W, SHOT_H),
@@ -646,6 +681,8 @@ def capture_zone(z):
             timeout=90, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         return None, '캡처 실행 실패: %s' % e
+    if proc.returncode != 0:
+        return None, '캡처 실패(크롬 종료코드 %s) — 네트워크·사이트 상태 확인' % proc.returncode
     if not os.path.exists(out):
         return None, '캡처 파일이 생기지 않았습니다(네트워크 확인)'
     try:
@@ -722,7 +759,11 @@ def rivals(keyword, n=5):
         d = NS._get('blog', keyword, display=n)
         return [(NS._clean(it.get('title', '')), NS._clean(it.get('bloggername', '')))
                 for it in (d.get('items') or [])]
-    except Exception:
+    except (Exception, SystemExit):
+        # ⚠️ SystemExit을 같이 잡아야 한다 — naver_serp._get은 키가 없으면
+        # SystemExit(BaseException)을 던지고, 그건 `except Exception`을 그냥
+        # 통과한다. 키 없는 PC에서 초안 파일이 아예 안 생기던 원인이었다.
+        # naver_serp.probe()는 반대로 일부러 다시 올려보내므로 거기는 그대로 둔다.
         return None
 
 
@@ -809,7 +850,7 @@ def main():
     d1 = draft_weekly(adv, sts, rows)
     # 심층은 개별 시도만 순회한다(집계 3종 제외).
     pool = SZ.zone_order(rows)
-    pick, seq, total = pick_zone(pool)
+    pick, seq, total, commit_rotation = pick_zone(pool)
     d2 = draft_zone(adv, pick, seq, total, len(pool))
 
     if not os.path.isdir(OUT):
@@ -828,9 +869,11 @@ def main():
             print('  새 초안은 %s 에 썼다. 비교 후 필요한 것만 옮길 것.'
                   % os.path.relpath(alt, ROOT))
             print('  덮어쓰려면 --force.')
+            # 순회는 소비하지 않는다 — 이 지역 글은 아직 안 나갔다.
             return 0
 
     io.open(path, 'w', encoding='utf-8', newline='\n').write(render(p, d1, d2))
+    commit_rotation()          # 파일이 실제로 생긴 뒤에만 순회를 한 칸 넘긴다
     print('네이버 초안 생성: %s' % os.path.relpath(path, ROOT))
     print('  ① %s' % d1['title'])
     print('  ② %s  (%s)' % (d2['title'], d2['seq']))

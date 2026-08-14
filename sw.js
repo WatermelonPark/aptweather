@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v103'; // 문서 4페이지 네비 통일
+const VERSION = 'v104'; // 지역 페이지에 '0' 기호 설명 추가
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [

@@ -15,11 +15,15 @@ rem   (a local script cannot report that it never ran).
 rem
 rem   exit codes: 10 keys 11 pull 12 update 20 split 13 share
 rem               14 add 15 commit 16 push 17 zone-pages 18 indicator-pages
-rem               19 already-running
-rem   (2026-07-24: 이메일/인스타 자동 발행 제거. 네이버는 자동 발행이 아니라
-rem    drafts/ 초안 생성만 남아 있고(gitignore, 비치명적 WARN) 계속 실행된다.
+rem               19 already-running 21 cycle-data
+rem   (2026-07-24: 이메일/인스타 자동 발행 제거.
 rem    rc=18은 옛 newsletter 코드가 아니라 make_indicator_pages 실패에 쓴다
-rem    — 2026-08-04 감사에서 표와 실물이 어긋난 것을 맞춤.)
+rem    — 2026-08-04 감사에서 표와 실물이 어긋난 것을 맞춤.
+rem    2026-08-15: 네이버 초안(make_naver_post.py)은 이 배치가 부르지 않는다.
+rem    사람이 발행 직전에 손으로 돌리는 도구다 — "계속 실행된다"고 적혀 있었으나
+rem    호출 줄은 없었다. 자동화하려면 여기에 스텝을 되살릴 것.
+rem    rc=19는 락 보유자 감지 전용이라 다른 실패에 재사용하면 락이 안 풀린다
+rem    — 그래서 refresh_cycle_data는 21을 쓴다.)
 rem ============================================================
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
@@ -121,10 +125,15 @@ if errorlevel 1 (
 )
 
 python tools\make_indicator_pages.py
-python toolsefresh_cycle_data.py
 if errorlevel 1 (
   echo ERROR: make_indicator_pages failed
   exit /b 18
+)
+
+python tools\refresh_cycle_data.py
+if errorlevel 1 (
+  echo ERROR: refresh_cycle_data failed
+  exit /b 21
 )
 
 rem 이중 구현 정합성 검사(check_dual_calc)는 2026-08-06에 폐지했다.

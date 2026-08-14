@@ -205,7 +205,12 @@ jobs:
             # retry 잡이 35분 뒤 새 런(새 IP + 다른 시각)으로 재도전한다(최대 3시도).
             if [ "${ATTEMPT:-1}" -lt 3 ]; then
               rep "❌ 러너 0/3 clean (시도 ${ATTEMPT:-1}/3) — 35분 뒤 자동 재시도"
-              echo "need_retry=true" >> "$GITHUB_OUTPUT"
+              # 이 한 줄이 재시도의 유일한 스위치다. 조용히 실패하면 전멸한 회차가
+              # 재시도 없이 끝나는데, 로그에는 '재시도한다'고만 남아 아무도 모른다.
+              if ! echo "need_retry=true" >> "$GITHUB_OUTPUT"; then
+                echo "::error::need_retry 출력에 실패 — 자동 재시도가 걸리지 않는다"
+                exit 1
+              fi
             else
               rep "❌ 러너 0/3 clean (시도 3/3 소진) — 이번 회차 갱신 없음, 다음 크론이 흡수"
               echo "::warning::재시도 3회 전멸 — 원천 광역 장애 가능성, 다음 크론 회차가 흡수"
@@ -412,13 +417,21 @@ jobs:
   # 무한루프 방지 2중: ①attempt 카운터(최대 3시도) — 여기서 걸러도, commit 잡이
   # 시도 3/3이면 need_retry 자체를 안 세운다 ②workflow_dispatch는 GITHUB_TOKEN
   # 재귀 차단의 예외라 동작하는 대신, 그만큼 카운터가 유일한 제동이다.
+  #
+  # ⚠️ 35분 대기는 이 워크플로 **밖**(update-cloud-retry.yml)에서 한다.
+  # 여기서 자면 파일 머리의 `concurrency: update-cloud`가 그 35분 내내 잡혀 있고,
+  # 그 창에 도착한 크론은 pending으로 밀린다. pending은 그룹당 하나만 남으므로
+  # **뒤이어 도착한 재시도 디스패치가 앞서 대기 중이던 크론을 취소한다** —
+  # 하필 목 20:00 백스톱이 그 자리다. 파이프라인이 실패 중인 날에만, 즉 백스톱이
+  # 가장 필요한 날에만 백스톱이 사라진다(2026-08-15 리뷰). 그래서 대기는 자체
+  # concurrency 그룹을 가진 별도 워크플로로 내보내고 여기서는 즉시 넘긴다.
   retry:
     needs: commit
     if: needs.commit.outputs.need_retry == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
-      - name: 35분 뒤 새 IP·새 시각으로 재트리거
+      - name: 대기 워크플로에 넘김(이 런은 즉시 끝나 그룹을 놓아준다)
         env:
           GH_TOKEN: ${{ github.token }}
           ATTEMPT: ${{ github.event.inputs.attempt || '1' }}
@@ -428,8 +441,11 @@ jobs:
             echo "시도 한도 도달 — 재트리거하지 않음(방어선, 정상이라면 commit 잡이 이미 걸렀다)"
             exit 0
           fi
-          echo "시도 ${ATTEMPT} 전멸 — 35분 대기 후 시도 ${NEXT} 디스패치"
-          sleep 2100
-          gh workflow run update-cloud.yml --ref main -f attempt="$NEXT" -R "$GITHUB_REPOSITORY"
-          echo "디스패치 완료(attempt=$NEXT)"
+          echo "시도 ${ATTEMPT} 전멸 — 대기 워크플로에 시도 ${NEXT} 예약"
+          if ! gh workflow run update-cloud-retry.yml --ref main \
+                 -f attempt="$NEXT" -R "$GITHUB_REPOSITORY"; then
+            echo "::error::재시도 예약 실패 — 이번 회차는 다음 크론이 흡수한다(attempt=$NEXT)"
+            exit 1
+          fi
+          echo "예약 완료(attempt=$NEXT)"
 

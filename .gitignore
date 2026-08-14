@@ -18,3 +18,7 @@ tools/data/국토교통부_건축인허가_철거멸실관리대장*/
 tools/cache/
 tools/data/.reseed.lock
 tools/data/.reseed_tries.json
+
+# 키워드 조사 스크래치(도구 출력물, 저장소에 남길 것 아님 — 2026-08-15 리뷰에서
+# kw.txt·kw2.txt·kw3.txt가 루트에 untracked로 굴러다니는 걸 발견).
+kw*.txt

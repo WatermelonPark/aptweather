@@ -1,0 +1,57 @@
+name: 데이터 갱신 재시도 대기
+
+# update-cloud.yml이 0/3 전멸했을 때 '35분 뒤 다시 던지기'의 **대기만** 맡는다.
+#
+# 왜 별도 파일인가: update-cloud.yml은 `concurrency: update-cloud`로 직렬화돼
+# 있는데, 대기를 그 안에서 하면 자는 35분 내내 그룹이 잡힌다. 그 창에 도착한
+# 정기 크론은 pending이 되고, GitHub은 그룹당 pending을 하나만 남기므로 뒤이어
+# 도착한 재시도 디스패치가 **앞서 대기하던 크론을 취소**한다. 하필 그 자리가
+# 목 20:00 백스톱이라, 파이프라인이 실패 중인 날 — 백스톱이 가장 필요한 날 —
+# 에만 백스톱이 조용히 사라졌다(2026-08-15 리뷰에서 확인).
+#
+# 이 파일은 update-cloud 그룹에 들어가지 않으므로, 자는 동안 정기 크론이
+# 평소대로 돈다. 여기서 다시 던진 재시도는 그때 도는 런 뒤에 줄을 설 뿐이다.
+on:
+  workflow_dispatch:
+    inputs:
+      attempt:
+        description: '재시도 카운터(update-cloud가 자동으로 넘긴다)'
+        type: string
+        default: '2'
+
+# 대기 런끼리만 직렬화한다. 대기가 겹쳐 쌓이면 같은 시각에 재시도가 여러 개
+# 떨어지는데, 그건 IP 룰렛을 푸는 게 아니라 같은 스로틀 창을 더 세게 두드리는
+# 것이다. 새 대기가 오면 옛 대기는 버린다(어차피 더 늦게 도착한 쪽이 최신 판정).
+concurrency:
+  group: update-cloud-retry
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+
+jobs:
+  wait_and_dispatch:
+    runs-on: ubuntu-latest
+    # 35분 sleep + 여유. update-cloud의 45분과 달리 여기선 실제로 자기만 한다.
+    timeout-minutes: 45
+    steps:
+      - name: 35분 뒤 새 IP·새 시각으로 재트리거
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTEMPT: ${{ github.event.inputs.attempt || '2' }}
+        run: |
+          # 카운터가 유일한 제동이다(workflow_dispatch는 GITHUB_TOKEN 재귀 차단의
+          # 예외라 동작한다). update-cloud의 commit 잡이 이미 3/3을 거르지만,
+          # 이 파일만 손으로 돌리는 경우를 대비해 여기서도 막는다.
+          if [ "$ATTEMPT" -gt 3 ]; then
+            echo "시도 한도 도달(attempt=$ATTEMPT) — 재트리거하지 않음"
+            exit 0
+          fi
+          echo "시도 ${ATTEMPT} 대기 시작 — 35분 뒤 디스패치"
+          sleep 2100
+          if ! gh workflow run update-cloud.yml --ref main \
+                 -f attempt="$ATTEMPT" -R "$GITHUB_REPOSITORY"; then
+            echo "::error::재시도 디스패치 실패(attempt=$ATTEMPT) — 다음 크론이 흡수한다"
+            exit 1
+          fi
+          echo "디스패치 완료(attempt=$ATTEMPT)"
