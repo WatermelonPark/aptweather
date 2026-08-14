@@ -484,6 +484,10 @@ code{background:#f1eee6;padding:1px 5px;border-radius:4px;font-size:12.5px}
 .rival ol{margin:7px 0 6px;padding-left:20px}
 .rival li{margin:3px 0;line-height:1.45}
 .src{color:#7b8a7b;font-size:12px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+button.tag{font:500 13px/1.35 inherit;padding:5px 10px;border:1px solid #cfd6e8;
+  background:#fff;color:#3d4a8a;border-radius:14px}
+button.tag.done{background:#1f8a70;border-color:#1f8a70;color:#fff}
 """
 
 JS = """
@@ -525,6 +529,30 @@ function legacy(el){                              // 클립보드 API가 막힌 
   try{document.execCommand('copy');}catch(e){}
   s.removeAllRanges();
 }
+// 태그는 서식이 필요 없다. 평문만 쓰면 어느 입력칸에 넣어도 그대로 들어간다.
+function copyText(s,b){
+  var ok=function(){
+    var old=b.textContent;
+    b.classList.add('done'); b.textContent='\\uBCF5\\uC0AC\\uB428';
+    setTimeout(function(){b.textContent=old;b.classList.remove('done');},900);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(s).then(ok,function(){fallbackText(s);ok();});
+  } else { fallbackText(s); ok(); }
+}
+function fallbackText(s){
+  var t=document.createElement('textarea');
+  t.value=s; t.style.position='fixed'; t.style.left='-9999px';
+  document.body.appendChild(t); t.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(t);
+}
+document.querySelectorAll('button.tag').forEach(function(b){
+  b.onclick=function(){copyText(b.dataset.tag,b);};
+});
+document.querySelectorAll('button[data-tags]').forEach(function(b){
+  b.onclick=function(){copyText(b.dataset.tags,b);};
+});
 document.querySelectorAll('button[data-t]').forEach(function(b){
   b.onclick=function(){
     var el=document.getElementById(b.dataset.t);
@@ -586,6 +614,23 @@ def field(lab, tid, html, cls=''):
             '<div class="box %s" id="%s">%s</div></div>') % (lab, tid, cls, tid, html)
 
 
+def tagfield(tags):
+    """태그는 한 줄로 붙여넣으면 제대로 안 들어간다(2026-08-14 사용자 실측).
+
+    네이버 태그 칸은 하나 넣고 Enter를 치는 구조라, 쉼표로 이어붙인 한 줄을
+    붙이면 통째로 한 태그가 되거나 앞뒤 공백이 태그에 섞인다. 붙여넣기 동작을
+    추측해 맞추는 대신, 칩을 눌러 하나씩 복사하게 만든다 — 에디터가 어떻게
+    처리하든 결과가 같다. 전체 복사는 남기되 공백 없이 잇는다.
+    """
+    chips = ''.join('<button class="tag" data-tag="%s">%s</button>' % (esc(t), esc(t))
+                    for t in tags)
+    return ('<div class="field"><div class="lab"><b>태그 %d개</b>'
+            '<button data-tags="%s">전체 복사</button>'
+            '<span class="src">칩을 누르면 하나씩 복사됩니다</span></div>'
+            '<div class="tags">%s</div></div>'
+            % (len(tags), esc(','.join(tags)), chips))
+
+
 def render(p, d1, d2):
     S = []
     S.append('<!doctype html><html lang="ko"><meta charset="utf-8">')
@@ -601,8 +646,7 @@ def render(p, d1, d2):
         S.append(rival_panel(d['kw']))
         S.append(field('제목', 't%d' % i, esc(d['title']), 't'))
         S.append(field('본문', 'b%d' % i, d['body']))
-        S.append(field('태그 (붙여넣고 쉼표로 구분)', 'g%d' % i,
-                       ', '.join(d['tags']), 'g'))
+        S.append(tagfield(d['tags']))
         if d['img']:
             S.append('<p class="note">📎 이미지 <code>%s</code> 를 %s에 끌어다 '
                      '놓으세요. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 '
