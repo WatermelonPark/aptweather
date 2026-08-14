@@ -15,11 +15,14 @@ date=최신순)이라 **통합검색 화면의 실제 순위와 다르다.** 그
 단정하지 않고 'API 순번'이라고만 적는다. 순위를 정확히 보려면 사람이 직접
 검색하는 수밖에 없다 — 그건 이 도구가 대신할 수 없다.
 
-공식 API만 쓴다(스크래핑 없음). 무료 일 25,000회라 이 용도엔 넉넉하다.
+공식 API만 쓴다(스크래핑 없음). 무료 일 25,000회라 이 용도엔 넉넉하다
+(1회 실행 = 키워드수 × 3).
 
-준비:
-  developers.naver.com → 애플리케이션 등록 → 사용 API '검색' 선택
-  발급받은 값을 환경변수로 둔다(기존 도구들과 같은 방식):
+준비 — 구 developers.naver.com이 아니라 **NAVER Cloud Platform API HUB**다.
+2026-08-14 실측 기준으로 호스트·경로·헤더가 모두 구 방식과 다르다:
+  ncloud.com → Application Services → NAVER API HUB → Application 등록
+  (검색 API 선택) → Application Management → 인증 정보 → Client ID/Secret
+  환경변수로 둔다(기존 도구들과 같은 방식):
     NAVER_CLIENT_ID=...  NAVER_CLIENT_SECRET=...
 
 사용:
@@ -27,10 +30,10 @@ date=최신순)이라 **통합검색 화면의 실제 순위와 다르다.** 그
   python tools/naver_serp.py "대구 미분양" "부산 입주물량"
   python tools/naver_serp.py --json             # 기계가 읽을 형태로
 """
-import io
 import json
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -45,7 +48,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OURS = ('agongmap.co.kr', 'blog.naver.com/startupbd')
 
 # 2026-08-14 네이버 키워드도구 실측에서 검색량이 확인된 것 위주.
-# 검색량 0인 조합(경기입주물량 10 등)은 넣어도 배울 게 없어 뺐다.
+# 검색량 10 수준인 조합(경기입주물량 등)은 넣어도 배울 게 없어 뺐다.
 DEFAULT_KEYWORDS = [
     '대구 미분양',          # 1,180 — 우리 주제 중 최대 시장
     '부산 미분양아파트',     # 3,340
@@ -57,24 +60,41 @@ DEFAULT_KEYWORDS = [
     '전세가율',             # 1,240
 ]
 
-API = 'https://openapi.naver.com/v1/search/%s.json'
+# 카페를 넣는 이유: 부동산은 카페 글이 검색 상위를 자주 먹는다.
+# 뉴스(/search/v1/news)도 신청돼 있으나 경쟁 상대가 아니라 소재원이라 뺐다.
+CORPORA = [('blog', '블로그'), ('webkr', '웹문서'), ('cafearticle', '카페')]
+
+# API HUB 게이트웨이. 확장자(.json)를 붙이면 404다 — 구 openapi.naver.com과
+# 다른 지점이라 바꿀 때 주의(2026-08-14 실측).
+API = 'https://naverapihub.apigw.ntruss.com/search/v1/%s'
 
 
 def _get(kind, query, display=10, sort='sim'):
-    cid = os.environ.get('NAVER_CLIENT_ID', '')
-    sec = os.environ.get('NAVER_CLIENT_SECRET', '')
+    # strip 필수 — 콘솔에서 복사하면 앞뒤 공백·개행이 딸려오기 쉽고,
+    # 네이버는 헤더 값에 공백이 있으면 그대로 인증 실패를 낸다.
+    cid = os.environ.get('NAVER_CLIENT_ID', '').strip()
+    sec = os.environ.get('NAVER_CLIENT_SECRET', '').strip()
     if not cid or not sec:
         raise SystemExit(
             'NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 환경변수가 없다.\n'
-            '  developers.naver.com → 애플리케이션 등록 → 사용 API "검색"\n'
+            '  ncloud.com → NAVER API HUB → Application Management → 인증 정보\n'
             '  PowerShell:  $env:NAVER_CLIENT_ID="..."; $env:NAVER_CLIENT_SECRET="..."\n'
             '  bash:        export NAVER_CLIENT_ID=... NAVER_CLIENT_SECRET=...')
     url = (API % kind) + '?' + urllib.parse.urlencode(
         {'query': query, 'display': display, 'sort': sort})
     req = urllib.request.Request(url, headers={
-        'X-Naver-Client-Id': cid, 'X-Naver-Client-Secret': sec})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read().decode('utf-8'))
+        'X-NCP-APIGW-API-KEY-ID': cid, 'X-NCP-APIGW-API-KEY': sec})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        # 실패 원인은 본문 JSON에 들어온다. 이걸 버리면 "401"만 남아서
+        # 키가 틀린 건지 경로가 틀린 건지 못 가른다(실제로 한 번 헤맸다).
+        try:
+            detail = e.read().decode('utf-8', 'replace')[:300]
+        except Exception:
+            detail = ''
+        raise RuntimeError('HTTP %s %s' % (e.code, detail)) from None
 
 
 def _clean(s):
@@ -86,29 +106,32 @@ def _clean(s):
 
 
 def probe(keyword, display=10):
-    """한 키워드에 대해 블로그·웹문서 결과를 모아 우리 것 여부를 표시한다."""
-    out = {'keyword': keyword, 'blog': [], 'web': [], 'ours': []}
-    for kind in ('blog', 'webkr'):
+    """한 키워드를 블로그·웹문서·카페에서 조회하고 우리 것 여부를 표시한다."""
+    out = {'keyword': keyword, 'hits': {}, 'ours': []}
+    for kind, label in CORPORA:
+        rows = []
         try:
             d = _get(kind, keyword, display=display)
         except SystemExit:
             raise
         except Exception as e:
-            out.setdefault('errors', []).append('%s: %s' % (kind, e))
+            out.setdefault('errors', []).append('%s: %s' % (label, e))
+            out['hits'][label] = rows
             continue
         for i, it in enumerate(d.get('items') or [], 1):
             link = it.get('link', '') + it.get('bloggerlink', '')
             row = {
                 'n': i,
                 'title': _clean(it.get('title', '')),
-                'src': _clean(it.get('bloggername', '') or
+                'src': _clean(it.get('bloggername', '') or it.get('cafename', '') or
                               urllib.parse.urlparse(it.get('link', '')).netloc),
                 'date': it.get('postdate', ''),
                 'link': it.get('link', ''),
             }
-            out['blog' if kind == 'blog' else 'web'].append(row)
+            rows.append(row)
             if any(o in link for o in OURS):
-                out['ours'].append({'kind': kind, **row})
+                out['ours'].append(dict(row, corpus=label))
+        out['hits'][label] = rows
     return out
 
 
@@ -122,23 +145,23 @@ def main(argv):
         return 0
 
     for r in results:
-        print('\n' + '=' * 62)
+        print('\n' + '=' * 72)
         print('[%s]' % r['keyword'])
         if r.get('errors'):
             print('  ! ' + ' / '.join(r['errors']))
         if r['ours']:
             for o in r['ours']:
-                print('  ★ 우리 노출: %s API순번 %d — %s' % (o['kind'], o['n'], o['title'][:40]))
+                print('  ★ 우리 노출: %s API순번 %d — %s' % (o['corpus'], o['n'], o['title'][:40]))
         else:
-            print('  ☆ 우리 글 없음(상위 10)')
-        print('  -- 블로그 상위 --')
-        for b in r['blog'][:5]:
-            print('   %2d. %-42s | %s' % (b['n'], b['title'][:42], b['src'][:18]))
-        if r['web']:
-            print('  -- 웹문서 상위 --')
-            for w in r['web'][:5]:
-                print('   %2d. %-42s | %s' % (w['n'], w['title'][:42], w['src'][:24]))
-    print('\n' + '=' * 62)
+            print('  ☆ 우리 글 없음(각 상위 10)')
+        for _, label in CORPORA:
+            rows = r['hits'].get(label) or []
+            if not rows:
+                continue
+            print('  -- %s --' % label)
+            for x in rows[:5]:
+                print('   %2d. %-44s | %s' % (x['n'], x['title'][:44], x['src'][:22]))
+    print('\n' + '=' * 72)
     print('⚠️ API 순번은 통합검색 실제 순위가 아니다(API 자체 정렬).')
     print('   경쟁 글의 각도를 보는 용도로 읽을 것.')
     return 0
