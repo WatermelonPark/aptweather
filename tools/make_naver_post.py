@@ -480,13 +480,21 @@ code{background:#f1eee6;padding:1px 5px;border-radius:4px;font-size:12.5px}
 """
 
 JS = """
-// 스마트에디터는 <p>와 <p> 사이의 CSS 여백을 그대로 가져오지 않는다.
-// 화면에선 문단이 갈라져 보이는데 붙여넣으면 줄줄이 붙는 이유가 이것이다
-// (2026-08-14 사용자 실측). 그래서 여백에 기대지 않고 빈 문단을 실제로
-// 끼워 넣은 복제본을 만들어 그걸 복사한다. 화면의 초안은 건드리지 않는다.
-function spaced(el){
-  if(el.children.length<2) return null;      // 제목·태그는 한 덩어리라 해당 없음
+// 클립보드에 '의미'만 싣는다.
+//
+// 두 가지를 한꺼번에 푼다(둘 다 2026-08-14 사용자 실측):
+//  ① 붙여넣으면 문단이 줄줄이 붙는다 — 에디터가 <p> 사이 CSS 여백을 안 가져온다.
+//     여백은 스타일이라 살아남지 못하므로, 빈 문단을 실제 노드로 끼운다.
+//  ② 붙여넣으면 전부 볼드로 나온다 — 소스는 굵지 않다(실측 font-weight 400).
+//     범위 선택 후 execCommand로 복사하면 Chrome이 계산된 스타일을 전부
+//     인라인으로 박아 넣고, 스마트에디터가 그 뭉치를 제 방식대로 해석한다.
+//     그래서 DOM을 복사시키지 않고 우리가 만든 HTML 문자열을 직접 쓴다.
+//     class·id는 지운다(페이지 겉치레). td의 text-align은 우리가 쓴 것이라 남긴다.
+function payload(el){
   var c=el.cloneNode(true);
+  c.querySelectorAll('*').forEach(function(n){
+    n.removeAttribute('class'); n.removeAttribute('id');
+  });
   var kids=Array.prototype.slice.call(c.children);
   kids.forEach(function(k,i){
     if(i<kids.length-1){
@@ -495,21 +503,35 @@ function spaced(el){
       c.insertBefore(gap,k.nextSibling);
     }
   });
+  c.removeAttribute('class'); c.removeAttribute('id');
   c.style.position='fixed'; c.style.left='-9999px'; c.style.top='0';
   document.body.appendChild(c);
-  return c;
+  // innerText는 문서에 붙어 있어야 나온다. 끼워 넣은 빈 문단 탓에 평문 쪽은
+  // 빈 줄이 과하게 잡히므로 두 줄로 줄인다(html을 못 받는 편집기용 폴백).
+  var out={html:c.innerHTML, text:c.innerText.replace(/\\n{3,}/g,'\\n\\n')};
+  document.body.removeChild(c);
+  return out;
+}
+function legacy(el){                              // 클립보드 API가 막힌 경우만
+  var r=document.createRange(); r.selectNodeContents(el);
+  var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  try{document.execCommand('copy');}catch(e){}
+  s.removeAllRanges();
 }
 document.querySelectorAll('button[data-t]').forEach(function(b){
   b.onclick=function(){
     var el=document.getElementById(b.dataset.t);
-    var tmp=spaced(el);
-    var r=document.createRange(); r.selectNodeContents(tmp||el);
-    var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
-    try{document.execCommand('copy');}catch(e){}
-    s.removeAllRanges();
-    if(tmp) document.body.removeChild(tmp);
-    b.textContent='\\uBCF5\\uC0AC\\uB428'; b.className='done';
-    setTimeout(function(){b.textContent='\\uBCF5\\uC0AC';b.className='';},1500);
+    var ok=function(){
+      b.textContent='\\uBCF5\\uC0AC\\uB428'; b.className='done';
+      setTimeout(function(){b.textContent='\\uBCF5\\uC0AC';b.className='';},1500);
+    };
+    var p=payload(el);
+    if(navigator.clipboard&&window.ClipboardItem){
+      navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([p.html],{type:'text/html'}),
+        'text/plain': new Blob([p.text],{type:'text/plain'})
+      })]).then(ok,function(){legacy(el);ok();});
+    } else { legacy(el); ok(); }
   };
 });
 """
