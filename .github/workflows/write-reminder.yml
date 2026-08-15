@@ -15,6 +15,13 @@ on:
     - cron: '0 23 * * 1'   # 월 23:00 UTC = 화 08:00 KST — 지역/사이클 격주
     - cron: '0 23 * * 4'   # 목 23:00 UTC = 금 08:00 KST — 주간 시세
   workflow_dispatch:        # 손으로도 돌려볼 수 있게
+    inputs:
+      force:
+        description: '요일과 무관하게 이 종류로 보낸다(시험용)'
+        required: false
+        default: ''
+        type: choice
+        options: ['', '주간 시세', '지역 공급', '사이클 이론']
 
 permissions:
   issues: write
@@ -27,6 +34,8 @@ jobs:
 
       - name: 오늘 쓸 글 정하기
         id: plan
+        env:
+          FORCE: ${{ inputs.force }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import datetime, os
@@ -38,14 +47,20 @@ jobs:
           # 화요일 격주 교대의 기준점. 2026-08-18(화)이 지역 편(대구) 차례다.
           ANCHOR = datetime.date(2026, 8, 18)
 
-          if d.weekday() == 4:            # 금요일
+          # 시험용 강제 지정. 날짜는 오늘 그대로 두고 종류만 바꾼다 —
+          # 제목의 날짜까지 가짜로 박으면 시험이 아니라 오해가 된다.
+          force = (os.environ.get('FORCE') or '').strip()
+          wd = {'주간 시세': 4, '지역 공급': 1, '사이클 이론': 1}.get(force, d.weekday())
+          alt_override = 1 if force == '사이클 이론' else (0 if force == '지역 공급' else None)
+
+          if wd == 4:                     # 금요일
               kind = '주간 시세'
               cmd = 'python tools/make_naver_post.py'
               cat = '주간 아파트 시세'
               note = ('한국부동산원 목요일 발표 → 배치 갱신 후 생성해야 '
                       '최신 숫자가 들어갑니다. 해석 문단은 비어 있습니다.')
-          elif d.weekday() == 1:          # 화요일
-              alt = ((d - ANCHOR).days // 7) % 2
+          elif wd == 1:                   # 화요일
+              alt = alt_override if alt_override is not None else ((d - ANCHOR).days // 7) % 2
               if alt == 0:
                   kind = '지역 공급'
                   cmd = 'python tools/make_naver_post.py'
