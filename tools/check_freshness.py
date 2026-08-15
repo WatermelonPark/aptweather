@@ -55,9 +55,11 @@ FETCH_TIMEOUT = 25     # 원천 호출 타임아웃. 재시도 패스에서는 2
 # 17계열 = HTTP 21회를 **직렬**로 돌고(R-ONE은 계열당 head+본문 2회), 광역 장애면
 # 전부 타임아웃을 꽉 채운다. 60초면 1차만 21×60 = 21분이고, 여기에 대기 75초와
 # 재시도 패스(~7분)를 더하면 28~31분 — watchdog.yml의 `timeout-minutes: 30`을
-# 넘긴다. 넘기는 순간 `steps.check.outputs.ok`가 안 찍혀 판정 없이 잡이 죽고,
-# recheck가 `!= 'true'` 조건에 걸려 같은 30분을 또 쓴다. **하필 재시도 층을 넣은
+# 넘긴다. 넘기는 순간 `steps.check.outputs.verdict`가 안 찍혀 판정 없이 잡이 죽고,
+# recheck가 빈 verdict를 받아 같은 30분을 또 쓴다. **하필 재시도 층을 넣은
 # 이유(어느 계열이 문제인지 말해주기)가 그때 사라진다.**
+# (verdict가 비면 recheck로 떨어지는 건 의도된 안전 방향이다 — watchdog.yml의
+#  `!= 'ok' && != 'final'` 참고. 여기서 말하는 건 '예산을 넘기면 안 된다'는 쪽이다.)
 # 25초 근거: 정상 응답은 2~3초다(update-cloud.yml 머리 주석의 실측). 10배 여유다.
 # 근본 대책은 268행대 파생 페이지 감시처럼 ThreadPoolExecutor로 병렬화하는 것이다
 # (그러면 1차가 1분대로 떨어져 timeout-minutes도 되돌릴 수 있다).
