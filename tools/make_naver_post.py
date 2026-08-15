@@ -836,6 +836,15 @@ def render(p, d1, d2):
         S.append('<section class="draft"><h2>%s</h2>' % head)
         S.append(rival_panel(d['kw']))
         S.append(field('제목', 't%d' % i, esc(d['title']), 't'))
+        if i == 1:
+            # 숫자를 기본값으로 두되(기계가 확실히 아는 값), 해석을 쓴 뒤에는
+            # 결론절로 바꾸는 게 낫다. 검색결과는 30자쯤만 보여줘서 뒤쪽 숫자가
+            # 잘리고, 무엇보다 +0.21%가 큰지 작은지는 들어와야 안다. 결론은
+            # 클릭 전에도 뜻이 통한다 — 우리 제목으로 검색했을 때 1위였던 글이
+            # 그 형태였다(2026-08-15).
+            S.append('<p class="note">✍ 해석을 쓴 뒤 제목 뒷부분을 <b>결론 한 줄</b>로 '
+                     '바꾸세요. 예: <code>… 8월 2주 | 서울 상승폭 축소, 지방은 보합</code>. '
+                     '숫자는 검색결과에서 잘리고, 클릭 전에는 뜻이 안 통합니다.</p>')
         S.append(field('본문', 'b%d' % i, d['body']))
         S.append(tagfield(d['tags']))
         if d['img']:
