@@ -41,6 +41,7 @@ SITE = 'https://www.agongmap.co.kr'
 #    값에 "가 섞이는 순간 속성이 그 자리에서 닫혀 태그 칩이 깨진다.
 num = M.num
 esc = M.esc
+umx = M.umx        # 미분양 배수 표기도 정본을 쓴다 — 사이트와 자릿수가 갈리면 안 된다
 
 
 def pct(v):
@@ -131,6 +132,36 @@ def pick_zone(rows):
 # ---------------------------------------------------------- 로테이션·해석 자리
 # 해석은 기계가 못 쓴다. 이 자리를 비워 둔 채 발행하면 시세 숫자만 나열한 글이
 # 되어 블로그 톤(분석)에서 떨어진다. 눈에 띄라고 대괄호로 남긴다.
+OUTLOOK_PLACEHOLDER = (
+    '[여기에 전망을 2~4문장으로. 위 숫자를 다시 읊지 말고 <b>그래서 어떻게 될 것</b>'
+    '인지 쓸 것. 주어를 분명히 하세요 — "제 판단으로는". 시점을 단정하지 말고 '
+    '방향을 말하는 게 안전하고, 그 편이 나중에 맞습니다.]')
+
+
+def _cd_change(sts):
+    """CD 91일물의 1년 변화 — 전망 문단에 깔아 줄 재료.
+
+    금리는 공급 순환을 덮어쓰는 외부 힘이라(/cycle/ 실측), 공급 얘기만 하고
+    금리를 빼면 반쪽이다. 같은 달끼리 비교한다 — 월별 등락이 커서 인접 월과
+    견주면 방향이 뒤집힌다.
+    """
+    r = (sts.get('금리') or {})
+    ser = (r.get('series') or {}).get('CD(91일)') or []
+    dates = r.get('dates') or []
+    p = [(d, v) for d, v in zip(dates, ser) if v is not None]
+    if len(p) < 13:
+        return None
+    cur = p[-1]
+    try:
+        y, m = int(cur[0][:4]) - 1, cur[0][5:7]
+    except ValueError:
+        return None
+    prev = next((x for x in p if x[0][:4] == str(y) and x[0][5:7] == m), None)
+    if not prev:
+        return None
+    return ('%.2f' % prev[1], '%.2f' % cur[1], '%+.2f' % (cur[1] - prev[1]))
+
+
 INTERP_PLACEHOLDER = (
     '[이번 주 데이터에서 눈에 띈 것을 2~4문장으로. 위 표의 숫자를 다시 읊지 말고 '
     '왜 그런지, 무엇을 시사하는지 쓸 것. 예: 특정 지역만 튀는 이유, 매매-전세 '
@@ -386,7 +417,7 @@ def draft_weekly(adv, sts, rows):
 
 
 # ---------------------------------------------------------------- 초안 ②
-def draft_zone(adv, r, seq, total, total_zones):
+def draft_zone(adv, sts, r, seq, total, total_zones):
     nm = r['z']
     t = r['tot']
     lack = t >= 0
@@ -505,6 +536,40 @@ def draft_zone(adv, r, seq, total, total_zones):
                 '구간이 생깁니다.</p>')
     body.append('<p>끝으로 화면의 세대수는 <b>절대량</b>이고 등급·순위는 <b>필요량 대비 '
                 '비율</b>로 매깁니다. 그래서 세대수가 큰 곳이 순위에서는 뒤일 수 있습니다.</p>')
+
+    # ── 전망. 숫자는 기계가 깔고, 판단은 사람이 쓴다.
+    #
+    # 사실 나열만 하면 데이터 덤프에 그친다는 사용자 지적(2026-08-15). 다만
+    # 판단을 기계가 쓰면 매주 같은 주장이 반복되고, 무엇보다 그건 저자의 몫이다.
+    # 그래서 검증 가능한 재료(미분양 배수와 전국 순위, 금리 변화)만 깔아 두고
+    # 결론 문단은 비운다.
+    #
+    # ⚠️ '역대 최저' 같은 표현을 쓰지 않는다. 서울 1,013호는 자기 25년 역사에선
+    # 낮은 순 139/241로 중간쯤이다(2018.12엔 27호였다). 압도적인 건 **지역 간
+    # 비교**다 — 그 층위를 섞으면 반박당한다.
+    zs = (adv.get('sido') or {}).get('zones') or []
+    ums = sorted((x for x in zs if not x.get('agg') and x.get('um') is not None),
+                 key=lambda x: x['um'])
+    mine = next((i for i, x in enumerate(ums) if x['z'] == nm), None)
+    if mine is not None and r.get('um') is not None:
+        body.append('<h3>그래서 어떻게 될 것인가</h3>')
+        # 바로 다음 순위와 견주면 안 된다 — 서울 0.05 vs 세종 0.07이라 '1배 차이'가
+        # 되어 뜻이 없다. 대척점(가장 높은 곳)과 견줘야 폭이 드러난다.
+        # 조사는 붙이지 않는다 — '세종와도' 같은 오류를 원천에서 없앤다.
+        cmp_txt = ''
+        if mine == 0 and len(ums) > 1:
+            top = ums[-1]
+            cmp_txt = (' 가장 높은 %s(%s)의 <b>%d분의 1</b> 수준입니다.'
+                       % (esc(top['z']), umx(top['um']),
+                          round(top['um'] / max(r['um'], .01))))
+        body.append('<p>%s의 미분양은 <b>%s호</b>입니다. 분기 적정물량과 견주면 '
+                    '<b>%s</b>로 17개 시도 가운데 <b>낮은 순 %d번째</b>입니다.%s</p>'
+                    % (esc(nm), num(r['unsold']), umx(r['um']), mine + 1, cmp_txt))
+        cd = _cd_change(sts)
+        if cd:
+            body.append('<p>금리도 같이 봐야 합니다. CD 91일물이 1년 사이 '
+                        '<b>%s%% → %s%%</b>로 %s%%p 움직였습니다.</p>' % cd)
+        body.append('<p>%s</p>' % OUTLOOK_PLACEHOLDER)
 
     body.append('<p>%s의 분기별 물량과 산출 근거 전체는 아래에서 볼 수 있습니다.<br>'
                 '👉 <a href="%s/zone/%s/?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=zone_deep">%s 공급 리포트</a></p>'
@@ -896,7 +961,7 @@ def main():
     # 심층은 개별 시도만 순회한다(집계 3종 제외).
     pool = SZ.zone_order(rows)
     pick, seq, total, commit_rotation = pick_zone(pool)
-    d2 = draft_zone(adv, pick, seq, total, len(pool))
+    d2 = draft_zone(adv, sts, pick, seq, total, len(pool))
 
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
