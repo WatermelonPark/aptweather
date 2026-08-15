@@ -135,7 +135,50 @@ def probe(keyword, display=10):
     return out
 
 
+def indexed(query, display=50):
+    """그 글이 색인됐는가만 본다 — 순위와 섞어 보면 안 된다.
+
+    ⚠️ 이걸 따로 둔 이유(2026-08-15 실측 오판). 색인 여부를 정확도순(sim)
+    상위 10개로 판정하면 **색인된 글도 '없음'으로 나온다.** 실제로 발행한 글이
+    네이버 블로그탭 최신순 1위인데 sim 상위 10에 없어서 두 번이나 미색인으로
+    잘못 보고했다.
+
+    색인 여부는 최신순(date)으로, 넓게(기본 50개) 훑어야 한다. 우리 글이
+    거기 있으면 색인된 것이다 — 그 자리가 몇 번째인지는 별개 문제다.
+    """
+    out = []
+    for kind, label in CORPORA[:1]:          # 블로그만 보면 된다
+        try:
+            d = _get(kind, query, display=display, sort='date')
+        except SystemExit:
+            raise
+        except Exception as e:
+            return None, '%s: %s' % (label, e)
+        for i, it in enumerate(d.get('items') or [], 1):
+            link = it.get('link', '') + it.get('bloggerlink', '')
+            if any(o in link for o in OURS):
+                out.append((i, _clean(it.get('title', '')), it.get('link', '')))
+    return out, None
+
+
 def main(argv):
+    if '--index' in argv:
+        qs = [a for a in argv if not a.startswith('--')]
+        if not qs:
+            raise SystemExit('색인을 확인할 제목(또는 그 일부)을 인자로 줄 것')
+        for q in qs:
+            hits, err = indexed(q)
+            if err:
+                print('  ! %s — %s' % (q, err))
+            elif hits:
+                for n, t, u in hits:
+                    print('  ✅ 색인됨 — %s' % t[:60])
+                    print('     최신순 %d번째 · %s' % (n, u))
+            else:
+                print('  ❌ 최신순 50개 안에 없음 — %s' % q)
+        print('\n※ 색인 여부만 본 것이다. 통합검색 노출 순위는 사람이 직접 검색해야 안다.')
+        return 0
+
     as_json = '--json' in argv
     kws = [a for a in argv if not a.startswith('--')] or DEFAULT_KEYWORDS
     results = [probe(k) for k in kws]
