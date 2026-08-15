@@ -396,17 +396,32 @@ def check_age(label, stamp, grace):
     return None
 
 
-def rone_latest(tbl, cycle):
-    """R-ONE은 과거부터 페이징된다 — 마지막 페이지가 최신이다."""
+def rone_latest(tbl, cycle, since=None):
+    """R-ONE은 과거부터 페이징된다 — 마지막 페이지가 최신이다.
+
+    ⚠️ since(START_WRTTIME)를 주면 서버측에서 기간을 잘라 받는다. 큰 표는 마지막
+    페이지 번호가 깊어지고(미분양 55,987행=56쪽), R-ONE이 그 요청을 간헐적으로
+    응답 없이 끊는다 — 2026-08-11·14 감시가 미분양에서 실제로 이걸로 실패했다
+    (브라우저 UA를 쓰는 배치도 같은 오류로 실패해, UA나 재시도 문제가 아니다).
+    감시는 '원천이 우리보다 최신인가'만 보므로 **우리 시점을 하한**으로 잡으면
+    된다 — 더 최신이면 반드시 창 안에 들어오니 탐지 능력은 그대로다.
+    """
     base = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
             '?KEY=%s&Type=json&STATBL_ID=%s&DTACYCLE_CD=%s'
             % (os.environ.get('RONE_API_KEY', ''), tbl, cycle))
+    if since:
+        base += '&START_WRTTIME=%s' % since
     head = get_json(base + '&pIndex=1&pSize=1')
     total = None
     for blk in head.get('SttsApiTblData', []):
         for h in blk.get('head', []) or []:
             if 'list_total_count' in h:
                 total = h['list_total_count']
+    if not total and since:
+        # 창이 통째로 비면 {'RESULT':{'CODE':'INFO-200'}}가 온다. 여기서 예외를
+        # 던지면 '원천 조회 실패'로 읽혀 오경보가 된다 — 필터를 풀고 다시 본다.
+        print('  (%s START_WRTTIME=%s 구간이 비어 전량 조회로 되돌림)' % (tbl, since))
+        return rone_latest(tbl, cycle)
     if not total:
         raise RuntimeError('list_total_count 없음')
     rows = []
@@ -631,8 +646,17 @@ def main():
     for name, cfg in sorted(U.SUPPLY_CONF.items()):
         D = stats.get(name) or {}
         last = (D.get('dates') or [None])[-1]
+        # 하한은 우리 시점 한 달 전 — 원천이 더 최신이면 반드시 이 창에 들어온다.
+        # 값이 이상하면(파싱 실패) since 없이 예전처럼 전량을 훑는다.
+        since = None
+        if last and len(digits(last)) >= 6:
+            since = digits(last)[:6]
+            y, m = int(since[:4]), int(since[4:6]) - 1
+            if m <= 0:
+                y, m = y - 1, 12
+            since = '%04d%02d' % (y, m)
         fails.append(check(name, last,
-                           lambda c=cfg: rone_latest(c['tbl'], 'MM'),
+                           lambda c=cfg, sc=since: rone_latest(c['tbl'], 'MM', sc),
                            GRACE_MONTHLY))
 
     print('[금리 — 원천 한국은행 ECOS]')

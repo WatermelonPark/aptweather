@@ -20,6 +20,7 @@ GitHub Actions(.github/workflows/update-stats.yml)는 KOSIS의 해외 IP 차단 
              쓰이는 라이브 데이터로 매 실행 갱신한다(fetch_monthly, adv['monthly']).
 """
 import io, os, re, sys, json, time
+import datetime
 import urllib.request
 import urllib.parse
 
@@ -173,7 +174,11 @@ def _fetch_supply_one(cfg, regions, months=None):
     months = SUPPLY_MONTHS if months is None else months
     # 미분양은 시군구까지 담겨 월당 ~246행, 분양은 ~21행. 넉넉히 받아 뒤에서 자른다.
     need = 10 ** 9 if months == 0 else max((months + 2) * 260, 3000)
-    rows = _rone_recent_rows(cfg['tbl'], need, cycle='MM')
+    # 시딩(months=0)은 26년치 전량이라 기간 필터를 걸지 않는다. 증분일 때만
+    # 요청 구간을 좁혀 깊은 페이지를 피한다(미분양 56쪽 → 1쪽, 위 주석 참조).
+    # 여유 +4개월은 소급 정정과 발표 지연을 덮는다 — need로 뒤에서 다시 자른다.
+    rows = _rone_recent_rows(cfg['tbl'], need, cycle='MM',
+                             since=None if months == 0 else _rone_since('MM', months + 4))
     out = {}
     for r in rows:
         t = (r.get('WRTTIME_IDTFR_ID') or '').strip()
@@ -462,19 +467,59 @@ def _gu_name(nm):
 
 # ---- R-ONE 주간 속보 (시도 18 + 서울 25구 + 시군구) ------------------------
 # 주간·월간 시세는 부동산원 R-ONE 단일 소스다(KOSIS는 같은 데이터가 4~7일 늦음).
-def _rone_recent_rows(tbl, need_rows, cycle='WK'):
-    base = {'KEY': RONE_KEY, 'Type': 'json', 'pSize': 1000, 'STATBL_ID': tbl, 'DTACYCLE_CD': cycle}
-    d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=1, pSize=1)))
-    k = list(d.keys())[0]
-    total = d[k][0]['head'][0]['list_total_count']
-    rows = []
-    p = (total + 999) // 1000
-    while p >= 1 and len(rows) < need_rows:
-        d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=p)))
+def _rone_since(cycle, back):
+    """START_WRTTIME 값 — 주간은 YYYYMMDD, 월간은 YYYYMM. back은 개월 수."""
+    d = datetime.date.today()
+    y, m = d.year, d.month - back
+    while m <= 0:
+        y, m = y - 1, m + 12
+    return '%04d%02d' % (y, m) + ('01' if cycle == 'WK' else '')
+
+
+def _rone_recent_rows(tbl, need_rows, cycle='WK', since=None):
+    """R-ONE 표의 최신 구간 행. since를 주면 서버측에서 기간을 잘라 받는다.
+
+    ⚠️ 왜 기간 필터가 필요한가(2026-08-15): R-ONE은 과거부터 페이징돼 최신은 늘
+    마지막 페이지다. 그런데 표가 크면 그 페이지 번호가 깊어지고(주간 매매 166,
+    미분양 56), 서버가 그 요청을 간헐적으로 응답 없이 끊는다
+    (RemoteDisconnected). 브라우저 UA로도, 3회 재시도로도 안 막혔다 —
+    2026-08-11·14 감시와 배치가 미분양에서 실제로 이걸로 실패했다.
+    START_WRTTIME을 붙이면 조회 대상이 줄어 페이지가 얕아진다(미분양
+    55,987행/56쪽 → 492행/1쪽, 주간 165,993→6,249). 요청이 가벼워질 뿐
+    받는 내용은 같다.
+
+    ⚠️ 필터가 빈손이면 필터 없이 다시 받는다. since는 오늘 날짜에서 거꾸로
+    계산하므로, 원천이 예상보다 더 뒤처져 있으면 창이 통째로 빌 수 있다.
+    그때 조용히 빈 결과를 돌려주면 배치가 '원천에 자료가 없다'고 판단해
+    계열이 갱신되지 않는다 — 성능 최적화가 데이터 사고가 되는 길이다.
+    """
+    def _fetch(start):
+        base = {'KEY': RONE_KEY, 'Type': 'json', 'pSize': 1000,
+                'STATBL_ID': tbl, 'DTACYCLE_CD': cycle}
+        if start:
+            base['START_WRTTIME'] = start
+        d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=1, pSize=1)))
         k = list(d.keys())[0]
-        rows = d[k][1]['row'] + rows
-        p -= 1
-        time.sleep(0.15)
+        # 조회 결과가 없으면 표 블록 대신 {'RESULT':{'CODE':'INFO-200'}}가 온다 —
+        # 그대로 인덱싱하면 KeyError로 죽어 아래 폴백이 영영 안 돈다.
+        if k == 'RESULT' or not isinstance(d[k], list):
+            return []
+        total = d[k][0]['head'][0]['list_total_count']
+        got = []
+        p = (total + 999) // 1000
+        while p >= 1 and len(got) < need_rows:
+            d = http_json(RONE_API + '?' + urllib.parse.urlencode(dict(base, pIndex=p)))
+            k = list(d.keys())[0]
+            got = d[k][1]['row'] + got
+            p -= 1
+            time.sleep(0.15)
+        return got
+
+    rows = _fetch(since)
+    if since and not rows:
+        print('rone %s: START_WRTTIME=%s 구간이 비었다 — 전량 조회로 되돌린다'
+              % (tbl, since))
+        rows = _fetch(None)
     return rows
 
 
@@ -483,9 +528,11 @@ def fetch_weekly_rone(weeks=None):
     need = (weeks + 2) * 240        # 주당 ~236행
     need = max(need, 12000)   # 시군구(236지역)는 최신주 전량이 여러 페이지에 흩어져 있어 넉넉히
     by, by_cls = {}, {}   # by=이름키(시도/서울구), by_cls=CLS_ID키(시군구 지도용)
+    # 주간표는 165,993행으로 가장 깊다(166쪽) — 필요한 건 최근 weeks주뿐이다.
+    since = _rone_since('WK', (weeks // 4) + 3)
     for key, tbl in RONE_TBL.items():
         m, mc = {}, {}
-        for r in _rone_recent_rows(tbl, need):
+        for r in _rone_recent_rows(tbl, need, since=since):
             full = (r.get('CLS_FULLNM') or '').strip()
             cid = r.get('CLS_ID')
             t = (r.get('WRTTIME_DESC') or '').strip()
@@ -624,9 +671,10 @@ def fetch_monthly_rone(months=None):
     months = months or RECENT_MONTHS  # 최근 구간만 — 10년 히스토리는 main() 병합이 보존
     need = (months + 2) * 260        # 월당 계층 지역 ~234
     by, by_cls = {}, {}   # by=이름키(시도/서울구), by_cls=CLS_ID키(시군구 지도용)
+    since = _rone_since('MM', months + 4)
     for key, tbl in RONE_MONTHLY_TBL.items():
         m, mc = {}, {}
-        for r in _rone_recent_rows(tbl, need, cycle='MM'):
+        for r in _rone_recent_rows(tbl, need, cycle='MM', since=since):
             full = (r.get('CLS_FULLNM') or '').strip()
             cid = r.get('CLS_ID')
             tid = (r.get('WRTTIME_IDTFR_ID') or '').strip()   # '202606'

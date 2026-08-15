@@ -279,6 +279,93 @@ def test_retry_still_catches_a_genuinely_stale_series(monkeypatch):
     _reset_retry()
 
 
+# ---------------------------------------------------------------------------
+# R-ONE 기간 필터 — 깊은 페이지가 서버에 끊기는 것을 피한다(2026-08-15)
+# ---------------------------------------------------------------------------
+
+import update_adv_data as U  # noqa: E402
+
+
+def test_rone_since_formats_and_rolls_over_the_year():
+    """주간은 YYYYMMDD, 월간은 YYYYMM. 연초에 back이 달을 넘기면 해가 줄어야 한다 —
+    여기서 틀리면 창이 미래로 잡혀 매번 폴백(=필터 무효)이 돈다."""
+    import datetime
+
+    class Feb(datetime.date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 2, 10)
+
+    real = datetime.date
+    datetime.date = Feb
+    try:
+        assert U._rone_since('MM', 4) == '202510'
+        assert U._rone_since('MM', 14) == '202412'
+        assert U._rone_since('WK', 8) == '20250601'
+        assert U._rone_since('MM', 1) == '202601'
+    finally:
+        datetime.date = real
+
+
+def test_empty_window_falls_back_to_the_full_table(monkeypatch):
+    """창이 비면 R-ONE은 표 블록 대신 {'RESULT':{'CODE':'INFO-200'}}를 준다.
+    그대로 인덱싱하면 KeyError로 죽고, 조용히 []를 돌려주면 배치가 '원천에 자료가
+    없다'로 읽어 계열이 갱신되지 않는다 — 성능 최적화가 데이터 사고가 되는 길이다.
+    필터를 풀고 다시 받아야 한다."""
+    seen = []
+    empty = {'RESULT': {'CODE': 'INFO-200', 'MESSAGE': '해당하는 데이터가 없습니다.'}}
+    full = {'SttsApiTblData': [{'head': [{'list_total_count': 2}]},
+                               {'row': [{'WRTTIME_IDTFR_ID': '202606'}]}]}
+
+    def fake(url, tries=3):
+        seen.append(url)
+        return empty if 'START_WRTTIME' in url else full
+
+    monkeypatch.setattr(U, 'http_json', fake)
+    monkeypatch.setattr(U.time, 'sleep', lambda s: None)
+    rows = U._rone_recent_rows('T1', 100, cycle='MM', since='209901')
+    assert rows, '빈 창에서 폴백이 안 돌았다'
+    assert any('START_WRTTIME' in u for u in seen) and any('START_WRTTIME' not in u for u in seen)
+
+
+def test_seeding_never_narrows_the_window(monkeypatch):
+    """시딩(months=0)은 26년치 전량이 목적이다. 여기에 기간 필터가 걸리면 과거가
+    통째로 사라진다 — 되돌리기 어려운 사고다."""
+    seen = {}
+
+    def fake(tbl, need, cycle='WK', since=None):
+        seen['since'] = since
+        return [{'WRTTIME_IDTFR_ID': '202606', 'CLS_FULLNM': '전국', 'DTA_VAL': '1'}]
+
+    monkeypatch.setattr(U, '_rone_recent_rows', fake)
+    U._fetch_supply_one(U.SUPPLY_CONF['미분양'], {'전국'}, 0)
+    assert seen['since'] is None, '시딩에 기간 필터가 걸렸다'
+    U._fetch_supply_one(U.SUPPLY_CONF['미분양'], {'전국'}, 8)
+    assert seen['since'], '증분인데 필터가 없다 — 깊은 페이지로 되돌아갔다'
+
+
+def test_watchdog_supply_check_lower_bounds_by_our_own_date(monkeypatch):
+    """감시의 하한은 **우리 시점**이어야 한다. 오늘 날짜 기준으로 잡으면 우리가
+    많이 뒤처졌을 때 창 밖이 되어 뒤처짐을 못 본다."""
+    got = {}
+
+    def fake_latest(tbl, cycle, since=None):
+        got['since'] = since
+        return '202607'
+
+    monkeypatch.setattr(C, 'rone_latest', fake_latest)
+    monkeypatch.setattr(C.time, 'sleep', lambda s: None)
+    cfg = {'tbl': 'T1'}
+    last = '2026.06'
+    since = C.digits(last)[:6]
+    y, m = int(since[:4]), int(since[4:6]) - 1
+    since = '%04d%02d' % ((y, m) if m > 0 else (y - 1, 12))
+    assert since == '202605'
+    r = C.check('미분양', last, lambda: fake_latest(cfg['tbl'], 'MM', since), C.GRACE_MONTHLY)
+    assert got['since'] == '202605'
+    assert r and '미분양' in r, '원천이 더 최신인데 뒤처짐을 못 잡았다'
+
+
 def test_aggregate_regions_are_monitored_too(monkeypatch):
     """전국·수도권·지방도 페이지가 **있다**(zone/전국/ 등) — 예전엔 '없다'는 틀린
     전제로 감시에서 빼서, 유입이 가장 많은 전국 페이지의 스테일을 원리적으로
