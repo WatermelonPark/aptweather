@@ -562,9 +562,19 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
             cmp_txt = (' 가장 높은 %s(%s)의 <b>%d분의 1</b> 수준입니다.'
                        % (esc(top['z']), umx(top['um']),
                           round(top['um'] / max(r['um'], .01))))
-        body.append('<p>%s의 미분양은 <b>%s호</b>입니다. 분기 적정물량과 견주면 '
-                    '<b>%s</b>로 17개 시도 가운데 <b>낮은 순 %d번째</b>입니다.%s</p>'
-                    % (esc(nm), num(r['unsold']), umx(r['um']), mine + 1, cmp_txt))
+        # 부족분 대비 비율이 가장 세게 읽힌다 — 서울은 31만 세대가 모자란데
+        # 안 팔린 건 1천 호, 308분의 1이다. '역대 최저' 같은 시계열 주장과 달리
+        # 반박할 구석이 없다(2026-08-15~16 사용자 지적으로 바로잡음).
+        vs_tot = ''
+        if t > 0 and r['unsold'] and r['unsold'] < t:
+            vs_tot = (' 앞서 본 부족분 <b>%s세대의 %.1f%%</b>, %d분의 1입니다.'
+                      % (num(t), r['unsold'] / t * 100, round(t / r['unsold'])))
+        body.append('<p>%s의 미분양은 <b>%s호</b>입니다.%s</p>'
+                    % (esc(nm), num(r['unsold']), vs_tot))
+        # '견줘도'는 낮다는 뉘앙스라 제주(2.4배)에서 어긋난다. 중립으로 쓴다.
+        body.append('<p>분기 적정물량과 견주면 <b>%s</b>로 17개 시도 가운데 '
+                    '<b>낮은 순 %d번째</b>입니다.%s</p>'
+                    % (umx(r['um']), mine + 1, cmp_txt))
         cd = _cd_change(sts)
         if cd:
             body.append('<p>금리도 같이 봐야 합니다. CD 91일물이 1년 사이 '
