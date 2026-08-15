@@ -454,6 +454,14 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
     # 캡처는 이 바로 뒤에 온다 — 앞 문장이 말한 숫자가 화면에 그대로 찍혀 있어
     # 글이 주장한 것을 곧바로 확인시켜 준다.
     body.append('<p>[여기에 리포트 캡처 이미지를 넣어 주세요]</p>')
+    # ⚠️ 캡처는 삽화가 아니다. "아공맵에 오면 이걸 직접 볼 수 있다"는 증거이고,
+    # 블로그의 목적이 사이트 유입이다(2026-08-16 사용자). 그래서 이미지마다
+    # 문을 하나씩 단다 — 맨 끝에 링크 하나만 두면 거기까지 읽은 사람만 넘어간다.
+    body.append('<p>위 화면이 <b>아공맵 %s 리포트</b>입니다. 지역만 바꾸면 '
+                '17개 시도를 같은 기준으로 볼 수 있습니다.<br>👉 '
+                '<a href="%s/zone/%s/?utm_source=naver_blog&amp;utm_medium=social'
+                '&amp;utm_campaign=zone_deep">%s 리포트 열어보기</a></p>'
+                % (esc(nm), SITE, quote(nm), esc(nm)))
 
     # ⚠️ 2026-08-06 시도 재편 반영. 폐기된 것: 3구간 가중평균(55/35/10),
     # 인허가 기반 미래 공급, 생활권 단위. 지금은 착공 실적을 LEAD_Q만큼 미래로
@@ -577,8 +585,15 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
                     % (umx(r['um']), mine + 1, cmp_txt))
         cd = _cd_change(sts)
         if cd:
-            body.append('<p>금리도 같이 봐야 합니다. CD 91일물이 1년 사이 '
+            body.append('<p>여기에 금리가 걸립니다. CD 91일물이 1년 사이 '
                         '<b>%s%% → %s%%</b>로 %s%%p 움직였습니다.</p>' % cd)
+            # 금리는 사이클 리포트가 검증한 영역이다. 그 페이지로 보내는 자리.
+            body.append('<p>금리가 공급 순환을 어떻게 덮어쓰는지는 따로 '
+                        '검증해 뒀습니다. 2021년 저금리에 매매가 전세를 이탈해 '
+                        '솟구치고 2022년에 먼저 꺾인 게 그래프로 남아 있습니다.<br>'
+                        '👉 <a href="%s/cycle/?utm_source=naver_blog&amp;'
+                        'utm_medium=social&amp;utm_campaign=cycle">'
+                        '집값이 도는 원리 — 사이클 리포트</a></p>' % SITE)
         body.append('<p>%s</p>' % OUTLOOK_PLACEHOLDER)
 
     body.append('<p>%s의 분기별 물량과 산출 근거 전체는 아래에서 볼 수 있습니다.<br>'
