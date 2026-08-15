@@ -402,3 +402,39 @@ def test_home_css_avoids_reviewed_regressions():
     stuck = [l for l in css.splitlines()
              if '#tb-main tfoot td' in l and 'border-top:2px' in l]
     assert not stuck, '2px 구분선이 tfoot 전체에 걸려 있다(첫 행 한정이어야 한다)'
+
+
+def test_grade_never_bends_to_unsold():
+    """등급은 미분양으로 깎지 않는다(2026-08-15 마케팅 요청 #3 검토 결론).
+
+    미분양은 이미 벌어진 하락의 흉터다 — 17시도 × 20년 패널에서 **이전** 12개월
+    가격변동과는 r=-0.31인데 **이후** 12개월과는 r=-0.07, 24개월에선 +0.07로
+    부호가 뒤집힌다. 3년 앞 공급을 재는 등급에 섞으면 지나간 가격을 미래 판정에
+    넣는 것이다. 어긋남은 uwarn으로 드러낼 뿐 순위는 건드리지 않는다.
+
+    말로만 정해두면 다음 사람이 되돌린다 — 미분양을 흔들어도 등급이 안 변하는지
+    실제로 계산해서 잠근다.
+    """
+    import copy, io as _io, json, re
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    src = _io.open(os.path.join(root, 'data.js'), encoding='utf-8').read()
+    stats = json.loads(re.search(
+        r'const STATS\s*=\s*(\{.*?\});?\s*(?:/\*|const |$)', src, re.S).group(1))
+    calc = M.calc(stats)
+    base = {z['z']: (z['grade'], z['ratio']) for z in calc['zones']}
+
+    st2 = copy.deepcopy(stats)
+    D = st2.get('미분양')
+    assert D, '미분양 계열이 없다 — 이 테스트가 무의미해졌다'
+    for r, v in D['series'].items():           # 미분양을 10배로 부풀린다
+        D['series'][r] = [None if x is None else x * 10 for x in v]
+
+    calc2 = M.calc(st2)
+    after = {z['z']: (z['grade'], z['ratio']) for z in calc2['zones']}
+    assert after == base, '미분양이 등급·순부족비를 움직였다 — 순위 산식에 샜다'
+
+    # 반대로 표시용 값은 따라 움직여야 한다(계산이 실제로 돌았다는 증거).
+    um0 = {z['z']: z['um'] for z in calc['zones'] if z['um'] is not None}
+    um1 = {z['z']: z['um'] for z in calc2['zones'] if z['um'] is not None}
+    assert um0 and um1 and any(um1[k] > um0[k] for k in um0), \
+        '미분양을 10배로 했는데 um이 그대로다 — 테스트가 헛돌고 있다'
