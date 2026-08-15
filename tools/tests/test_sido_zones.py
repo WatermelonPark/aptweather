@@ -447,3 +447,33 @@ def test_grade_never_bends_to_unsold():
     um1 = {z['z']: z['um'] for z in calc2['zones'] if z['um'] is not None}
     assert um0 and um1 and any(um1[k] > um0[k] for k in um0), \
         '미분양을 10배로 했는데 um이 그대로다 — 테스트가 헛돌고 있다'
+
+
+def test_label_ladder_stays_one_notch_up_without_moving_the_cuts():
+    """2026-08-15 PM 결정 — 라벨은 한 칸 올리되 컷은 그대로.
+
+    사용자 지적("전국·수도권·지방이 상세는 벌건데 '다소 부족'")의 해법으로 컷을
+    0.55로 내리는 안이 있었으나, 그걸 정당화할 근거가 "집계 3곳을 올리고 싶어서"
+    뿐이었다. 컷은 가격 실측(밴드별 이후 16분기 실질 상승률: 0.5~1.0 +2.58% vs
+    1.0+ +10.22%)에 묶여 있고 그 4배 차이는 실제 정보다. 결함은 컷이 아니라
+    이름이었다 — 0.60은 3년 필요량의 60%가 순부족인데 '심하진 않습니다'라고
+    불렀다.
+
+    둘은 한 몸으로 움직이기 쉽다("정리" 커밋이 라벨을 되돌리거나, 다음 사람이
+    라벨에 맞춰 컷을 옮기거나). 양쪽을 같이 잠근다.
+    """
+    assert M.GRADE_CUTS == (1.5, 1.0, 0.5, 0.0), \
+        '컷이 움직였다 — 가격 실측 근거를 대체할 새 근거가 문서에 있는지 확인할 것'
+    assert M.GRADE_LABS == {'g4': '심각한 부족', 'g3': '매우 부족', 'g2': '부족',
+                            'g1': '균형', 'g0': '공급 여유'}, '라벨 사다리가 되돌아갔다'
+
+    # 요구가 실제로 충족되는지 — 집계 3곳이 '부족' 이상으로 읽혀야 한다.
+    import io as _io, json, re
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    src = _io.open(os.path.join(root, 'data.js'), encoding='utf-8').read()
+    adv = json.loads(re.search(
+        r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/', src, re.S).group(1))
+    by = {z['z']: z for z in adv['sido']['zones']}
+    for agg in ('전국', '수도권', '지방'):
+        assert M.GRADE_LABS[by[agg]['grade']] in ('부족', '매우 부족', '심각한 부족'), \
+            '%s가 아직 약하게 읽힌다(%s)' % (agg, M.GRADE_LABS[by[agg]['grade']])

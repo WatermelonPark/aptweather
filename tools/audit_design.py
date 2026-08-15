@@ -35,7 +35,7 @@ SHARED = io.open('app.css', encoding='utf-8').read()
 # 덮던 베이지이지 62px 배지의 데이터 틴트가 아니므로 이 색만 통과시킨다.
 # (짝인 글자색 #b9770e는 채도 171이라 애초에 안 걸린다 — 앰버 자체는 쟁점이 아니다.)
 # ⚠️ 여기 새 색을 추가하기 전에: 넓은 면 배경으로 쓰이는 색이면 예외 대상이 아니다.
-DATA_TINTS = {'faf3e7'}   # .sc-tier.g2 / .tag.g2 — 등급 '다소 부족'
+DATA_TINTS = {'faf3e7'}   # .sc-tier.g2 / .tag.g2 — 등급 '부족'
 
 
 def warm_neutral(h):

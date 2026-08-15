@@ -3,7 +3,7 @@
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
 */
-const VERSION = 'v107'; // 지역 표 스크립트를 /zone/zone.js 하나로
+const VERSION = 'v102'; // 등급 라벨 사다리 한 칸 (컷은 그대로)
 const CACHE = `aptweather-${VERSION}`;
 
 const PRECACHE = [
