@@ -30,6 +30,8 @@ date=최신순)이라 **통합검색 화면의 실제 순위와 다르다.** 그
   python tools/naver_serp.py "대구 미분양" "부산 입주물량"
   python tools/naver_serp.py --json             # 기계가 읽을 형태로
 """
+import datetime
+import io
 import json
 import os
 import sys
@@ -67,6 +69,38 @@ CORPORA = [('blog', '블로그'), ('webkr', '웹문서'), ('cafearticle', '카�
 # API HUB 게이트웨이. 확장자(.json)를 붙이면 404다 — 구 openapi.naver.com과
 # 다른 지점이라 바꿀 때 주의(2026-08-14 실측).
 API = 'https://naverapihub.apigw.ntruss.com/search/v1/%s'
+
+# 회차 기록. 실행할 때마다 그 순간의 화면만 보고 끝나면 "지난주보다 나아졌나"에
+# 답할 근거가 없다. 발행을 막 시작한 지금이 베이스라인을 잡을 유일한 시점이다.
+#
+# 자리를 tools/로 잡되 **git에는 올리지 않는다**(.gitignore).
+#  - drafts/에 두지 않는 이유: 초안 정리에 함께 쓸려 나가기 쉽다.
+#  - 그렇다고 추적하면 안 되는 이유: 이 파일에는 남의 블로그 제목과 상호가
+#    쌓인다. 저장소가 공개라 그대로 노출된다 — 출처 표기 규칙과 같은 뿌리다
+#    (2026-08-15 리뷰 지적). 우리가 보려고 모으는 경쟁 정보를 남의 이름째로
+#    공개할 이유가 없다.
+HIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'serp-history.jsonl')
+
+
+def hist_append(rec):
+    rec = dict(rec, d=datetime.date.today().isoformat())
+    with io.open(HIST, 'a', encoding='utf-8', newline='\n') as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+
+
+def hist_last(mode, key):
+    """같은 질문의 직전 기록. 없으면 None — 첫 회차라는 뜻이다."""
+    if not os.path.exists(HIST):
+        return None
+    last = None
+    for line in io.open(HIST, encoding='utf-8'):
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        if r.get('mode') == mode and r.get('key') == key:
+            last = r
+    return last
 
 
 def _get(kind, query, display=10, sort='sim'):
@@ -166,17 +200,34 @@ def main(argv):
         qs = [a for a in argv if not a.startswith('--')]
         if not qs:
             raise SystemExit('색인을 확인할 제목(또는 그 일부)을 인자로 줄 것')
+        rec = '--record' in argv
         for q in qs:
             hits, err = indexed(q)
             if err:
                 print('  ! %s — %s' % (q, err))
-            elif hits:
+                continue
+            prev = hist_last('index', q) if rec else None
+            if hits:
                 for n, t, u in hits:
                     print('  ✅ 색인됨 — %s' % t[:60])
                     print('     최신순 %d번째 · %s' % (n, u))
             else:
                 print('  ❌ 최신순 50개 안에 없음 — %s' % q)
+            if prev is not None:
+                was, now = bool(prev.get('hit')), bool(hits)
+                if was != now:
+                    print('     ↳ 변화: %s → %s (직전 %s)'
+                          % ('색인됨' if was else '없음',
+                             '색인됨' if now else '없음', prev['d']))
+                else:
+                    print('     ↳ %s 이후 그대로' % prev['d'])
+            if rec:
+                hist_append(dict(mode='index', key=q, hit=bool(hits),
+                                 n=(hits[0][0] if hits else None),
+                                 link=(hits[0][2] if hits else None)))
         print('\n※ 색인 여부만 본 것이다. 통합검색 노출 순위는 사람이 직접 검색해야 안다.')
+        if rec:
+            print('※ %s 에 기록했다.' % os.path.relpath(HIST, ROOT))
         return 0
 
     as_json = '--json' in argv
@@ -196,7 +247,9 @@ def main(argv):
             for o in r['ours']:
                 print('  ★ 우리 노출: %s API순번 %d — %s' % (o['corpus'], o['n'], o['title'][:40]))
         else:
-            print('  ☆ 우리 글 없음(각 상위 10)')
+            # ⚠️ '없음'은 색인 안 됐다는 뜻이 아니다. 정확도순 상위 10에 없다는
+            # 뜻일 뿐이다 — 이걸 미색인으로 읽어 두 번 오판했다(2026-08-15).
+            print('  ☆ 정확도순 상위 10에는 없음 (색인 여부는 --index 로 확인)')
         for _, label in CORPORA:
             rows = r['hits'].get(label) or []
             if not rows:
@@ -204,6 +257,24 @@ def main(argv):
             print('  -- %s --' % label)
             for x in rows[:5]:
                 print('   %2d. %-44s | %s' % (x['n'], x['title'][:44], x['src'][:22]))
+
+        # 회차 비교 — 지난번과 달라진 것만 짚는다. 매번 같은 목록을 다시 읽는 건
+        # 사람이 못 한다.
+        top = [x['title'] for x in (r['hits'].get('블로그') or [])[:10]]
+        if '--record' in argv:
+            prev = hist_last('serp', r['keyword'])
+            if prev:
+                fresh = [t for t in top if t not in (prev.get('top') or [])]
+                gone = [t for t in (prev.get('top') or []) if t not in top]
+                print('  ── %s 대비 ──' % prev['d'])
+                if not fresh and not gone:
+                    print('     상위 10 변동 없음')
+                for t in fresh[:4]:
+                    print('     + %s' % t[:56])
+                for t in gone[:2]:
+                    print('     − %s' % t[:56])
+            hist_append(dict(mode='serp', key=r['keyword'], top=top,
+                             ours=[o['title'] for o in r['ours']]))
     print('\n' + '=' * 72)
     print('⚠️ API 순번은 통합검색 실제 순위가 아니다(API 자체 정렬).')
     print('   경쟁 글의 각도를 보는 용도로 읽을 것.')
