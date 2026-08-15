@@ -64,6 +64,28 @@ def test_workflow_actually_carries_this_policy():
     assert 'exit 1' in y[det:nxt], '결정론적 실패가 red 없이 지나간다'
 
 
+def test_exhausted_retries_turn_the_run_red():
+    """재시도 3회를 다 쓰고도 0/3이면 red다. 예전엔 exit 0이라 워크플로가 초록으로
+    끝났고 이슈 코멘트의 ❌만 남아 **실패 메일이 오지 않았다**(2026-08-15 사용자
+    결정). 감시가 5시간 뒤 뒤처짐으로 잡아주긴 하지만, 그만큼 늦게 아는 것이다."""
+    y = io.open(WF, encoding='utf-8').read()
+    blk = y[y.index('시도 3/3 소진'):]
+    end = blk.index('\n          fi')
+    assert 'exit 1' in blk[:end], '재시도 소진이 초록으로 끝난다'
+
+
+def test_pending_retry_must_not_turn_red():
+    """반대로 '재시도 대기' 분기는 초록이어야 한다 — retry 잡의 if가 커스텀 조건이라
+    커밋 잡이 실패하면 GitHub이 그 잡을 건너뛴다. red로 만들면 재시도를 걸어놓고
+    재시도를 못 돌게 하는 꼴이 된다."""
+    y = io.open(WF, encoding='utf-8').read()
+    blk = y[y.index('need_retry=true'):y.index('시도 3/3 소진')]
+    assert 'exit 0' in blk, '재시도 대기 분기가 red가 되면 retry 잡이 건너뛰어진다'
+    # retry 잡 조건이 always()/!cancelled() 없이 needs.commit에 걸려 있다는 전제.
+    assert re.search(r"if:\s*needs\.commit\.outputs\.need_retry\s*==\s*'true'", y), \
+        'retry 잡 조건이 바뀌었다 — 위 전제를 다시 확인할 것'
+
+
 def test_reason_is_uploaded_even_when_the_runner_fails():
     """실패한 러너의 사유가 정보다. clean 산출물처럼 성공 때만 올리면 0/3 회차엔
     판정 근거가 하나도 없다."""
