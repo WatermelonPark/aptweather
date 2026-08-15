@@ -79,6 +79,42 @@ REFNOTE = {
 }
 
 
+def zone_js():
+    """지역 20장이 공유하는 표 동작 스크립트 — /zone/zone.js로 나간다.
+
+    예전엔 이 코드가 페이지마다 인라인으로 들어가 20벌 구워졌다(장당 +2.2KB,
+    배포 44KB). 지역과 무관하게 완전히 같은 코드라 한 파일로 뺀다. 지역 페이지는
+    이미 공유 app.css를 부르므로 '자기완결' 제약은 CSS에만 걸려 있었다.
+
+    ⚠️ REFNOTE 문구가 이제 HTML이 아니라 이 파일에만 있다. sw.js에서 정적 자산은
+    cache-first(백그라운드 갱신)라, 문구를 고친 배포 직후 한 번은 옛 파일이 나올 수
+    있다 — 배포마다 sw.js VERSION을 올리면 activate가 옛 캐시를 지워 해소된다.
+    """
+    return (
+        '/* 지역 페이지 표 동작 — make_sido_pages.zone_js()가 생성한다. 직접 고치지 말 것. */\n'
+        '(function(){\n'
+        '/* 표의 기본 화면을 맨 아래(미래 분기)로 — 공급을 보러 온 사람이 매번\n'
+        '   28행을 내리게 하지 않는다(2026-08-11 사용자). 과거는 올리면 된다. */\n'
+        'document.querySelectorAll(".ztb-scroll").forEach(function(e){'
+        'e.scrollTop=e.scrollHeight});\n'
+        '/* 안내 문구는 make_sido_pages.REFNOTE 정본을 그대로 실어 손으로 옮기지 않는다. */\n'
+        'var ZREFNOTE=' + json.dumps(REFNOTE, ensure_ascii=False) + ';\n'
+        'document.querySelectorAll(".ztb tfoot tr.zref").forEach(function(tr){\n'
+        'tr.addEventListener("click",function(){\n'
+        'var p=document.getElementById("zrefnote");if(!p)return;\n'
+        'var k=tr.getAttribute("data-ref");\n'
+        'if(!p.hidden&&p.dataset.k===k){p.hidden=true;}\n'
+        'else{p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;\n'
+        '/* 탭한 행이 화면 맨 밑이면 설명이 폴드 아래 열린다(모바일) —\n'
+        '   nearest라 이미 보이면 안 움직인다. */\n'
+        'p.scrollIntoView({block:"nearest"});}\n'
+        'document.querySelectorAll(".ztb tfoot .rbtn").forEach(function(b){\n'
+        'var own=b.parentNode.parentNode.getAttribute("data-ref");\n'
+        'b.setAttribute("aria-expanded",'
+        '(!p.hidden&&own===p.dataset.k)?"true":"false");});});});\n'
+        '})();\n')
+
+
 def unsold_warn(row):
     """판정과 미분양이 어긋날 때의 경고문 — **정본은 여기 하나**다.
 
@@ -532,23 +568,9 @@ def build_page(z, calc, stats, pq, others):
     # 참고 행 탭 안내(2026-08-11 사용자) — 데스크톱 호버가 없는 모바일에서도
     # 행을 누르면 표 아래에 설명이 열린다. 홈 표의 TB_REFNOTE와 같은 문구.
     # 안내 문구는 REFNOTE 정본을 JSON으로 그대로 실어 손으로 옮기지 않는다.
-    h.append('<script>document.querySelectorAll(".ztb-scroll").forEach('
-             'function(e){e.scrollTop=e.scrollHeight});'
-             'var ZREFNOTE=' + json.dumps(REFNOTE, ensure_ascii=False) + ';'
-             'document.querySelectorAll(".ztb tfoot tr.zref").forEach(function(tr){'
-             'tr.addEventListener("click",function(){'
-             'var p=document.getElementById("zrefnote");if(!p)return;'
-             'var k=tr.getAttribute("data-ref");'
-             'if(!p.hidden&&p.dataset.k===k){p.hidden=true;}'
-             'else{p.dataset.k=k;p.textContent=ZREFNOTE[k]||"";p.hidden=false;'
-             # 탭한 행이 화면 맨 밑이면 설명이 폴드 아래 열린다(모바일) —
-             # nearest라 이미 보이면 안 움직인다.
-             'p.scrollIntoView({block:"nearest"});}'
-             'document.querySelectorAll(".ztb tfoot .rbtn").forEach(function(b){'
-             'var own=b.parentNode.parentNode.getAttribute("data-ref");'
-             'b.setAttribute("aria-expanded",'
-             '(!p.hidden&&own===p.dataset.k)?"true":"false");});});});'
-             '</script>'
+    # 이 스크립트는 지역과 무관하게 20장이 완전히 같아서 /zone/zone.js 하나로 뺀다
+    # (자세한 이유는 ZONE_JS 주석). defer라 표 마크업이 다 파싱된 뒤에 돈다.
+    h.append('<script src="/zone/zone.js" defer></script>'
              '</div></section>')
 
     # ── 산출 방법 ──
@@ -760,6 +782,10 @@ def main():
     hub_fp = os.path.join(OUT, 'index.html')
     hub, hub_lm, hub_ch = keep_dates(build_hub(calc), read_old(hub_fp), today)
     io.open(hub_fp, 'w', encoding='utf-8', newline='\n').write(hub)
+    # 20장이 공유하는 표 동작 스크립트. 페이지와 같은 실행에서 함께 써야
+    # '마크업은 새 판, 스크립트는 옛 판'이 생기지 않는다.
+    io.open(os.path.join(OUT, 'zone.js'), 'w', encoding='utf-8',
+            newline='\n').write(zone_js())
     # ⚠️ 홈·/weekly/ lastmod를 zone 변경에만 묶으면 안 된다. 주간 회차가 새로 들어온
     # 날 홈 히어로 지도와 /weekly/ 지도는 실제로 바뀌는데 zone 20장은 분기 준공·착공만
     # 읽으므로 changed=0이 되고, 두 페이지 lastmod가 영영 안 움직인다(2026-08-07 감사).

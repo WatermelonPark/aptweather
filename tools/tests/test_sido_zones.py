@@ -304,9 +304,15 @@ def test_table_footer_shows_unsold_and_permits_everywhere():
         assert '<tfoot><tr class="zref" data-ref="un"><td><button' in h, z
         assert '<tr class="zref" data-ref="pm"><td><button' in h, z
         assert '>미분양<' in h and '>인허가 1년<' in h, z
-        assert 'scrollTop=e.scrollHeight' in h, '%s: 표 기본 화면이 맨 아래가 아니다' % z
-        # 탭 안내(2026-08-11 사용자) — 모바일엔 호버가 없어 행을 누르면 설명이 열린다
-        assert 'id="zrefnote"' in h and 'ZREFNOTE' in h, '%s: 참고 행 탭 안내가 없다' % z
+        assert 'id="zrefnote"' in h, '%s: 참고 행 탭 안내 자리가 없다' % z
+        # 표 동작 스크립트는 20장이 같아 /zone/zone.js로 뺐다(인라인 20벌 → 1벌).
+        # 페이지는 링크만 갖고, 실제 동작은 그 파일에 있어야 한다.
+        assert '<script src="/zone/zone.js" defer></script>' in h, \
+            '%s: 공유 스크립트를 안 부른다' % z
+    js = io.open(os.path.join(root, 'zone', 'zone.js'), encoding='utf-8').read()
+    assert 'scrollTop=e.scrollHeight' in js, '표 기본 화면이 맨 아래가 아니다'
+    # 탭 안내(2026-08-11 사용자) — 모바일엔 호버가 없어 행을 누르면 설명이 열린다
+    assert 'ZREFNOTE' in js, '참고 행 탭 안내가 없다'
 
 
 def test_home_table_has_both_reference_rows():
@@ -342,10 +348,11 @@ def test_refnote_copy_is_identical_on_home_and_zone():
         assert home[k] == M.REFNOTE[k], '%s 문구가 갈렸다\n홈  : %s\n정본: %s' % (
             k, home[k], M.REFNOTE[k])
 
-    # 지역 페이지는 정본을 JSON으로 실어 나른다 — 옮겨 적기 자체가 없어야 한다.
-    z = io.open(os.path.join(root, 'zone', '서울', 'index.html'), encoding='utf-8').read()
-    baked = json.loads(re.search(r'var ZREFNOTE=(\{.*?\});', z, re.S).group(1))
-    assert baked == M.REFNOTE, '지역 페이지에 구운 문구가 정본과 다르다'
+    # 지역 쪽은 정본을 JSON으로 실어 나른다 — 옮겨 적기 자체가 없어야 한다.
+    # 20장이 같은 코드라 /zone/zone.js 하나로 뺐고, 구운 문구도 그 파일에 있다.
+    js = io.open(os.path.join(root, 'zone', 'zone.js'), encoding='utf-8').read()
+    baked = json.loads(re.search(r'var ZREFNOTE=(\{.*?\});', js, re.S).group(1))
+    assert baked == M.REFNOTE, '지역 스크립트에 구운 문구가 정본과 다르다'
 
 
 def test_unsold_ratio_reads_the_same_everywhere():
@@ -385,7 +392,9 @@ def test_reference_rows_are_keyboard_reachable():
         h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
         assert h.count('<button type="button" class="rbtn"') == 2, z
         assert 'aria-controls="zrefnote"' in h and 'aria-live="polite"' in h, z
-        assert 'scrollIntoView' in h, '%s: 열린 설명이 시야 밖에 남을 수 있다' % z
+    # 스크롤 동작은 공유 스크립트로 옮겼다(홈은 정적 파일이라 위처럼 본문에 남는다).
+    zjs = io.open(os.path.join(root, 'zone', 'zone.js'), encoding='utf-8').read()
+    assert 'scrollIntoView' in zjs, '지역: 열린 설명이 시야 밖에 남을 수 있다'
 
 
 def test_home_css_avoids_reviewed_regressions():
