@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- charset은 <head> 첫 줄이어야 한다. 인코딩 프리스캔이 문서 앞 1024바이트만
+     보는데, 아래 한글 주석이 앞에 끼면 선언이 그 밖으로 밀려 헤더를 안 주는
+     환경(file://·단순 정적 서버)에서 한글이 통째로 깨진다(2026-08-15 리뷰). -->
+<meta charset="UTF-8">
 <!-- 기기 단위 GA 제외: ?ga_off=1 로 한 번 들어온 기기는 이후 전송하지 않는다
      (되돌리기 ?ga_off=0). 개발자 본인 트래픽이 Direct 세션의 절반을 차지해
      블로그 유입 측정이 불가능했다. GA 콘솔의 IP 제외는 데스크톱만 커버되고
@@ -15,11 +19,15 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
 </script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"></noscript>
+<!-- 표 동작(기본 스크롤·참고 행 토글). head에서 부르는 이유는 발견 시점을 앞당겨
+     defer 대기창을 줄이기 위해서다 — 본문 끝에 두면 문서를 거의 다 읽은 뒤에야
+     받기 시작해, 느린 회선에서 표가 위에 그려졌다 아래로 튀는 구간이 생긴다
+     (2026-08-15 리뷰). defer라 실행은 파싱 완료 후이므로 마크업 전제는 그대로다. -->
+<script src="/zone/zone.js?v=888ad96a" defer></script>
 <title>시도별 아파트 공급 분석 | 아공맵</title>
 <meta name="description" content="전국 17개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. 실적은 국토교통부 준공, 앞으로 12분기는 착공 실적 기준. 기준 2026Q2.">
 <link rel="canonical" href="https://www.agongmap.co.kr/zone/">

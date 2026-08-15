@@ -76,6 +76,9 @@ def neun(w):
 SHELL = """<!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- charset은 <head> 첫 줄이어야 한다 — 인코딩 프리스캔이 앞 1024바이트만 보는데
+     아래 한글 주석이 앞에 끼면 선언이 그 밖으로 밀린다(2026-08-15 리뷰). -->
+<meta charset="UTF-8">
 <!-- 기기 단위 GA 제외: ?ga_off=1 로 한 번 들어온 기기는 이후 전송하지 않는다
      (되돌리기 ?ga_off=0). 개발자 본인 트래픽이 Direct 세션의 절반을 차지해
      블로그 유입 측정이 불가능했다. GA 콘솔의 IP 제외는 데스크톱만 커버되고
@@ -90,7 +93,6 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
 </script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">

@@ -90,9 +90,9 @@ def zone_js():
     배포 44KB). 지역과 무관하게 완전히 같은 코드라 한 파일로 뺀다. 지역 페이지는
     이미 공유 app.css를 부르므로 '자기완결' 제약은 CSS에만 걸려 있었다.
 
-    ⚠️ REFNOTE 문구가 이제 HTML이 아니라 이 파일에만 있다. sw.js에서 정적 자산은
-    cache-first(백그라운드 갱신)라, 문구를 고친 배포 직후 한 번은 옛 파일이 나올 수
-    있다 — 배포마다 sw.js VERSION을 올리면 activate가 옛 캐시를 지워 해소된다.
+    ⚠️ REFNOTE 문구가 이제 HTML이 아니라 이 파일에만 있다. 그래서 부르는 쪽은
+    내용 해시를 단 URL을 쓴다(zone_js_src) — 캐시 갈림과 lastmod 갱신이 거기 걸려
+    있으니 태그를 손으로 `/zone/zone.js`로 되돌리지 말 것.
     """
     return (
         '/* 지역 페이지 표 동작 — make_sido_pages.zone_js()가 생성한다. 직접 고치지 말 것. */\n'
@@ -117,6 +117,22 @@ def zone_js():
         'b.setAttribute("aria-expanded",'
         '(!p.hidden&&own===p.dataset.k)?"true":"false");});});});\n'
         '})();\n')
+
+
+def zone_js_src():
+    """`/zone/zone.js?v=<내용 해시>` — 쿼리에 해시를 다는 이유가 둘이다.
+
+    ① **lastmod가 따라 움직인다.** REFNOTE 문구가 이제 HTML엔 없어서, 문구만
+       고치면 20장이 바이트 동일이 되고 keep_dates가 '안 바뀜'으로 판정한다.
+       그러면 보이는 글이 바뀌었는데 dateModified·sitemap lastmod는 얼어붙는다
+       (2026-08-15 리뷰). 해시를 태그에 실으면 HTML이 함께 바뀐다.
+    ② **캐시가 알아서 갈린다.** sw.js 정적 자산은 cache-first라 옛 파일이 한 번
+       더 나올 수 있는데, URL이 달라지면 캐시 미스라 새로 받는다. VERSION 상향에
+       기대지 않아도 된다.
+    """
+    import hashlib
+    return '/zone/zone.js?v=' + hashlib.sha1(
+        zone_js().encode('utf-8')).hexdigest()[:8]
 
 
 def unsold_warn(row):
@@ -317,6 +333,10 @@ def head(z, desc, title, url=None, crumb=None):
     return '''<!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- charset은 <head> 첫 줄이어야 한다. 인코딩 프리스캔이 문서 앞 1024바이트만
+     보는데, 아래 한글 주석이 앞에 끼면 선언이 그 밖으로 밀려 헤더를 안 주는
+     환경(file://·단순 정적 서버)에서 한글이 통째로 깨진다(2026-08-15 리뷰). -->
+<meta charset="UTF-8">
 <!-- 기기 단위 GA 제외: ?ga_off=1 로 한 번 들어온 기기는 이후 전송하지 않는다
      (되돌리기 ?ga_off=0). 개발자 본인 트래픽이 Direct 세션의 절반을 차지해
      블로그 유입 측정이 불가능했다. GA 콘솔의 IP 제외는 데스크톱만 커버되고
@@ -331,11 +351,15 @@ if(localStorage.getItem('ga_off'))window['ga-disable-%(ga)s']=true;
 </script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=%(ga)s"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','%(ga)s');</script>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"></noscript>
+<!-- 표 동작(기본 스크롤·참고 행 토글). head에서 부르는 이유는 발견 시점을 앞당겨
+     defer 대기창을 줄이기 위해서다 — 본문 끝에 두면 문서를 거의 다 읽은 뒤에야
+     받기 시작해, 느린 회선에서 표가 위에 그려졌다 아래로 튀는 구간이 생긴다
+     (2026-08-15 리뷰). defer라 실행은 파싱 완료 후이므로 마크업 전제는 그대로다. -->
+<script src="%(zjs)s" defer></script>
 <title>%(title)s | 아공맵</title>
 <meta name="description" content="%(desc)s">
 <link rel="canonical" href="%(url)s">
@@ -352,7 +376,8 @@ if(localStorage.getItem('ga_off'))window['ga-disable-%(ga)s']=true;
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-''' % {'ga': GA, 'title': esc(title), 'desc': esc(desc), 'url': u, 'site': SITE,
+''' % {'ga': GA, 'zjs': zone_js_src(),
+       'title': esc(title), 'desc': esc(desc), 'url': u, 'site': SITE,
        # 지역 카드(make_zone_cards.py 산출물). 없으면 브랜드 카드로 떨어진다 —
        # 카드를 아직 안 구웠거나 지역이 새로 생긴 회차에도 미리보기가 깨지지 않게.
        'ogimg': ((SITE + '/share/zone-' + urllib.parse.quote(z) + '.png')
@@ -572,10 +597,7 @@ def build_page(z, calc, stats, pq, others):
     # 참고 행 탭 안내(2026-08-11 사용자) — 데스크톱 호버가 없는 모바일에서도
     # 행을 누르면 표 아래에 설명이 열린다. 홈 표의 TB_REFNOTE와 같은 문구.
     # 안내 문구는 REFNOTE 정본을 JSON으로 그대로 실어 손으로 옮기지 않는다.
-    # 이 스크립트는 지역과 무관하게 20장이 완전히 같아서 /zone/zone.js 하나로 뺀다
-    # (자세한 이유는 ZONE_JS 주석). defer라 표 마크업이 다 파싱된 뒤에 돈다.
-    h.append('<script src="/zone/zone.js" defer></script>'
-             '</div></section>')
+    h.append('</div></section>')
 
     # ── 산출 방법 ──
     h.append('<section><div class="wrap"><h2>어떻게 계산했나</h2>'

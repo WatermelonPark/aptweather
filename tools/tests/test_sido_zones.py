@@ -297,7 +297,9 @@ def test_table_footer_shows_unsold_and_permits_everywhere():
     """표 하단 참고 2행(2026-08-11 사용자, 텍스트 줄→표 행으로 승격) — 배지(경고)와
     달리 전 지역에 항상 붙는다. 표만 보고 떠나는 사람이 함께 봐야 할 값이라서다.
     스크롤 기본값이 맨 아래라 이 두 행이 첫 화면에 들어온다."""
-    import io, os
+    import io, os, sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    import make_sido_pages as M
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     for z in ('서울', '대전', '충남'):     # 배지가 뜨는 곳과 안 뜨는 곳 모두
         h = io.open(os.path.join(root, 'zone', z, 'index.html'), encoding='utf-8').read()
@@ -307,8 +309,11 @@ def test_table_footer_shows_unsold_and_permits_everywhere():
         assert 'id="zrefnote"' in h, '%s: 참고 행 탭 안내 자리가 없다' % z
         # 표 동작 스크립트는 20장이 같아 /zone/zone.js로 뺐다(인라인 20벌 → 1벌).
         # 페이지는 링크만 갖고, 실제 동작은 그 파일에 있어야 한다.
-        assert '<script src="/zone/zone.js" defer></script>' in h, \
+        assert 'src="/zone/zone.js?v=' in h and 'defer' in h, \
             '%s: 공유 스크립트를 안 부른다' % z
+        # 해시 쿼리가 있어야 문구만 고친 회차에도 HTML이 바뀌어 lastmod가 움직이고,
+        # cache-first 캐시도 갈린다(2026-08-15 리뷰). 손으로 떼면 둘 다 깨진다.
+        assert M.zone_js_src() in h, '%s: 스크립트 URL 해시가 현재 내용과 다르다' % z
     js = io.open(os.path.join(root, 'zone', 'zone.js'), encoding='utf-8').read()
     assert 'scrollTop=e.scrollHeight' in js, '표 기본 화면이 맨 아래가 아니다'
     # 탭 안내(2026-08-11 사용자) — 모바일엔 호버가 없어 행을 누르면 설명이 열린다
