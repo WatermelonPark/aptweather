@@ -93,7 +93,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "[발행] ${{ steps.plan.outputs.date }} ${{ steps.plan.outputs.kind }}" \
             --body "$(cat <<'EOF'
-          오늘 발행할 글이 있습니다.
+          @${{ github.repository_owner }} 오늘 발행할 글이 있습니다.
 
           **종류** ${{ steps.plan.outputs.kind }}
           **카테고리** ${{ steps.plan.outputs.cat }} · **주제** 부동산
