@@ -87,10 +87,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue create \
+          # 담당자 지정은 따로 떼어 두고 실패해도 넘긴다. 계정 권한에 따라
+          # 막힐 수 있는데(실측), 그것 때문에 알림 자체가 안 가면 본말전도다.
+          URL=$(gh issue create \
             --repo "$GITHUB_REPOSITORY" \
             --title "[발행] ${{ steps.plan.outputs.date }} ${{ steps.plan.outputs.kind }}" \
-            --assignee "${{ github.repository_owner }}" \
             --body "$(cat <<'EOF'
           오늘 발행할 글이 있습니다.
 
@@ -118,6 +119,10 @@ jobs:
           발행하면 이 이슈를 닫아 주세요. 닫힌 이슈가 곧 발행 기록입니다.
 
           _바쁜 날은 그냥 닫으셔도 됩니다. 리듬이 한 번 끊기는 것보다 매번
-          부담이 되는 쪽이 더 오래 못 갑니다._
+          부담이 되는 쪽이 더 오래 못 갑니다. 화요일이 힘들면 수요일에 하셔도
+          됩니다 — 이슈는 닫을 때까지 남아 있습니다._
           EOF
-          )"
+          )")
+          echo "생성: $URL"
+          gh issue edit "$URL" --add-assignee "${{ github.repository_owner }}" \
+            || echo "담당자 지정 실패 — 이슈는 만들어졌다(알림은 저장소 구독으로 간다)"
