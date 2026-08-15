@@ -55,7 +55,9 @@ CHUNG_API = 'https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/getAPTLttotPbl
 
 # ---- KOSIS 표 설정 ------------------------------------------------------
 # tblId는 `--discover <검색어>` 로 확인 후 채운다.
-# DT_MLTM_1948(주택유형별 인허가실적 월별누계)은 2024 강의 화면 URL에서 직접 확인됨.
+# DT_MLTM_1948(주택유형별 인허가실적 월별누계)만 예외로, 검색으로는 잘 잡히지 않아
+# 표 ID를 직접 지정해 넣었다. 실재와 구조는 실호출로 확인돼 있다 — 아래 인허가
+# 주석(전국·지방소계 실재 확인)과 _fetch_apt_permits()가 그 근거다.
 CONF = {
     'permits_size': {          # 주택규모별 인허가실적(월별 누계) — 40제외 산출용
         'orgId': '116',
