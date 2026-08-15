@@ -856,9 +856,16 @@ table.adv thead th:first-child{text-align:center}
   section h2{font-size:19px;font-weight:700;margin-bottom:4px}
   .zsub{font-size:12.5px;color:var(--muted);line-height:1.7;margin:2px 0 12px}
 
+  /* 격자선을 컨테이너 배경(--line)으로 깔고 gap:1px로 뚫어 보이게 하던 방식이었는데,
+     카드가 5개라 넓은 화면에서 4열이 잡히면 둘째 줄 빈 칸 3개에 그 배경이 그대로
+     드러났다(17개 시도 전부). 셀이 없는 자리는 --paper로 덮이지 않기 때문이다.
+     그래서 선을 셀이 스스로 그리게 바꾼다 — 빈 자리에는 아무것도 안 그려진다.
+     box-shadow는 바깥으로 1px 번지므로 gap:1px을 인접 셀끼리 나눠 채워 1px 선이
+     되고, 레이아웃을 밀지 않아 열 계산에도 영향이 없다. auto-fit이라 열 수가
+     화면 폭에 따라 달라져서, 빌드 시점에 더미 셀을 채우는 방법은 못 쓴다. */
   .zgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-    gap:1px;background:var(--line);border:1px solid var(--line);margin-top:14px}
-  .zcell{background:var(--paper);padding:13px 14px}
+    gap:1px;margin-top:14px}
+  .zcell{background:var(--paper);padding:13px 14px;box-shadow:0 0 0 1px var(--line)}
   .zcell b{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
   .zcell span{display:block;font-size:21px;font-weight:700;letter-spacing:-.01em;
     margin:3px 0 5px;font-variant-numeric:tabular-nums}
