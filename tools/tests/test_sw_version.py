@@ -8,15 +8,26 @@
 
 여러 세션이 같은 파일을 번갈아 올리는 저장소라 '기억한 숫자를 박는' 실수가 반복된다.
 사람의 주의력 대신 여기서 막는다 — git 이력의 최대값보다 큰지 본다.
+
+⚠️ **이 가드는 로컬에서만 판정한다.** CI(actions/checkout 기본값)는 얕은 클론이라
+sw.js 이력이 커밋 1개뿐이고, 그러면 이력 최대값 = 현재 값이 되어 어떤 값을 넣어도
+통과한다. 배치가 sw.js를 건드리지 않으니 실질 위험은 없지만, **'CI가 막아준다'고
+믿으면 안 된다** — 세션이 푸시 전에 pytest를 돌리는 것이 유일한 방어선이다.
+그래서 이력을 못 읽으면 조용히 통과시키지 않고 skip으로 드러낸다(2026-08-15 리뷰).
 """
 import io
 import os
 import re
 import subprocess
 
+import pytest
+
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 SW = os.path.join(ROOT, 'sw.js')
 PAT = re.compile(r"const VERSION = 'v(\d+)'")
+# 이력에서 뽑을 때는 diff 줄(+/-)까지 본다 — 아래 _history() 주석 참조.
+DIFF_PAT = re.compile(r"^[+-]const VERSION = 'v(\d+)'", re.M)
+HISTORY_DEPTH = 60      # 버전은 시간순 증가라 최대값은 늘 최근 구간에 있다
 
 
 def _current():
@@ -25,30 +36,29 @@ def _current():
     return int(m.group(1))
 
 
-def _history(limit=60):
-    """git 이력에 등장한 모든 버전. 저장소가 아니거나 이력이 없으면 빈 집합."""
+def _history():
+    """git 이력에 등장한 모든 버전. 읽지 못하면 None(판정 불가).
+
+    ⚠️ `git log`로 SHA를 받아 커밋마다 `git show`를 도는 방식이었는데, 프로세스를
+    61번 띄워 3.56초가 걸렸다 — 나머지 135개 테스트 전부(4.73초)와 맞먹었다.
+    `git log -p` 한 번이면 같은 정보가 0.07초에 나온다(2026-08-15 리뷰, 50배).
+    diff에서 뽑으므로 `+`(새 값)와 `-`(옛 값)를 모두 세는데, 어느 쪽이든 '한때
+    이 저장소에 있던 번호'라 재사용 판정에는 양쪽이 다 필요하다.
+
+    ⚠️ text=True만 쓰면 Windows 기본 코덱(cp949)으로 디코딩하다 sw.js의 한글
+    주석에서 깨져 stdout이 None으로 온다 — 인코딩을 명시한다.
+    """
     try:
-        # ⚠️ text=True만 쓰면 Windows 기본 코덱(cp949)으로 디코딩하다 sw.js의
-        # 한글 주석에서 깨지고, stdout이 None으로 와서 엉뚱한 TypeError가 난다.
-        # 인코딩을 명시한다(2026-08-15에 실제로 이걸로 한 번 넘어졌다).
-        out = subprocess.run(['git', 'log', '--format=%h', '-%d' % limit, '--', 'sw.js'],
-                             cwd=ROOT, capture_output=True, timeout=60,
-                             encoding='utf-8', errors='replace')
-        shas = [s for s in (out.stdout or '').split() if s]
+        out = subprocess.run(
+            ['git', 'log', '-%d' % HISTORY_DEPTH, '-p', '--format=%h', '--', 'sw.js'],
+            cwd=ROOT, capture_output=True, timeout=60,
+            encoding='utf-8', errors='replace')
     except Exception:
-        return set()
-    seen = set()
-    for sha in shas:
-        try:
-            blob = subprocess.run(['git', 'show', '%s:sw.js' % sha],
-                                  cwd=ROOT, capture_output=True, timeout=60,
-                                  encoding='utf-8', errors='replace').stdout or ''
-        except Exception:
-            continue
-        m = PAT.search(blob)
-        if m:
-            seen.add(int(m.group(1)))
-    return seen
+        return None
+    if out.returncode != 0:
+        return None
+    found = {int(v) for v in DIFF_PAT.findall(out.stdout or '')}
+    return found or None
 
 
 def test_sw_version_never_goes_below_the_highest_ever_shipped():
@@ -66,9 +76,13 @@ def test_sw_version_never_goes_below_the_highest_ever_shipped():
     """
     cur = _current()
     hist = _history()
-    if not hist:
-        return                      # 얕은 클론 등 — 이력을 못 읽으면 판정하지 않는다
+    if hist is None:
+        pytest.skip('sw.js 이력을 읽지 못했다(얕은 클론 등) — 이번엔 버전을 못 본다')
     top = max(hist)
+    # 얕은 클론이면 이력이 현재 값 하나뿐이라 비교가 자기 자신과의 비교가 된다.
+    # 통과시키되 '봤다'고 말하지는 않는다.
+    if hist == {cur}:
+        pytest.skip('sw.js 이력에 현재 값(v%d)뿐이다 — 얕은 클론으로 보인다' % cur)
     assert cur >= top, (
         'sw.js VERSION이 뒤로 갔거나 이미 쓴 번호다: 현재 v%d, 이력 최대 v%d. '
         '기억한 숫자를 박지 말고 현재 값을 읽어 +1 할 것.' % (cur, top))
