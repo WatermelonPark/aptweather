@@ -783,6 +783,19 @@ def rival_panel(keyword):
             '유사문서로 묶이면 둘 다 손해입니다.</span></div>' % (esc(keyword), li))
 
 
+# 발행 전 자가 점검 — 기억에 의존하지 않게 초안에 박아 둔다.
+# 코드 주석에 외부 강의 화면 URL이 근거로 적혀 있던 사고가 있었다(2026-08-15
+# 리뷰 지적). 원인은 악의가 아니라 '판단 근거를 밝히려는 선의'였고, 발행 글에도
+# 같은 자리가 있다 — 어디서 봤는지를 적고 싶어지는 자리.
+# 근거는 사실만 적으면 온전하다: 누구의 강의였는지 없이도 "인허가가 적정물량의
+# 42%에 그쳤다"는 그 자체로 검증 가능하다.
+SOURCE_CHECK = (
+    '<p class="note"><b>발행 전 자가 점검</b><br>'
+    '□ 특정 인물·강의·유료 콘텐츠를 출처로 적지 않았는가<br>'
+    '□ 수치의 출처가 국토교통부·한국부동산원·한국은행 등 공개 원천으로만 '
+    '표기됐는가</p>')
+
+
 def field(lab, tid, html, cls=''):
     return ('<div class="field"><div class="lab"><b>%s</b>'
             '<button data-t="%s">복사</button></div>'
@@ -833,6 +846,7 @@ def render(p, d1, d2):
     S.append('<p class="hint">같은 내용을 사이트·인스타와 똑같이 올리면 네이버가 '
              '유사문서로 볼 수 있습니다. 첫 두세 문장만이라도 직접 고쳐 쓰면 '
              '안전합니다.</p>')
+    S.append(SOURCE_CHECK)
     S.append('<script>%s</script></html>' % JS)
     return '\n'.join(S)
 

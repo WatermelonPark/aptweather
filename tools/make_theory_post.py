@@ -212,6 +212,9 @@ def render(post):
     S.append('</section>')
     S.append('<p class="hint">⚠️ 사이트 /cycle/ 페이지와 같은 문장을 쓰면 유사문서로 '
              '묶입니다. 고쳐 쓰실 때도 사이트 문장을 그대로 가져오지 마세요.</p>')
+    # 이론 글은 특히 위험한 자리다 — 개념을 설명하다 보면 "누가 이렇게 말했다"를
+    # 적고 싶어진다. 근거는 사실만으로 온전하다(2026-08-15 리뷰 지적).
+    S.append(P.SOURCE_CHECK)
     S.append('<script>%s</script></html>' % P.JS)
     return '\n'.join(S)
 
