@@ -1,0 +1,108 @@
+name: 발행일 알림 (블로그)
+
+# 퇴근하고 잊거나 바쁜 날 넘어가는 걸 막는다. 발행 리듬이 끊기면 C-Rank가
+# 보는 '꾸준함'이 먼저 깨진다.
+#
+# ⚠️ 알림용으로 워크플로를 일부러 실패시키지 않는다. 이 저장소의 실패 메일은
+# watchdog(데이터 사고)이 쓰는 통로다. 가짜 실패를 섞으면 진짜 경보가 묻힌다
+# — watchdog 주석의 "오경보가 쌓이면 진짜 경보도 같이 묻힌다"가 그 말이다.
+# 그래서 이슈를 만든다. 담당자로 지정하면 GitHub이 메일을 보내고, 발행 후
+# 이슈를 닫으면 그게 곧 발행 기록이 된다.
+
+on:
+  schedule:
+    # GitHub cron은 UTC다. 한국시간 08:00 = 전날 23:00 UTC.
+    - cron: '0 23 * * 1'   # 월 23:00 UTC = 화 08:00 KST — 지역/사이클 격주
+    - cron: '0 23 * * 4'   # 목 23:00 UTC = 금 08:00 KST — 주간 시세
+  workflow_dispatch:        # 손으로도 돌려볼 수 있게
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 오늘 쓸 글 정하기
+        id: plan
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import datetime, os
+
+          # KST 기준으로 요일을 본다. UTC로 보면 금요일 알림이 목요일로 잡힌다.
+          kst = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
+          d = kst.date()
+
+          # 화요일 격주 교대의 기준점. 2026-08-18(화)이 지역 편(대구) 차례다.
+          ANCHOR = datetime.date(2026, 8, 18)
+
+          if d.weekday() == 4:            # 금요일
+              kind = '주간 시세'
+              cmd = 'python tools/make_naver_post.py'
+              cat = '주간 아파트 시세'
+              note = ('한국부동산원 목요일 발표 → 배치 갱신 후 생성해야 '
+                      '최신 숫자가 들어갑니다. 해석 문단은 비어 있습니다.')
+          elif d.weekday() == 1:          # 화요일
+              alt = ((d - ANCHOR).days // 7) % 2
+              if alt == 0:
+                  kind = '지역 공급'
+                  cmd = 'python tools/make_naver_post.py'
+                  cat = '지역별 아파트 공급'
+                  note = ('초안 ②가 그 주 순번 지역입니다. 리포트 캡처는 '
+                          'drafts/capture-<지역>.png 로 자동 생성됩니다.')
+              else:
+                  kind = '사이클 이론'
+                  cmd = 'python tools/make_theory_post.py <편번호>'
+                  cat = '부동산 사이클'
+                  note = ('경험 문단은 비어 있습니다. 사이트 /cycle/ 문장을 '
+                          '옮겨 쓰지 마세요 — 유사문서로 묶입니다.')
+          else:
+              kind = ''
+              cmd = cat = note = ''
+
+          out = dict(kind=kind, cmd=cmd, cat=cat, note=note, date=d.isoformat())
+          for k, v in out.items():
+              print('%s=%s' % (k, v))
+          PY
+
+      - name: 알림 이슈 만들기
+        if: steps.plan.outputs.kind != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "[발행] ${{ steps.plan.outputs.date }} ${{ steps.plan.outputs.kind }}" \
+            --assignee "${{ github.repository_owner }}" \
+            --body "$(cat <<'EOF'
+          오늘 발행할 글이 있습니다.
+
+          **종류** ${{ steps.plan.outputs.kind }}
+          **카테고리** ${{ steps.plan.outputs.cat }} · **주제** 부동산
+
+          ### 초안 만들기
+          ```
+          ${{ steps.plan.outputs.cmd }}
+          ```
+          ${{ steps.plan.outputs.note }}
+
+          ### 발행 전 점검
+          - [ ] 비어 있는 문단(해석·경험)을 채웠는가
+          - [ ] 특정 인물·강의·유료 콘텐츠를 출처로 적지 않았는가
+          - [ ] 수치의 출처가 국토교통부·한국부동산원·한국은행 등 공개 원천으로만 표기됐는가
+          - [ ] 카테고리와 주제를 맞게 골랐는가
+          - [ ] 이미지에 캡션을 달았는가
+
+          ### 발행 후
+          ```
+          python tools/naver_serp.py --index --record "제목 일부"
+          ```
+
+          발행하면 이 이슈를 닫아 주세요. 닫힌 이슈가 곧 발행 기록입니다.
+
+          _바쁜 날은 그냥 닫으셔도 됩니다. 리듬이 한 번 끊기는 것보다 매번
+          부담이 되는 쪽이 더 오래 못 갑니다._
+          EOF
+          )"
