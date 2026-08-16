@@ -413,7 +413,10 @@ def draft_weekly(adv, sts, rows):
     # 입력도 빨라진다. 매주 13개를 손으로 넣는 건 그 값을 못 한다(사용자 지적).
     tags = ['주간아파트시세', '아파트시세', '집값전망', '부동산데이터', '아공맵']
     return dict(title=title, body='\n'.join(body), tags=tags, kw='주간 아파트 시세',
-                img=r'share\weekly-map.png', imgnote='본문의 [여기에 시세 지도] 자리')
+                img=r'share\weekly-map.png',
+                imgnote='이미지 <b>share\\weekly-map.png</b> → 본문의 [여기에 시세 '
+                        '지도] 자리. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 '
+                        '파일을 직접 올리고, 캡션을 달아 주세요.')
 
 
 # ---------------------------------------------------------------- 초안 ②
@@ -512,6 +515,7 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
     body.append('<h3>이 숫자의 한계</h3>')
     # 이건 한계가 아니라 우리 편이다. 보수적으로 셌다는 뜻이고 실제 부족은 더 크다.
     # 그런데 "덜 잡습니다"로 끝내면 사과처럼 읽힌다(2026-08-15 사용자 지적).
+    body.append('<p>[여기에 분기별 공급표 이미지를 넣어 주세요]</p>')
     body.append('<p>게다가 이 숫자는 <b>보수적입니다.</b> 앞으로 헐릴 집을 빼지 '
                 '않았습니다 — 지난 몫에서는 철거(멸실)를 반영했지만 앞으로 %d년 '
                 '몫에는 넣지 않았습니다. 재건축이 언제 얼마나 진행될지 미리 알 '
@@ -599,6 +603,9 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
                         '집값이 도는 원리 — 사이클 리포트</a></p>' % SITE)
         body.append('<p>%s</p>' % OUTLOOK_PLACEHOLDER)
 
+    body.append('<p>[여기에 17개 시도 판정표 이미지를 넣어 주세요]</p>')
+    body.append('<p>다른 지역도 같은 기준으로 판정해 두었습니다. 내 동네가 어느 '
+                '칸에 있는지 확인해 보세요.</p>')
     body.append('<p>%s의 분기별 물량과 산출 근거 전체는 아래에서 볼 수 있습니다.<br>'
                 '👉 <a href="%s/zone/%s/?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=zone_deep">%s 공급 리포트</a></p>'
                 % (esc(nm), SITE, quote(nm), esc(nm)))
@@ -609,13 +616,21 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
     # 채널 주제는 유지된다. '입주물량'은 넣지 않는다 — 분양 확정분을 뜻하는
     # 말이라 착공 추정인 우리 숫자와 어긋난다(제목에서 뺀 것과 같은 이유).
     tags = [nm + '아파트', nm + '부동산', '아파트공급', '집값전망', '아공맵']
-    shot, err = (None, '--no-shot 로 건너뜀')
+    shot, shots, err = (None, {}, '--no-shot 로 건너뜀')
     if '--no-shot' not in sys.argv:
-        shot, err = capture_zone(nm)
-    note = ('%s 화면을 떴습니다. 본문의 [여기에 리포트 캡처] 자리에 끌어다 놓으세요. '
-            '네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 파일을 직접 올려야 '
-            '합니다.' % nm) if shot else ('캡처 없음 — %s. 본문의 자리 표시자를 '
-                                          '지우거나 직접 캡처해 넣으세요.' % err)
+        shot, shots, err = capture_zone(nm)
+    if shot:
+        lines = ['<b>%s</b> → [리포트 캡처]' % shot]
+        if shots.get('표'):
+            lines.append('<b>%s</b> → [분기별 공급표]' % shots['표'])
+        if shots.get('판정표'):
+            lines.append('<b>%s</b> → [17개 시도 판정표]' % shots['판정표'])
+        note = ('%s 화면을 자동으로 떴습니다.<br>%s<br>네이버는 외부 이미지 주소를 '
+                '그대로 쓰지 않으므로 파일을 직접 올리고, 이미지마다 캡션을 달아 '
+                '주세요.' % (nm, '<br>'.join(lines)))
+    else:
+        note = ('캡처 없음 — %s. 본문의 자리 표시자를 지우거나 직접 캡처해 '
+                '넣으세요.' % err)
     return dict(title=title, body='\n'.join(body), tags=tags, img=shot,
                 kw='%s 아파트 공급물량' % nm, imgnote=note,
                 seq='%d / %d번째 지역' % (seq, total))
@@ -751,7 +766,7 @@ CHROME_PATHS = (
 # 화면 크기. 높이 1100은 제목·판정·경고·'숫자로 보면' 카드까지 담기는 값이다
 # (경고가 0~2줄로 지역마다 달라 여유를 뒀다). 하단 네비게이션은 position:fixed라
 # 창 높이와 무관하게 항상 바닥에 깔리므로, 그 높이만큼 잘라낸다.
-SHOT_W, SHOT_H, SHOT_SCALE = 1100, 1100, 2
+SHOT_W, SHOT_H, SHOT_SCALE = 1100, 3400, 2
 NAV_CSS_H = 112
 
 
@@ -774,9 +789,10 @@ def capture_zone(z):
     Chrome이 없거나 실패하면 None을 돌려주고 초안은 그대로 나간다 —
     이미지 때문에 발행이 막히면 안 된다.
     """
+    extra = {}
     exe = find_chrome()
     if not exe:
-        return None, 'Chrome/Edge를 찾지 못했습니다'
+        return None, extra, 'Chrome/Edge를 찾지 못했습니다'
     out = os.path.join(OUT, 'capture-%s.png' % z)
     url = '%s/zone/%s/' % (SITE, quote(z))
     # ⚠️ 지난주 캡처를 먼저 지운다. drafts/는 gitignore라 파일이 계속 남는데,
@@ -786,7 +802,7 @@ def capture_zone(z):
         if os.path.exists(out):
             os.remove(out)
     except OSError as e:
-        return None, '지난 캡처를 지우지 못했습니다: %s' % e
+        return None, extra, '지난 캡처를 지우지 못했습니다: %s' % e
     try:
         proc = subprocess.run(
             [exe, '--headless=new', '--disable-gpu', '--hide-scrollbars',
@@ -795,20 +811,83 @@ def capture_zone(z):
              '--screenshot=%s' % out, url],
             timeout=90, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
-        return None, '캡처 실행 실패: %s' % e
+        return None, extra, '캡처 실행 실패: %s' % e
     if proc.returncode != 0:
-        return None, '캡처 실패(크롬 종료코드 %s) — 네트워크·사이트 상태 확인' % proc.returncode
+        return None, extra, '캡처 실패(크롬 종료코드 %s) — 네트워크·사이트 상태 확인' % proc.returncode
     if not os.path.exists(out):
-        return None, '캡처 파일이 생기지 않았습니다(네트워크 확인)'
+        return None, extra, '캡처 파일이 생기지 않았습니다(네트워크 확인)'
     try:
         from PIL import Image
-        im = Image.open(out).convert('RGB')
-        w, h = im.size
-        im = im.crop((0, 0, w, max(1, h - NAV_CSS_H * SHOT_SCALE)))
-        im.crop((0, 0, w, _cut_after_cards(im))).save(out)
+        full = Image.open(out).convert('RGB')
+        w, h = full.size
+        body = full.crop((0, 0, w, max(1, h - NAV_CSS_H * SHOT_SCALE)))
+        body.crop((0, 0, w, _cut_after_cards(body))).save(out)
+
+        # 분기별 표와 다른 지역 그리드도 같이 뽑는다. 매주 손으로 자르면
+        # 결국 빠뜨린다(2026-08-16 사용자). 순번으로 잡으므로 머리말 길이가
+        # 달라져도 따라간다 — 실측에서 카드=1번, 표=2번, 다른지역=4번이고
+        # 그 높이는 지역과 무관하게 같다.
+        bs = _blocks(body)
+        X0, X1 = 320, w - 320                 # 본문 폭. 좌우 여백을 잘라 낸다
+        if len(bs) > 2:
+            t = os.path.join(OUT, 'capture-%s-표.png' % z)
+            body.crop((X0, bs[2][0] - 8, X1, bs[2][1] + 8)).save(t)
+            extra['표'] = os.path.relpath(t, ROOT)
+        if len(bs) > 4:
+            # 4번 덩어리는 '다른 지역' 제목 + 그리드 + 링크가 한 묶음이다.
+            # 그리드만 남기려고 위 60·아래는 시작+450에서 끊는다(실측 오프셋).
+            g0 = bs[4][0] + 60
+            t = os.path.join(OUT, 'capture-%s-판정표.png' % z)
+            body.crop((X0, g0, X1, min(g0 + 400, bs[4][1]))).save(t)
+            extra['판정표'] = os.path.relpath(t, ROOT)
     except Exception as e:
-        return os.path.relpath(out, ROOT), '다듬기 실패(원본 그대로): %s' % e
-    return os.path.relpath(out, ROOT), None
+        return os.path.relpath(out, ROOT), extra, '다듬기 실패(원본 그대로): %s' % e
+    return os.path.relpath(out, ROOT), extra, None
+
+
+def _blocks(im, gap=70, keep=60):
+    """배경 여백으로 끊어 본 내용 덩어리 목록 [(시작, 끝, 높이)].
+
+    지역 페이지는 덩어리 구조가 지역과 무관하게 규칙적이다(2026-08-16 실측,
+    서울·대구·제주 대조):
+        0) 머리말      경고 줄 수에 따라 373~444로 **여기만 달라진다**
+        1) 숫자로 보면   584
+        2) 분기별 공급 표 1246
+        3) 어떻게 계산했나 577
+        4) 다른 지역     704
+    그래서 픽셀 좌표가 아니라 **순번**으로 잡으면 머리말 길이가 달라져도
+    따라간다. 고정 좌표는 경기(경고 0줄)에서 이미 한 번 깨졌다.
+    """
+    w, h = im.size
+    px = im.load()
+    bg = px[5, 5]
+    xs = list(range(0, w, max(1, w // 200)))
+
+    def is_bg(y):
+        return all(abs(px[x, y][0] - bg[0]) + abs(px[x, y][1] - bg[1])
+                   + abs(px[x, y][2] - bg[2]) <= 24 for x in xs)
+
+    flags = [is_bg(y) for y in range(h)]
+    out, y = [], 0
+    while y < h:
+        if flags[y]:
+            y += 1
+            continue
+        s = y
+        while y < h:
+            if flags[y]:
+                g = y
+                while g < h and flags[g]:
+                    g += 1
+                if g - y >= gap:
+                    break
+                y = g
+            else:
+                y += 1
+        if y - s >= keep:
+            out.append((s, y, y - s))
+        y += 1
+    return out
 
 
 def _cut_after_cards(im):
@@ -959,12 +1038,9 @@ def render(p, d1, d2):
                      '숫자는 검색결과에서 잘리고, 클릭 전에는 뜻이 안 통합니다.</p>')
         S.append(field('본문', 'b%d' % i, d['body']))
         S.append(tagfield(d['tags']))
-        if d['img']:
-            S.append('<p class="note">📎 이미지 <code>%s</code> 를 %s에 끌어다 '
-                     '놓으세요. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 '
-                     '파일을 직접 올려야 합니다.</p>' % (d['img'], d['imgnote']))
-        else:
-            S.append('<p class="note">📎 %s</p>' % d['imgnote'])
+        # imgnote는 완결된 안내문이다. 예전엔 문장 안에 끼워 넣는 구조였는데,
+        # 이미지가 여러 장이 되면서 문장이 깨졌다(2026-08-16).
+        S.append('<p class="note">📎 %s</p>' % d['imgnote'])
         S.append('</section>')
 
     S.append('<p class="hint">같은 내용을 사이트·인스타와 똑같이 올리면 네이버가 '
