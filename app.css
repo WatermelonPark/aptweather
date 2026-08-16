@@ -901,10 +901,14 @@ table.adv thead th:first-child{text-align:center}
   .rbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .tb-refnote{margin:6px 0 0;font-size:12px;line-height:1.55;color:var(--muted)}
 
+  /* .zgrid와 같은 이유로 셀이 선을 그린다(2026-08-16). 컨테이너 배경을 선 색으로
+     깔면 항목이 열 수로 안 떨어질 때 마지막 줄 빈 칸에 그 색이 드러난다 —
+     여긴 5열에 19개(집계 3 + 시도 16, 자기 지역 제외)라 늘 한 칸이 빈다. */
   .zlinks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1px;
-    background:var(--line);border:1px solid var(--line);margin-top:12px}
+    margin-top:12px}
   .zlinks a{background:var(--paper);padding:10px 12px;text-decoration:none;color:var(--ink);
-    display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px}
+    display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px;
+    box-shadow:0 0 0 1px var(--line)}
   .zlinks a:hover{background:var(--paper2)}
   .zlinks a b{font-weight:600}
   .zlinks a i{font-style:normal;font-size:11px;color:var(--muted);
