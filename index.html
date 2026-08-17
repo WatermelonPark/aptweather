@@ -3182,11 +3182,11 @@ function renderBubbleSec(){
    값은 ADV.weekly.rows(시도 20곳 최신 1주, split_data가 코어에 싣는다).
    ⚠️ 히어로 지도가 읽는 sgg.rows와는 다른 배열이다 — 이쪽은 regions와
    같은 순서로 ma/je가 들어 있고, PNG 생성기(make_weekly_share.py)도 이걸 쓴다. */
-function fmtPct(v){
-  if(v==null||isNaN(v))return '–';
-  const s=(v>0?'+':(v<0?'−':''))+Math.abs(v).toFixed(2);
-  return s;
-}
+/* ⚠️ 여기 있던 fmtPct는 지웠다(2026-08-18). **원값의 부호 + 반올림한 절대값**을
+   이어 붙이는 방식이라 −0.0012가 '−0.00'으로, +0.0012가 '+0.00'으로 나왔다
+   (부산 실측). 값은 0인데 부호가 붙으면 글자와 색이 서로 다른 말을 한다.
+   정본은 pv2/pvSign — **반올림을 먼저** 하고 그 결과로 부호를 정한다.
+   새 서식이 필요해도 이 패턴을 다시 만들지 말고 pv2를 쓸 것. */
 function renderWeeklyGrid(){
   const box=document.getElementById('home-weekly-grid');
   if(!box)return;
