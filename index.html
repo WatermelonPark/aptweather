@@ -212,6 +212,17 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
     <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
     <h2>이번 주, 어디가 오르고 내렸을까?</h2>
     <p>전국 시군구 시세를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b> 지도로.</p>
+    <!-- 글자만 있으면 "내 지역이 무슨 색이지?"가 안 생긴다. 카톡 공유용으로 매주
+         자동 생성되는 share/weekly-map.png(make_weekly_share.py)를 그대로 쓴다 —
+         서버·JS 추가 없이 실물을 보여준다.
+         ⚠️ 파일명이 고정이라 주간 갱신분이 캐시에 가린다. sw.js에서 이미지는
+         정적 자산(cache-first)이라 한 방문 늦게 바뀌므로, 주간 기준일을 ?v=로
+         달아 URL 자체를 갈라 준다(setWeeklyMap). data-src로 두는 건 버전 없는
+         주소로 한 번, 버전 붙은 주소로 또 한 번 받는 걸 막으려는 것이다. -->
+    <a class="hs-map" href="/weekly/" onclick="track('home_cta',{to:'weekly_map'})">
+      <img id="home-weekly-map" data-src="/share/weekly-map.png" alt="이번 주 전국 시군구 아파트 시세 지도" loading="lazy" decoding="async" width="1200" height="630">
+      <noscript><img src="/share/weekly-map.png" alt="이번 주 전국 시군구 아파트 시세 지도" width="1200" height="630"></noscript>
+    </a>
     <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">이번 주 시세 지도 보기</button></div>
   </div></section>
 
@@ -219,6 +230,12 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
     <div class="hs-kicker">10문항 · 3분</div>
     <h2>내 부동산 감각, 몇 점일까?</h2>
     <p>10문항으로 재는 내 부동산 감각. 결과는 친구와 대결할 수 있습니다.</p>
+    <!-- 무엇을 얻는지가 안 보여서 안 누른다(2026-08-17). 결과 화면의 티어 카드를
+         축소해 미리 보여준다. 문구는 BLV 정본에서 읽어 굽는다 — 손으로 옮겨
+         적으면 티어 문구를 고칠 때 홈만 옛말을 하게 된다(quizSample).
+         ⚠️ 참여자 수·평균 점수는 넣지 않는다. 지금 트래픽에선 적은 숫자가
+         그대로 드러나 사회적 증거가 역효과다(PM 결정). -->
+    <div id="quiz-sample" class="qsample" aria-hidden="true"></div>
     <div class="hs-cta">
       <button class="home-cta" onclick="location.href='/burini-test/'">🐣 부린이 테스트 · 난이도 하</button>
       <button class="home-cta alt" onclick="location.href='/investor-test/'">🦅 투자자 테스트 · 난이도 중</button>
@@ -231,12 +248,10 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
     <h3>집값은 왜 돌고 도는가</h3>
     <p>공급 → 전세 → 매매 → 다시 공급, 20년 데이터로 검증한 순환의 6개 고리입니다.</p>
     <div class="hs-cta"><a class="home-cta" href="/cycle/" onclick="track('home_cta',{to:'cycle'})">사이클 리포트 읽기</a></div>
-    <div class="hs-kicker" style="margin-top:26px">KOSIS · 한국은행 · 국토교통부</div>
-    <h3>국가기관 원자료 그대로</h3>
-    <p>실거래지수·인허가·착공·준공·금리를 지역과 기간으로 나눠 봅니다.</p>
-    <div class="hs-cta">
-      <button class="home-cta" onclick="goStats('basic')">통계 원자료 보기</button>
-    </div>
+    <!-- '통계 원자료' 카드는 2026-08-17에 뺐다. 통계는 하단 네비로 이미 도달
+         가능해서 이 카드가 하는 일이 스크롤을 늘리는 것뿐이었다. 빈 자리는
+         채우지 않는다 — 홈이 짧아지는 게 목적이다. 다만 원자료를 쓴다는
+         사실은 신뢰 자산이라 문구만 푸터로 옮겼다(아래 ft-src). -->
   </div></section>
 
 
@@ -244,6 +259,7 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
   <div class="home-foot">
     <div class="ft-brand"><b>아공맵</b> — 아파트 · 공급량 · 투자지도</div>
     <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">시도별 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
+    <div class="ft-src">KOSIS · 한국부동산원 · 국토교통부 원자료 기반</div>
     <div class="ft-meta"><a href="/about/">아공맵 소개</a> · <a href="/privacy/">개인정보처리방침</a> · 만든이 agongmap@gmail.com</div>
     <div class="legal-disc"><b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div></div>
 </div>
@@ -415,6 +431,7 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
   <div class="minifooter">
     <div class="ft-brand"><b>아공맵</b> — 아파트 · 공급량 · 투자지도</div>
     <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">시도별 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
+    <div class="ft-src">KOSIS · 한국부동산원 · 국토교통부 원자료 기반</div>
     <div class="ft-meta"><a href="/about/">아공맵 소개</a> · <a href="/privacy/">개인정보처리방침</a> · 만든이 agongmap@gmail.com</div>
     <div class="legal-disc"><b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div>
   </div>
@@ -475,6 +492,7 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
   <div class="minifooter">
     <div class="ft-brand"><b>아공맵</b> — 아파트 · 공급량 · 투자지도</div>
     <nav class="ft-nav" aria-label="주요 페이지"><a href="/weekly/">이번 주 시세 지도</a> · <a href="/burini-test/">부린이 테스트</a> · <a href="/faq/">부동산 FAQ</a> · <a href="/zone/">시도별 공급 순위</a> · <a href="/moveins/">입주물량</a> · <a href="/jeonse-ratio/">전세가율</a> · <a href="/cycle/">사이클 리포트</a></nav>
+    <div class="ft-src">KOSIS · 한국부동산원 · 국토교통부 원자료 기반</div>
     <div class="ft-meta"><a href="/about/">아공맵 소개</a> · <a href="/privacy/">개인정보처리방침</a> · 만든이 agongmap@gmail.com</div>
     <div class="legal-disc"><b>투자 면책 고지</b> · 공공 데이터를 가공한 <b>참고 자료</b>이며 투자자문이 아닙니다. <b>투자 판단과 책임은 이용자에게 있습니다.</b></div>
   </div>
@@ -3140,8 +3158,48 @@ function renderBubbleSec(){
    ⚠️ DOMContentLoaded까지 미루는 이유: applyHash()가 #stats로 들어오면 그 자리에서
    차트를 만드는데, Chart.js가 defer라 파싱 시점엔 아직 없다. defer 스크립트는
    DOMContentLoaded 직전에 실행이 보장되므로 이 훅이 정확한 경계다. */
+/* 주간 배너 지도의 src를 여기서 정한다. 파일명이 고정(share/weekly-map.png)이라
+   ?v=에 그 주 기준일을 달아야 캐시가 갈린다 — 안 그러면 sw.js의 정적 자산
+   cache-first 때문에 옛 주차 지도가 한 방문 더 보인다.
+   기준일을 못 읽으면 버전 없이 그냥 건다 — 지도가 안 보이는 것보다는 낫다. */
+function setWeeklyMap(){
+  const img=document.getElementById('home-weekly-map');
+  if(!img||img.src)return;
+  /* ⚠️ ADV.weekly.rows가 아니라 **sgg.rows**다. 코어(data-core.js)의 weekly에는
+     regions·sgg만 실리고 rows는 지연 로드(data-trend.json)라, rows를 보면 boot
+     시점에 늘 비어 버전이 안 붙는다(2026-08-17 실측). 히어로 지도도 같은 곳을 읽는다. */
+  let v='';
+  try{const R=ADV.weekly&&ADV.weekly.sgg&&ADV.weekly.sgg.rows;
+      if(R&&R.length)v=R[R.length-1].p||'';}catch(e){}
+  img.src=img.dataset.src+(v?'?v='+encodeURIComponent(v):'');
+}
+/* 퀴즈 카드의 '결과 예시' — 실제 결과 화면(.rcard)과 같은 마크업을 축소해 쓴다.
+   티어 문구는 BLV 정본에서 읽는다. 예시 점수는 8/10 — 만점을 걸면 "쉽겠네"가
+   되고 낮으면 매력이 없다. 가짜 데이터로 오해되지 않게 라벨을 붙인다. */
+const SAMPLE_SCORE=8, SAMPLE_TOTAL=10;
+function quizSample(){
+  const box=document.getElementById('quiz-sample');
+  /* ⚠️ window.BLV로 보면 안 된다 — 최상위 const는 window에 안 걸린다(2026-08-17
+     실측: windowBLV=undefined, BLV는 len=11). 이름 그대로 참조한다. */
+  if(!box||typeof BLV==='undefined'||!BLV[SAMPLE_SCORE])return;
+  const g=BLV[SAMPLE_SCORE];
+  let dots='';
+  for(let i=0;i<SAMPLE_TOTAL;i++)dots+='<i class="'+(i<SAMPLE_SCORE?'ok':'no')+'"></i>';
+  box.innerHTML='<div class="qs-label">결과 예시</div>'
+    +'<div class="rcard rc-sample">'
+    +'<div class="rc-head">부린이 테스트</div>'
+    +'<div class="rc-emoji">'+g.emoji+'</div>'
+    +'<div class="rc-score">'+SAMPLE_SCORE+'<small>/'+SAMPLE_TOTAL+'</small></div>'
+    +'<div class="rc-dots">'+dots+'</div>'
+    +'<div><span class="rc-lv">'+g.lv+'</span></div>'
+    +'<div class="rc-grade">'+g.g+'</div>'
+    +'<div class="rc-desc">'+g.d+'</div>'
+    +'</div>';
+}
 function boot(){
   chartSetup();
+  setWeeklyMap();
+  quizSample();
   renderHeroMap();    // 히어로 배경 = 이번 주 전국 시군구 지도
   /* ⚠️ 표(분기 1,000칸 HTML 조립)는 여기서 굽지 않는다. 기본 모드가 지도인데
      숨은 표를 먼저 구우면 그 비용(월 모드 실측 200ms+)이 기본 화면 페인트를 막고,

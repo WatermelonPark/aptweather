@@ -226,6 +226,19 @@
   .rcard{background:#18242a;border:1px solid rgba(255,255,255,.16);
     border-radius:0;padding:30px 24px 22px;max-width:380px;margin:14px auto 24px;
     color:#fff;}
+  /* 홈 퀴즈 카드의 '결과 예시'(2026-08-17). 실제 결과 카드와 같은 마크업을 쓰되
+     축소한다 — 홈에서 결과 화면만큼 커지면 그게 주인공이 돼 버린다.
+     라벨은 카드 밖에 둔다. 안에 넣으면 실제 결과에도 있는 줄로 읽힌다. */
+  .qsample{margin-top:20px}
+  .qs-label{font-size:11.5px;color:var(--muted);letter-spacing:.02em;margin-bottom:6px}
+  .rcard.rc-sample{max-width:300px;padding:20px 18px 16px;margin:0 auto}
+  .rcard.rc-sample .rc-emoji{font-size:38px;margin:8px 0 2px}
+  .rcard.rc-sample .rc-score{font-size:32px}
+  .rcard.rc-sample .rc-score small{font-size:16px}
+  .rcard.rc-sample .rc-dots{gap:5px;margin:8px 0 12px}
+  .rcard.rc-sample .rc-dots i{width:9px;height:9px}
+  .rcard.rc-sample .rc-grade{font-size:16px;margin-bottom:7px}
+  .rcard.rc-sample .rc-desc{font-size:12.5px;line-height:1.6}
   .rcard .rc-head{font-size:13px;font-weight:600;color:rgba(232,235,242,.66)}
   .rcard .rc-emoji{font-size:54px;margin:12px 0 2px;line-height:1}
   .rcard .rc-score{font-size:46px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
@@ -299,6 +312,9 @@
 @media(max-width:560px){.ft-nav{max-width:340px;margin-left:auto;margin-right:auto}}
 .ft-nav a{color:inherit;text-decoration:none;white-space:nowrap}
 .ft-nav a:hover{text-decoration:underline}
+/* 홈에서 뺀 '통계 원자료' 카드의 신뢰 신호만 남긴 줄(2026-08-17). 링크가 아니라
+   출처 표기라 ft-meta보다 한 톤 죽인다 — 클릭을 유도하는 자리가 아니다. */
+.ft-src{font-size:11.5px;color:var(--muted);margin-bottom:6px;letter-spacing:.01em}
 .ft-meta{font-size:12px;color:var(--muted)}
 .ft-meta a{color:inherit;text-decoration:none;white-space:nowrap}
 .ft-meta a:hover{text-decoration:underline}
@@ -598,6 +614,12 @@
   .home-sec h2{font-size:clamp(21px,4.6vw,27px);font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
   .home-sec h3{font-size:clamp(17px,3.6vw,20px);font-weight:700;letter-spacing:-.01em;margin-bottom:10px}
   .home-sec p{font-size:16px;line-height:1.75;color:var(--ink2);max-width:520px;margin:0 auto}
+  /* 주간 시세 배너의 지도 실물(share/weekly-map.png, 1200×630). width/height를
+     마크업에 적어 두고 aspect-ratio로 자리를 미리 잡는다 — lazy 이미지가 늦게
+     도착하면서 아래 버튼을 밀어내면 그게 곧 레이아웃 점프다. */
+  .hs-map{display:block;max-width:520px;margin:18px auto 0;border:1px solid var(--line);
+    background:var(--paper);line-height:0}
+  .hs-map img{width:100%;height:auto;aspect-ratio:1200/630;display:block}
   .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
