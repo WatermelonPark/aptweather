@@ -3193,21 +3193,46 @@ function renderWeeklyGrid(){
   let regs,row;
   try{const W=ADV.weekly;regs=W&&W.regions;row=W&&W.rows&&W.rows[W.rows.length-1];}catch(e){}
   if(!regs||!regs.length||!row||!row.ma){box.style.display='none';return;}
-  const cells=regs.map((r,i)=>{
+  /* 색은 홈 지도와 같은 문법 — 상승 빨강·하락 파랑. 0.2%p를 상한으로 잡아
+     투명도를 준다(주간 변동은 대개 ±0.3%p 안이라 그 안에서 갈려야 보인다). */
+  /* ⚠️ 표시·색·정렬을 모두 **표시값**(pv2r: 소수 2자리 반올림) 기준으로 맞춘다.
+     원값으로 찍으면 −0.0012가 '−0.00'이 되고(실측: 부산), 원값 부호로 칠하면
+     같은 0.00이 빨강·파랑으로 갈린다 — 글자와 색이 다른 말을 한다.
+     pv2/pvSign은 감사 세션이 세운 정본이라 그대로 쓴다(2026-08-08 규칙). */
+  /* 값의 정본은 pv2/pvSign 그대로 두고, 글리프만 하이픈 → 마이너스(U+2212).
+     숫자 격자에서 '-'는 줄표처럼 붙어 자릿수를 흐린다(홈 지도 tbSigned와 같은 글리프). */
+  const mnus=(t)=>t.replace('-','−');
+  const tint=(ma)=>{
+    const v=pvSign(ma);
+    if(ma==null) return 'transparent';
+    if(v===0) return 'transparent';
+    const t=Math.min(1,Math.abs(v)/0.2), a=(0.06+t*0.30).toFixed(3);
+    return (v>0?'rgba(169,50,38,':'rgba(26,82,118,')+a+')';
+  };
+  const cell=(r,i,cls)=>{
     const ma=row.ma[i], je=row.je?row.je[i]:null;
-    /* 색은 홈 지도와 같은 문법 — 상승 빨강·하락 파랑. 0.2%p를 상한으로 잡아
-       투명도를 준다(주간 변동은 대개 ±0.3%p 안이라 그 안에서 갈려야 보인다). */
-    const t=Math.min(1,Math.abs(ma||0)/0.2);
-    const bg=ma==null?'transparent':(ma>=0
-      ?'rgba(169,50,38,'+(0.06+t*0.30).toFixed(3)+')'
-      :'rgba(26,82,118,'+(0.06+t*0.30).toFixed(3)+')');
-    return '<div class="wc" style="background:'+bg+'">'
+    return '<div class="'+cls+'" style="background:'+tint(ma)+'">'
       +'<b>'+r+'</b>'
-      +'<span class="wc-ma">'+fmtPct(ma)+'</span>'
-      +'<i class="wc-je">전세 '+fmtPct(je)+'</i></div>';
-  }).join('');
-  box.innerHTML='<div class="wg-head">'+(row.p||'')+' 기준 · 매매 전주 대비 변동률(%)</div>'
-    +'<div class="wg-cells">'+cells+'</div>';
+      +'<span class="wc-ma">'+mnus(pv2(ma))+'</span>'
+      +'<i class="wc-je">전세 '+mnus(pv2(je))+'</i></div>';
+  };
+  /* 집계 3은 격자에서 떼어 위로 — 홈 지도의 집계 칩과 같은 구조다. 20칸이
+     균질하게 깔리면 눈이 어디부터 볼지 모른다(2026-08-17 개발 세션 요청). */
+  const AGG=3;
+  const aggHtml=regs.slice(0,AGG).map((r,i)=>cell(r,i,'wc wc-agg')).join('');
+  /* 17시도는 매매 변동률 내림차순 — 첫 칸이 1위, 끝 칸이 꼴찌라 'TOP3 상승·
+     하락' 요약 줄이 따로 필요 없다. 격자 자체가 순위를 말한다. */
+  const rest=regs.map((r,i)=>({r,i})).slice(AGG)
+    .sort((a,b)=>(row.ma[b.i]==null?-Infinity:pvSign(row.ma[b.i]))
+                -(row.ma[a.i]==null?-Infinity:pvSign(row.ma[a.i])));
+  const cells=rest.map(o=>cell(o.r,o.i,'wc')).join('');
+  box.innerHTML='<div class="wg-head"><span>'+(row.p||'')+' 기준 · 매매 전주 대비(%)</span>'
+    +'<span class="tb-key wg-key"><span class="tk"><i class="tk-d"></i>하락</span>'
+    +'<span class="tk-ramp" aria-hidden="true"></span>'
+    +'<span class="tk"><i class="tk-u"></i>상승</span></span></div>'
+    +'<div class="wg-agg">'+aggHtml+'</div>'
+    +'<div class="wg-cells">'+cells+'</div>'
+    +'<p class="wg-foot">시도는 오른 순.</p>';
 }
 /* 퀴즈 카드의 '결과 예시' — 실제 결과 화면(.rcard)과 같은 마크업을 축소해 쓴다.
    티어 문구는 BLV 정본에서 읽는다. 예시 점수는 8/10 — 만점을 걸면 "쉽겠네"가
