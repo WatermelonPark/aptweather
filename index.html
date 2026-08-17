@@ -212,17 +212,12 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
     <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
     <h2>이번 주, 어디가 오르고 내렸을까?</h2>
     <p>전국 시군구 시세를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b> 지도로.</p>
-    <!-- 글자만 있으면 "내 지역이 무슨 색이지?"가 안 생긴다. 카톡 공유용으로 매주
-         자동 생성되는 share/weekly-map.png(make_weekly_share.py)를 그대로 쓴다 —
-         서버·JS 추가 없이 실물을 보여준다.
-         ⚠️ 파일명이 고정이라 주간 갱신분이 캐시에 가린다. sw.js에서 이미지는
-         정적 자산(cache-first)이라 한 방문 늦게 바뀌므로, 주간 기준일을 ?v=로
-         달아 URL 자체를 갈라 준다(setWeeklyMap). data-src로 두는 건 버전 없는
-         주소로 한 번, 버전 붙은 주소로 또 한 번 받는 걸 막으려는 것이다. -->
-    <a class="hs-map" href="/weekly/" onclick="track('home_cta',{to:'weekly_map'})">
-      <img id="home-weekly-map" data-src="/share/weekly-map.png" alt="이번 주 전국 시군구 아파트 시세 지도" loading="lazy" decoding="async" width="1200" height="630">
-      <noscript><img src="/share/weekly-map.png" alt="이번 주 전국 시군구 아파트 시세 지도" width="1200" height="630"></noscript>
-    </a>
+    <!-- 글자만 있으면 "내 지역이 무슨 색이지?"가 안 생긴다. 처음엔 카톡 공유용
+         PNG(1200×630)를 그대로 걸었는데, 고정 비율이라 폭이 좁아지면 글자가
+         뭉개졌다(2026-08-17 사용자 지적). 같은 격자를 HTML로 직접 그린다 —
+         화면 폭에 따라 열이 접히고, 값은 라이브 데이터에서 읽으므로 주차가
+         바뀌어도 캐시 버스터가 필요 없다. -->
+    <div id="home-weekly-grid" class="wgrid"></div>
     <div class="hs-cta"><button class="home-cta" onclick="goStats('market')">이번 주 시세 지도 보기</button></div>
   </div></section>
 
@@ -247,6 +242,31 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
     <div class="hs-kicker">15개 시도 · 20년</div>
     <h3>집값은 왜 돌고 도는가</h3>
     <p>공급 → 전세 → 매매 → 다시 공급, 20년 데이터로 검증한 순환의 6개 고리입니다.</p>
+    <!-- 사이클 카드에도 그림을 준다(2026-08-17 사용자). /cycle/의 상호작용
+         다이어그램(클릭 점프·고리 번호)을 그대로 옮기지 않고 축약 도식만 둔다 —
+         홈에서는 "돈다"는 모양만 보이면 되고, 정본은 리포트 쪽이다.
+         ⚠️ 숫자(기간·시도 수)는 넣지 않는다. 여기 박으면 리포트와 갈린다. -->
+    <div class="cyc-mini">
+      <svg viewBox="0 0 320 190" role="img" aria-label="공급 부족에서 시작해 전세·매매·신축 공급을 거쳐 다시 도는 순환 도식">
+        <defs><marker id="cma" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="#9aa8a2"></path></marker></defs>
+        <ellipse cx="160" cy="95" rx="118" ry="66" fill="none" stroke="#dfe6e2" stroke-width="1.5"></ellipse>
+        <path d="M160 29 A118 66 0 0 1 268 84" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M268 106 A118 66 0 0 1 160 161" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M160 161 A118 66 0 0 1 52 106" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M52 84 A118 66 0 0 1 160 29" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <g font-family="inherit" text-anchor="middle">
+          <g><rect x="106" y="16" width="108" height="26" rx="2" fill="#131e24"></rect>
+             <text x="160" y="33" font-size="12.5" font-weight="600" fill="#fff">공급 부족</text></g>
+          <g><rect x="222" y="82" width="86" height="26" rx="2" fill="#fff" stroke="#c4cec9"></rect>
+             <text x="265" y="99" font-size="12.5" font-weight="600" fill="#a93226">전세·매매 ↑</text></g>
+          <g><rect x="106" y="148" width="108" height="26" rx="2" fill="#fff" stroke="#c4cec9"></rect>
+             <text x="160" y="165" font-size="12.5" font-weight="600" fill="#1a5276">신축 공급</text></g>
+          <g><rect x="12" y="82" width="86" height="26" rx="2" fill="#fff" stroke="#c4cec9"></rect>
+             <text x="55" y="99" font-size="12.5" font-weight="600" fill="#1a5276">전세·매매 ↓</text></g>
+        </g>
+      </svg>
+    </div>
     <div class="hs-cta"><a class="home-cta" href="/cycle/" onclick="track('home_cta',{to:'cycle'})">사이클 리포트 읽기</a></div>
     <!-- '통계 원자료' 카드는 2026-08-17에 뺐다. 통계는 하단 네비로 이미 도달
          가능해서 이 카드가 하는 일이 스크롤을 늘리는 것뿐이었다. 빈 자리는
@@ -3158,25 +3178,44 @@ function renderBubbleSec(){
    ⚠️ DOMContentLoaded까지 미루는 이유: applyHash()가 #stats로 들어오면 그 자리에서
    차트를 만드는데, Chart.js가 defer라 파싱 시점엔 아직 없다. defer 스크립트는
    DOMContentLoaded 직전에 실행이 보장되므로 이 훅이 정확한 경계다. */
-/* 주간 배너 지도의 src를 여기서 정한다. 파일명이 고정(share/weekly-map.png)이라
-   ?v=에 그 주 기준일을 달아야 캐시가 갈린다 — 안 그러면 sw.js의 정적 자산
-   cache-first 때문에 옛 주차 지도가 한 방문 더 보인다.
-   기준일을 못 읽으면 버전 없이 그냥 건다 — 지도가 안 보이는 것보다는 낫다. */
-function setWeeklyMap(){
-  const img=document.getElementById('home-weekly-map');
-  if(!img||img.src)return;
-  /* ⚠️ ADV.weekly.rows가 아니라 **sgg.rows**다. 코어(data-core.js)의 weekly에는
-     regions·sgg만 실리고 rows는 지연 로드(data-trend.json)라, rows를 보면 boot
-     시점에 늘 비어 버전이 안 붙는다(2026-08-17 실측). 히어로 지도도 같은 곳을 읽는다. */
-  let v='';
-  try{const R=ADV.weekly&&ADV.weekly.sgg&&ADV.weekly.sgg.rows;
-      if(R&&R.length)v=R[R.length-1].p||'';}catch(e){}
-  img.src=img.dataset.src+(v?'?v='+encodeURIComponent(v):'');
+/* 주간 시세 카드 격자 — 공유 PNG를 대신해 홈에서 직접 그린다.
+   값은 ADV.weekly.rows(시도 20곳 최신 1주, split_data가 코어에 싣는다).
+   ⚠️ 히어로 지도가 읽는 sgg.rows와는 다른 배열이다 — 이쪽은 regions와
+   같은 순서로 ma/je가 들어 있고, PNG 생성기(make_weekly_share.py)도 이걸 쓴다. */
+function fmtPct(v){
+  if(v==null||isNaN(v))return '–';
+  const s=(v>0?'+':(v<0?'−':''))+Math.abs(v).toFixed(2);
+  return s;
+}
+function renderWeeklyGrid(){
+  const box=document.getElementById('home-weekly-grid');
+  if(!box)return;
+  let regs,row;
+  try{const W=ADV.weekly;regs=W&&W.regions;row=W&&W.rows&&W.rows[W.rows.length-1];}catch(e){}
+  if(!regs||!regs.length||!row||!row.ma){box.style.display='none';return;}
+  const cells=regs.map((r,i)=>{
+    const ma=row.ma[i], je=row.je?row.je[i]:null;
+    /* 색은 홈 지도와 같은 문법 — 상승 빨강·하락 파랑. 0.2%p를 상한으로 잡아
+       투명도를 준다(주간 변동은 대개 ±0.3%p 안이라 그 안에서 갈려야 보인다). */
+    const t=Math.min(1,Math.abs(ma||0)/0.2);
+    const bg=ma==null?'transparent':(ma>=0
+      ?'rgba(169,50,38,'+(0.06+t*0.30).toFixed(3)+')'
+      :'rgba(26,82,118,'+(0.06+t*0.30).toFixed(3)+')');
+    return '<div class="wc" style="background:'+bg+'">'
+      +'<b>'+r+'</b>'
+      +'<span class="wc-ma">'+fmtPct(ma)+'</span>'
+      +'<i class="wc-je">전세 '+fmtPct(je)+'</i></div>';
+  }).join('');
+  box.innerHTML='<div class="wg-head">'+(row.p||'')+' 기준 · 매매 전주 대비 변동률(%)</div>'
+    +'<div class="wg-cells">'+cells+'</div>';
 }
 /* 퀴즈 카드의 '결과 예시' — 실제 결과 화면(.rcard)과 같은 마크업을 축소해 쓴다.
    티어 문구는 BLV 정본에서 읽는다. 예시 점수는 8/10 — 만점을 걸면 "쉽겠네"가
    되고 낮으면 매력이 없다. 가짜 데이터로 오해되지 않게 라벨을 붙인다. */
-const SAMPLE_SCORE=8, SAMPLE_TOTAL=10;
+/* 예시 점수 3 = 🐥 솜털 병아리. 8(🏘️ 다주택자)로 걸었다가 사용자가 "병아리가
+   더 귀엽다"고 해서 낮췄다(2026-08-17). 만점을 걸면 "쉽겠네"가 되고, 부린이
+   테스트의 얼굴은 도달점보다 출발점 쪽이 맞다 — 상위 티어는 풀어야 보인다. */
+const SAMPLE_SCORE=3, SAMPLE_TOTAL=10;
 function quizSample(){
   const box=document.getElementById('quiz-sample');
   /* ⚠️ window.BLV로 보면 안 된다 — 최상위 const는 window에 안 걸린다(2026-08-17
@@ -3198,7 +3237,7 @@ function quizSample(){
 }
 function boot(){
   chartSetup();
-  setWeeklyMap();
+  renderWeeklyGrid();
   quizSample();
   renderHeroMap();    // 히어로 배경 = 이번 주 전국 시군구 지도
   /* ⚠️ 표(분기 1,000칸 HTML 조립)는 여기서 굽지 않는다. 기본 모드가 지도인데

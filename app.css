@@ -617,9 +617,27 @@
   /* 주간 시세 배너의 지도 실물(share/weekly-map.png, 1200×630). width/height를
      마크업에 적어 두고 aspect-ratio로 자리를 미리 잡는다 — lazy 이미지가 늦게
      도착하면서 아래 버튼을 밀어내면 그게 곧 레이아웃 점프다. */
-  .hs-map{display:block;max-width:520px;margin:18px auto 0;border:1px solid var(--line);
-    background:var(--paper);line-height:0}
-  .hs-map img{width:100%;height:auto;aspect-ratio:1200/630;display:block}
+  /* 주간 시세 카드 격자. 예전엔 1200×630 PNG를 걸었는데 고정 비율이라 폭이
+     좁아지면 글자가 뭉갰다(2026-08-17). auto-fit으로 4열→3열→2열로 접힌다.
+     ⚠️ 격자선은 셀이 box-shadow로 그린다 — 컨테이너 배경으로 그리면 마지막 줄
+     빈 칸에 선 색이 드러난다(test_grid_line_trick이 막는 그 트릭). */
+  .wgrid{max-width:560px;margin:18px auto 0}
+  .wg-head{font-size:11.5px;color:var(--muted);margin-bottom:8px;letter-spacing:.01em}
+  .wg-cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px}
+  .wc{padding:9px 8px 8px;box-shadow:0 0 0 1px var(--line);text-align:center;
+    display:flex;flex-direction:column;gap:1px;min-width:0}
+  .wc b{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .wc-ma{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .wc-je{font-style:normal;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  @media(max-width:380px){
+    .wg-cells{grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
+    .wc-ma{font-size:14px}
+  }
+  /* 홈 사이클 카드의 축약 도식(2026-08-17). /cycle/의 상호작용 다이어그램과 달리
+     장식이라 클릭 대상이 아니다 — 카드 전체의 CTA가 이미 리포트로 간다. */
+  .cyc-mini{max-width:340px;margin:16px auto 0}
+  .cyc-mini svg{width:100%;height:auto;display:block}
   .hs-cta{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:20px}
   .bb-legend{font-size:12px;color:var(--muted);margin:10px 2px}
   .bb-row{display:flex;align-items:center;gap:10px;margin:2px 0;padding:6px 0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06)}

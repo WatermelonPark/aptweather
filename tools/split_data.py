@@ -107,7 +107,13 @@ def main():
     w = adv.get('weekly') or {}
     sgg = w.get('sgg') or {}
     if sgg.get('rows'):
+        # rows(시도 20곳 최신 1주)도 함께 싣는다 — 홈 주간 배너가 카드 격자를
+        # 직접 그리는 입력이다(2026-08-17). 예전엔 그 자리에 1200×630 PNG를
+        # 넣었는데 고정 비율이라 화면 폭이 좁으면 글자가 뭉갰다. 20개 지역 ×
+        # 값 2개뿐이라 페이로드는 1KB 미만이고, 지연 로드로 미루면 첫 화면에
+        # 빈 칸이 보였다가 채워진다.
         core_adv['weekly'] = {'regions': w.get('regions', []),
+                              'rows': (w.get('rows') or [])[-1:],
                               'sgg': {'codes': sgg.get('codes', []), 'rows': sgg['rows'][-1:]}}
 
     # 홈 통합표가 쓰는 가격 변동률 — 매매·전세·월세만, 시도 20곳만.
