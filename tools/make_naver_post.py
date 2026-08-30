@@ -1222,9 +1222,9 @@ def main():
     if d2:
         print('  ② %s  (%s)' % (d2['title'], d2['seq']))
 
-    # 바로 연다. 터미널의 경로를 손으로 찾아 여는 왕복이 매주 반복될 이유가 없다.
-    # 배치에서 부르는 도구가 아니라 사람이 발행 직전에 돌리는 도구다.
-    if '--no-open' not in sys.argv:
+    # 열지 않는다. 한 편을 쓰는 동안 여러 번 다시 만드는데 그때마다 창이 뜬다.
+    # 볼 때는 --open 을 준다.
+    if '--open' in sys.argv:
         try:
             import webbrowser
             webbrowser.open('file:///' + path.replace('\\', '/'))
