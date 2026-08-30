@@ -269,17 +269,18 @@ def extra_section(adv, sts, rot):
 
 # ---------------------------------------------------------------- 초안 ①
 def draft_weekly(adv, sts, rows):
-    sgg1 = sgg2 = None
+    sgg1 = sgg2 = top10 = None
     sggerr = '--no-shot 로 건너뜀'
     if '--no-shot' not in sys.argv:
-        sgg1, sgg2, sggerr = capture_weekly_map()
+        sgg1, sgg2, top10, sggerr = capture_weekly_map()
     if sgg1 and sgg2:
-        sggnote = ('시군구 지도를 자동으로 떴습니다.<br>'
+        sggnote = ('지도·표를 자동으로 떴습니다.<br>'
                    '<b>%s</b> → [시군구 지도 ① 수도권·강원]<br>'
-                   '<b>%s</b> → [시군구 지도 ② 충청 이남]<br>'
-                   '①에는 범례가 없으니 캡션에 "위 = 매매 · 아래 = 전세"를 적어 '
+                   '<b>%s</b> → [시군구 지도 ② 충청 이남]<br>' % (sgg1, sgg2)
+                   + ('<b>%s</b> → [상승·하락 TOP10]<br>' % top10 if top10 else '')
+                   + '①에는 범례가 없으니 캡션에 "위 = 매매 · 아래 = 전세"를 적어 '
                    '주세요. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 파일을 '
-                   '직접 올려야 합니다.' % (sgg1, sgg2))
+                   '직접 올려야 합니다.')
     else:
         sggnote = ('시군구 지도 없음 — %s. 본문의 자리 표시자를 지우거나 '
                    '%s/#stats-market 을 직접 캡처해 넣으세요.' % (sggerr, SITE))
@@ -385,6 +386,9 @@ def draft_weekly(adv, sts, rows):
     #
     # 두 장으로 가르는 이유: 187개 시군구가 한 장에 들어가면 네이버 모바일에서
     # 타일 글씨가 안 읽힌다.
+    body.append('<p>가장 많이 오르고 내린 곳을 순위로 보면 이렇습니다. '
+                '맨 오른쪽은 <b>지난주 순위에서 몇 계단 움직였는지</b>입니다.</p>')
+    body.append('<p>[여기에 상승·하락 TOP10 이미지를 넣어 주세요]</p>')
     body.append('<p>시군구로 내려가 보면 같은 권역 안에서도 갈립니다.</p>')
     body.append('<p>[여기에 시군구 지도 ① 수도권·강원 이미지를 넣어 주세요]</p>')
     body.append('<p>[여기에 시군구 지도 ② 충청 이남 이미지를 넣어 주세요]</p>')
@@ -442,8 +446,12 @@ def draft_weekly(adv, sts, rows):
         more['desc'], SITE, more['path'],
         '?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=weekly',
         more['label']))
-    body.append('<p><i>※ 이 글은 한국부동산원·국토교통부·KOSIS·한국은행 공개 데이터를 '
-                '가공한 것으로, 특정 지역의 매수·매도를 권유하지 않습니다.</i></p>')
+    # ⚠️ 면책을 '권유하지 않습니다'로 쓰지 않는다. 본문이 방향을 분명히
+    # 말하는데 말미에서 그걸 부인하면 글이 스스로를 무른다. 대신 **사실과
+    # 견해를 가르고 책임 소재를 밝힌다** — 이 편이 더 정직하고 더 강하다.
+    body.append('<p><i>※ 숫자는 한국부동산원·국토교통부·KOSIS·한국은행 공개 '
+                '데이터를 가공한 것이고, <b>판단과 전망은 글쓴이 개인의 견해</b>'
+                '입니다. 투자 결정과 그 결과는 읽는 분의 몫입니다.</i></p>')
 
     # 13개에서 5개로 줄였다(2026-08-14). 태그는 순위를 가르는 신호가 아니다 —
     # C-Rank(채널 주제 집중도)와 D.I.A.+(문서 품질)가 가른다. 개수보다 일관성이
@@ -619,8 +627,12 @@ def draft_zone(adv, sts, r, seq, total, total_zones):
     body.append('<p>%s의 분기별 물량과 산출 근거 전체는 아래에서 볼 수 있습니다.<br>'
                 '👉 <a href="%s/zone/%s/?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=zone_deep">%s 공급 리포트</a></p>'
                 % (esc(nm), SITE, quote(nm), esc(nm)))
-    body.append('<p><i>※ 한국부동산원·국토교통부·KOSIS·한국은행 공개 데이터를 '
-                '가공한 것으로, 특정 지역의 매수·매도를 권유하지 않습니다.</i></p>')
+    # ⚠️ 면책을 '권유하지 않습니다'로 쓰지 않는다. 본문이 방향을 분명히
+    # 말하는데 말미에서 그걸 부인하면 글이 스스로를 무른다. 대신 **사실과
+    # 견해를 가르고 책임 소재를 밝힌다** — 이 편이 더 정직하고 더 강하다.
+    body.append('<p><i>※ 숫자는 한국부동산원·국토교통부·KOSIS·한국은행 공개 '
+                '데이터를 가공한 것이고, <b>판단과 전망은 글쓴이 개인의 견해</b>'
+                '입니다. 투자 결정과 그 결과는 읽는 분의 몫입니다.</i></p>')
 
     # 5개로 축소(①과 같은 이유). 지역명 2개는 매주 바뀌고 뒤 3개는 고정이라
     # 채널 주제는 유지된다. '입주물량'은 넣지 않는다 — 분양 확정분을 뜻하는
@@ -866,16 +878,22 @@ def capture_zone(z):
 # 아래 끝에서 잰 오프셋**이 안정적이다. 실측(2026-08-24 회차, 배율 2):
 #   지도 높이 3130 · 수도권/충청 경계는 아래 끝에서 1765 위
 MAP_H, MAP_SPLIT, MAP_X0, MAP_X1 = 3130, 1765, 250, 1830
+# TOP10 표는 지도 바로 위에 있다 — 지도 top에서 위로 잰다(실측 778 높이).
+TOP10_UP, TOP10_H, TOP10_X0, TOP10_X1 = 782, 778, 240, 1960
 
 
 def capture_weekly_map():
-    """시군구 타일 지도를 두 장으로 떠서 (수도권, 지방) 경로를 돌려준다.
+    """시군구 지도 두 장 + 상승/하락 TOP10 한 장을 떠서 경로를 돌려준다.
 
-    실패하면 (None, None, 사유) — 이미지 때문에 초안 생성이 막히면 안 된다.
+    돌려주는 값: (수도권지도, 지방지도, TOP10, 사유)
+    실패하면 앞 셋이 None — 이미지 때문에 초안 생성이 막히면 안 된다.
+
+    TOP10을 넣는 이유: 순위와 **전주 대비 순위 변동**(▲18위)까지 나와서
+    표만으로 이야기가 된다(2026-08-30 사용자: 그것도 넣으면 더 재밌겠다).
     """
     exe = find_chrome()
     if not exe:
-        return None, None, 'Chrome/Edge를 찾지 못했습니다'
+        return None, None, None, 'Chrome/Edge를 찾지 못했습니다'
     tmp = os.path.join(OUT, '_sggmap.png')
     for f in (tmp,):
         try:
@@ -892,28 +910,33 @@ def capture_weekly_map():
              SITE + '/#stats-market'],
             timeout=120, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
-        return None, None, '캡처 실행 실패: %s' % e
+        return None, None, None, '캡처 실행 실패: %s' % e
     if proc.returncode != 0 or not os.path.exists(tmp):
-        return None, None, '캡처 실패(크롬 종료코드 %s)' % proc.returncode
+        return None, None, None, '캡처 실패(크롬 종료코드 %s)' % proc.returncode
     try:
         from PIL import Image
         im = Image.open(tmp).convert('RGB')
         bs = [b for b in _blocks(im, gap=70, keep=120) if b[2] > 2000]
         if not bs:
-            return None, None, '지도 덩어리를 못 찾았습니다(화면 구조가 바뀌었을 수 있음)'
+            return None, None, None, '지도 덩어리를 못 찾았습니다(화면 구조가 바뀌었을 수 있음)'
         bottom = bs[0][1]
         top, split = bottom - MAP_H, bottom - MAP_SPLIT
         if top < 200 or split - top < 800 or bottom - split < 800:
-            return None, None, '지도 위치가 예상과 다릅니다(top=%d split=%d bottom=%d)' % (
+            return None, None, None, '지도 위치가 예상과 다릅니다(top=%d split=%d bottom=%d)' % (
                 top, split, bottom)
         a = os.path.join(OUT, 'weekly-sgg-1.png')
         b = os.path.join(OUT, 'weekly-sgg-2.png')
         im.crop((MAP_X0, top, MAP_X1, split)).save(a)
         im.crop((MAP_X0, split - 10, MAP_X1, bottom + 10)).save(b)
+        c = None
+        if top - TOP10_UP > 100:
+            c = os.path.join(OUT, 'weekly-top10.png')
+            im.crop((TOP10_X0, top - TOP10_UP, TOP10_X1, top - 4)).save(c)
+            c = os.path.relpath(c, ROOT)
         os.remove(tmp)
-        return os.path.relpath(a, ROOT), os.path.relpath(b, ROOT), None
+        return os.path.relpath(a, ROOT), os.path.relpath(b, ROOT), c, None
     except Exception as e:
-        return None, None, '자르기 실패: %s' % e
+        return None, None, None, '자르기 실패: %s' % e
 
 
 def _blocks(im, gap=70, keep=60):
