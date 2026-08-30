@@ -133,9 +133,14 @@ def pick_zone(rows):
 # 해석은 기계가 못 쓴다. 이 자리를 비워 둔 채 발행하면 시세 숫자만 나열한 글이
 # 되어 블로그 톤(분석)에서 떨어진다. 눈에 띄라고 대괄호로 남긴다.
 OUTLOOK_PLACEHOLDER = (
-    '[여기에 전망을 2~4문장으로. 위 숫자를 다시 읊지 말고 <b>그래서 어떻게 될 것</b>'
-    '인지 쓸 것. 주어를 분명히 하세요 — "제 판단으로는". 시점을 단정하지 말고 '
-    '방향을 말하는 게 안전하고, 그 편이 나중에 맞습니다.]')
+    '[여기에 전망을 3~5문장으로. 위 숫자를 다시 읊지 말고 <b>그래서 어떻게 될 것</b>'
+    '인지 쓸 것.<br>'
+    '① <b>결론을 첫 문장에.</b> "제 판단으로는, 이 지역은 지금 ○○ 구간입니다"처럼 '
+    '한 줄로 못 박고 시작한다. 읽고 나서 방향이 안 읽히면 안 쓴 것과 같다.<br>'
+    '② 근거는 그다음. 앞에 깔린 숫자(공급 비율·미분양·금리) 중 <b>가장 센 것 하나</b>를 '
+    '고른다.<br>'
+    '③ 시점은 단정하지 않는다 — 방향은 공급이 정하지만 시점은 금리와 재고 소화가 '
+    '정한다. 다만 그 유보를 <b>결론 앞에 두지 말 것</b>. 앞에 두면 결론이 죽는다.]')
 
 
 def _cd_change(sts):
@@ -264,6 +269,21 @@ def extra_section(adv, sts, rot):
 
 # ---------------------------------------------------------------- 초안 ①
 def draft_weekly(adv, sts, rows):
+    sgg1 = sgg2 = None
+    sggerr = '--no-shot 로 건너뜀'
+    if '--no-shot' not in sys.argv:
+        sgg1, sgg2, sggerr = capture_weekly_map()
+    if sgg1 and sgg2:
+        sggnote = ('시군구 지도를 자동으로 떴습니다.<br>'
+                   '<b>%s</b> → [시군구 지도 ① 수도권·강원]<br>'
+                   '<b>%s</b> → [시군구 지도 ② 충청 이남]<br>'
+                   '①에는 범례가 없으니 캡션에 "위 = 매매 · 아래 = 전세"를 적어 '
+                   '주세요. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 파일을 '
+                   '직접 올려야 합니다.' % (sgg1, sgg2))
+    else:
+        sggnote = ('시군구 지도 없음 — %s. 본문의 자리 표시자를 지우거나 '
+                   '%s/#stats-market 을 직접 캡처해 넣으세요.' % (sggerr, SITE))
+
     W = adv['weekly']
     p = W['rows'][-1]['p']
     rot = rot_index(p)
@@ -359,7 +379,20 @@ def draft_weekly(adv, sts, rows):
     if gu:
         body.append('<p>서울 안에서는 %s 순으로 올랐습니다.</p>' %
                     ' · '.join('<b>%s %s</b>' % (k, pct(v)) for k, v in gu))
-    body.append('<p>[여기에 시세 지도 이미지를 넣어 주세요]</p>')
+    # 시도 타일 지도(share/weekly-map.png)를 넣던 자리다. 뺐다 — 그 값들은 바로
+    # 위 표에 그대로 있어 중복이고, 시군구 지도가 훨씬 값어치 있다(2026-08-30
+    # 사용자). 시도 지도는 /weekly/ og:image로는 계속 쓴다.
+    #
+    # 두 장으로 가르는 이유: 187개 시군구가 한 장에 들어가면 네이버 모바일에서
+    # 타일 글씨가 안 읽힌다.
+    body.append('<p>시군구로 내려가 보면 같은 권역 안에서도 갈립니다.</p>')
+    body.append('<p>[여기에 시군구 지도 ① 수도권·강원 이미지를 넣어 주세요]</p>')
+    body.append('<p>[여기에 시군구 지도 ② 충청 이남 이미지를 넣어 주세요]</p>')
+    body.append('<p>타일마다 위가 매매, 아래가 전세입니다. 붉을수록 오르고 '
+                '푸를수록 내린 곳입니다.<br>👉 '
+                '<a href="%s/#stats-market?utm_source=naver_blog&amp;'
+                'utm_medium=social&amp;utm_campaign=weekly_map">'
+                '지도에서 직접 찾아보기</a></p>' % SITE)
 
     # ── ② 해석 자리. 기계가 채울 수 없는 부분이라 비워 두고, 재료(위 표·순위)만
     # 앞에 깔아 둔다. 블로그 이웃들이 기대하는 건 숫자 나열이 아니라 해석이므로
@@ -418,10 +451,7 @@ def draft_weekly(adv, sts, rows):
     # 입력도 빨라진다. 매주 13개를 손으로 넣는 건 그 값을 못 한다(사용자 지적).
     tags = ['주간아파트시세', '아파트시세', '집값전망', '부동산데이터', '아공맵']
     return dict(title=title, body='\n'.join(body), tags=tags, kw='주간 아파트 시세',
-                img=r'share\weekly-map.png',
-                imgnote='이미지 <b>share\\weekly-map.png</b> → 본문의 [여기에 시세 '
-                        '지도] 자리. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 '
-                        '파일을 직접 올리고, 캡션을 달아 주세요.')
+                img=(sgg1 or sgg2 or None), imgnote=sggnote)
 
 
 # ---------------------------------------------------------------- 초안 ②
@@ -823,6 +853,67 @@ def capture_zone(z):
     except Exception as e:
         return os.path.relpath(out, ROOT), extra, '다듬기 실패(원본 그대로): %s' % e
     return os.path.relpath(out, ROOT), extra, None
+
+
+# /#stats-market 의 시군구 타일 지도 — 매주 글에 넣을 두 장.
+#
+# 왜 두 장인가: 187개 시군구가 한 장에 들어가면 네이버 모바일(폭 ~700px)에서
+# 타일 글씨가 안 읽힌다. 수도권·강원 / 충청 이남으로 갈라야 각 타일이 읽힌다
+# (2026-08-30 사용자 요청).
+#
+# 왜 아래에서 재는가: 위쪽엔 TOP10 표가 있고 그 높이가 회차마다 미세하게
+# 달라진다. 반면 타일 배치는 시군구 목록이 바뀌지 않는 한 고정이라, **지도
+# 아래 끝에서 잰 오프셋**이 안정적이다. 실측(2026-08-24 회차, 배율 2):
+#   지도 높이 3130 · 수도권/충청 경계는 아래 끝에서 1765 위
+MAP_H, MAP_SPLIT, MAP_X0, MAP_X1 = 3130, 1765, 250, 1830
+
+
+def capture_weekly_map():
+    """시군구 타일 지도를 두 장으로 떠서 (수도권, 지방) 경로를 돌려준다.
+
+    실패하면 (None, None, 사유) — 이미지 때문에 초안 생성이 막히면 안 된다.
+    """
+    exe = find_chrome()
+    if not exe:
+        return None, None, 'Chrome/Edge를 찾지 못했습니다'
+    tmp = os.path.join(OUT, '_sggmap.png')
+    for f in (tmp,):
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except OSError:
+            pass
+    try:
+        proc = subprocess.run(
+            [exe, '--headless=new', '--disable-gpu', '--hide-scrollbars',
+             '--force-device-scale-factor=%d' % SHOT_SCALE,
+             '--virtual-time-budget=8000',      # SPA가 뷰를 바꿀 시간을 준다
+             '--window-size=1100,3200', '--screenshot=%s' % tmp,
+             SITE + '/#stats-market'],
+            timeout=120, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        return None, None, '캡처 실행 실패: %s' % e
+    if proc.returncode != 0 or not os.path.exists(tmp):
+        return None, None, '캡처 실패(크롬 종료코드 %s)' % proc.returncode
+    try:
+        from PIL import Image
+        im = Image.open(tmp).convert('RGB')
+        bs = [b for b in _blocks(im, gap=70, keep=120) if b[2] > 2000]
+        if not bs:
+            return None, None, '지도 덩어리를 못 찾았습니다(화면 구조가 바뀌었을 수 있음)'
+        bottom = bs[0][1]
+        top, split = bottom - MAP_H, bottom - MAP_SPLIT
+        if top < 200 or split - top < 800 or bottom - split < 800:
+            return None, None, '지도 위치가 예상과 다릅니다(top=%d split=%d bottom=%d)' % (
+                top, split, bottom)
+        a = os.path.join(OUT, 'weekly-sgg-1.png')
+        b = os.path.join(OUT, 'weekly-sgg-2.png')
+        im.crop((MAP_X0, top, MAP_X1, split)).save(a)
+        im.crop((MAP_X0, split - 10, MAP_X1, bottom + 10)).save(b)
+        os.remove(tmp)
+        return os.path.relpath(a, ROOT), os.path.relpath(b, ROOT), None
+    except Exception as e:
+        return None, None, '자르기 실패: %s' % e
 
 
 def _blocks(im, gap=70, keep=60):
