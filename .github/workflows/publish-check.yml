@@ -1,0 +1,48 @@
+name: 발행 확인 (알림 이슈 자동 닫기)
+
+# 발행일 알림이 만든 이슈를 사람이 매번 닫아야 했다. 주 2회 클릭이 쌓이면 결국
+# 안 닫게 되고, 그러면 열린 이슈 목록이 신호가 아니라 잡음이 된다 —
+# 2026-08-30에 실제로 4건이 밀려 있었다.
+#
+# 그래서 블로그 RSS로 발행을 확인해 닫는다. 기록은 그대로 남는다: 닫기 전에
+# 어떤 글이 그 이슈를 해소했는지 댓글로 적는다.
+#
+# ⚠️ 보수적으로 판단한다(tools/close_published_issues.py 참고).
+#   · 제목이 아니라 카테고리로 맞춘다 — 제목은 발행할 때 바뀐다
+#   · 이슈 예정일 이후에 올라온 글만 인정한다
+#   · 글 하나는 이슈 하나만 닫는다
+#   · RSS를 못 읽으면 아무것도 안 닫고 끝낸다
+#
+# 알림 자체(write-reminder.yml)와 분리한 이유: 알림은 화·금에만 도는데,
+# 수요일에 발행하면 금요일까지 이슈가 열린 채 남는다. 확인은 매일 돈다.
+
+on:
+  schedule:
+    - cron: '0 12 * * *'    # 매일 21:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '무엇을 닫을지 보기만 한다'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 발행 확인 후 이슈 닫기
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python3 tools/close_published_issues.py --dry-run
+          else
+            python3 tools/close_published_issues.py
+          fi
