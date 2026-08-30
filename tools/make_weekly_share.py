@@ -60,9 +60,32 @@ def fmt(v):
     return ('%+.2f' % v) if v != 0 else '0.00'
 
 
+def _week_back():
+    """--week N — N주 전 회차로 그린다(기본 0 = 최신).
+
+    발행이 밀리면 지난 주차 지도가 없어서 그 회차 글을 채울 수 없다. 실제로
+    2주가 비었다(2026-08-30). 기록을 이어 붙이려면 과거 회차도 그릴 수 있어야 한다.
+
+    ⚠️ N>0이면 **share/weekly-map.png를 덮지 않는다.** 그 파일은 /weekly/의
+    og:image이자 감시가 신선도를 읽는 곳이라(PNG 메타 agongmap-basis), 옛 주차로
+    덮으면 라이브 카드가 과거로 돌아가고 감시가 오경보를 낸다.
+    """
+    if '--week' not in sys.argv:
+        return 0
+    i = sys.argv.index('--week')
+    try:
+        return max(0, int(sys.argv[i + 1]))
+    except (IndexError, ValueError):
+        raise SystemExit('--week 뒤에 숫자를 줄 것 (0=최신, 1=한 주 전)')
+
+
 def main():
     W = load_weekly()
-    regs, row = W['regions'], W['rows'][-1]
+    back = _week_back()
+    if back >= len(W['rows']):
+        raise SystemExit('주간 계열이 %d회차뿐이다 — --week %d 는 없다'
+                         % (len(W['rows']), back))
+    regs, row = W['regions'], W['rows'][-1 - back]
     val = {r: row['ma'][i] for i, r in enumerate(regs)}
     je = {r: row['je'][i] for i, r in enumerate(regs)}
 
@@ -118,7 +141,9 @@ def main():
     d.text((IW // 2, IH - 62), 'agongmap.co.kr — 서울 구별·전국 시군구 상세 지도', font=noto(26), fill=INK, anchor='mm')
     d.text((IW // 2, IH - 30), '자료: 한국부동산원 R-ONE 전국주택가격동향조사 · 매주 목요일 자동 갱신', font=noto(18), fill=MUTED, anchor='mm')
 
-    out = os.path.join(ROOT, 'share', 'weekly-map.png')
+    # 과거 회차는 라이브 카드를 건드리지 않도록 drafts/로 뺀다(위 docstring 참고).
+    out = (os.path.join(ROOT, 'share', 'weekly-map.png') if not back
+           else os.path.join(ROOT, 'drafts', 'weekly-map-%s.png' % row['p']))
     # 조사기준일을 PNG 메타(tEXt)에 심는다 — 감시가 라이브 카드의 신선도를 읽을
     # 유일한 방법이다. 그림에서 날짜를 OCR할 수는 없고, 파일 해시로는 '배포가
     # 됐나'만 알지 '언제 주차인가'를 모른다. 2026-07-18 카드가 3주간 라이브에
@@ -126,7 +151,7 @@ def main():
     meta = PngImagePlugin.PngInfo()
     meta.add_text('agongmap-basis', row['p'])
     img.save(out, 'PNG', pnginfo=meta)
-    print('wrote share/weekly-map.png (%s)' % row['p'])
+    print('wrote %s (%s)' % (os.path.relpath(out, ROOT), row['p']))
 
 
 if __name__ == '__main__':
