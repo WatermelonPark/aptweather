@@ -74,6 +74,11 @@ FETCH_TIMEOUT = 25     # 원천 호출 타임아웃. 재시도 패스에서는 2
 # (verdict가 비면 recheck로 떨어지는 건 의도된 안전 방향이다 — watchdog.yml의
 #  `!= 'ok' && != 'final'` 참고. 여기서 말하는 건 '예산을 넘기면 안 된다'는 쪽이다.)
 # 25초 근거: 정상 응답은 2~3초다(update-cloud.yml 머리 주석의 실측). 10배 여유다.
+# ⚠️ 예산 재계산(2026-08-26, 지역명 충돌 검사 추가): 원천 호출이 21 → 25회가 됐다
+# (충돌 검사가 표 2개 × head+본문 = 4회). 최악 1차 25×25 + 사이트 5×20 = 12.1분,
+# 대기 75초와 재시도 패스를 더해 21.7분 — 30분 예산 안(여유 8.3분)이다.
+# 여기에 호출을 더 얹을 땐 **곱해서 다시 확인할 것**. 이 파일의 '최악 N분' 주석은
+# 과거 두 번 다 과소평가였다.
 # 근본 대책은 268행대 파생 페이지 감시처럼 ThreadPoolExecutor로 병렬화하는 것이다
 # (그러면 1차가 1분대로 떨어져 timeout-minutes도 되돌릴 수 있다).
 
@@ -389,6 +394,78 @@ def check_derived_pages(adv, stats):
         SKIPPED.append('파생 페이지(입주물량)')
         print('  입주물량  판정 못 함 — %s' % str(e)[:60])
     return out
+
+
+def check_region_collisions():
+    """원천의 지역 계층에서 **우리 지역 키와 마지막 조각이 겹치는 행**을 찾는다.
+
+    왜 이걸 보는가(2026-08-26, 타겟유저 문서 A 회신에서 발견):
+    배치는 R-ONE 계층 이름의 마지막 조각을 지역 키로 쓴다
+    (`full.rsplit('>', 1)[-1]` — update_adv_data의 주간·월간 시세). 2026-07
+    행정구역 개편에서 광주·전남 위에 `전남광주`가 끼어들었을 때 우리가 무사했던
+    게 이 설계 덕이다. `전남광주>광주` → '광주'로 그대로 잡혔다.
+
+    ⚠️ 그런데 이 설계는 **마지막 조각이 유일할 때만** 옳다. 예컨대 원천이
+    `경기>동부1권>광주시`를 '광주시' 대신 '광주'로 줄이는 순간, 경기 광주시 값이
+    광역시 광주 자리에 섞여 들어간다. 값은 그럴듯하게 나오고 합계 검사도
+    통과한다 — **조용히 틀린 데이터**가 되는 경로다.
+
+    나이·합계 검사는 이걸 원리적으로 못 잡는다(시점도 맞고 합도 맞는다).
+    그래서 이름 충돌을 따로 본다. 표 하나만 봐도 충분하다 — 재편은 표별로 따로
+    오지 않고 R-ONE 계층 전체에 한꺼번에 온다.
+    """
+    keys = set(U.WEEKLY_REGIONS)
+    fails = []
+    for label, tbl, cycle in (('주간 시세', U.RONE_TBL['maega'], 'WK'),
+                              ('월간 시세', U.RONE_MONTHLY_TBL['maega'], 'MM')):
+        try:
+            names = rone_region_names(tbl, cycle)
+        except Exception as e:
+            # 조회 실패는 '충돌 없음'이 아니다 — 못 본 것이다. FETCH_FAIL로 보내
+            # 새 IP 재확인 쪽으로 분류되게 한다(SKIPPED는 게이트 분자라 안 쓴다).
+            FETCH_FAIL.append('지역명 충돌(%s)' % label)
+            print('  %-10s 지역 목록 조회 실패 (%s)' % (label, str(e)[:40]))
+            continue
+        tails = {}
+        for full in names:
+            tails.setdefault(full.rsplit('>', 1)[-1], []).append(full)
+        hit = {k: v for k, v in tails.items() if k in keys and len(v) > 1}
+        if hit:
+            for k, v in sorted(hit.items()):
+                fails.append('%s 지역명 충돌: %r가 %d개 행에 걸린다 — %s'
+                             % (label, k, len(v), ', '.join(sorted(v))))
+            print('  %-10s 행 %d개 · 충돌 %d건  실패' % (label, len(names), len(hit)))
+        else:
+            print('  %-10s 행 %d개 · 충돌 없음' % (label, len(names)))
+    return fails
+
+
+def rone_region_names(tbl, cycle):
+    """R-ONE 표의 지역 계층 이름 집합(최신 한 시점).
+
+    이름만 필요하므로 최신 한 페이지만 받는다 — 시점 값은 안 본다.
+    """
+    base = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
+            '?KEY=%s&Type=json&STATBL_ID=%s&DTACYCLE_CD=%s'
+            % (os.environ.get('RONE_API_KEY', ''), tbl, cycle))
+    head = get_json(base + '&pIndex=1&pSize=1')
+    total = None
+    for blk in head.get('SttsApiTblData', []):
+        for h in blk.get('head', []) or []:
+            if 'list_total_count' in h:
+                total = h['list_total_count']
+    if not total:
+        raise RuntimeError('list_total_count 없음')
+    names = set()
+    for blk in get_json(base + '&pIndex=%d&pSize=1000'
+                        % ((total // 1000) + 1)).get('SttsApiTblData', []):
+        for r in blk.get('row', []) or []:
+            nm = (r.get('CLS_FULLNM') or '').strip()
+            if nm:
+                names.add(nm)
+    if not names:
+        raise RuntimeError('지역 행 없음')
+    return names
 
 
 def check_age(label, stamp, grace):
@@ -716,6 +793,9 @@ def main():
         # 안 되므로). 대신 FETCH_FAIL에 남겨 '새 IP로 재확인' 쪽으로 분류되게 한다.
         FETCH_FAIL.append('ADV.sido')
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
+
+    print('[지역 계층 — 이름 충돌 (배치의 rsplit 매핑이 성립하는가)]')
+    fails.extend(check_region_collisions())
 
     fails.extend(check_sido_sum(stats))
     fails.extend(check_derived_pages(adv, stats))

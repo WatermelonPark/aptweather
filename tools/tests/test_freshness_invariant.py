@@ -372,3 +372,54 @@ def test_aggregate_regions_are_monitored_too(monkeypatch):
     못 잡았다(2026-08-10 리뷰). 집계 페이지만 옛 시점이어도 잡혀야 한다."""
     f = _derived(monkeypatch, OKP, OKP, nat=OLDP)
     assert len(f) == 1 and '전국(2026.05)' in f[0], f
+
+
+# ---------------------------------------------------------------------------
+# 지역명 충돌 — 배치의 rsplit 매핑이 성립하는지 (2026-08-26)
+# ---------------------------------------------------------------------------
+
+def _names(monkeypatch, names):
+    """rone_region_names를 대체해 지정한 계층 이름 집합을 돌려준다."""
+    C.FETCH_FAIL[:] = []
+    monkeypatch.setattr(C, 'rone_region_names', lambda tbl, cycle: set(names))
+
+
+def test_no_collision_passes(monkeypatch):
+    """2026-07 개편 직후의 실제 모양 — 상위에 '전남광주'가 끼어도 마지막 조각은
+    유일하므로 통과해야 한다. 이게 우리가 그 개편을 무사히 넘긴 이유다."""
+    _names(monkeypatch, ['전국', '수도권', '서울', '경기', '경기>동부1권>광주시',
+                         '전남광주', '전남광주>광주', '전남광주>전남', '인천'])
+    assert C.check_region_collisions() == []
+    assert C.FETCH_FAIL == []
+
+
+def test_collision_is_caught(monkeypatch):
+    """'경기>동부1권>광주시'가 '광주'로 줄면 경기 광주시 값이 광역시 광주 자리에
+    섞인다. 값도 그럴듯하고 합계 검사도 통과하는 **조용히 틀린 데이터**라,
+    이름 충돌로만 잡을 수 있다."""
+    _names(monkeypatch, ['전남광주>광주', '경기>동부1권>광주', '서울'])
+    fails = C.check_region_collisions()
+    assert fails, '충돌을 못 잡았다 — 배치가 두 광주를 한 키로 섞는다'
+    assert any('광주' in f and '충돌' in f for f in fails), fails
+    # 어느 행들이 겹쳤는지 말해줘야 사람이 판단할 수 있다.
+    assert any('경기>동부1권>광주' in f for f in fails), fails
+
+
+def test_collision_only_counts_our_own_keys(monkeypatch):
+    """우리가 안 쓰는 이름이 겹치는 건 상관없다 — 그건 원천의 사정이다.
+    여기서 오탐이 나면 매 회차 빨간불이 뜨고 감시가 무시된다."""
+    _names(monkeypatch, ['A>중구', 'B>중구', '서울', '전남광주>광주'])
+    assert C.check_region_collisions() == []
+
+
+def test_lookup_failure_is_not_read_as_no_collision(monkeypatch):
+    """조회 실패는 '충돌 없음'이 아니라 '못 봤다'다. 조용히 통과시키면 감시가
+    켜진 채 아무것도 안 보는 상태가 된다 — FETCH_FAIL로 보내 새 IP 재확인
+    쪽으로 분류되게 한다(SKIPPED는 게이트 분자라 쓰지 않는다)."""
+    C.FETCH_FAIL[:] = []
+    def dead(tbl, cycle):
+        raise OSError('timed out')
+    monkeypatch.setattr(C, 'rone_region_names', dead)
+    assert C.check_region_collisions() == []      # 실패 사유로는 안 올린다
+    assert len(C.FETCH_FAIL) == 2, C.FETCH_FAIL   # 대신 조회 실패로 남는다
+    C.FETCH_FAIL[:] = []
