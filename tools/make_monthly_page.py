@@ -38,6 +38,13 @@ SITE = I.SITE
 OUT = os.path.join(ROOT, 'monthly')
 URL = SITE + '/monthly/'
 
+# ⚠️ 이 페이지의 최초 공개일. make_indicator_pages.PUBLISHED(2026-07-29)를
+# 물려쓰면 안 된다 — 그건 /moveins/·/jeonse-ratio/의 날짜다. 그대로 쓰면 이 URL이
+# 존재하지도 않던 5주 전에 발행됐다고 선언하고, sitemap lastmod도 그 날로 나간다
+# (2026-09-02 리뷰). 검색엔진에 거짓 신호를 보내는 쪽이라 반드시 자기 날짜를 쓴다.
+PUBLISHED = '2026-09-01'
+
+
 # 표에 싣는 지역 순서 — 집계 3을 앞에 두고 17시도가 따라온다(sido_zones 정본).
 ORDER = list(SZ.ORDER)
 AGG = set(SZ.AGG)
@@ -78,6 +85,24 @@ def month_label(p):
     return '%s년 %d월' % (m.group(1), int(m.group(2))) if m else str(p)
 
 
+def sort_key(p):
+    """기준 시점을 비교 가능한 'YYYY-MM'으로.
+
+    ⚠️ 한글 라벨('2026년 9월')을 그대로 max()에 넣으면 안 된다 — 자릿수를
+    안 맞춘 어휘 비교라 '2026년 9월' > '2026년 10월'이 된다. 10월부터 dateModified와
+    sitemap lastmod가 9월에 얼어붙는데, 표는 계속 바뀌므로 아무도 못 알아챈다
+    (2026-09-02 리뷰). 분기('2026Q3')는 그 분기의 마지막 달로 환산한다.
+    """
+    s = str(p)
+    m = re.match(r'^(\d{4})[.\-](\d{1,2})', s)
+    if m:
+        return '%s-%02d' % (m.group(1), int(m.group(2)))
+    m = re.match(r'^(\d{4})Q([1-4])$', s)
+    if m:
+        return '%s-%02d' % (m.group(1), int(m.group(2)) * 3)
+    return s
+
+
 def last_idx(d):
     """계열의 마지막 시점 인덱스와 라벨."""
     dates = d['dates']
@@ -109,21 +134,50 @@ def sum_last(d, i, n=12):
 
 
 def table(head, rows, note=''):
-    """지역 행 표. 집계 3은 agg 클래스로 위에 고정(SHELL의 정렬 스크립트 규약)."""
-    th = ''.join('<th scope="col" data-num tabindex="0" role="button" aria-sort="none">%s</th>'
-                 % esc(h) for h in head[1:])
+    """지역 행 표.
+
+    ⚠️ 표두에 tabindex/role="button"/aria-sort를 **달지 않는다.** SHELL의 정렬
+    스크립트는 `getElementById('utable')` 하나에만 붙는데 이 페이지엔 그 id가 없다.
+    달아 두면 눌러도 아무 일이 없는 버튼 17개가 탭 순서에 끼고, 스크린리더에는
+    '버튼'이라고 읽힌다. th에 role="button"을 얹는 것 자체가 SHELL 주석이 적어 둔
+    2026-08-08 감사의 회귀이기도 하다(정렬이 필요해지면 그때 id와 함께 붙일 것).
+
+    행 머리(지역명)는 여기서 <th scope="row">로 낸다 — 그것도 같은 스크립트가
+    런타임에 승격시키던 일이라, 스크립트가 안 도는 이 페이지에서는 직접 해야
+    20열 표에서 스크린리더가 '어느 지역'인지 말한다.
+    """
+    th = ''.join('<th scope="col">%s</th>' % esc(h) for h in head[1:])
     body = []
     for r in ORDER:
         tds = rows.get(r)
         if tds is None:
             continue
-        body.append('<tr%s><td>%s</td>%s</tr>'
+        body.append('<tr%s><th scope="row">%s</th>%s</tr>'
                     % (' class="agg"' if r in AGG else '', esc(r), tds))
     return ('<div class="tbl-wrap"><table><thead><tr>'
-            '<th scope="col" tabindex="0" role="button" aria-sort="none">%s</th>%s'
+            '<th scope="col">%s</th>%s'
             '</tr></thead><tbody>%s</tbody></table></div>%s'
             % (esc(head[0]), th, ''.join(body),
                ('<p class="note">%s</p>' % note) if note else ''))
+
+
+def ld_pack_here(headline, desc, url, modified):
+    """구조화 데이터. I.ld_pack은 I.PUBLISHED를 박아 쓰므로 그대로 못 쓴다."""
+    modified = max(modified, PUBLISHED)
+    return json.dumps([{
+        "@context": "https://schema.org", "@type": "Article",
+        "headline": headline, "description": desc,
+        "datePublished": PUBLISHED, "dateModified": modified,
+        "author": {"@type": "Organization", "name": "아공맵"},
+        "publisher": {"@type": "Organization", "name": "아공맵"},
+        "mainEntityOfPage": url,
+    }, {
+        "@context": "https://schema.org", "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "아공맵", "item": SITE + '/'},
+            {"@type": "ListItem", "position": 2, "name": "이달의 공급 통계"},
+        ],
+    }], ensure_ascii=False, indent=2)
 
 
 def sec(anchor, n, title, basis, source, body):
@@ -155,8 +209,9 @@ def build(adv, sts):
             wo = (row.get('wo') or [None] * len(mregs))[i]
             cells[r] = ('<td%s>%s</td><td%s>%s</td><td%s>%s</td>'
                         % (cls(ma), pv2(ma), cls(je), pv2(je), cls(wo), pv2(wo)))
-        lab = month_label(row['p'])
-        basis_list.append(lab)
+        raw = row['p']
+        lab = month_label(raw)
+        basis_list.append(raw)
         out.append(sec('price', 1, '시도별 매매·전세·월세', lab,
                        '한국부동산원 전국주택가격동향조사',
                        table(['지역', '매매', '전세', '월세'], cells,
@@ -170,14 +225,19 @@ def build(adv, sts):
         cur, yr = series_at(pm, i), sum_last(pm, i, 12)
         cells = {r: '<td>%s</td><td>%s</td>' % (num(cur.get(r)), num(yr.get(r)))
                  for r in ORDER if cur.get(r) is not None or yr.get(r) is not None}
-        lab = month_label(p)
-        basis_list.append(lab)
+        raw = p
+        lab = month_label(raw)
+        basis_list.append(raw)
         out.append(sec('permits', 2, '인허가', lab, esc(pm.get('source') or '국토교통부'),
                        table(['지역', '이 달', '최근 12개월 합'], cells,
                              '허가받은 단계의 물량(호). 보통 3~4년 뒤 입주로 이어집니다. '
                              '월별 편차가 커서 12개월 합을 함께 봅니다.')))
 
     # ── 3. 입주물량 ──────────────────────────────────────────────
+    # ⚠️ 열 이름에 '이번/다음 분기'를 쓰지 않는다. act[-1]은 **끝난** 분기
+    # (2026Q2)이고 fut[0]이 지금 **진행 중인** 분기(2026Q3)라, 상대 표현을 쓰면
+    # 한 칸씩 밀린다 — 게다가 진행 중인 분기 번호가 화면에 아예 안 나왔다
+    # (2026-09-02 리뷰). 분기를 그대로 적으면 어긋날 여지가 없다.
     occ = adv.get('occupancy') or {}
     orows, oregs = occ.get('rows') or [], occ.get('regions') or []
     if orows:
@@ -194,11 +254,14 @@ def build(adv, sts):
             a = (last.get('v') or [])[i] if i < len(last.get('v') or []) else None
             b = (nxt.get('v') or [])[i] if nxt and i < len(nxt.get('v') or []) else None
             cells[r] = '<td>%s</td><td>%s</td>' % (num(a), num(b))
-        lab = last.get('p', '')
-        basis_list.append(lab)
+        raw = last.get('p', '')
+        lab = raw
+        basis_list.append(raw)
         out.append(sec('moveins', 3, '입주물량', lab, '국토교통부 준공 실적',
-                       table(['지역', '이번 분기(실적)', '다음 분기(예정)'], cells,
-                             '실제로 집이 들어온 물량(세대). 분기 단위입니다. '
+                       table(['지역', '%s(실적)' % lab, '%s(예정)' % (nxt.get('p', '') if nxt else '-')],
+                             cells,
+                             '실제로 집이 들어온 물량(세대). 분기 단위라 다른 지표와 '
+                             '기준 시점이 다릅니다 — 표에 분기를 그대로 적었습니다. '
                              '<a href="/moveins/">입주물량 자세히 보기</a>')))
 
     # ── 4. 미분양 ────────────────────────────────────────────────
@@ -218,8 +281,9 @@ def build(adv, sts):
                 else ('<td class="dn">%s</td>' % format(int(d), ',') if d < 0
                       else '<td>0</td>'))
             cells[r] = '<td>%s</td>%s' % (num(c), arrow or '<td>·</td>')
-        lab = month_label(p)
-        basis_list.append(lab)
+        raw = p
+        lab = month_label(raw)
+        basis_list.append(raw)
         out.append(sec('unsold', 4, '미분양', lab, esc(un.get('source') or '국토교통부'),
                        table(['지역', '미분양(호)', '전월 대비'], cells,
                              '다 짓고도 팔리지 않아 남은 집. 이미 지어진 재고라 '
@@ -239,8 +303,9 @@ def build(adv, sts):
             d = None if prev.get(r) is None else c - prev[r]
             cells[r] = ('<td>%s</td><td%s>%s</td>'
                         % ('·' if c is None else '%.1f' % c, cls(d), pv2(d)))
-        lab = month_label(p)
-        basis_list.append(lab)
+        raw = p
+        lab = month_label(raw)
+        basis_list.append(raw)
         out.append(sec('jeonse', 5, '전세가율', lab, esc(jr.get('source') or '한국부동산원'),
                        table(['지역', '전세가율(%)', '1년 전 대비(%p)'], cells,
                              '매매가 대비 전세가 비율. <a href="/jeonse-ratio/">전세가율 자세히 보기</a>')))
@@ -272,15 +337,28 @@ def main():
         r'const STATS\s*=\s*(\{.*?\});?\s*(?:/\*|const |$)', src, re.S).group(1))
 
     secs, basis = build(adv, sts)
-    if not secs:
-        print('monthly: 실을 계열이 없다 — 생성하지 않음')
+    # ⚠️ 계열 하나가 비면 그 섹션만 조용히 빠진 4섹션 페이지가 커밋된다.
+    # 그 자체도 문제지만 더 나쁜 건 **다음 회차**다 — 배치는 pytest를 생성보다
+    # 먼저 돌리므로, 4섹션 페이지를 본 test_five_indicators_in_fixed_order가
+    # 실패해 **데이터 커밋 전체가 막힌다**(주간 시세·지역 20장까지 함께).
+    # 원인은 이 화면인데 증상은 파이프라인 전체 정지라 진단이 오래 걸린다.
+    # 그래서 여기서 먼저 죽는다: 커밋되지 않으니 라이브는 직전 판을 유지하고,
+    # 배치 로그가 '어느 지표가 비었는지'를 그 자리에서 말한다(2026-09-02 리뷰).
+    want = ['price', 'permits', 'moveins', 'unsold', 'jeonse']
+    got = [re.search(r'<section id="([a-z]+)"', s).group(1) for s in secs]
+    if got != want:
+        print('monthly: 지표가 빠졌다 — 생성하지 않음 (기대 %s / 실제 %s)'
+              % (want, got))
+        print('  원자료에 해당 계열이 없다. data.js와 update_adv_data 쪽을 볼 것.')
         return 1
 
-    newest = max(basis) if basis else ''
-    # dateModified는 가장 최신 기준월에서 유도한다. 데이터가 안 바뀌면 안 움직여야
+    # dateModified는 가장 최신 기준 시점에서 유도한다. 데이터가 안 바뀌면 안 움직여야
     # sitemap lastmod가 매일 흔들리지 않는다(/moveins/와 같은 규칙).
-    m = re.match(r'^(\d{4})년 (\d{1,2})월$', newest)
-    mod_iso = ('%s-%02d-01' % (m.group(1), int(m.group(2)))) if m else I.PUBLISHED
+    # 비교는 반드시 sort_key로 — 한글 라벨 어휘 비교는 10월을 9월보다 작다고 본다.
+    newest_raw = max(basis, key=sort_key) if basis else ''
+    newest = month_label(newest_raw)
+    key = sort_key(newest_raw)                       # 'YYYY-MM'
+    mod_iso = (key + '-01') if re.match(r'^\d{4}-\d{2}$', key) else PUBLISHED
 
     toc = ('<div class="wrap"><nav class="toc" aria-label="지표 목록">'
            '<a href="#price">1 매매·전세·월세</a><a href="#permits">2 인허가</a>'
@@ -305,7 +383,7 @@ def main():
         I.SHELL,
         title=esc(title), ogtitle=esc('이달의 공급 통계 — 한 화면 정리'),
         desc=esc(desc), url=URL,
-        ld=I.ld_pack('이달의 공급 통계', desc, URL, '이달의 공급 통계', mod_iso),
+        ld=ld_pack_here('이달의 공급 통계', desc, URL, mod_iso),
         src='한국부동산원 · 국토교통부 · KOSIS',
         body=body)
     # 이 페이지 전용 CSS를 SHELL 스타일 끝에 얹는다(SHELL을 건드리지 않는다).
@@ -325,11 +403,11 @@ def main():
     # 날짜만 다른 재생성은 커밋하지 않는다(/zone/과 같은 규칙).
     DATE = re.compile(r'\d{4}-\d{2}-\d{2}')
     if old and DATE.sub('@', old) == DATE.sub('@', html):
-        I.update_sitemap([('/monthly/', I.not_before_pub(mod_iso))])
+        I.update_sitemap([('/monthly/', max(mod_iso, PUBLISHED))])
         print('monthly: 내용 변경 없음 — 그대로 둠 (기준 %s)' % newest)
         return 0
     io.open(p, 'w', encoding='utf-8', newline='\n').write(html)
-    I.update_sitemap([('/monthly/', I.not_before_pub(mod_iso))])
+    I.update_sitemap([('/monthly/', max(mod_iso, PUBLISHED))])
     print('monthly: /monthly/ 생성 (기준 %s, %d개 지표, %.1f KB)'
           % (newest, len(secs), len(html.encode('utf-8')) / 1024))
     return 0

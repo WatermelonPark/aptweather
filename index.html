@@ -252,17 +252,20 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
     <div class="cyc-mini">
       <!-- 화살표 호의 끝점은 위 타원 위의 점이어야 한다. 예전 좌표는 옆면 두 점이
      타원 밖(잔차 0.865)이라 링에서 최대 8px 벌어져 보였다(2026-09-01 리뷰).
-     지금 값은 cx160 cy95 rx118 ry66을 각도 ±24도 간격으로 끊어 계산한 것 —
+     지금 값은 cx160 cy95 rx118 ry66에서 시작 16도·끝 32도 간격으로 끊은 것이다.
+     간격을 좌우 비대칭으로 둔 이유는 **화살촉**이 라벨 사각형 안에서 끝나면
+     라벨이 나중에 그려져 덮어버리기 때문이다(±24도 대칭일 때 위·아래 둘이
+     그랬다 — 2026-09-02 리뷰). 시작은 짧게 잘라 호를 길게 유지한다.
      좌표를 손으로 고치지 말고 그 파라미터로 다시 계산할 것. -->
       
       <svg viewBox="0 0 320 190" role="img" aria-label="공급 부족에서 시작해 전세·매매·신축 공급을 거쳐 다시 도는 순환 도식">
         <defs><marker id="cma" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
           <path d="M0 0 L8 4 L0 8 z" fill="#9aa8a2"></path></marker></defs>
         <ellipse cx="160" cy="95" rx="118" ry="66" fill="none" stroke="#dfe6e2" stroke-width="1.5"></ellipse>
-        <path d="M208.0 34.7 A118 66 0 0 1 267.8 68.2" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
-        <path d="M267.8 121.8 A118 66 0 0 1 208.0 155.3" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
-        <path d="M112.0 155.3 A118 66 0 0 1 52.2 121.8" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
-        <path d="M52.2 68.2 A118 66 0 0 1 112.0 34.7" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M192.5 31.6 A118 66 0 0 1 260.1 60.0" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M273.4 113.2 A118 66 0 0 1 222.5 151.0" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M127.5 158.4 A118 66 0 0 1 59.9 130.0" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M46.6 76.8 A118 66 0 0 1 97.5 39.0" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
         <g font-family="inherit" text-anchor="middle">
           <g><rect x="106" y="16" width="108" height="26" rx="2" fill="#131e24"></rect>
              <text x="160" y="33" font-size="12.5" font-weight="600" fill="#fff">공급 부족</text></g>

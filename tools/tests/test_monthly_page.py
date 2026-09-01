@@ -50,7 +50,9 @@ def test_every_indicator_shows_its_basis_month_and_source(html):
 def test_gwangju_and_jeonnam_are_separate(html):
     """정부 화면의 통합 표기('전남광주')를 따라가지 않는다."""
     seg = html.split('id="price"', 1)[1].split('</section>', 1)[0]
-    names = re.findall(r'<tr[^>]*><td>([^<]+)</td>', seg)
+    # 행 머리는 <th scope="row">다 — 20열 표에서 스크린리더가 '어느 지역'인지
+    # 말하게 하려고 td에서 승격시켰다(2026-09-02). 마크업이 또 바뀌면 여기도 같이.
+    names = re.findall(r'<tr[^>]*><th scope="row">([^<]+)</th>', seg)
     assert '광주' in names and '전남' in names, '광주·전남이 분리로 안 나온다'
     merged = [n for n in names if re.search(r'전남광주|광주전남', n)]
     assert not merged, '통합 표기가 섞였다: %s' % merged
@@ -92,3 +94,58 @@ def test_batch_generates_and_commits_it():
     assert 'tools/make_monthly_page.py' in y, '배치가 이 화면을 만들지 않는다'
     m = re.search(r'TARGETS="([^"]+)"', y)
     assert m and 'monthly' in m.group(1).split(), 'TARGETS에 monthly가 없다'
+
+
+def test_no_dead_sort_affordances(html):
+    """누르면 아무 일도 없는 버튼을 탭 순서에 두지 않는다.
+
+    SHELL의 정렬 스크립트는 `getElementById('utable')` 하나에만 붙는데 이 페이지엔
+    그 id가 없다. 그런데 표두에 tabindex/role="button"/aria-sort를 달아 두면
+    스크린리더는 '버튼'이라 읽고 키보드는 17번 멈추는데 눌러도 아무 일이 없다
+    (2026-09-02 리뷰). 정렬을 넣으려면 id와 함께 붙일 것.
+    """
+    body = html.split('</head>', 1)[1]
+    for attr in ('tabindex', 'role="button"', 'aria-sort'):
+        bad = [m for m in re.findall(r'<th[^>]*>', body) if attr in m]
+        assert not bad, '표두에 %s가 달렸는데 정렬 스크립트가 안 붙는다: %s' % (attr, bad[:2])
+
+
+def test_moveins_columns_name_the_actual_quarters(html):
+    """'이번/다음 분기' 같은 상대 표현은 한 칸씩 밀린다.
+
+    act[-1]은 끝난 분기, fut[0]이 지금 진행 중인 분기라 상대 표현을 쓰면
+    진행 중인 분기가 '다음'이 되고 그 번호는 화면에 아예 안 나왔다.
+    """
+    seg = html.split('id="moveins"', 1)[1].split('</section>', 1)[0]
+    heads = re.findall(r'<th scope="col">([^<]*)</th>', seg)
+    quarters = [h for h in heads if re.search(r'\d{4}Q[1-4]', h)]
+    assert len(quarters) >= 2, '분기명이 열 이름에 없다: %s' % heads
+    assert not [h for h in heads if '이번 분기' in h or '다음 분기' in h],         '상대 표현이 남아 있다: %s' % heads
+
+
+def test_page_has_its_own_publication_date(html):
+    """make_indicator_pages.PUBLISHED를 물려쓰면 URL이 없던 날짜로 발행됐다고 선언한다."""
+    m = re.search(r'"datePublished": "([0-9-]+)"', html)
+    assert m, 'datePublished가 없다'
+    assert m.group(1) >= '2026-09-01', (
+        'datePublished가 %s다 — 이 URL이 생기기 전이다(다른 페이지 날짜를 물려썼다)'
+        % m.group(1))
+
+
+def test_basis_sort_key_orders_months_numerically():
+    """한글 라벨 어휘 비교는 10월을 9월보다 작다고 본다.
+
+    max()가 그걸 그대로 쓰면 10월부터 dateModified와 sitemap lastmod가 9월에
+    얼어붙는데 표는 계속 바뀌므로 아무도 못 알아챈다(2026-09-02 리뷰).
+    """
+    import sys, os as _os
+    sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..'))
+    import make_monthly_page as M
+
+    # 사고 재현: 라벨끼리 비교하면 9월이 이긴다
+    assert max(['2026년 10월', '2026년 9월']) == '2026년 9월'
+    # sort_key를 끼우면 바로잡힌다
+    assert max(['2026.09', '2026.10'], key=M.sort_key) == '2026.10'
+    assert M.sort_key('2026.9') == '2026-09'
+    assert M.sort_key('2026Q3') == '2026-09', '분기는 그 분기 마지막 달로'
+    assert M.sort_key('2026Q4') > M.sort_key('2026.09')
