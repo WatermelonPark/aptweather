@@ -614,9 +614,6 @@
   .home-sec h2{font-size:clamp(21px,4.6vw,27px);font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
   .home-sec h3{font-size:clamp(17px,3.6vw,20px);font-weight:700;letter-spacing:-.01em;margin-bottom:10px}
   .home-sec p{font-size:16px;line-height:1.75;color:var(--ink2);max-width:520px;margin:0 auto}
-  /* 주간 시세 배너의 지도 실물(share/weekly-map.png, 1200×630). width/height를
-     마크업에 적어 두고 aspect-ratio로 자리를 미리 잡는다 — lazy 이미지가 늦게
-     도착하면서 아래 버튼을 밀어내면 그게 곧 레이아웃 점프다. */
   /* 주간 시세 카드 격자. 예전엔 1200×630 PNG를 걸었는데 고정 비율이라 폭이
      좁아지면 글자가 뭉갰다(2026-08-17). auto-fit으로 4열→3열→2열로 접힌다.
      ⚠️ 격자선은 셀이 box-shadow로 그린다 — 컨테이너 배경으로 그리면 마지막 줄

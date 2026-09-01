@@ -46,6 +46,9 @@ def load_weekly():
 
 
 def cell_bg(v, ref=0.4):
+    # 색도 **표시값**으로 정한다 — 표시가 0.00인데 원값 부호로 칠하면
+    # 같은 '0.00'이 세 색으로 갈린다(사이트 pvSign과 같은 규칙).
+    v = pv2r(v)
     if v is None or v == 0:
         return (239, 234, 221)
     a = min(abs(v) / ref, 1.0)
@@ -55,9 +58,25 @@ def cell_bg(v, ref=0.4):
     return tuple(round(b * al + p * (1 - al)) for b, p in zip(base, PAPER))
 
 
+def pv2r(v):
+    """표시 자릿수(소수 둘째)로 **먼저** 반올림한다 — 부호는 그 결과로 정한다.
+
+    ⚠️ 원값의 부호를 쓰면 -0.0012가 '-0.00'이 되고 잉크까지 파랗게 나간다
+    (부산 실측). 값은 0인데 글자와 색이 다른 말을 하는 상태다. 사이트 쪽
+    정본(index.html의 pv2/pvSign)이 같은 이유로 이 순서를 쓴다 —
+    2026-08-18에 JS만 고치고 이 파일을 놓쳐 카톡·네이버로 나가는 카드에만
+    결함이 남아 있었다(2026-09-01 리뷰).
+    """
+    if v is None:
+        return None
+    r = round(v, 2)
+    return r + 0.0          # -0.0 → 0.0
+
+
 def fmt(v):
-    if v is None: return '·'
-    return ('%+.2f' % v) if v != 0 else '0.00'
+    r = pv2r(v)
+    if r is None: return '·'
+    return ('%+.2f' % r) if r != 0 else '0.00'
 
 
 def _week_back():
@@ -118,16 +137,25 @@ def main():
         v = val.get(name)
         d.rounded_rectangle((px, py, px + TW, py + TH), 16, fill=cell_bg(v), outline=LINE, width=2)
         d.text((px + TW // 2, py + 34), name, font=noto(30), fill=INK, anchor='mm')
-        tc = (143, 35, 24) if (v or 0) > 0 else ((18, 60, 92) if (v or 0) < 0 else MUTED)
+        # 글자색도 표시값 기준(pv2r) — 원값으로 정하면 '0.00'이 빨강/파랑으로 갈린다
+        rv = pv2r(v) or 0
+        tc = (143, 35, 24) if rv > 0 else ((18, 60, 92) if rv < 0 else MUTED)
         d.text((px + TW // 2, py + 74), fmt(v), font=noto(31), fill=tc, anchor='mm')
         jv = je.get(name)
+        rj = pv2r(jv) or 0
         d.text((px + TW // 2, py + 105), '전세 %s' % fmt(jv), font=noto(18),
-               fill=(143, 35, 24) if (jv or 0) > 0 else ((18, 60, 92) if (jv or 0) < 0 else MUTED), anchor='mm')
+               fill=(143, 35, 24) if rj > 0 else ((18, 60, 92) if rj < 0 else MUTED), anchor='mm')
 
     # 요약 한 줄 (상승·하락 상위)
-    ranked = sorted((r for r in regs if val.get(r) is not None and r != '수도권'), key=lambda r: val[r], reverse=True)
-    up3 = [r for r in ranked if val[r] > 0][:3]
-    dn3 = [r for r in reversed(ranked) if val[r] < 0][:3]
+    # ⚠️ 집계 3종(전국·수도권·지방)을 **전부** 뺀다. 예전엔 '수도권'만 빼서
+    # 전국(+0.08)이 충북(+0.07)을 밀어내고 시도 순위에 끼어들었다(실측).
+    # 집계는 시도와 같은 층위가 아니라 그 합이라, 섞으면 순위가 자기 자신과
+    # 경쟁한다 — 홈 격자가 집계를 따로 떼어낸 것과 같은 이유(2026-09-01 리뷰).
+    AGG = ('전국', '수도권', '지방')
+    ranked = sorted((r for r in regs if val.get(r) is not None and r not in AGG),
+                    key=lambda r: pv2r(val[r]), reverse=True)
+    up3 = [r for r in ranked if pv2r(val[r]) > 0][:3]
+    dn3 = [r for r in reversed(ranked) if pv2r(val[r]) < 0][:3]
     sy = oy + 5 * TH + 4 * G + 34
     if up3:
         d.text((IW // 2, sy), '상승: ' + ' · '.join('%s %s' % (r, fmt(val[r])) for r in up3),

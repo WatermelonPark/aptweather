@@ -106,15 +106,18 @@ def main():
     # 전체 sgg는 59.7KB인데 그중 필요한 건 4.8KB뿐이다.
     w = adv.get('weekly') or {}
     sgg = w.get('sgg') or {}
+    # 시도 rows와 sgg는 **따로 판정한다**. 예전에는 둘 다
+    # `if sgg.get('rows')` 안에 있어서, 시군구 계열만 비어도 홈 배너까지
+    # 통째로 사라졌다 — display:none이라 에러도 테스트 실패도 없이 조용히
+    # 빈다(2026-09-01 리뷰). 배너(시도)와 히어로 지도(시군구)는 서로 다른
+    # 입력이라, 한쪽이 비어도 다른 쪽은 그려야 한다.
+    wk = {'regions': w.get('regions', [])}
+    if w.get('rows'):
+        wk['rows'] = w['rows'][-1:]
     if sgg.get('rows'):
-        # rows(시도 20곳 최신 1주)도 함께 싣는다 — 홈 주간 배너가 카드 격자를
-        # 직접 그리는 입력이다(2026-08-17). 예전엔 그 자리에 1200×630 PNG를
-        # 넣었는데 고정 비율이라 화면 폭이 좁으면 글자가 뭉갰다. 20개 지역 ×
-        # 값 2개뿐이라 페이로드는 1KB 미만이고, 지연 로드로 미루면 첫 화면에
-        # 빈 칸이 보였다가 채워진다.
-        core_adv['weekly'] = {'regions': w.get('regions', []),
-                              'rows': (w.get('rows') or [])[-1:],
-                              'sgg': {'codes': sgg.get('codes', []), 'rows': sgg['rows'][-1:]}}
+        wk['sgg'] = {'codes': sgg.get('codes', []), 'rows': sgg['rows'][-1:]}
+    if len(wk) > 1:
+        core_adv['weekly'] = wk
 
     # 홈 통합표가 쓰는 가격 변동률 — 매매·전세·월세만, 시도 20곳만.
     # 전체 monthly는 753.9KB(대부분 seoul 76.8 + sgg 617.1)라 통째로는 못 싣는다.

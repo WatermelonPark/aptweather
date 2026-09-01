@@ -211,7 +211,10 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
   <section class="home-sec"><div class="wrap">
     <div class="hs-kicker">매주 갱신 · 한국부동산원 발표 기준</div>
     <h2>이번 주, 어디가 오르고 내렸을까?</h2>
-    <p>전국 시군구 시세를 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b> 지도로.</p>
+    <!-- ⚠️ 아래 격자는 **시도 20곳**이다. 예전 문구는 '전국 시군구'라고 말해
+         눈앞의 격자와 어긋났고, CTA도 '이미 보고 있는 것'으로 읽혔다(2026-09-01 리뷰).
+         격자는 시도, 시군구는 눌러서 보는 것으로 갈라 적는다. -->
+    <p>시도별 <b style="color:#a93226">빨강(상승)</b>·<b style="color:#1a5276">파랑(하락)</b>을 한눈에. 눌러서 <b>시군구·서울 구별</b>까지.</p>
     <!-- 글자만 있으면 "내 지역이 무슨 색이지?"가 안 생긴다. 처음엔 카톡 공유용
          PNG(1200×630)를 그대로 걸었는데, 고정 비율이라 폭이 좁아지면 글자가
          뭉개졌다(2026-08-17 사용자 지적). 같은 격자를 HTML로 직접 그린다 —
@@ -247,14 +250,19 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
          홈에서는 "돈다"는 모양만 보이면 되고, 정본은 리포트 쪽이다.
          ⚠️ 숫자(기간·시도 수)는 넣지 않는다. 여기 박으면 리포트와 갈린다. -->
     <div class="cyc-mini">
+      <!-- 화살표 호의 끝점은 위 타원 위의 점이어야 한다. 예전 좌표는 옆면 두 점이
+     타원 밖(잔차 0.865)이라 링에서 최대 8px 벌어져 보였다(2026-09-01 리뷰).
+     지금 값은 cx160 cy95 rx118 ry66을 각도 ±24도 간격으로 끊어 계산한 것 —
+     좌표를 손으로 고치지 말고 그 파라미터로 다시 계산할 것. -->
+      
       <svg viewBox="0 0 320 190" role="img" aria-label="공급 부족에서 시작해 전세·매매·신축 공급을 거쳐 다시 도는 순환 도식">
         <defs><marker id="cma" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
           <path d="M0 0 L8 4 L0 8 z" fill="#9aa8a2"></path></marker></defs>
         <ellipse cx="160" cy="95" rx="118" ry="66" fill="none" stroke="#dfe6e2" stroke-width="1.5"></ellipse>
-        <path d="M160 29 A118 66 0 0 1 268 84" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
-        <path d="M268 106 A118 66 0 0 1 160 161" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
-        <path d="M160 161 A118 66 0 0 1 52 106" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
-        <path d="M52 84 A118 66 0 0 1 160 29" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M208.0 34.7 A118 66 0 0 1 267.8 68.2" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M267.8 121.8 A118 66 0 0 1 208.0 155.3" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M112.0 155.3 A118 66 0 0 1 52.2 121.8" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
+        <path d="M52.2 68.2 A118 66 0 0 1 112.0 34.7" fill="none" stroke="#9aa8a2" stroke-width="1.5" marker-end="url(#cma)"></path>
         <g font-family="inherit" text-anchor="middle">
           <g><rect x="106" y="16" width="108" height="26" rx="2" fill="#131e24"></rect>
              <text x="160" y="33" font-size="12.5" font-weight="600" fill="#fff">공급 부족</text></g>
@@ -3187,6 +3195,19 @@ function renderBubbleSec(){
    (부산 실측). 값은 0인데 부호가 붙으면 글자와 색이 서로 다른 말을 한다.
    정본은 pv2/pvSign — **반올림을 먼저** 하고 그 결과로 부호를 정한다.
    새 서식이 필요해도 이 패턴을 다시 만들지 말고 pv2를 쓸 것. */
+/* 조사기준일(월) -> 부동산원 공표일(목). 공유 카드(make_weekly_share._pubdate)와
+   같은 규칙이다 — 2026-08-06 사용자 결정으로 '발표일'로 적기로 했는데, 격자만
+   조사기준일을 찍고 있어 같은 데이터가 두 화면에서 다른 날짜로 보였다
+   (2026-09-01 리뷰). 공휴일이 끼면 하루씩 밀리는 주가 있으나 그건 원천 일정이라
+   우리가 알 수 없다 — 통상 +3일로 적는다. */
+function pubDate(basis){
+  if(!basis)return '';
+  const d=new Date(basis+'T00:00:00');
+  if(isNaN(d))return basis;
+  d.setDate(d.getDate()+3);
+  const z=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+}
 function renderWeeklyGrid(){
   const box=document.getElementById('home-weekly-grid');
   if(!box)return;
@@ -3236,7 +3257,7 @@ function renderWeeklyGrid(){
   const cells=regs.map((r,i)=>({r,i})).slice(AGG)
     .map(o=>cell(o.r,o.i,'wc',TILE[o.r])).join('');
   box.innerHTML='<a class="wg-link" href="/weekly/" aria-label="이번 주 시세 지도 보기">'
-    +'<div class="wg-head"><span class="wg-when"><b>'+(row.p||'')+'</b> 기준 · 매매 전주 대비(%)</span>'
+    +'<div class="wg-head"><span class="wg-when"><b>'+pubDate(row.p)+'</b> 발표 · 매매 전주 대비(%)</span>'
     +'<span class="tb-key wg-key"><span class="tk"><i class="tk-d"></i>하락</span>'
     +'<span class="tk-ramp" aria-hidden="true"></span>'
     +'<span class="tk"><i class="tk-u"></i>상승</span></span></div>'
@@ -3244,9 +3265,8 @@ function renderWeeklyGrid(){
     +'<div class="wg-cells">'+cells+'</div></a>';
 }
 /* 퀴즈 카드의 '결과 예시' — 실제 결과 화면(.rcard)과 같은 마크업을 축소해 쓴다.
-   티어 문구는 BLV 정본에서 읽는다. 예시 점수는 8/10 — 만점을 걸면 "쉽겠네"가
-   되고 낮으면 매력이 없다. 가짜 데이터로 오해되지 않게 라벨을 붙인다. */
-/* 예시 점수 3 = 🐥 솜털 병아리. 8(🏘️ 다주택자)로 걸었다가 사용자가 "병아리가
+   티어 문구는 BLV 정본에서 읽는다. 가짜 데이터로 오해되지 않게 라벨을 붙인다.
+   예시 점수 3 = 🐥 솜털 병아리. 8(🏘️ 다주택자)로 걸었다가 사용자가 "병아리가
    더 귀엽다"고 해서 낮췄다(2026-08-17). 만점을 걸면 "쉽겠네"가 되고, 부린이
    테스트의 얼굴은 도달점보다 출발점 쪽이 맞다 — 상위 티어는 풀어야 보인다. */
 const SAMPLE_SCORE=3, SAMPLE_TOTAL=10;
