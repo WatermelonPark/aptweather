@@ -549,9 +549,25 @@ def fetch_weekly_rone(weeks=None):
     if len(dates) < 2:
         raise RuntimeError('R-ONE 주간 데이터 부족')
 
-    def sido(week, name):   # 시도·수도권 (광주/전남은 상위그룹 밑에 있음)
-        full = {'광주': '전남광주>광주', '전남': '전남광주>전남', '지방': '지방권'}.get(name, name)
-        return week.get(full)
+    def sido(week, name):
+        """시도 이름 → 그 주의 값. **계층 개편을 자동으로 따라간다.**
+
+        ⚠️ 예전엔 '전남광주>광주' 같은 전체 경로를 하드코딩했다. 지금 계층에서는
+        맞지만, R-ONE이 상위 묶음을 한 번 더 바꾸면(2026-07에 실제로 '전남광주'가
+        새로 생겼다) 그 즉시 광주·전남이 통째로 None이 된다 — 시점은 최신이고
+        합계 검사 대상도 아니라 **아무 경보 없이 값만 빈다**(2026-08-26 리뷰).
+        월간 sido()가 이미 쓰던 방식으로 통일한다: 평평한 이름이 없으면
+        '>이름'으로 끝나는 키 중 **가장 얕은 것**을 쓴다(시군구가 아니라 시도를 집는다).
+        이 프로젝트는 같은 함정에 강원·전북으로 두 번, 광주·전남으로 15개월
+        당했다(2026-08-07 감사).
+        """
+        key = {'지방': '지방권'}.get(name, name)
+        if key in week:
+            return week[key]
+        cand = [k for k in week if k.endswith('>' + key)]
+        if not cand:
+            return None
+        return week[min(cand, key=lambda k: k.count('>'))]
 
     def seoul_gu(week):
         out = {}

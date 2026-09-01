@@ -396,47 +396,69 @@ def check_derived_pages(adv, stats):
     return out
 
 
-def check_region_collisions():
-    """원천의 지역 계층에서 **우리 지역 키와 마지막 조각이 겹치는 행**을 찾는다.
+def _sido_lookup(names, key):
+    """배치(update_adv_data의 sido())와 **같은 규칙**으로 지역 행을 찾는다.
 
-    왜 이걸 보는가(2026-08-26, 타겟유저 문서 A 회신에서 발견):
-    배치는 R-ONE 계층 이름의 마지막 조각을 지역 키로 쓴다
-    (`full.rsplit('>', 1)[-1]` — update_adv_data의 주간·월간 시세). 2026-07
-    행정구역 개편에서 광주·전남 위에 `전남광주`가 끼어들었을 때 우리가 무사했던
-    게 이 설계 덕이다. `전남광주>광주` → '광주'로 그대로 잡혔다.
-
-    ⚠️ 그런데 이 설계는 **마지막 조각이 유일할 때만** 옳다. 예컨대 원천이
-    `경기>동부1권>광주시`를 '광주시' 대신 '광주'로 줄이는 순간, 경기 광주시 값이
-    광역시 광주 자리에 섞여 들어간다. 값은 그럴듯하게 나오고 합계 검사도
-    통과한다 — **조용히 틀린 데이터**가 되는 경로다.
-
-    나이·합계 검사는 이걸 원리적으로 못 잡는다(시점도 맞고 합도 맞는다).
-    그래서 이름 충돌을 따로 본다. 표 하나만 봐도 충분하다 — 재편은 표별로 따로
-    오지 않고 R-ONE 계층 전체에 한꺼번에 온다.
+    평평한 이름이 있으면 그것, 없으면 '>이름'으로 끝나는 키 중 가장 얕은 것.
+    규칙이 갈리면 감시가 배치와 다른 것을 보게 되므로 여기만 고치지 말 것.
     """
-    keys = set(U.WEEKLY_REGIONS)
+    key = {'지방': '지방권'}.get(key, key)
+    if key in names:
+        return key
+    cand = [k for k in names if k.endswith('>' + key)]
+    if not cand:
+        return None
+    return min(cand, key=lambda k: k.count('>'))
+
+
+def check_region_rows():
+    """원천 계층에서 **우리 20개 지역을 실제로 집을 수 있는가**를 본다.
+
+    왜 이걸 보는가(2026-08-26 리뷰):
+    시세 계열의 진짜 실패 모드는 이름 충돌이 아니라 **결측**이다. R-ONE은 시도를
+    상위 묶음 밑으로 옮기곤 하는데(2026-07에 '전남광주'가 새로 생겼다), 배치가
+    그 경로를 못 찾으면 해당 지역이 통째로 None이 된다. 그런데 이 상태는
+    **기존 검사를 전부 통과한다** — 시점은 최신이고(check '주간'), 시세는
+    SUM_SERIES에 없어 합계 검사 대상이 아니며, 파생 페이지는 날짜만 본다.
+    아무 경보 없이 광주 시세만 사라지는 것이다. 실제로 광주·전남이 이 경로로
+    15개월 결측이었다(2026-08-07 감사).
+
+    같이 보는 것 하나 더: 서울 구 추출은 계층 마지막 조각을 키로 쓰므로
+    (`full.rsplit('>', 1)[-1]`) 같은 구 이름이 두 경로에 있으면 뒤엣것이 앞엣것을
+    덮어 **한 구가 조용히 유실된다.** rsplit이 실제로 쓰이는 유일한 자리다.
+    """
     fails = []
     for label, tbl, cycle in (('주간 시세', U.RONE_TBL['maega'], 'WK'),
                               ('월간 시세', U.RONE_MONTHLY_TBL['maega'], 'MM')):
         try:
             names = rone_region_names(tbl, cycle)
         except Exception as e:
-            # 조회 실패는 '충돌 없음'이 아니다 — 못 본 것이다. FETCH_FAIL로 보내
+            # 조회 실패는 '이상 없음'이 아니라 '못 봤다'다. FETCH_FAIL로 보내
             # 새 IP 재확인 쪽으로 분류되게 한다(SKIPPED는 게이트 분자라 안 쓴다).
-            FETCH_FAIL.append('지역명 충돌(%s)' % label)
+            FETCH_FAIL.append('지역 계층(%s)' % label)
             print('  %-10s 지역 목록 조회 실패 (%s)' % (label, str(e)[:40]))
             continue
-        tails = {}
+
+        missing = [z for z in U.WEEKLY_REGIONS if _sido_lookup(names, z) is None]
+        if missing:
+            fails.append('%s 지역 결측: %s — 원천 계층이 바뀌어 배치가 못 집는다'
+                         % (label, ', '.join(missing)))
+
+        # 서울 구: 마지막 조각이 겹치면 덮어쓰기로 유실된다.
+        gu = {}
         for full in names:
-            tails.setdefault(full.rsplit('>', 1)[-1], []).append(full)
-        hit = {k: v for k, v in tails.items() if k in keys and len(v) > 1}
-        if hit:
-            for k, v in sorted(hit.items()):
-                fails.append('%s 지역명 충돌: %r가 %d개 행에 걸린다 — %s'
+            if full.startswith('서울>') and full.endswith('구'):
+                gu.setdefault(full.rsplit('>', 1)[-1], []).append(full)
+        dup = {k: v for k, v in gu.items() if len(v) > 1}
+        if dup:
+            for k, v in sorted(dup.items()):
+                fails.append('%s 서울 구 이름 충돌: %r가 %d개 경로 — %s (덮어써서 유실)'
                              % (label, k, len(v), ', '.join(sorted(v))))
-            print('  %-10s 행 %d개 · 충돌 %d건  실패' % (label, len(names), len(hit)))
-        else:
-            print('  %-10s 행 %d개 · 충돌 없음' % (label, len(names)))
+
+        state = '결측 %d · 구충돌 %d' % (len(missing), len(dup))
+        print('  %-10s 행 %d개 · 20지역 %s · 서울구 %d개%s'
+              % (label, len(names), '전부 집힘' if not missing else '결측 있음',
+                 len(gu), '' if not (missing or dup) else '  실패 (%s)' % state))
     return fails
 
 
@@ -794,8 +816,8 @@ def main():
         FETCH_FAIL.append('ADV.sido')
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 
-    print('[지역 계층 — 이름 충돌 (배치의 rsplit 매핑이 성립하는가)]')
-    fails.extend(check_region_collisions())
+    print('[지역 계층 — 배치가 20지역을 집을 수 있는가]')
+    fails.extend(check_region_rows())
 
     fails.extend(check_sido_sum(stats))
     fails.extend(check_derived_pages(adv, stats))

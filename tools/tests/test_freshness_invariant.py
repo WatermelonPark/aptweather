@@ -375,51 +375,100 @@ def test_aggregate_regions_are_monitored_too(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# 지역명 충돌 — 배치의 rsplit 매핑이 성립하는지 (2026-08-26)
+# 지역 계층 — 배치가 20지역을 집을 수 있는가 (2026-08-26)
 # ---------------------------------------------------------------------------
 
 def _names(monkeypatch, names):
-    """rone_region_names를 대체해 지정한 계층 이름 집합을 돌려준다."""
     C.FETCH_FAIL[:] = []
     monkeypatch.setattr(C, 'rone_region_names', lambda tbl, cycle: set(names))
 
 
-def test_no_collision_passes(monkeypatch):
-    """2026-07 개편 직후의 실제 모양 — 상위에 '전남광주'가 끼어도 마지막 조각은
-    유일하므로 통과해야 한다. 이게 우리가 그 개편을 무사히 넘긴 이유다."""
-    _names(monkeypatch, ['전국', '수도권', '서울', '경기', '경기>동부1권>광주시',
-                         '전남광주', '전남광주>광주', '전남광주>전남', '인천'])
-    assert C.check_region_collisions() == []
+def _full(extra=()):
+    """20개 지역이 전부 집히는 최소 계층 + 추가 행."""
+    base = []
+    for z in C.U.WEEKLY_REGIONS:
+        base.append({'지방': '지방권'}.get(z, z))
+    return set(base) | set(extra)
+
+
+def test_current_hierarchy_passes(monkeypatch):
+    """2026-07 개편 직후의 실제 모양 — 광주·전남이 상위 묶음 밑에 있어도
+    '가장 얕은 >이름'으로 집히므로 통과해야 한다."""
+    names = (_full() - {'광주', '전남'}) | {'전남광주', '전남광주>광주', '전남광주>전남'}
+    _names(monkeypatch, names)
+    assert C.check_region_rows() == []
     assert C.FETCH_FAIL == []
 
 
-def test_collision_is_caught(monkeypatch):
-    """'경기>동부1권>광주시'가 '광주'로 줄면 경기 광주시 값이 광역시 광주 자리에
-    섞인다. 값도 그럴듯하고 합계 검사도 통과하는 **조용히 틀린 데이터**라,
-    이름 충돌로만 잡을 수 있다."""
-    _names(monkeypatch, ['전남광주>광주', '경기>동부1권>광주', '서울'])
-    fails = C.check_region_collisions()
-    assert fails, '충돌을 못 잡았다 — 배치가 두 광주를 한 키로 섞는다'
-    assert any('광주' in f and '충돌' in f for f in fails), fails
-    # 어느 행들이 겹쳤는지 말해줘야 사람이 판단할 수 있다.
-    assert any('경기>동부1권>광주' in f for f in fails), fails
+def test_missing_region_is_caught(monkeypatch):
+    """진짜 실패 모드 — 원천이 상위 묶음을 또 바꿔 배치가 경로를 못 찾는 경우.
+    시점도 최신이고 시세는 합계 검사 대상도 아니라, 이 검사가 없으면
+    **아무 경보 없이 광주 시세만 사라진다**(실제로 15개월 결측 전례)."""
+    names = (_full() - {'광주', '전남'}) | {'호남', '호남>광주'}   # 전남이 없어짐
+    _names(monkeypatch, names)
+    fails = C.check_region_rows()
+    assert fails and any('전남' in f and '결측' in f for f in fails), fails
+    assert not any("'광주'" in f for f in fails), '광주는 집히는데 잡으면 오탐'
 
 
-def test_collision_only_counts_our_own_keys(monkeypatch):
-    """우리가 안 쓰는 이름이 겹치는 건 상관없다 — 그건 원천의 사정이다.
-    여기서 오탐이 나면 매 회차 빨간불이 뜨고 감시가 무시된다."""
-    _names(monkeypatch, ['A>중구', 'B>중구', '서울', '전남광주>광주'])
-    assert C.check_region_collisions() == []
+def test_sido_lookup_matches_the_batch_rule():
+    """감시가 배치와 **같은 규칙**으로 찾아야 한다. 규칙이 갈리면 감시는 통과하는데
+    배치만 못 집는(또는 그 반대) 상태가 된다."""
+    names = {'서울', '전남광주>광주', '전남광주>전남>광주시', '지방권'}
+    assert C._sido_lookup(names, '서울') == '서울'
+    assert C._sido_lookup(names, '지방') == '지방권'       # 별칭
+    # 얕은 것 우선 — 시군구가 아니라 시도를 집는다
+    assert C._sido_lookup(names, '광주') == '전남광주>광주'
+    assert C._sido_lookup(names, '없는지역') is None
 
 
-def test_lookup_failure_is_not_read_as_no_collision(monkeypatch):
-    """조회 실패는 '충돌 없음'이 아니라 '못 봤다'다. 조용히 통과시키면 감시가
-    켜진 채 아무것도 안 보는 상태가 된다 — FETCH_FAIL로 보내 새 IP 재확인
-    쪽으로 분류되게 한다(SKIPPED는 게이트 분자라 쓰지 않는다)."""
+def test_seoul_gu_name_collision_is_caught(monkeypatch):
+    """서울 구 추출은 마지막 조각을 키로 쓴다(rsplit이 실제로 쓰이는 유일한 자리).
+    같은 구 이름이 두 경로에 있으면 뒤엣것이 앞엣것을 덮어 한 구가 유실된다."""
+    _names(monkeypatch, _full() | {'서울>강북지역>도심권>중구', '서울>강남지역>서남권>중구'})
+    fails = C.check_region_rows()
+    assert fails and any('중구' in f and '충돌' in f for f in fails), fails
+
+
+def test_lookup_failure_is_not_read_as_healthy(monkeypatch):
+    """조회 실패는 '이상 없음'이 아니라 '못 봤다'다. 조용히 통과시키면 감시가
+    켜진 채 아무것도 안 보는 상태가 된다 — FETCH_FAIL로 보낸다(SKIPPED는
+    게이트 분자라 쓰지 않는다)."""
     C.FETCH_FAIL[:] = []
     def dead(tbl, cycle):
         raise OSError('timed out')
     monkeypatch.setattr(C, 'rone_region_names', dead)
-    assert C.check_region_collisions() == []      # 실패 사유로는 안 올린다
-    assert len(C.FETCH_FAIL) == 2, C.FETCH_FAIL   # 대신 조회 실패로 남는다
+    assert C.check_region_rows() == []
+    assert len(C.FETCH_FAIL) == 2, C.FETCH_FAIL
     C.FETCH_FAIL[:] = []
+
+
+def test_batch_and_watchdog_resolve_regions_identically():
+    """배치와 감시가 **같은 계층에서 같은 행**을 집어야 한다.
+
+    감시의 _sido_lookup은 배치 sido()의 거울이다. 한쪽만 고치면 감시는 통과하는데
+    배치는 못 집는(또는 그 반대) 상태가 되고, 그게 바로 이 검사가 막으려던 것이다.
+    거울이 맞는지 말로 두지 않고 두 함수를 같은 입력에 돌려 비교한다.
+
+    ⚠️ 배치 sido()는 fetch_weekly_rone/fetch_monthly_rone 안의 지역 클로저라
+    직접 부를 수 없다. 소스에서 규칙을 뽑아 비교하는 대신, **양쪽 소스에 같은
+    규칙 문장이 있는지**로 잠근다(얕은 것 우선 + '지방'→'지방권' 별칭).
+    """
+    import io as _io, os, re
+    root = os.path.join(os.path.dirname(__file__), '..')
+    batch = _io.open(os.path.join(root, 'update_adv_data.py'), encoding='utf-8').read()
+    # 주간·월간 sido() 둘 다 자동추적이어야 한다(하드코딩 경로가 남아 있으면 안 됨).
+    assert batch.count("cand = [k for k in") >= 2, \
+        '배치 sido()가 자동추적이 아니다 — 상위 묶음이 바뀌면 그 지역이 통째로 빈다'
+    assert "min(cand, key=lambda k: k.count('>'))" in batch, '얕은 것 우선 규칙이 없다'
+    # ⚠️ 주석에도 '전남광주>광주'가 예시로 나온다 — 문자열 포함으로 보면 주석을
+    # 코드로 오인해 오탐이 난다(이 테스트를 만들며 실제로 걸렸다). 대입/조회로
+    # 쓰이는 줄만 본다.
+    hard = [ln.strip() for ln in batch.splitlines()
+            if "'전남광주>광주'" in ln and ('get(' in ln or '=' in ln.split('#')[0])]
+    assert not hard, '주간 sido()에 전체 경로 하드코딩이 남아 있다: %s' % hard
+    # 감시도 같은 규칙
+    wd = _io.open(os.path.join(root, 'check_freshness.py'), encoding='utf-8').read()
+    assert "min(cand, key=lambda k: k.count('>'))" in wd, '감시가 배치와 다른 규칙을 쓴다'
+    assert "{'지방': '지방권'}" in wd and "{'지방': '지방권'}" in batch, \
+        "'지방'→'지방권' 별칭이 한쪽에만 있다"
