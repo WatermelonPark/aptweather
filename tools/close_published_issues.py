@@ -42,6 +42,16 @@ KIND_TO_CATEGORY = {
     '사이클 이론': '부동산 사이클',
 }
 
+def norm(s):
+    """눈에 보이는 글자만 남긴다.
+
+    네이버 카테고리에는 줄바꿈 없는 공백(\xa0)이 섞여 들어온다. 화면에는
+    보통 공백과 똑같이 보이는데 == 로는 다르다. 실제로 이것 때문에 발행한
+    글을 '아직 발행 안 됨'으로 넘긴 적이 있다(2026-08-31).
+    """
+    return ' '.join((s or '').split())
+
+
 MONTHS = {m: i for i, m in enumerate(
     'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(), 1)}
 
@@ -69,7 +79,8 @@ def fetch_posts():
                 d = datetime.date(int(m.group(3)), MONTHS[m.group(2)], int(m.group(1)))
         url = re.search(r'<guid>(.*?)</guid>', item, re.S)
         if d:
-            out.append(dict(date=d, cat=pick('category'), title=pick('title'),
+            out.append(dict(date=d, cat=norm(pick('category')),
+                            title=pick('title'),
                             url=url.group(1).strip() if url else ''))
     return out
 
@@ -91,8 +102,8 @@ def open_issues():
         m = re.match(r'\[발행\]\s+(\d{4})-(\d{2})-(\d{2})\s+(.+?)\s*$', it['title'])
         if not m:
             continue                      # 알림 이슈가 아니면 건드리지 않는다
-        kind = m.group(4).strip()
-        cat = KIND_TO_CATEGORY.get(kind)
+        kind = norm(m.group(4))
+        cat = norm(KIND_TO_CATEGORY.get(kind, ''))
         if not cat:
             continue
         out.append(dict(n=it['number'], kind=kind, cat=cat,
