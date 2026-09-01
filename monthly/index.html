@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- charset은 <head> 첫 줄이어야 한다 — 인코딩 프리스캔이 앞 1024바이트만 보는데
+     아래 한글 주석이 앞에 끼면 선언이 그 밖으로 밀린다(2026-08-15 리뷰). -->
+<meta charset="UTF-8">
+<!-- 기기 단위 GA 제외: ?ga_off=1 로 한 번 들어온 기기는 이후 전송하지 않는다
+     (되돌리기 ?ga_off=0). 개발자 본인 트래픽이 Direct 세션의 절반을 차지해
+     블로그 유입 측정이 불가능했다. GA 콘솔의 IP 제외는 데스크톱만 커버되고
+     모바일 데이터는 CGNAT이라 불가능해서 기기 쪽에 스위치를 둔다.
+     ⚠️ gtag 로더보다 반드시 먼저 실행돼야 한다 — 뒤에 두면 안 먹는다. -->
+<script>
+try{var _p=new URLSearchParams(location.search);
+if(_p.has('ga_off')){if(_p.get('ga_off')==='0')localStorage.removeItem('ga_off');
+else localStorage.setItem('ga_off','1');}
+if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
+}catch(e){}
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3FJNG6G1F3"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-3FJNG6G1F3');</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"></noscript>
+<title>이달의 공급 통계 — 시도별 매매·전세·인허가·입주물량·미분양 | 아공맵</title>
+<meta name="description" content="매달 발표되는 공개 통계를 한 화면에서 순서대로. 시도별 매매·전세·월세 변동률, 인허가, 입주물량, 미분양, 전세가율 — 기준월과 원천을 함께 표시합니다.">
+<link rel="canonical" href="https://www.agongmap.co.kr/monthly/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" href="/app_icon.png">
+<meta name="theme-color" content="#16203a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="이달의 공급 통계 — 한 화면 정리">
+<meta property="og:description" content="매달 발표되는 공개 통계를 한 화면에서 순서대로. 시도별 매매·전세·월세 변동률, 인허가, 입주물량, 미분양, 전세가율 — 기준월과 원천을 함께 표시합니다.">
+<meta property="og:url" content="https://www.agongmap.co.kr/monthly/">
+<meta property="og:image" content="https://www.agongmap.co.kr/og-brand.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">[
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "이달의 공급 통계",
+    "description": "매달 발표되는 공개 통계를 한 화면에서 순서대로. 시도별 매매·전세·월세 변동률, 인허가, 입주물량, 미분양, 전세가율 — 기준월과 원천을 함께 표시합니다.",
+    "datePublished": "2026-07-29",
+    "dateModified": "2026-07-29",
+    "author": {
+      "@type": "Organization",
+      "name": "아공맵"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "아공맵"
+    },
+    "mainEntityOfPage": "https://www.agongmap.co.kr/monthly/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "아공맵",
+        "item": "https://www.agongmap.co.kr/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "이달의 공급 통계"
+      }
+    ]
+  }
+]</script>
+<style>
+:root{--ink:#131e24;--ink2:#4c5f66;--paper:#f4f6f5;--paper2:#e9edeb;--muted:#5e6f74;--line:#c4cec9;--up:#b23b2e;--dn:#2f6db3}
+*{margin:0;padding:0;box-sizing:border-box}
+b,strong{font-weight:600}
+body{background:var(--paper);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;
+ font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+ line-height:1.75;-webkit-font-smoothing:antialiased;padding-bottom:66px}
+.wrap{max-width:620px;margin:0 auto;padding:0 22px}
+header{padding:44px 0 24px;text-align:center}
+.chip{display:inline-block;font-size:12.5px;font-weight:600;color:#fff;background:var(--ink);padding:5px 14px;margin-bottom:14px}
+h1{font-size:clamp(25px,5.6vw,34px);font-weight:700;letter-spacing:-.02em;line-height:1.28;margin-bottom:12px}
+.lead{font-size:15.5px;color:var(--ink2)}
+.big{font-size:clamp(34px,9vw,48px);font-weight:700;letter-spacing:-.02em;margin:6px 0 2px}
+.bigsub{font-size:13.5px;color:var(--muted)}
+section{padding:20px 0}
+h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
+p{margin-bottom:12px;font-size:15px}
+p:last-child{margin-bottom:0}
+.note{font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px}
+.tbl-wrap{overflow-x:auto;margin:6px 0 2px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+/* ⚠️ thead에 한정한다. 행 머리(지역명)를 th로 바꾸면서 이 규칙이 tbody까지 먹어
+   모든 줄이 표두처럼 렌더됐다(2026-08-08 감사). */
+thead th{font-size:12.5px;font-weight:600;color:var(--muted);text-align:right;padding:7px 8px;border-bottom:1.5px solid var(--ink);white-space:nowrap;cursor:pointer;user-select:none}
+tbody th{font-weight:400;color:var(--ink);font-size:14px;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+tr.agg td,tr.agg th{background:var(--paper2);font-weight:600}
+.up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--muted)}
+.links{display:grid;gap:10px;margin-top:6px}
+.links a{display:block;background:#fff;border:1px solid var(--line);padding:13px 16px;text-decoration:none;color:var(--ink);font-weight:600;font-size:14.5px}
+.links a span{display:block;font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.links a:hover{border-color:var(--ink)}
+footer{padding:28px 0 40px;font-size:13px;color:var(--muted);text-align:center}
+footer a{color:var(--ink)}
+.disc{margin-top:10px;font-size:11.5px;line-height:1.6;color:#8a9599}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--ink);display:flex;justify-content:center;z-index:100;box-shadow:0 -4px 18px rgba(22,32,58,.28)}
+.nav-btn{flex:1;max-width:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#97a0b8;font-size:11.5px;font-weight:600;text-decoration:none}
+.nav-btn svg{display:block}
+.nav-btn:hover{color:#fff}
+.nav-btn:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+.secno{display:inline-block;font-size:11.5px;font-weight:600;color:var(--muted);
+ border:1px solid var(--line);border-radius:2px;padding:1px 7px;margin-bottom:6px}
+.basis{font-size:13px;color:var(--muted);margin-bottom:8px}
+.basis b{color:var(--ink);font-weight:600}
+.up{color:var(--up)} .dn{color:var(--dn)}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.toc a{font-size:12.5px;color:var(--ink2);text-decoration:none;border:1px solid var(--line);
+ border-radius:2px;padding:4px 9px;white-space:nowrap}
+.toc a:hover{background:var(--paper2)}
+table td:first-child,table th[scope=row]{white-space:nowrap}
+tbody tr.agg{background:var(--paper2)}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="chip">이달의 공급 통계</div><h1>이번 달 통계, 한 화면에서</h1><p class="lead">매달 흩어져 발표되는 공개 통계를 보는 순서 그대로 모았습니다. 지표마다 <b>기준월과 발표 원천</b>을 함께 적었습니다.</p></div></header><div class="wrap"><nav class="toc" aria-label="지표 목록"><a href="#price">1 매매·전세·월세</a><a href="#permits">2 인허가</a><a href="#moveins">3 입주물량</a><a href="#unsold">4 미분양</a><a href="#jeonse">5 전세가율</a></nav></div><section id="price"><div class="wrap"><div class="secno">1</div><h2>시도별 매매·전세·월세</h2><p class="basis"><b>2026년 7월</b> 기준 · 한국부동산원 전국주택가격동향조사</p><div class="tbl-wrap"><table><thead><tr><th scope="col" tabindex="0" role="button" aria-sort="none">지역</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">매매</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">전세</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">월세</th></tr></thead><tbody><tr class="agg"><td>전국</td><td class="up">+0.44</td><td class="up">+0.49</td><td class="up">+0.47</td></tr><tr class="agg"><td>수도권</td><td class="up">+0.88</td><td class="up">+0.84</td><td class="up">+0.77</td></tr><tr class="agg"><td>지방</td><td class="up">+0.02</td><td class="up">+0.16</td><td class="up">+0.19</td></tr><tr><td>서울</td><td class="up">+1.27</td><td class="up">+1.28</td><td class="up">+1.12</td></tr><tr><td>경기</td><td class="up">+0.85</td><td class="up">+0.71</td><td class="up">+0.66</td></tr><tr><td>인천</td><td class="up">+0.11</td><td class="up">+0.42</td><td class="up">+0.46</td></tr><tr><td>부산</td><td class="dn">-0.05</td><td class="up">+0.28</td><td class="up">+0.23</td></tr><tr><td>울산</td><td class="up">+0.36</td><td class="up">+0.55</td><td class="up">+0.63</td></tr><tr><td>경남</td><td class="up">+0.07</td><td class="up">+0.29</td><td class="up">+0.29</td></tr><tr><td>대구</td><td class="dn">-0.09</td><td class="up">+0.07</td><td class="up">+0.08</td></tr><tr><td>경북</td><td class="dn">-0.14</td><td class="dn">-0.04</td><td class="up">+0.03</td></tr><tr><td>광주</td><td class="up">+0.07</td><td class="dn">-0.03</td><td class="up">+0.13</td></tr><tr><td>전남</td><td class="up">+0.24</td><td class="up">+0.13</td><td class="up">+0.21</td></tr><tr><td>대전</td><td class="up">+0.06</td><td class="up">+0.17</td><td class="up">+0.13</td></tr><tr><td>충남</td><td class="dn">-0.15</td><td class="up">+0.07</td><td class="up">+0.16</td></tr><tr><td>충북</td><td class="up">+0.18</td><td class="up">+0.11</td><td class="up">+0.08</td></tr><tr><td>전북</td><td class="up">+0.21</td><td class="up">+0.30</td><td class="up">+0.34</td></tr><tr><td>강원</td><td class="dn">-0.04</td><td class="dn">-0.02</td><td class="up">+0.11</td></tr><tr><td>세종</td><td class="dn">-0.06</td><td class="up">+0.40</td><td class="up">+0.40</td></tr><tr><td>제주</td><td class="dn">-0.26</td><td class="dn">-0.20</td><td class="dn">-0.14</td></tr></tbody></table></div><p class="note">전월 대비 변동률(%). 광주·전남은 원자료의 시도 단위 값 그대로 나눠서 싣습니다 — 정부 화면에는 통합으로 표시되는 구간이 있습니다.</p></div></section><section id="permits"><div class="wrap"><div class="secno">2</div><h2>인허가</h2><p class="basis"><b>2026년 6월</b> 기준 · 국토교통부 주택건설 인허가실적</p><div class="tbl-wrap"><table><thead><tr><th scope="col" tabindex="0" role="button" aria-sort="none">지역</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">이 달</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">최근 12개월 합</th></tr></thead><tbody><tr class="agg"><td>전국</td><td>99,724</td><td>1,623,862</td></tr><tr class="agg"><td>수도권</td><td>59,115</td><td>895,769</td></tr><tr class="agg"><td>지방</td><td>40,609</td><td>728,093</td></tr><tr><td>서울</td><td>16,377</td><td>224,959</td></tr><tr><td>경기</td><td>35,385</td><td>548,244</td></tr><tr><td>인천</td><td>7,353</td><td>122,566</td></tr><tr><td>부산</td><td>5,455</td><td>158,809</td></tr><tr><td>울산</td><td>3,037</td><td>30,264</td></tr><tr><td>경남</td><td>2,222</td><td>34,472</td></tr><tr><td>대구</td><td>841</td><td>25,105</td></tr><tr><td>경북</td><td>2,981</td><td>43,411</td></tr><tr><td>광주</td><td>1,188</td><td>48,664</td></tr><tr><td>전남</td><td>3,014</td><td>47,740</td></tr><tr><td>대전</td><td>5,817</td><td>88,806</td></tr><tr><td>충남</td><td>2,858</td><td>129,852</td></tr><tr><td>충북</td><td>4,309</td><td>37,005</td></tr><tr><td>전북</td><td>3,703</td><td>50,793</td></tr><tr><td>강원</td><td>1,249</td><td>18,615</td></tr><tr><td>세종</td><td>3,866</td><td>12,274</td></tr><tr><td>제주</td><td>69</td><td>2,283</td></tr></tbody></table></div><p class="note">허가받은 단계의 물량(호). 보통 3~4년 뒤 입주로 이어집니다. 월별 편차가 커서 12개월 합을 함께 봅니다.</p></div></section><section id="moveins"><div class="wrap"><div class="secno">3</div><h2>입주물량</h2><p class="basis"><b>2026Q2</b> 기준 · 국토교통부 준공 실적</p><div class="tbl-wrap"><table><thead><tr><th scope="col" tabindex="0" role="button" aria-sort="none">지역</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">이번 분기(실적)</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">다음 분기(예정)</th></tr></thead><tbody><tr class="agg"><td>전국</td><td>40,382</td><td>36,529</td></tr><tr class="agg"><td>수도권</td><td>21,628</td><td>19,876</td></tr><tr class="agg"><td>지방</td><td>18,754</td><td>16,654</td></tr><tr><td>서울</td><td>6,294</td><td>6,984</td></tr><tr><td>경기</td><td>11,698</td><td>11,579</td></tr><tr><td>인천</td><td>3,636</td><td>1,312</td></tr><tr><td>부산</td><td>3,503</td><td>1,856</td></tr><tr><td>울산</td><td>339</td><td>0</td></tr><tr><td>경남</td><td>1,878</td><td>617</td></tr><tr><td>대구</td><td>3,281</td><td>0</td></tr><tr><td>경북</td><td>3,011</td><td>4,186</td></tr><tr><td>광주</td><td>1,127</td><td>2,759</td></tr><tr><td>전남</td><td>599</td><td>3,625</td></tr><tr><td>대전</td><td>1,849</td><td>44</td></tr><tr><td>충남</td><td>508</td><td>472</td></tr><tr><td>충북</td><td>1,674</td><td>0</td></tr><tr><td>전북</td><td>873</td><td>900</td></tr><tr><td>강원</td><td>29</td><td>2,195</td></tr><tr><td>세종</td><td>0</td><td>0</td></tr><tr><td>제주</td><td>83</td><td>0</td></tr></tbody></table></div><p class="note">실제로 집이 들어온 물량(세대). 분기 단위입니다. <a href="/moveins/">입주물량 자세히 보기</a></p></div></section><section id="unsold"><div class="wrap"><div class="secno">4</div><h2>미분양</h2><p class="basis"><b>2026년 6월</b> 기준 · 한국부동산원 R-ONE 미분양주택현황</p><div class="tbl-wrap"><table><thead><tr><th scope="col" tabindex="0" role="button" aria-sort="none">지역</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">미분양(호)</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">전월 대비</th></tr></thead><tbody><tr class="agg"><td>전국</td><td>67,464</td><td class="up">+2,225</td></tr><tr class="agg"><td>수도권</td><td>18,770</td><td class="up">+169</td></tr><tr class="agg"><td>지방</td><td>48,694</td><td class="up">+2,056</td></tr><tr><td>서울</td><td>1,013</td><td class="up">+28</td></tr><tr><td>경기</td><td>13,553</td><td class="up">+511</td></tr><tr><td>인천</td><td>4,204</td><td class="dn">-370</td></tr><tr><td>부산</td><td>8,071</td><td class="dn">-221</td></tr><tr><td>울산</td><td>1,359</td><td class="dn">-78</td></tr><tr><td>경남</td><td>4,842</td><td class="dn">-351</td></tr><tr><td>대구</td><td>4,383</td><td class="up">+85</td></tr><tr><td>경북</td><td>5,284</td><td class="up">+1,005</td></tr><tr><td>광주</td><td>1,245</td><td class="dn">-14</td></tr><tr><td>전남</td><td>2,649</td><td class="dn">-149</td></tr><tr><td>대전</td><td>2,044</td><td class="up">+158</td></tr><tr><td>충남</td><td>8,894</td><td class="up">+681</td></tr><tr><td>충북</td><td>1,699</td><td class="up">+151</td></tr><tr><td>전북</td><td>1,852</td><td class="up">+158</td></tr><tr><td>강원</td><td>3,420</td><td class="up">+526</td></tr><tr><td>세종</td><td>43</td><td>0</td></tr><tr><td>제주</td><td>2,909</td><td class="up">+105</td></tr></tbody></table></div><p class="note">다 짓고도 팔리지 않아 남은 집. 이미 지어진 재고라 공급 순위 계산에는 넣지 않고 참고로만 봅니다.</p></div></section><section id="jeonse"><div class="wrap"><div class="secno">5</div><h2>전세가율</h2><p class="basis"><b>2026년 6월</b> 기준 · KOSIS 매매가격 대비 전세가격비</p><div class="tbl-wrap"><table><thead><tr><th scope="col" tabindex="0" role="button" aria-sort="none">지역</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">전세가율(%)</th><th scope="col" data-num tabindex="0" role="button" aria-sort="none">1년 전 대비(%p)</th></tr></thead><tbody><tr class="agg"><td>전국</td><td>69.0</td><td class="up">+0.80</td></tr><tr class="agg"><td>수도권</td><td>62.8</td><td class="up">+0.40</td></tr><tr class="agg"><td>지방</td><td>74.8</td><td class="up">+1.20</td></tr><tr><td>서울</td><td>52.3</td><td class="dn">-1.20</td></tr><tr><td>경기</td><td>66.9</td><td class="up">+0.90</td></tr><tr><td>인천</td><td>69.3</td><td class="up">+1.60</td></tr><tr><td>부산</td><td>69.1</td><td class="up">+2.40</td></tr><tr><td>울산</td><td>74.5</td><td class="up">+0.70</td></tr><tr><td>경남</td><td>78.1</td><td class="up">+1.10</td></tr><tr><td>대구</td><td>70.7</td><td class="up">+1.70</td></tr><tr><td>경북</td><td>78.7</td><td class="up">+0.70</td></tr><tr><td>광주</td><td>78.4</td><td class="up">+1.80</td></tr><tr><td>전남</td><td>79.1</td><td class="up">+0.70</td></tr><tr><td>대전</td><td>71.7</td><td class="up">+1.30</td></tr><tr><td>충남</td><td>77.5</td><td class="up">+0.80</td></tr><tr><td>충북</td><td>78.7</td><td class="up">+0.10</td></tr><tr><td>전북</td><td>78.2</td><td class="dn">-0.50</td></tr><tr><td>강원</td><td>76.8</td><td class="up">+0.20</td></tr><tr><td>세종</td><td>51.9</td><td class="up">+4.30</td></tr><tr><td>제주</td><td>65.9</td><td class="up">+0.30</td></tr></tbody></table></div><p class="note">매매가 대비 전세가 비율. <a href="/jeonse-ratio/">전세가율 자세히 보기</a></p></div></section><section><div class="wrap"><p class="note">모든 값은 공개 통계 원자료에서 그대로 가져옵니다. 가공은 단위 환산과 합계뿐이며, 없는 값을 추정해 채우지 않습니다. 원자료에는 있으나 정부 화면에서 찾기 어려운 시도 단위 값(광주·전남 분리 등)을 대신 꺼내 보여줍니다.</p></div></section>
+<footer><div class="wrap">
+  <b>아공맵</b> — 아파트 · 공급량 · 투자지도<br>
+  <a href="/">agongmap.co.kr</a> · 자료: 한국부동산원 · 국토교통부 · KOSIS
+  <div class="disc">공공 데이터를 가공한 참고 자료이며 투자자문이 아닙니다. 투자 판단과 책임은 이용자에게 있습니다.</div>
+</div></footer>
+
+<nav class="bottomnav">
+  <a class="nav-btn" href="/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>홈</span></a>
+  <a class="nav-btn" href="/zone/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 21s-7-5.8-7-11a7 7 0 0 1 14 0c0 5.2-7 11-7 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>지역</span></a>
+  <a class="nav-btn" href="/#stats"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>통계</span></a>
+  <a class="nav-btn" href="/cycle/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20.3 3.7v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>사이클</span></a>
+</nav>
+
+<script>
+(function(){
+  var t=document.getElementById('utable'); if(!t) return;
+  var tb=t.tBodies[0], ths=t.tHead.rows[0].cells, cur=-1, dir=1;
+  function val(row,k,isNum){
+    var s=row.cells[k].textContent.trim();
+    return isNum ? (parseFloat(s.replace(/[^0-9.-]/g,''))||-1e9) : s;
+  }
+  /* 마우스로만 정렬되던 것을 키보드에서도 되게 한다 — 안내문이 '표두를 누르면 정렬'인데
+     탭으로는 표두에 닿지도 않았다(2026-08-08 감사). aria-sort로 현재 정렬 상태도 알린다. */
+  Array.prototype.forEach.call(ths, function(h,i){
+    h.setAttribute('scope','col');
+    /* ⚠️ role="button"을 주면 columnheader 역할이 사라져 열 머리 연결이 끊기고
+       aria-sort도 무효가 된다(columnheader/rowheader에서만 유효). 키보드 접근은
+       tabindex + keydown으로 충분하다(2026-08-08 감사). */
+    h.tabIndex=0;
+    h.setAttribute('aria-sort','none');
+    h.title='누르면 이 열로 정렬';
+    function sort(){
+      var isNum=h.hasAttribute('data-num');
+      dir=(cur===i)?-dir:-1; cur=i;
+      var rows=Array.prototype.slice.call(tb.rows).filter(function(r){return !r.classList.contains('agg')});
+      var aggs=Array.prototype.slice.call(tb.rows).filter(function(r){return r.classList.contains('agg')});
+      rows.sort(function(a,b){var x=val(a,i,isNum),y=val(b,i,isNum);return (x<y?-1:x>y?1:0)*dir;});
+      aggs.concat(rows).forEach(function(r){tb.appendChild(r);});
+      Array.prototype.forEach.call(ths,function(o){o.setAttribute('aria-sort','none');});
+      h.setAttribute('aria-sort', dir>0?'ascending':'descending');
+    }
+    h.addEventListener('click', sort);
+    h.addEventListener('keydown', function(e){
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sort(); }
+    });
+  });
+  /* 행 머리(지역명)를 프로그램적으로 붙인다 — 20열 표에서 이게 없으면 스크린리더가
+     칸을 읽을 때 어느 지역인지 말하지 않는다. */
+  Array.prototype.forEach.call(tb.rows, function(r){
+    var c=r.cells[0]; if(!c || c.tagName==='TH') return;
+    var th=document.createElement('th'); th.scope='row'; th.innerHTML=c.innerHTML;
+    th.className=c.className; c.parentNode.replaceChild(th,c);
+  });
+})();
+</script>
+<script>try{gtag('event','view',{screen_name:'monthly'});}catch(e){}</script>
+</body>
+</html>
