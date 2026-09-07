@@ -1,4 +1,4 @@
-/* aptweather service worker
+/* 아공맵(agongmap) service worker
    - HTML(navigation): network-first  → 배포 즉시 반영, 오프라인이면 캐시
    - 정적 자산: cache-first (+백그라운드 갱신)
    - 외부 도메인(GA·카카오 SDK)은 건드리지 않음
@@ -8,8 +8,8 @@
 // 실사고가 그렇게 났다(sed로 패턴을 잡아 하드코딩 값으로 치환). 되돌아간 번호는
 // 배포 이력을 못 읽게 만들고, 다음 사람이 이미 쓴 번호를 재사용하게 한다.
 // 단조 증가는 test_sw_version_only_moves_forward가 지킨다.
-const VERSION = 'v119'; // 2차 코드리뷰 7건 반영
-const CACHE = `aptweather-${VERSION}`;
+const VERSION = 'v120'; // 캐시 접두사 agongmap- 로 변경
+const CACHE = `agongmap-${VERSION}`;
 
 const PRECACHE = [
   '/',
