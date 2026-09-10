@@ -94,7 +94,7 @@ POSTS = [
 <p>이번 글부터 격주로, 집값이 움직이는 구조를 하나씩 뜯어보려 합니다.
 첫 글은 전체 그림입니다.</p>
 
-<p>%(exp)s</p>
+%(exp)s
 
 <p>[여기에 사이클 도식]</p>
 
@@ -276,7 +276,7 @@ POSTS = [
 <p>맞는 말이라고 생각했지만, 그때는 근거를 대지 못했습니다. 그럴듯한 이야기와
 검증된 사실은 다릅니다.</p>
 
-<p>%(exp)s</p>
+%(exp)s
 
 <p>그래서 재봤습니다. 이번 글은 그 결과입니다.</p>
 
@@ -389,7 +389,7 @@ POSTS = [
 <b>그 지역이 어떤 시장인지</b>를 알려주는 신호이고, 정작 봐야 할 것은
 <b>지금 오르는 중인가 내리는 중인가</b>입니다.</p>
 
-<p>%(exp)s</p>
+%(exp)s
 
 <h3>전세가율이 무엇인가</h3>
 
@@ -538,7 +538,11 @@ def render(post):
         'cycle': link('고리별 검증 결과 보기'),
         'zone': link('우리 동네 공급은 어떤가 — 시도별 리포트',
                      path='/zone/', camp='zone_from_cycle'),
-        'exp': post.get('exp') or EXP_PLACEHOLDER,
+        # exp는 그 자체가 <p>…</p> 여러 개다. 본문 템플릿에서 <p>%(exp)s</p>로
+        # 감싸면 <p> 안에 <p>가 들어가 빈 문단이 생긴다(2026-09-10 클립보드
+        # 실측: <p></p><p><br></p> 가 두 군데). 감싸지 않고 넣고, 비어 있을
+        # 때만 자리 표시자를 <p>로 감싼다.
+        'exp': post.get('exp') or ('<p>%s</p>' % EXP_PLACEHOLDER),
     }
     S.append(P.field('본문', 'b1', body))
     S.append(P.tagfield(post.get('tags', []) + TAGS))

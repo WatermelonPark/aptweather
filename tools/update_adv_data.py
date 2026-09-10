@@ -826,6 +826,68 @@ def fetch_monthly():
 
 
 # ---- 기본통계 fetch & merge ----------------------------------------------
+def merged_sido_rows(names):
+    """원천이 시도 둘 이상을 한 행으로 합쳐 낸 것을 찾는다. {병합이름: [구성 시도]}
+
+    2026-07분부터 국토교통부 주택건설실적통계에서 '광주'와 '전남'이 각각 사라지고
+    '전남광주' 한 행이 나타났다(원천 최종변경일 2026-08-31). 2026.05·06에는 두
+    지역이 따로 있었다. 소계도 함께 바뀌어서 '기타광역시'에서 광주가, '기타지방'에서
+    전남이 빠지고 그 둘을 합친 값이 별도 행으로 나온다.
+
+    이름이 구성 시도들로 **온전히** 덮일 때만 병합으로 본다. 시군구 이름이 시도
+    이름을 하나 품는 경우(광주시·제주시)는 조각이 하나뿐이라 걸리지 않는다.
+    """
+    import sido_zones as SZ          # 지역 정본. 손 목록을 두면 재편 때 갈린다.
+    known = [z for z in SZ.ORDER if z not in SZ.AGG]
+    found = {}
+    for nm in names:
+        if nm in known:
+            continue
+        parts = [k for k in known if k in nm]
+        if len(parts) < 2:
+            continue
+        parts.sort(key=nm.find)
+        if ''.join(parts) == nm:
+            found[nm] = parts
+    return found
+
+
+def drop_unsplittable_months(name, out):
+    """원천이 시도를 합쳐 낸 달을 out에서 제거한다. 제거한 (y,m) 목록 반환.
+
+    왜 버리는가: 합쳐 낸 달은 빠진 지역이 None으로 남고, 저장분 정합 검사가
+    null을 0으로 세므로(KOSIS 규약) 17시도 합이 전국보다 작아진다. 그 검사는
+    배포 게이트라 **배치 전체가 멈춘다** — 2026-09-08·09·10 세 회차가 이 사유로
+    연속 실패했고 그동안 주간 시세까지 함께 묶여 있었다.
+
+    왜 안분해 채우지 않는가: 이 서비스의 근거는 '숫자를 원천에서 그대로 가져온다'는
+    것이다. 합친 값을 비율로 쪼개면 그 자리에서 검증 불가능한 수가 된다. 그래서
+    **받지 않는다.** 원천이 분해를 되돌리면 다음 회차에 자동으로 다시 들어오고,
+    끝내 안 되돌리면 감시가 뒤처짐으로 잡아 사람에게 넘긴다(GRACE_BASIC 100일이라
+    약 한 달의 유예가 있다). 조용히 사라지는 경로가 없다는 것이 이 선택의 전제다.
+
+    ⚠️ 합친 행이 있어도 **개별 시도가 함께 오면 버리지 않는다.** R-ONE처럼 상위
+    묶음을 새로 만들면서 하위를 유지하는 원천이 있기 때문이다(2026-07 R-ONE이
+    '전남광주>광주' 형태로 그렇게 했다). 그 경우는 분해가 가능하므로 정상이다.
+    """
+    dropped = []
+    for ym in sorted(out):
+        merged = merged_sido_rows(out[ym])
+        if not merged:
+            continue
+        lost = sorted({p for parts in merged.values() for p in parts
+                       if p not in out[ym]})
+        if not lost:
+            continue
+        # 조사('을/를')는 지역명 받침에 따라 갈리는데 목록이 동적이라, 조사가
+        # 필요 없는 어순으로 쓴다.
+        print('  %s %d.%02d 보류: 시도 분해 불가 — 원천이 합쳐 냈다(%s → %s)'
+              % (name, ym[0], ym[1], '·'.join(lost), ', '.join(sorted(merged))))
+        del out[ym]
+        dropped.append(ym)
+    return dropped
+
+
 def _fetch_basic_one(name, months=None, upto=None):
     """upto=(y,m)이 주어지면 그 달을 끝으로 months개월을 받는다(이력 교정용).
        기본은 오늘 기준 최근 창(BASIC_MONTHS / BASIC_MONTHS_DEEP)."""
@@ -886,6 +948,8 @@ def _fetch_basic_one(name, months=None, upto=None):
             won[(ym, reg)] = code
             v = round(v, cfg['dec']) if cfg['dec'] else int(round(v))
             out.setdefault(ym, {})[reg] = v
+
+    drop_unsplittable_months(name, out)
     return out, rates
 
 
@@ -894,8 +958,20 @@ def _label_ym(label):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+# 원천이 두 지역을 **합쳐서** 주는 항목. 17시도 모델은 그 지역을 개별로 다루므로
+# series 에 넣지 않는다. 다만 값을 그냥 버리면 합계 검사(check_freshness.check_sido_sum)가
+# 그 시점을 영영 검증하지 못한다 — 광주·전남이 빈 채로 '17시도합 < 전국'이 되는데, 그
+# 부족분이 정말 이 항목 때문인지 다른 시도가 굳어서인지 구분할 수가 없어진다. 실제로
+# 그 구분을 못 하면 부산이 틀려도 검사가 통과한다(2026-09-10 파괴 시험으로 확인).
+# 그래서 값만 따로 남겨 검사가 보정에 쓰게 한다(KOSIS 2026.07 공표분부터 '전남광주').
+MERGED_KEYS = ('전남광주',)
+
+
 def merge_basic(D, fetched):
-    """fetched {(y,m):{region:val}} 를 D(dates/series)에 병합. 변경 셀 수 반환."""
+    """fetched {(y,m):{region:val}} 를 D(dates/series)에 병합. 변경 셀 수 반환.
+
+    series 에 없는 지역 키는 버리되, MERGED_KEYS 는 D['merged'] 에 보존한다.
+    """
     key2idx = {}
     for i, d in enumerate(D['dates']):
         ym = _label_ym(d)
@@ -903,6 +979,10 @@ def merge_basic(D, fetched):
     changed = 0
     for ym in sorted(fetched):
         vals = {r: v for r, v in fetched[ym].items() if r in D['series']}
+        keep = {r: v for r, v in fetched[ym].items()
+                if r in MERGED_KEYS and v is not None}
+        if keep:
+            D.setdefault('merged', {})['%d.%02d' % ym] = keep
         if not vals: continue
         if ym in key2idx:
             i = key2idx[ym]

@@ -771,6 +771,18 @@ function payload(el){
   c.querySelectorAll('*').forEach(function(n){
     n.removeAttribute('class'); n.removeAttribute('id');
   });
+  // 소스에서 접어 둔 줄바꿈을 지운다. 이론 시리즈 본문은 문단 안에 줄바꿈 문자가
+  // 수십 개 들어 있는데, 주간 초안(문단 안 줄바꿈 문자 0개)은 붙여넣기가 멀쩡했고
+  // 이론 초안만 줄바꿈이 안 먹는다는 보고가 있었다(2026-09-10). 편집기가
+  // 문단 안 줄바꿈 문자를 어떻게 다루는지는 확인할 수 없으니, 클립보드로 나가는
+  // HTML을 주간 초안과 같은 모양(문단 안 줄바꿈 문자 없음)으로 맞춘다.
+  var w=document.createTreeWalker(c,NodeFilter.SHOW_TEXT,null,false), t, drop=[];
+  while((t=w.nextNode())){
+    if(t.parentNode&&t.parentNode.tagName==='PRE') continue;
+    if(!t.nodeValue.trim()&&t.parentNode===c){drop.push(t);continue;} // 블록 사이 공백
+    t.nodeValue=t.nodeValue.replace(/\\s*\\n\\s*/g,' ');
+  }
+  drop.forEach(function(n){n.parentNode.removeChild(n);});
   var kids=Array.prototype.slice.call(c.children);
   kids.forEach(function(k,i){
     if(i<kids.length-1){
