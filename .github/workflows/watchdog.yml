@@ -152,6 +152,8 @@ jobs:
     if: ${{ !cancelled() && needs.freshness.outputs.verdict != 'ok' && needs.freshness.outputs.verdict != 'final' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30    # 스크립트 내부 재시도 예산 포함(위 주석)
+    outputs:
+      verdict: ${{ steps.check.outputs.verdict }}
     steps:
       - uses: actions/checkout@v5
 
@@ -159,12 +161,85 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 새 IP로 재대조 (여기서 실패하면 진짜 경보)
+      # 여기에도 프리플라이트를 둔다(2026-09-09). 예전엔 이 잡이 IP 건강성을 안
+      # 보고 바로 대조에 들어가서, 재확인 러너까지 나쁜 IP를 뽑으면 KOSIS 계열
+      # 12개가 통째로 타임아웃 나며 **오경보 메일**이 나갔다. 실측 8/26~9/9
+      # 14회 중 3회(21%)가 이 경로였고, 셋 다 같은 회차의 배치는 정상이었다.
+      # IP 뽑기가 두 번뿐이라 둘 다 나쁠 확률이 그대로 오경보율이 된 것이다.
+      - name: IP 프리플라이트 (2차)
+        id: pre
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+        run: |
+          if [ -z "$KOSIS_API_KEY" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; echo "KOSIS 시크릿 없음 — 대조는 진행(키 누락도 감시 대상)"; exit 0; fi
+          if python - << 'PY'
+          import os, sys, urllib.parse, urllib.request
+          u='https://kosis.kr/openapi/Param/statisticsParameterData.do?'+urllib.parse.urlencode(
+            dict(method='getList',apiKey=os.environ['KOSIS_API_KEY'],format='json',jsonVD='Y',
+                 orgId='408',tblId='DT_304004_WEEK_001_B',objL1='ALL',itmId='ALL',prdSe='F',
+                 startPrdDe='20260601',endPrdDe='20260620'))
+          try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+              urllib.request.urlopen(req,timeout=15).read()
+          except Exception as e:
+              print('나쁜 IP:',type(e).__name__); sys.exit(1)
+          PY
+          then
+            echo "ok=true" >> "$GITHUB_OUTPUT"; echo "프리플라이트 OK — 좋은 IP"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "2차도 나쁜 IP — 판정하지 않고 3차로 넘긴다"
+          fi
+
+      - name: 새 IP로 재대조
+        id: check
+        if: steps.pre.outputs.ok == 'true'
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
           RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
-        run: python tools/check_freshness.py
+        run: |
+          # 1차와 달리 여기서는 종료코드를 삼키지 않는다 — 좋은 IP로 봤는데도
+          # 실패했다면 그건 진짜 경보다. 다만 verdict를 남겨 3차가 자기가 돌지
+          # 말지 판단할 수 있게 한다.
+          RC=0
+          python tools/check_freshness.py || RC=$?
+          if [ "$RC" = "0" ]; then
+            echo "verdict=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "verdict=fail" >> "$GITHUB_OUTPUT"
+            exit "$RC"
+          fi
+
+  # 3차: **나쁜 IP를 두 번 연속 뽑았을 때만** 돈다. 판정을 한 번 더 하는 게
+  # 아니라, 아직 아무도 판정을 못 한 회차를 마무리하는 자리다.
+  #
+  # ⚠️ 조건을 `== ''`(빈 verdict)로 쓴 이유: recheck가 프리플라이트에서 걸리면
+  # 대조 스텝이 통째로 건너뛰어져 verdict가 빈다. recheck가 정상 판정했으면
+  # 'ok' 또는 'fail'이 찍히므로 이 잡은 안 돈다. `!cancelled()`는 recheck가
+  # 타임아웃으로 죽은 회차도 여기로 오게 하려는 것이다(그 회차야말로 판정이 없다).
+  recheck2:
+    needs: [freshness, recheck]
+    if: ${{ !cancelled() && needs.freshness.outputs.verdict != 'ok' && needs.freshness.outputs.verdict != 'final' && needs.recheck.outputs.verdict == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 3차 대조 (여기서 실패하면 진짜 경보)
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY || secrets.KOSIS }}
+          RONE_API_KEY: ${{ secrets.RONE_API_KEY || secrets.RONE }}
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY || secrets.ECOS }}
+        run: |
+          # 여기는 프리플라이트로 빠져나가지 않는다. 세 러너가 모두 KOSIS에
+          # 닿지 못했다면 그 사실 자체를 알려야 한다 — 조용히 통과시키면
+          # '감시가 켜진 채 아무것도 안 보는' 상태가 된다.
+          echo "::notice::1·2차 러너가 모두 KOSIS에 닿지 못했다. 3차가 최종 판정한다."
+          python tools/check_freshness.py
 
   # 3차 아님 — recheck의 **대안**이다. 둘 중 정확히 하나만 돈다.
   # 조회가 전부 성공했는데 실패가 났다면 원인은 데이터 쪽이고, 새 IP로 다시 봐도

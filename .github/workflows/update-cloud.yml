@@ -449,6 +449,28 @@ jobs:
           # 보고 파일이 없다 = 커밋 잡이 시작도 못 했다(체크아웃·아티팩트 단계에서 죽음).
           # 그것도 사실이므로 그대로 보고한다 — 침묵이 가장 나쁘다.
           [ -f "$R" ] || echo "❌ 배치가 보고 지점 전에 중단됨 — 러너 로그 확인 필요" > "$R"
+
+          # ── 감시가 살아 있는지 되짚는다(2026-09-09) ──────────────────────
+          # ⚠️ rep()는 앞 커밋 스텝의 지역 함수다. 셸 함수는 스텝을 넘지 않으므로
+          # 여기서는 $R에 직접 덧붙인다(rep을 쓰면 command not found로 죽는다).
+          # 감시(watchdog)는 **실패할 때만** 메일을 보낸다. 그래서 회차가 아예
+          # 안 뜬 날은 아무 신호도 없다 — 2026-08-13과 09-01에 실제로 그랬고,
+          # 크론을 옮긴 뒤에도 재발했다. 감시가 감시받지 않는 유일한 구멍이라
+          # 배치가 대신 확인한다(둘은 서로 다른 워크플로라 함께 죽지 않는다).
+          # 30시간: 감시는 하루 한 번인데 GitHub 크론이 상시 3~6시간 밀리므로
+          # (실측 8/28~9/9 +169~592분) 24시간으로 자르면 매일 오탐이 난다.
+          LAST=$(gh run list --workflow=watchdog.yml --limit 1 --json createdAt --jq '.[0].createdAt' 2>/dev/null || true)
+          if [ -z "$LAST" ]; then
+            echo "⚠️ 감시 실행 이력을 읽지 못했다 — 감시가 도는지 확인 필요" >> "$R"
+          else
+            AGE=$(( ( $(date -u +%s) - $(date -u -d "$LAST" +%s) ) / 3600 ))
+            LKST=$(TZ=Asia/Seoul date -d "$LAST" '+%m-%d %H:%M')
+            if [ "$AGE" -gt 30 ]; then
+              echo "⚠️ 감시가 ${AGE}시간째 안 돌았다(마지막 $LKST KST) — 크론 누락 의심" >> "$R"
+            else
+              echo "✅ 감시 최근 실행 $LKST KST (${AGE}시간 전)" >> "$R"
+            fi
+          fi
           KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
           TITLE="아공맵 배치 리포트"
           RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
