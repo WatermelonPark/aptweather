@@ -185,9 +185,15 @@ MORE_ROTATION = [
     dict(h='집값은 왜 도는가',
          desc='공급 → 전세 → 매매 → 다시 공급으로 이어지는 순환의 6개 고리를, 15개 시도 20년 데이터로 검증한 리포트입니다.',
          path='/cycle/', label='「집값은 돌고 돈다」 읽기'),
+    # 테스트가 셋인데 부린이 하나만 소개하고 있었다. "문항마다 국가 통계에
+    # 근거한 해설"은 설명서 문구라 빼고, 종류를 보여준다(2026-09-07 사용자).
+    # links가 있으면 desc 뒤에 링크를 여러 줄로 단다 — path/label 한 쌍으로는
+    # 셋을 못 보여준다.
     dict(h='내 부동산 감각은 몇 점일까',
-         desc='10문항 3분이면 끝나는 테스트입니다. 문항마다 국가 통계에 근거한 해설이 붙습니다.',
-         path='/burini-test/', label='부린이 테스트 풀어보기'),
+         desc='테스트가 세 가지입니다. 각 10문항, 3분이면 끝납니다.',
+         links=[('/burini-test/', '부린이 테스트 — 내 감각은 몇 점인가'),
+                ('/investor-test/', '투자자 테스트 — 통념을 뒤집을 준비가 됐나'),
+                ('/redev-test/', '재건축·재개발 테스트 — 이 사업, 사업성이 있나')]),
 ]
 
 
@@ -270,18 +276,18 @@ def extra_section(adv, sts, rot):
 
 
 # ---------------------------------------------------------------- 초안 ①
-def draft_weekly(adv, sts, rows):
-    sgg1 = sgg2 = top10 = None
+def draft_weekly(adv, sts):
+    sgg = top10 = None
     sggerr = '--no-shot 로 건너뜀'
     if '--no-shot' not in sys.argv:
-        sgg1, sgg2, top10, sggerr = capture_weekly_map()
-    if sgg1 and sgg2:
+        sgg, top10, sggerr = capture_weekly_map()
+    if sgg:
+        # 한 장짜리 지도는 맨 아래 범례("위 = 매매 · 아래 = 전세")까지 같이 잘려
+        # 들어온다. 반 장일 때 필요했던 캡션 안내는 그래서 뺐다.
         sggnote = ('지도·표를 자동으로 떴습니다.<br>'
-                   '<b>%s</b> → [시군구 지도 ① 수도권·강원]<br>'
-                   '<b>%s</b> → [시군구 지도 ② 충청 이남]<br>' % (sgg1, sgg2)
+                   '<b>%s</b> → [전국 시군구 지도]<br>' % sgg
                    + ('<b>%s</b> → [상승·하락 TOP10]<br>' % top10 if top10 else '')
-                   + '①에는 범례가 없으니 캡션에 "위 = 매매 · 아래 = 전세"를 적어 '
-                   '주세요. 네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 파일을 '
+                   + '네이버는 외부 이미지 주소를 그대로 쓰지 않으므로 파일을 '
                    '직접 올려야 합니다.')
     else:
         sggnote = ('시군구 지도 없음 — %s. 본문의 자리 표시자를 지우거나 '
@@ -328,15 +334,6 @@ def draft_weekly(adv, sts, rows):
     title = '주간 아파트 시세 %s년 %s월 %s주 | 한국부동산원 기준, 서울 %s 전국 %s' % (
         ymd[0], int(ymd[1]), (int(ymd[2]) - 1) // 7 + 1, pct(seoul[0]), pct(nat[0]))
 
-    # 아공맵 상위 — 사이트 표준 순서를 그대로 쓴다.
-    # ⚠️ tot(절대 세대수)만으로 정렬하면 안 된다. 등급은 '필요량 대비 비율'로 매기므로
-    # 덩치 큰 곳이 1위인데 판정은 '균형'으로 찍히는 모순이 난다(2026-08-02 실측).
-    # SZ.zone_order()가 홈·허브·지역 페이지가 공유하는 유일한 순서이고,
-    # 집계 3종(전국·수도권·지방)은 그 안에서 이미 빠진다.
-    units = SZ.zone_order(rows)
-    top = units[:5]
-    sido_count = len(units)         # 개별 시도 수(집계 제외)
-
     rowsHtml = ''
     for k in ['전국', '수도권', '서울', '경기', '인천', '부산', '대구', '대전', '광주', '울산']:
         if k not in val:
@@ -346,13 +343,6 @@ def draft_weekly(adv, sts, rows):
             continue
         rowsHtml += ('<tr><td>%s</td><td style="text-align:right">%s</td>'
                      '<td style="text-align:right">%s</td></tr>') % (k, pct(m), pct(j))
-
-    # 순위·판정만 싣는다(세대수 제외). 판정 라벨은 하드코딩하지 않고 GRADE_LABS를
-    # 읽는다 — 등급 체계가 바뀌어도 초안이 따라간다.
-    topHtml = ''
-    for i, r in enumerate(top, 1):
-        topHtml += ('<tr><td>%d위</td><td>%s</td><td>%s</td></tr>'
-                    % (i, esc(r['z']), SZ.GRADE_LABS[r['grade']]))
 
     lead = ('한국부동산원이 발표한 <b>%s 기준</b> 주간 아파트 가격 동향입니다. '
             '전국 매매가는 전주 대비 <b>%s</b>, 서울은 <b>%s</b> 움직였습니다.'
@@ -392,8 +382,9 @@ def draft_weekly(adv, sts, rows):
                 '맨 오른쪽은 <b>지난주 순위에서 몇 계단 움직였는지</b>입니다.</p>')
     body.append('<p>[여기에 상승·하락 TOP10 이미지를 넣어 주세요]</p>')
     body.append('<p>시군구로 내려가 보면 같은 권역 안에서도 갈립니다.</p>')
-    body.append('<p>[여기에 시군구 지도 ① 수도권·강원 이미지를 넣어 주세요]</p>')
-    body.append('<p>[여기에 시군구 지도 ② 충청 이남 이미지를 넣어 주세요]</p>')
+    # 지도는 한 장으로 간다(2026-09-07 사용자: 둘로 잘리니 보기 안 좋다). 원래
+    # 모바일 가독성 때문에 둘로 나눴던 것인데(3ea4781), 잘린 자리가 더 거슬린다.
+    body.append('<p>[여기에 전국 시군구 지도 이미지를 넣어 주세요]</p>')
     body.append('<p>타일마다 위가 매매, 아래가 전세입니다. 붉을수록 오르고 '
                 '푸를수록 내린 곳입니다.<br>👉 '
                 '<a href="%s/#stats-market?utm_source=naver_blog&amp;'
@@ -406,36 +397,10 @@ def draft_weekly(adv, sts, rows):
     body.append('<h3>이번 주 눈에 띈 것</h3>')
     body.append('<p>%s</p>' % INTERP_PLACEHOLDER)
 
-    # ── ③ 공급. 절대 세대수는 싣지 않는다 — 공급 모델이 갱신되면 숫자가 움직이는데
-    # 블로그 글은 박제되기 때문이다. 순위와 등급은 훨씬 덜 흔들린다.
-    # ⚠️ 소제목에 브랜드를 박지 않는다. '— 아공맵'이 붙으면 독자가 여기부터를
-    # 광고로 읽는다. 지역 편에서 방법론을 뒤로 뺀 것과 같은 이유다
-    # (2026-08-30 사용자: 아공맵 설명보다 전문성 있는 리포트 느낌으로).
-    #
-    # 방법론 2문단도 1문단으로 줄였다. '착공이 3년 걸린다', '순위는 비율로
-    # 매긴다'는 매주 똑같이 나가는 말이라, 매주 읽는 사람에게는 군더더기다.
-    # 자세한 건 절 끝의 리포트 링크가 진다.
-    body.append('<h3>공급으로 보면</h3>')
-    body.append('<p>시세가 지금의 온도라면 공급은 앞으로의 방향입니다. 착공한 '
-                '아파트가 입주까지 <b>%d년</b>쯤 걸려서, 앞으로 %d년 몫은 이미 삽을 '
-                '뜬 현장으로 정해져 있습니다. 전국 <b>%d개 시도</b>를 각자의 적정 '
-                '공급량과 견준 순위입니다.</p>'
-                % (SZ.LEAD_Q // 4, SZ.LEAD_Q // 4, sido_count))
-    body.append('<table border="1" cellspacing="0" cellpadding="6"><thead>'
-                '<tr><th>순위</th><th>지역</th><th>판정</th></tr></thead>'
-                '<tbody>%s</tbody></table>' % topHtml)
-    lead_z = top[0]
-    body.append('<p><b>%s</b>%s 가장 모자란 곳으로 나왔습니다.</p>'
-                % (esc(lead_z['z']), iga(lead_z['z'])))
-    # 1위가 미분양 경고를 달고 있으면 '가격을 밀어올린다'고 쓰면 안 된다.
-    # 사이트 지역 페이지는 같은 자리에서 정반대를 경고하고 있다(제주: 부족 1위인데
-    # 미분양이 분기 적정물량의 2.4배). 블로그만 반대로 말하면 신뢰가 무너진다
-    # — 우리가 파는 게 계산법의 투명성이기 때문이다(2026-08-14 사용자 지적).
-    if lead_z.get('uwarn'):
-        body.append('<p>⚠ %s</p>' % M.unsold_warn(lead_z))
-    else:
-        body.append('<p>공급 부족이 곧 가격 상승을 뜻하지는 않지만, '
-                    '금리·수요와 함께 가격을 밀어올리는 힘 가운데 하나입니다.</p>')
+    # ── ③ '공급으로 보면'(시도 순위표)은 뺐다(2026-09-07 사용자). 공급 판정은
+    # 착공 실적으로 매기는데 그건 월 단위로 움직여서, 주간 글에 넣으면 매주
+    # 제주가 1위인 같은 표가 나간다. 시의성이 없는 절이 매주 반복되는 셈이었다.
+    # 공급 이야기는 격주 지역 편이 진다 — 주간 글은 시세와 그 주의 지표만 다룬다.
 
     # ── ④ 다른 지표(4주 로테이션). 매주 같은 각도만 보여주면 사이트의 폭이 안 드러난다.
     if extra_html:
@@ -444,10 +409,12 @@ def draft_weekly(adv, sts, rows):
     # ── ⑤ 더 보기(4주 로테이션). 매번 같은 링크를 붙이면 무시당하므로 4주에 걸쳐
     # 사이트의 다른 코너를 하나씩 소개한다.
     body.append('<h3>%s</h3>' % more['h'])
-    body.append('<p>%s<br>👉 <a href="%s%s%s">%s</a></p>' % (
-        more['desc'], SITE, more['path'],
-        '?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=weekly',
-        more['label']))
+    utm = '?utm_source=naver_blog&amp;utm_medium=social&amp;utm_campaign=weekly'
+    links = more.get('links') or [(more['path'], more['label'])]
+    body.append('<p>%s%s</p>' % (
+        more['desc'],
+        ''.join('<br>👉 <a href="%s%s%s">%s</a>' % (SITE, path, utm, label)
+                for path, label in links)))
     # ⚠️ 면책을 '권유하지 않습니다'로 쓰지 않는다. 본문이 방향을 분명히
     # 말하는데 말미에서 그걸 부인하면 글이 스스로를 무른다. 대신 **사실과
     # 견해를 가르고 책임 소재를 밝힌다** — 이 편이 더 정직하고 더 강하다.
@@ -461,7 +428,7 @@ def draft_weekly(adv, sts, rows):
     # 입력도 빨라진다. 매주 13개를 손으로 넣는 건 그 값을 못 한다(사용자 지적).
     tags = ['주간아파트시세', '아파트시세', '집값전망', '부동산데이터', '아공맵']
     return dict(title=title, body='\n'.join(body), tags=tags, kw='주간 아파트 시세',
-                img=(sgg1 or sgg2 or None), imgnote=sggnote)
+                img=(sgg or None), imgnote=sggnote)
 
 
 # ---------------------------------------------------------------- 초안 ②
@@ -976,17 +943,21 @@ TOP10_UP, TOP10_H, TOP10_X0, TOP10_X1 = 782, 778, 240, 1960
 
 
 def capture_weekly_map():
-    """시군구 지도 두 장 + 상승/하락 TOP10 한 장을 떠서 경로를 돌려준다.
+    """전국 시군구 지도 한 장 + 상승/하락 TOP10 한 장을 떠서 경로를 돌려준다.
 
-    돌려주는 값: (수도권지도, 지방지도, TOP10, 사유)
-    실패하면 앞 셋이 None — 이미지 때문에 초안 생성이 막히면 안 된다.
+    돌려주는 값: (지도, TOP10, 사유)
+    실패하면 앞 둘이 None — 이미지 때문에 초안 생성이 막히면 안 된다.
+
+    지도는 원래 수도권/지방 두 장으로 잘라 줬다(모바일 가독성, 3ea4781). 2026-09-07
+    사용자가 "둘로 잘리니 보기 안 좋다"고 해서 한 장으로 돌렸다. 반 장 두 개는
+    파일로만 남긴다 — 되돌릴 일이 생기면 그걸 쓴다.
 
     TOP10을 넣는 이유: 순위와 **전주 대비 순위 변동**(▲18위)까지 나와서
     표만으로 이야기가 된다(2026-08-30 사용자: 그것도 넣으면 더 재밌겠다).
     """
     exe = find_chrome()
     if not exe:
-        return None, None, None, 'Chrome/Edge를 찾지 못했습니다'
+        return None, None,'Chrome/Edge를 찾지 못했습니다'
     tmp = os.path.join(OUT, '_sggmap.png')
     for f in (tmp,):
         try:
@@ -1003,33 +974,35 @@ def capture_weekly_map():
              SITE + '/#stats-market'],
             timeout=120, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
-        return None, None, None, '캡처 실행 실패: %s' % e
+        return None, None,'캡처 실행 실패: %s' % e
     if proc.returncode != 0 or not os.path.exists(tmp):
-        return None, None, None, '캡처 실패(크롬 종료코드 %s)' % proc.returncode
+        return None, None,'캡처 실패(크롬 종료코드 %s)' % proc.returncode
     try:
         from PIL import Image
         im = Image.open(tmp).convert('RGB')
         bs = [b for b in _blocks(im, gap=70, keep=120) if b[2] > 2000]
         if not bs:
-            return None, None, None, '지도 덩어리를 못 찾았습니다(화면 구조가 바뀌었을 수 있음)'
+            return None, None,'지도 덩어리를 못 찾았습니다(화면 구조가 바뀌었을 수 있음)'
         bottom = bs[0][1]
         top, split = bottom - MAP_H, bottom - MAP_SPLIT
         if top < 200 or split - top < 800 or bottom - split < 800:
-            return None, None, None, '지도 위치가 예상과 다릅니다(top=%d split=%d bottom=%d)' % (
+            return None, None,'지도 위치가 예상과 다릅니다(top=%d split=%d bottom=%d)' % (
                 top, split, bottom)
-        a = os.path.join(OUT, 'weekly-sgg-1.png')
-        b = os.path.join(OUT, 'weekly-sgg-2.png')
-        im.crop((MAP_X0, top, MAP_X1, split)).save(a)
-        im.crop((MAP_X0, split - 10, MAP_X1, bottom + 10)).save(b)
+        # 본문에 쓰는 건 한 장(weekly-sgg.png). 반으로 자른 두 장도 같이 남긴다 —
+        # 모바일에서 글자가 작다 싶으면 그걸로 되돌릴 수 있게(2026-09-07).
+        a = os.path.join(OUT, 'weekly-sgg.png')
+        im.crop((MAP_X0, top, MAP_X1, bottom + 10)).save(a)
+        im.crop((MAP_X0, top, MAP_X1, split)).save(os.path.join(OUT, 'weekly-sgg-1.png'))
+        im.crop((MAP_X0, split - 10, MAP_X1, bottom + 10)).save(os.path.join(OUT, 'weekly-sgg-2.png'))
         c = None
         if top - TOP10_UP > 100:
             c = os.path.join(OUT, 'weekly-top10.png')
             im.crop((TOP10_X0, top - TOP10_UP, TOP10_X1, top - 4)).save(c)
             c = os.path.relpath(c, ROOT)
         os.remove(tmp)
-        return os.path.relpath(a, ROOT), os.path.relpath(b, ROOT), c, None
+        return os.path.relpath(a, ROOT), c, None
     except Exception as e:
-        return None, None, None, '자르기 실패: %s' % e
+        return None, None,'자르기 실패: %s' % e
 
 
 def _blocks(im, gap=70, keep=60):
@@ -1278,7 +1251,7 @@ def main():
         adv = dict(adv, weekly=dict(adv['weekly'], rows=wrows[:len(wrows) - back]))
     p = adv['weekly']['rows'][-1]['p']
 
-    d1 = draft_weekly(adv, sts, rows)
+    d1 = draft_weekly(adv, sts)
     if back:
         # 과거 회차 채우기 — 시세 글만 만든다.
         d2 = None

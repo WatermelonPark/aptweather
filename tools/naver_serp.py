@@ -195,7 +195,97 @@ def indexed(query, display=50):
     return out, None
 
 
+def rank_on(keyword, display=30):
+    """정확도순 블로그 결과에서 우리 글이 몇 번째인지. 없으면 (None, None).
+
+    ⚠️ indexed()와 목적이 다르다. 저쪽은 **최신순**으로 넓게 훑어 "색인됐나"만
+    본다. 이쪽은 **정확도순**이라 경쟁 글과 같은 줄에 세운 자리다 — 링크를
+    줄인 게 순위에 영향을 줬는지 보려면 이 값이 필요하다.
+
+    API 순번은 통합검색 실제 순위가 아니다. 그래도 **같은 키워드를 같은 방식으로**
+    회차마다 재면 그 사이의 변화는 읽을 수 있다. 절대값이 아니라 추이를 본다.
+    """
+    try:
+        d = _get('blog', keyword, display=display, sort='sim')
+    except SystemExit:
+        raise
+    except Exception as e:
+        return None, str(e)
+    for i, it in enumerate(d.get('items') or [], 1):
+        link = it.get('link', '') + it.get('bloggerlink', '')
+        if any(o in link for o in OURS):
+            return dict(n=i, title=_clean(it.get('title', '')),
+                        link=it.get('link', '')), None
+    return None, None
+
+
+def track_keywords():
+    """발행된 지역 편에서 타겟 키워드를 뽑는다 — "2026년 부산 아파트 공급물량".
+
+    2026-08-14 실측에서 확인한 형태다(상위 1위가 "2026년 부산 아파트 공급물량과
+    향후 부동산 시장 전망은"). 제목이 "…전망, <결론절>" 구조라 '전망' 앞까지가
+    곧 타겟 키워드다.
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import close_published_issues as CP
+        posts = CP.fetch_posts()
+    except Exception as e:
+        print('발행 목록을 못 읽었다: %s' % e)
+        return []
+    if not posts:
+        return []
+    out = []
+    for p in sorted(posts, key=lambda x: x['date']):
+        if p['cat'] != '지역별 아파트 공급':
+            continue
+        kw = p['title'].split('전망')[0].strip(' ,')
+        if kw and kw not in out:
+            out.append(kw)
+    return out
+
+
 def main(argv):
+    if '--track' in argv:
+        # 링크를 줄인 게 순위에 해가 됐는지는 회차마다 같은 키워드를 재야 답이
+        # 나온다. 자기 제목 검색(--index)은 색인만 알려주지 경쟁 키워드에서
+        # 밀렸는지는 말해주지 않는다(2026-09-01 사용자 우려).
+        kws = [a for a in argv if not a.startswith('--')] or track_keywords()
+        if not kws:
+            raise SystemExit('추적할 키워드가 없다 — 발행된 지역 편이 아직 없거나 '
+                             'RSS를 못 읽었다.')
+        print('타겟 키워드 %d개의 우리 자리를 잰다 (정확도순 블로그 상위 30)\n' % len(kws))
+        for kw in kws:
+            hit, err = rank_on(kw)
+            if err:
+                print('  ! %-28s — %s' % (kw[:28], err))
+                continue
+            prev = hist_last('rank', kw)
+            if hit:
+                print('  %-30s  %2d번째  %s' % (kw[:30], hit['n'], hit['title'][:38]))
+            else:
+                print('  %-30s  상위 30 밖' % kw[:30])
+            if prev:
+                a, b = prev.get('n'), (hit['n'] if hit else None)
+                if a == b:
+                    print('      ↳ %s 이후 그대로' % prev['d'])
+                elif a is None:
+                    print('      ↳ 진입 (직전 %s엔 30 밖)' % prev['d'])
+                elif b is None:
+                    print('      ↳ ⚠ 이탈 — %s엔 %d번째였다' % (prev['d'], a))
+                else:
+                    print('      ↳ %d → %d (%s%d, 직전 %s)'
+                          % (a, b, '+' if b < a else '', a - b, prev['d']))
+            # 남의 블로그 제목은 남기지 않는다 — HIST 주석의 이유 그대로다.
+            # 우리 자리만 기록하면 추이를 보는 데 충분하다.
+            hist_append(dict(mode='rank', key=kw,
+                             n=(hit['n'] if hit else None),
+                             link=(hit['link'] if hit else None)))
+        print('\n※ API 순번은 통합검색 실제 순위가 아니다. 절대값이 아니라 '
+              '회차 간 **변화**를 읽을 것.')
+        print('※ %s 에 기록했다.' % os.path.relpath(HIST, ROOT))
+        return 0
+
     if '--index' in argv:
         qs = [a for a in argv if not a.startswith('--')]
         if not qs:
