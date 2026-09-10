@@ -98,7 +98,9 @@ def test_rule_set_does_not_shrink_silently():
     """대상 계열·규칙이 줄면 검사가 꺼진 줄 모른다."""
     assert set(C.SUM_SERIES) == {'준공', '착공', '인허가', '분양', '미분양'}
     assert len(C.SUM_RULES) == 4
-    assert len(C.SIDO17) == 17
+    # 2026-09-10 광주·전남 통합으로 16곳이 됐다. 개수를 박아두는 이유는 그대로다 —
+    # 지역이 조용히 빠지면 합계 검사가 통과하면서 그 지역만 사라진다.
+    assert len(C.SIDO17) == 16
 
 
 def test_sido17_excludes_aggregate_rows():
@@ -394,7 +396,7 @@ def _full(extra=()):
 def test_current_hierarchy_passes(monkeypatch):
     """2026-07 개편 직후의 실제 모양 — 광주·전남이 상위 묶음 밑에 있어도
     '가장 얕은 >이름'으로 집히므로 통과해야 한다."""
-    names = (_full() - {'광주', '전남'}) | {'전남광주', '전남광주>광주', '전남광주>전남'}
+    names = _full() | {'전남광주>광주', '전남광주>전남'}   # 하위가 함께 있어도 상위를 집는다
     _names(monkeypatch, names)
     assert C.check_region_rows() == []
     assert C.FETCH_FAIL == []
@@ -404,11 +406,11 @@ def test_missing_region_is_caught(monkeypatch):
     """진짜 실패 모드 — 원천이 상위 묶음을 또 바꿔 배치가 경로를 못 찾는 경우.
     시점도 최신이고 시세는 합계 검사 대상도 아니라, 이 검사가 없으면
     **아무 경보 없이 광주 시세만 사라진다**(실제로 15개월 결측 전례)."""
-    names = (_full() - {'광주', '전남'}) | {'호남', '호남>광주'}   # 전남이 없어짐
+    names = _full() - {'전남광주'}          # 통합 지역이 통째로 사라진 경우
     _names(monkeypatch, names)
     fails = C.check_region_rows()
-    assert fails and any('전남' in f and '결측' in f for f in fails), fails
-    assert not any("'광주'" in f for f in fails), '광주는 집히는데 잡으면 오탐'
+    assert fails and any('전남광주' in f and '결측' in f for f in fails), fails
+    assert not any('서울' in f for f in fails), '집히는 지역을 잡으면 오탐'
 
 
 def test_sido_lookup_matches_the_batch_rule():

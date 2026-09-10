@@ -53,7 +53,8 @@ def test_core_carries_price_rows_for_the_table():
     adv, _ = _core()
     mo = adv.get('monthly') or {}
     assert mo.get('rows'), 'monthly가 core에 없다 — 표의 가격 색이 전부 빠진다'
-    assert len(mo.get('regions') or []) == 20, '표는 20개 지역을 그린다'
+    # 2026-09-10 광주·전남 통합으로 19곳(시도 16 + 집계 3).
+    assert len(mo.get('regions') or []) == 19, '표는 19개 지역을 그린다'
     for f in ('ma', 'je', 'wo'):
         assert f in mo['rows'][0], 'monthly.rows에 %s가 없다' % f
     for heavy in ('seoul', 'sgg'):

@@ -452,6 +452,35 @@ def tint(v, scale):
     return ('rgba(198,58,48,%.3f)' if v > 0 else 'rgba(38,110,180,%.3f)') % a
 
 
+def _write_merged_stub(path, old, new):
+    """통합으로 사라진 지역의 옛 주소에 남기는 안내 페이지.
+
+    GitHub Pages는 301을 못 주므로 canonical + meta refresh로 대신한다.
+    ⚠️ noindex를 걸지 않는다 — 검색엔진이 canonical을 읽고 새 주소로 옮겨야
+    하는데, noindex면 그 신호를 보기 전에 색인에서 빼버린다.
+    """
+    url = SITE + '/zone/' + urllib.parse.quote(new) + '/'
+    h = ('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
+         '<meta name="viewport" content="width=device-width,initial-scale=1">'
+         '<title>%s 아파트 공급 분석 — %s로 통합 | 아공맵</title>'
+         '<link rel="canonical" href="%s">'
+         '<meta http-equiv="refresh" content="3;url=%s">'
+         '<meta name="description" content="%s의 공급 통계는 %s 페이지에서 볼 수 있습니다.">'
+         '<link rel="stylesheet" href="/app.css"></head><body>'
+         '<main class="wrap" style="max-width:640px;margin:12vh auto;text-align:center">'
+         '<h1 style="font-size:20px">%s는 %s로 합쳐졌습니다</h1>'
+         '<p style="line-height:1.7;color:var(--muted)">국토교통부가 2026년 7월분부터 '
+         '공급 통계를 <b>%s</b> 하나로 발표하기 시작했습니다. 시군구 단위 자료가 없어 '
+         '두 지역을 따로 계산할 수 없게 되어, 아공맵도 판정 단위를 합쳤습니다.</p>'
+         '<p style="margin-top:22px"><a href="%s" style="display:inline-block;'
+         'background:var(--ink);color:var(--paper);padding:12px 22px;border-radius:8px;'
+         'text-decoration:none">%s 공급 분석 보기</a></p>'
+         '<p style="font-size:12px;color:var(--muted);margin-top:18px">3초 뒤 자동으로 이동합니다.</p>'
+         '</main></body></html>') % (old, new, url, url, old, new, old, new, new, url, new)
+    io.open(os.path.join(path, 'index.html'), 'w', encoding='utf-8',
+            newline='\n').write(h)
+
+
 def build_page(z, calc, stats, pq, others):
     row = [x for x in calc['zones'] if x['z'] == z][0]
     lab, color, gdesc = GRADE_TXT[row['grade']]
@@ -785,11 +814,21 @@ def main():
 
     # 옛 생활권 디렉터리 정리. 이름이 통째로 바뀌었으므로 남겨두면 stale 페이지가
     # 색인에 그대로 남는다(리다이렉트도 두지 않기로 함 — 2026-08-06 사용자 결정).
+    # 통합으로 사라진 지역은 **지우지 않고 안내 페이지로 바꾼다**(2026-09-10).
+    # /zone/광주/ 는 검색·블로그·카톡에 남아 있어, 지우면 그 링크가 전부 404가
+    # 된다. 사용자가 '광주'를 찾아온 것 자체가 정당한 요청이므로 어디로 갔는지
+    # 알려주고 보낸다. canonical을 새 주소로 걸어 검색엔진에도 이전을 알린다.
+    MERGED_INTO = {'광주': '전남광주', '전남': '전남광주'}
     gone = []
     if os.path.isdir(OUT):
         for d in os.listdir(OUT):
             p = os.path.join(OUT, d)
-            if os.path.isdir(p) and d not in names:
+            if not os.path.isdir(p) or d in names:
+                continue
+            if d in MERGED_INTO:
+                _write_merged_stub(p, d, MERGED_INTO[d])
+                gone.append('%s→안내' % d)
+            else:
                 shutil.rmtree(p); gone.append(d)
     os.makedirs(OUT, exist_ok=True)
 

@@ -47,15 +47,30 @@ def test_every_indicator_shows_its_basis_month_and_source(html):
         assert len(m.group(2).strip()) > 3, '%s: 원천이 비었다' % sid
 
 
-def test_gwangju_and_jeonnam_are_separate(html):
-    """정부 화면의 통합 표기('전남광주')를 따라가지 않는다."""
+def test_region_rows_match_the_model(html):
+    """화면의 지역 행이 산식 정본의 지역과 같아야 한다.
+
+    ⚠️ 이 테스트는 원래 '광주·전남을 분리로 유지한다'였다(정부 화면이 통합
+    표기로 바뀌어도 우리는 따로 본다는 차별점). 2026-09-10에 뒤집혔다 —
+    국토교통부가 인허가·착공·준공을 '전남광주'로만 발표하기 시작했고 시군구
+    계층이 없어 되살릴 방법이 없어졌다. 원천에 없는 것을 지어낼 수는 없으므로
+    판정 단위를 합쳤다(사용자 결정).
+
+    지금 잠그는 것은 '분리'가 아니라 **정본과 화면의 일치**다. 산식이 19곳을
+    보는데 화면이 20곳을 그리면 어느 쪽이든 틀린 것이다.
+    """
     seg = html.split('id="price"', 1)[1].split('</section>', 1)[0]
-    # 행 머리는 <th scope="row">다 — 20열 표에서 스크린리더가 '어느 지역'인지
+    # 행 머리는 <th scope="row">다 — 넓은 표에서 스크린리더가 '어느 지역'인지
     # 말하게 하려고 td에서 승격시켰다(2026-09-02). 마크업이 또 바뀌면 여기도 같이.
     names = re.findall(r'<tr[^>]*><th scope="row">([^<]+)</th>', seg)
-    assert '광주' in names and '전남' in names, '광주·전남이 분리로 안 나온다'
-    merged = [n for n in names if re.search(r'전남광주|광주전남', n)]
-    assert not merged, '통합 표기가 섞였다: %s' % merged
+    assert names, '지역 행을 못 찾았다 — 마크업이 바뀌었는지 확인할 것'
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    import sido_zones as SZ
+    assert '전남광주' in names, '통합 지역이 화면에 없다'
+    assert '광주' not in names and '전남' not in names, '통합 전 이름이 남아 있다'
+    unknown = [n for n in names if n not in SZ.REF_Q]
+    assert not unknown, '정본에 없는 지역이 화면에 있다: %s' % unknown
 
 
 def test_no_person_or_lecture_reference(html):

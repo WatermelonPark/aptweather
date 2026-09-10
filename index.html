@@ -2927,10 +2927,15 @@ function renderSidoMap(){
     +'<span class="tk-n">지역을 누르면 상세 리포트</span></div>'
     +'<svg viewBox="0 0 '+SIDO_GEO.w+' '+SIDO_GEO.h
     +'" role="img" aria-label="시도별 아파트 공급 부족 지도 — 붉을수록 부족, 푸를수록 여유">';
+  /* 광주·전남은 2026-09-10 판정 단위가 하나로 합쳐졌다(국토부가 공급 통계를
+     '전남광주'로만 발표). 지도의 두 도형은 지리 정보라 그대로 두고, 색과 링크만
+     통합 지역을 가리킨다 — 한 판정을 두 땅이 나눠 갖는 모양이다. */
+  var MERGED={'광주':'전남광주','전남':'전남광주'};
   SIDO_GEO.p.forEach(function(a){
-    var z=Z[a.n]||{};
-    var lab=a.n+' — '+(TB_GRADE[z.grade]||'')+' · 누적 '+tbSigned(z.tot||0)+'세대';
-    h+='<a href="/zone/'+encodeURIComponent(a.n)+'/" aria-label="'+lab+'">'
+    var key=MERGED[a.n]||a.n;
+    var z=Z[key]||{};
+    var lab=key+' — '+(TB_GRADE[z.grade]||'')+' · 누적 '+tbSigned(z.tot||0)+'세대';
+    h+='<a href="/zone/'+encodeURIComponent(key)+'/" aria-label="'+lab+'">'
       +'<path d="'+a.d+'" fill="'+mapFill(z.ratio)+'"></path>'
       +(SMALL[a.n]?'<circle cx="'+a.x+'" cy="'+a.y+'" r="22" fill="transparent"></circle>':'')
       +'<text x="'+a.x+'" y="'+a.y+'" class="'+(SMALL[a.n]?'ml-s':'ml')+'">'+a.n+'</text>'

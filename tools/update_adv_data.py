@@ -77,15 +77,15 @@ CONF = {
     },
 }
 
-WEEKLY_REGIONS = ['전국','수도권','지방','서울','경기','인천','부산','대구','광주','대전','세종','울산',
-                  '강원','충북','충남','전북','전남','경북','경남','제주']
+WEEKLY_REGIONS = ['전국','수도권','지방','서울','경기','인천','부산','대구','전남광주','대전','세종','울산',
+                  '강원','충북','충남','전북','경북','경남','제주']
 
 # ---- 버블밴드 (전월세전환율 × 전세가율 밴드 vs 주담대금리) -------------------
 # 전세가율은 STATS(DT_30404_N0006_R1)에 이미 있어 페이지에서 병합. 여기선 전환율+금리만.
 # ⚠️ 2026-08-06 시도 20곳 재편을 따라가야 한다. '지방'이 빠져 있어 버블밴드만
 # 19곳이었다(다른 화면은 20곳) — 원천 DT_30404_N0010에 a2='지방'이 실재한다.
-BUBBLE_REGIONS = ['전국','수도권','지방','서울','경기','인천','부산','대구','광주','대전','울산',
-                  '세종','강원','충북','충남','전북','전남','경북','경남','제주']
+BUBBLE_REGIONS = ['전국','수도권','지방','서울','경기','인천','부산','대구','전남광주','대전','울산',
+                  '세종','강원','충북','충남','전북','경북','경남','제주']
 BUBBLE_SHORT = {'서울특별시':'서울','부산광역시':'부산','대구광역시':'대구','인천광역시':'인천',
                 '광주광역시':'광주','대전광역시':'대전','울산광역시':'울산','세종특별자치시':'세종',
                 '경기도':'경기','강원도':'강원','강원특별자치도':'강원','충청북도':'충북','충청남도':'충남',
@@ -153,6 +153,46 @@ def _supply_region(full):
     return last
 
 
+_GJ_OLD = ('광주', '전남')          # 통합 전 이름. 원천이 아직 이 이름으로 준다.
+
+
+def _merge_gj(fetched):
+    """광주·전남을 '전남광주'로 합친다(2026-09-10 통합).
+
+    미분양·분양은 R-ONE이 아직 두 지역을 따로 주는데, 판정 단위가 합쳐졌으므로
+    여기서 더한다. 호·세대 단위라 합산이 곧 정답이다(지수라면 가중평균이 필요하다).
+    한쪽만 있으면 있는 쪽만 쓴다 — 결측을 0으로 세면 합이 줄어든다.
+    """
+    for ym, vals in fetched.items():
+        g, j = vals.pop(_GJ_OLD[0], None), vals.pop(_GJ_OLD[1], None)
+        parts = [x for x in (g, j) if x is not None]
+        if parts:
+            vals['전남광주'] = sum(parts)
+    return fetched
+
+
+def _drop_incomplete(fetched, regions, name):
+    """시도가 하나라도 빠진 달은 통째로 버린다(2026-09-10).
+
+    ⚠️ 왜 필요한가: _supply_rollup은 **있는 지역만 더해** 전국/수도권/지방을 만든다.
+    그래서 원천이 개편 중이라 한 지역을 빠뜨리면, 전국이 그만큼 적은 채로 저장되고
+    합계 검사(시도합=전국)는 **양쪽이 똑같이 적으므로 통과한다.** 조용히 틀린 값이
+    되는 경로다 — 실제로 2026.07 미분양에서 광주·전남이 원천에서 빠지며 전국이
+    3,894호 모자랐다(그 시점 원천은 통합 노드도 아직 안 만들었다).
+
+    빠진 달은 안 받는 편이 낫다. 다음 회차에 원천이 채우면 그때 들어오고,
+    계속 비면 감시의 나이 검사가 뒤처짐으로 잡는다.
+    """
+    want = {r for r in regions if r not in ('전국', '수도권', '지방')}
+    for ym in sorted(fetched):
+        missing = want - set(fetched[ym])
+        if missing:
+            del fetched[ym]
+            print('supply %s: %d-%02d 제외, 시도 %d곳 결측(%s)'
+                  % (name, ym[0], ym[1], len(missing), ', '.join(sorted(missing)[:4])))
+    return fetched
+
+
 def _supply_rollup(fetched, regions):
     """미분양표는 시도만 주므로 전국/수도권/지방 합계를 직접 만든다.
        분양표처럼 원천이 이미 주는 경우엔 덮어쓰지 않는다."""
@@ -213,9 +253,19 @@ def update_supply(stats, months=None):
                                'series': {r: [] for r in base}, 'source': cfg['source']}
             D = stats[name]
             regions = set(D['series'])
-            fetched = _fetch_supply_one(cfg, regions, months)
+            # ⚠️ 원천은 미분양·분양을 아직 광주·전남으로 따로 준다. 저장 계열에는
+            # '전남광주'만 있으므로, 조회 단계에서 지역 필터에 두 옛 이름을 함께
+            # 넣어야 _merge_gj가 합칠 대상을 받는다. 이걸 빠뜨리면 두 지역이
+            # 조회에서 버려져 전남광주가 비고, 롤업이 만든 '전국'이 그만큼
+            # 줄어든다(2026-09-10 실측: 전국이 3,894호 모자랐다).
+            fetched = _fetch_supply_one(cfg, regions | set(_GJ_OLD), months)
             if not fetched:
                 print('supply %s: 빈 응답 — 건너뜀' % name)
+                continue
+            _merge_gj(fetched)
+            _drop_incomplete(fetched, regions, name)
+            if not fetched:
+                print('supply %s: 완비된 달이 없어 건너뜀' % name)
                 continue
             _supply_rollup(fetched, regions)
             n = merge_basic(D, fetched)
