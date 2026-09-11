@@ -31,7 +31,10 @@ try:
 except Exception:
     pass
 
-REPO = 'WatermelonPark/aptweather'
+# 2026-09-11 저장소 이름 변경(aptweather → agongmap). 깃헙이 옛 이름을 영구
+# 리다이렉트해 줘서 당장은 옛 값으로도 돌지만, 리다이렉트에 기대면 다음 사람이
+# 저장소를 못 찾는다. 정식 이름을 적는다.
+REPO = 'WatermelonPark/agongmap'
 RSS = 'https://rss.blog.naver.com/startupbd.xml'
 
 # 알림 이슈의 '종류' → 블로그 카테고리. 카테고리로 맞추는 이유는 제목과 달리
