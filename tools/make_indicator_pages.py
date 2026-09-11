@@ -338,7 +338,7 @@ def build_jeonse(sts):
     <a href="/#stats-adv-bubble">버블밴드<span>전세가율로 계산한 지역별 고평가·저평가 밴드</span></a>
     <a href="/#stats-basic">기본통계 차트<span>전세가율 2012년부터 월별 추이를 지역별로</span></a>
     <a href="/moveins/">아파트 입주물량<span>전세가율을 움직이는 원인 — 시도별 입주 예정</span></a>
-    <a href="/zone/">시도별 공급 분석<span>17개 시도를 부족·과잉 등급으로</span></a>
+    <a href="/zone/">시도별 공급 분석<span>16개 시도를 부족·과잉 등급으로</span></a>
     <a href="/cycle/">아파트 사이클 리포트<span>전세가율이 매매를 미는 고리, 데이터 검증</span></a>
   </div>
 </section>
@@ -458,7 +458,7 @@ def build_moveins(adv):
   <h2>더 보기</h2>
   <div class="links">
     <a href="/#stats-adv-occ">입주물량 차트<span>분기별 추이를 적정수요와 견줘 지역별로</span></a>
-    <a href="/zone/">시도별 공급 분석<span>17개 시도의 부족·과잉을 등급으로</span></a>
+    <a href="/zone/">시도별 공급 분석<span>16개 시도의 부족·과잉을 등급으로</span></a>
     <a href="/jeonse-ratio/">전세가율<span>입주물량이 움직이는 결과 — 시도별 현황</span></a>
     <a href="/cycle/">아파트 사이클 리포트<span>입주 → 전세 → 매매로 이어지는 고리, 데이터 검증</span></a>
   </div>
