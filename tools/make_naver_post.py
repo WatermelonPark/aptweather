@@ -465,7 +465,7 @@ ZONE_CTA = (
      '/weekly/', '주간 시세 지도', 'weekly'),
     ('내 부동산 감각이 몇 점인지 3분이면 나옵니다.',
      '/burini-test/', '부린이 테스트', 'test'),
-    ('17개 시도를 한 화면에 놓고 비교할 수 있습니다.',
+    ('전국 시도를 한 화면에 놓고 비교할 수 있습니다.',
      '/zone/', '시도별 공급 분석', 'zone_hub'),
 )
 
@@ -663,9 +663,11 @@ def draft_zone(adv, sts, r, seq, total):
         body.append('<p>그 미분양은%s</p>' % (vs_tot or
                     ' 부족분과 견주면 그리 크지 않습니다.'))
         # '견줘도'는 낮다는 뉘앙스라 제주(2.4배)에서 어긋난다. 중립으로 쓴다.
-        body.append('<p>분기 적정물량과 견주면 <b>%s</b>로 17개 시도 가운데 '
+        # 시도 수를 박지 않는다 — 광주·전남이 '전남광주'로 합쳐져 16곳이 됐다
+        # (2026-09-11 확인). 순회 pool 크기(total)를 그대로 쓴다.
+        body.append('<p>분기 적정물량과 견주면 <b>%s</b>로 %d개 시도 가운데 '
                     '<b>낮은 순 %d번째</b>입니다.%s</p>'
-                    % (umx(r['um']), mine + 1, cmp_txt))
+                    % (umx(r['um']), total, mine + 1, cmp_txt))
         cd = _cd_change(sts)
         if cd:
             body.append('<p>여기에 금리가 걸립니다. CD 91일물이 1년 사이 '
@@ -677,7 +679,7 @@ def draft_zone(adv, sts, r, seq, total):
         # 2026-09-01 사용자: "사이클 고리는 굳이 필요없을듯".
         body.append('<p>%s</p>' % OUTLOOK_PLACEHOLDER)
 
-    body.append('<p>[여기에 17개 시도 판정표 이미지를 넣어 주세요]</p>')
+    body.append('<p>[여기에 %d개 시도 판정표 이미지를 넣어 주세요]</p>' % total)
     # ── 산식 3문단(적정물량 기준선 / 인허가 아니라 착공 1.3~1.7배 / 멸실 미차감)을
     # 걷어냈다. 회차마다 글자까지 똑같이 나가던 자리다 — 2026-09-01 실측에서 부산 ②
     # 53문장 중 30문장이 대구와 뼈대가 같았고, 그 절반이 여기였다. 계산법 공개는
@@ -706,7 +708,7 @@ def draft_zone(adv, sts, r, seq, total):
         if shots.get('표'):
             lines.append('<b>%s</b> → [분기별 공급표]' % shots['표'])
         if shots.get('판정표'):
-            lines.append('<b>%s</b> → [17개 시도 판정표]' % shots['판정표'])
+            lines.append('<b>%s</b> → [%d개 시도 판정표]' % (shots['판정표'], total))
         note = ('%s 화면을 자동으로 떴습니다.<br>%s<br>네이버는 외부 이미지 주소를 '
                 '그대로 쓰지 않으므로 파일을 직접 올리고, 이미지마다 캡션을 달아 '
                 '주세요.' % (nm, '<br>'.join(lines)))
