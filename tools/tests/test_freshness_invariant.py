@@ -474,3 +474,34 @@ def test_batch_and_watchdog_resolve_regions_identically():
     assert "min(cand, key=lambda k: k.count('>'))" in wd, '감시가 배치와 다른 규칙을 쓴다'
     assert "{'지방': '지방권'}" in wd and "{'지방': '지방권'}" in batch, \
         "'지방'→'지방권' 별칭이 한쪽에만 있다"
+
+
+def test_region_count_gate_follows_the_model():
+    """감시의 지역 수 기대값은 **모델에서 파생**되어야 한다.
+
+    2026-09-10 광주·전남 통합(20곳→19곳) 때 이 게이트에 20이 박혀 있어, 데이터는
+    멀쩡한데 감시가 이틀 연속 빨개졌다("ADV.sido 지역이 19곳뿐이다(20곳이어야 함)").
+    감시자만 옛 세상을 보고 있었던 셈이다. 모델이 바뀌면 기대값도 따라와야 한다.
+
+    숫자 리터럴이 다시 들어오는 것을 막는 게 목적이라 소스를 직접 본다.
+    """
+    import io as _io, os, re
+    root = os.path.join(os.path.dirname(__file__), '..')
+    src = _io.open(os.path.join(root, 'check_freshness.py'), encoding='utf-8').read()
+    seg = src[src.index("n_z = len(sido['zones'])"):]
+    seg = seg[:seg.index('check_age')]
+    assert 'len(SZ.REF_Q)' in seg, '지역 수 기대값이 모델에서 오지 않는다'
+    lit = re.findall(r'n_z\s*<\s*(\d+)', seg)
+    assert not lit, '지역 수를 숫자로 박았다: %s' % lit
+
+
+def test_region_count_gate_passes_on_live_data():
+    """실제 라이브 지역 수로 이 게이트가 통과하는지 — 배포 전에 여기서 잡는다."""
+    import io as _io, json, os, re
+    import sido_zones as SZ
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    core = _io.open(os.path.join(root, 'data-core.js'), encoding='utf-8').read()
+    adv = json.loads(re.search(r'const ADV=(\{.*?\});', core, re.S).group(1))
+    n = len(adv['sido']['zones'])
+    assert n == len(SZ.REF_Q), \
+        '데이터 지역 %d곳 vs 모델 %d곳 — 한쪽만 바뀌면 감시가 매일 빨개진다' % (n, len(SZ.REF_Q))

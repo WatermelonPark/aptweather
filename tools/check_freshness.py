@@ -192,7 +192,7 @@ def _q_to_date(q):
 
 # ⚠️ 여기 17곳은 **실제 행정구역만**이다. 저장분에는 집계 행이 섞여 있어
 # (STATS 22곳 = 17시도 + 전국·수도권·지방·기타광역시·기타지방,
-#  ADV.sido 20곳 = 17시도 + 전국·수도권·지방) 전부 더하면 전국의 세 배가 나온다.
+#  ADV.sido = 시도 + 전국·수도권·지방) 전부 더하면 전국의 세 배가 나온다.
 # 개수가 20/22/17로 달라 보이는 건 집계를 몇 개 안고 있느냐의 차이일 뿐이다.
 # 손으로 옮겨 적으면 정본(개칭·구성 변경)에서 갈라져 합계 검사가 행을 조용히
 # 건너뛴다 — 이 파일이 LAZY_STATS에서 겪은 그 패턴이라 sido_zones에서 유도한다.
@@ -415,7 +415,7 @@ def _sido_lookup(names, key):
 
 
 def check_region_rows():
-    """원천 계층에서 **우리 20개 지역을 실제로 집을 수 있는가**를 본다.
+    """원천 계층에서 **우리 지역을 실제로 집을 수 있는가**를 본다.
 
     왜 이걸 보는가(2026-08-26 리뷰):
     시세 계열의 진짜 실패 모드는 이름 충돌이 아니라 **결측**이다. R-ONE은 시도를
@@ -459,10 +459,64 @@ def check_region_rows():
                              % (label, k, len(v), ', '.join(sorted(v))))
 
         state = '결측 %d · 구충돌 %d' % (len(missing), len(dup))
-        print('  %-10s 행 %d개 · 20지역 %s · 서울구 %d개%s'
-              % (label, len(names), '전부 집힘' if not missing else '결측 있음',
+        print('  %-10s 행 %d개 · 지역 %d곳 %s · 서울구 %d개%s'
+              % (label, len(names), len(U.WEEKLY_REGIONS),
+                 '전부 집힘' if not missing else '결측 있음',
                  len(gu), '' if not (missing or dup) else '  실패 (%s)' % state))
     return fails
+
+
+def rone_latest_complete(tbl, since=None):
+    """R-ONE 월간표에서 **우리 시도가 모두 들어찬** 가장 최신 시점.
+
+    배치(_drop_incomplete)가 불완전한 달을 버리므로, 감시도 같은 기준으로 봐야
+    한다. 기준이 갈리면 배치는 일부러 안 받고 감시는 그걸 뒤처짐이라 하는
+    엇갈림이 생긴다(2026-09-11 실측: 미분양이 이 상태로 매일 빨개졌다).
+
+    완비된 달이 하나도 없으면 그냥 최신 시점을 돌려준다 — 판정을 못 하게 되는
+    것보다는 낫고, 그 경우는 뒤처짐으로 잡히는 게 맞다.
+    """
+    base = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
+            '?KEY=%s&Type=json&STATBL_ID=%s&DTACYCLE_CD=MM'
+            % (os.environ.get('RONE_API_KEY', ''), tbl))
+    if since:
+        base += '&START_WRTTIME=%s' % since
+    head = get_json(base + '&pIndex=1&pSize=1')
+    total = None
+    for blk in head.get('SttsApiTblData', []):
+        for h in blk.get('head', []) or []:
+            if 'list_total_count' in h:
+                total = h['list_total_count']
+    if not total:
+        if since:
+            return rone_latest_complete(tbl)
+        raise RuntimeError('list_total_count 없음')
+    rows = []
+    for blk in get_json(base + '&pIndex=%d&pSize=1000'
+                        % ((total // 1000) + 1)).get('SttsApiTblData', []):
+        if 'row' in blk:
+            rows = blk['row']
+    want = {z for z in U.WEEKLY_REGIONS if z not in ('전국', '수도권', '지방')}
+    by = {}
+    for r in rows:
+        t = (r.get('WRTTIME_IDTFR_ID') or '').strip()
+        reg = U._supply_region(r.get('CLS_FULLNM'))
+        if not (t and reg) or r.get('DTA_VAL') in (None, ''):
+            continue
+        by.setdefault(t, set()).add(reg)
+    if not by:
+        raise RuntimeError('시점 파싱 실패')
+    # 원천이 아직 옛 이름(광주·전남)으로 주는 계열이 있다. 배치가 조회 뒤 합치므로
+    # 감시도 같은 규칙으로 센다 — 둘 다 있으면 통합 지역이 있는 것으로 본다.
+    old_a, old_b = U._GJ_OLD
+    full = []
+    for t, regs in by.items():
+        have = set(regs)
+        if old_a in have and old_b in have:
+            have.add('전남광주')
+        if not (want - have):
+            full.append(t)
+    return max(full) if full else max(by)
 
 
 def rone_region_names(tbl, cycle):
@@ -770,8 +824,13 @@ def main():
             if m <= 0:
                 y, m = y - 1, 12
             since = '%04d%02d' % (y, m)
+        # ⚠️ 원천의 '가장 최신 달'이 아니라 **우리 지역이 다 들어찬 가장 최신 달**과
+        # 견준다. 배치는 시도가 하나라도 빠진 달을 일부러 버리는데(_drop_incomplete),
+        # 그걸 모르면 의도된 건너뜀이 뒤처짐으로 읽혀 매일 빨개진다 — 2026.07
+        # 미분양이 실제로 그랬다(원천에 광주·전남 행이 없고 통합 노드도 아직 없음).
+        # 원천이 그 달을 채우면 그때부터 비교 대상이 되므로 경보가 늦지 않는다.
         fails.append(check(name, last,
-                           lambda c=cfg, sc=since: rone_latest(c['tbl'], 'MM', sc),
+                           lambda c=cfg, sc=since: rone_latest_complete(c['tbl'], sc),
                            GRACE_MONTHLY))
 
     print('[금리 — 원천 한국은행 ECOS]')
@@ -808,9 +867,13 @@ def main():
             n_z = len(sido['zones'])
             print('  실적 마지막 분기 %s · 착공 %s · 미래 %d분기 · 지역 %d곳'
                   % (sido.get('L'), sido.get('S'), sido.get('H', 0), n_z))
-            if n_z < 20:
-                fails.append('ADV.sido 지역이 %d곳뿐이다(20곳이어야 함) — 빠진 곳: %s'
-                             % (n_z, ', '.join(sido.get('missing') or ['?'])))
+            # ⚠️ 개수를 하드코딩하지 않는다. 20을 박아뒀다가 2026-09-10 광주·전남
+            # 통합(19곳)에서 그대로 빨개져 감시가 이틀간 오경보를 냈다 — 데이터는
+            # 멀쩡한데 감시자만 옛 세상을 보고 있었다. 모델이 곧 기대값이다.
+            want = len(SZ.REF_Q)
+            if n_z < want:
+                fails.append('ADV.sido 지역이 %d곳뿐이다(%d곳이어야 함) — 빠진 곳: %s'
+                             % (n_z, want, ', '.join(sido.get('missing') or ['?'])))
             fails.append(check_age('시도 지표', None if not sido.get('L') else
                                    _q_to_date(sido['L']), 200))
     except Exception as e:
@@ -819,7 +882,7 @@ def main():
         FETCH_FAIL.append('ADV.sido')
         fails.append('ADV.sido 조회 실패(%s) — data-core.js 배포 확인 필요' % str(e)[:60])
 
-    print('[지역 계층 — 배치가 20지역을 집을 수 있는가]')
+    print('[지역 계층 — 배치가 우리 지역을 집을 수 있는가]')
     fails.extend(check_region_rows())
 
     fails.extend(check_sido_sum(stats))
