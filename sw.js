@@ -8,7 +8,7 @@
 // 실사고가 그렇게 났다(sed로 패턴을 잡아 하드코딩 값으로 치환). 되돌아간 번호는
 // 배포 이력을 못 읽게 만들고, 다음 사람이 이미 쓴 번호를 재사용하게 한다.
 // 단조 증가는 test_sw_version_only_moves_forward가 지킨다.
-const VERSION = 'v125'; // 표 모드 전남광주 누락 수정
+const VERSION = 'v126'; // 표 모드 경고 전용으로 축소
 const CACHE = `agongmap-${VERSION}`;
 
 const PRECACHE = [

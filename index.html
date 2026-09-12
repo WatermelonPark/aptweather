@@ -939,11 +939,16 @@ function buildMatrix(D,idx,parsed){
      같은 사고가 사이클 전세가율 차트에도 있었다(355d767). 조용히 빠뜨리지 않도록
      데이터에만 있는 지역은 뒤에 붙이고 콘솔에 남긴다. */
   const regs=MATRIX_REGIONS.filter(r=>D.series[r]);
+  /* ⚠️ 경고만 하고 **표에 넣지는 않는다.** 넣었더니 전세가율의 권역 집계
+     (6대광역시·5대광역시·9개도·8개도)까지 시도 표 끝에 붙었다 — 원래 여기 오면
+     안 되는 행이다. 데이터에만 있다고 다 시도인 것이 아니라서, 무엇을 넣을지는
+     JS 쪽에서 판단할 수가 없다.
+     빠지는 것을 막는 주 방어는 시험이다(tools/tests/test_region_lists.py 가
+     MATRIX_REGIONS 를 sido_zones.ORDER 와 대조해 배포 전에 잡는다). 이 경고는
+     그 시험이 없는 경로로 데이터가 바뀌었을 때를 위한 보조 신호다. */
   const missed=Object.keys(D.series||{}).filter(r=>MATRIX_REGIONS.indexOf(r)<0);
-  if(missed.length){
-    console.warn('MATRIX_REGIONS에 없는 지역이 데이터에 있다 — 목록을 고칠 것:',missed);
-    missed.forEach(r=>regs.push(r));
-  }
+  if(missed.length)
+    console.warn('MATRIX_REGIONS에 없는 지역이 데이터에 있다 — 시도라면 목록에 넣을 것:',missed);
   const single=regs.length<=1;
   document.getElementById('sec-basicmain').classList.toggle('single',single);
   if(single){box.innerHTML='';return;}
