@@ -169,6 +169,30 @@ def _cd_change(sts):
     return ('%.2f' % prev[1], '%.2f' % cur[1], '%+.2f' % (cur[1] - prev[1]))
 
 
+def _tile_counts():
+    """홈 시군구 지도가 실제로 그리는 타일 수. (서울 외 시군구, 서울 구).
+
+    2026-09-12 리뷰: 발행 문구가 '187개 시군구와 서울 25개 구'라고 말했는데 실제
+    타일은 182개(서울 25 + 그 외 157)였다. 사이트 어디에도 187이라는 수가 없어
+    대조할 데가 없었고, 4주마다 한 번씩 그대로 발행됐다.
+
+    타일은 `SGG_QNAME`에 이름이 있는 코드만 그려진다(index.html의 그리기 조건이
+    `SGG_QNAME[c] && …`). 그래서 그 목록이 곧 타일 수다.
+    """
+    import json
+    import re
+    h = io.open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
+    m = re.search(r'SGG_QNAME\s*=\s*(\{.*?\})\s*;', h, re.S)
+    if not m:
+        raise RuntimeError('index.html에서 SGG_QNAME을 찾지 못했다 — 타일 수를 못 맞춘다')
+    q = json.loads(m.group(1))
+    seoul = sum(1 for n in q.values() if n.startswith('서울 '))
+    return len(q) - seoul, seoul
+
+
+SGG_N, SEOUL_N = _tile_counts()
+
+
 # 사이트 /cycle/ 의 고리 검증 대상 곳 수. 두 발행 도구가 같은 값을 말해야 하므로
 # make_theory_post 의 정본을 가져온다(사본을 두면 다음 모델 변경 때 갈린다).
 from make_theory_post import CYCLE_SYNC_N  # noqa: E402
@@ -182,7 +206,8 @@ INTERP_PLACEHOLDER = (
 # ⑤ 더 보기 — 4주에 걸쳐 사이트의 다른 코너를 하나씩 소개한다.
 MORE_ROTATION = [
     dict(h='이번 주 시세를 지도로 보려면',
-         desc='187개 시군구와 서울 25개 구의 매매·전세 변동률을 지도 한 장으로 볼 수 있습니다. 상승은 빨강, 하락은 파랑입니다.',
+         desc='시군구 %d곳과 서울 %d개 구의 매매·전세 변동률을 지도 한 장으로 '
+              '볼 수 있습니다. 상승은 빨강, 하락은 파랑입니다.' % (SGG_N, SEOUL_N),
          path='/weekly/', label='주간 시세 지도 보기'),
     dict(h='우리 동네 공급은 어떤가',
          desc='시도별로 앞으로 3년간 들어올 물량과 필요한 양을 비교한 리포트가 있습니다. 지역을 골라 들어가 보세요.',
@@ -403,7 +428,7 @@ def draft_weekly(adv, sts):
     # 위 표에 그대로 있어 중복이고, 시군구 지도가 훨씬 값어치 있다(2026-08-30
     # 사용자). 시도 지도는 /weekly/ og:image로는 계속 쓴다.
     #
-    # 두 장으로 가르는 이유: 187개 시군구가 한 장에 들어가면 네이버 모바일에서
+    # 두 장으로 가르는 이유: 시군구 전부가 한 장에 들어가면 네이버 모바일에서
     # 타일 글씨가 안 읽힌다.
     body.append('<p>가장 많이 오르고 내린 곳을 순위로 보면 이렇습니다. '
                 '맨 오른쪽은 <b>지난주 순위에서 몇 계단 움직였는지</b>입니다.</p>')
@@ -973,7 +998,7 @@ def capture_zone(z):
 
 # /#stats-market 의 시군구 타일 지도 — 매주 글에 넣을 두 장.
 #
-# 왜 두 장인가: 187개 시군구가 한 장에 들어가면 네이버 모바일(폭 ~700px)에서
+# 왜 두 장인가: 시군구 전부가 한 장에 들어가면 네이버 모바일(폭 ~700px)에서
 # 타일 글씨가 안 읽힌다. 수도권·강원 / 충청 이남으로 갈라야 각 타일이 읽힌다
 # (2026-08-30 사용자 요청).
 #

@@ -50,3 +50,22 @@ def test_both_publishing_tools_say_the_same_region_count():
     for s in descs:
         assert '%d개 시도' % T.CYCLE_SYNC_N in s, \
             '블로그 문구의 곳 수가 사이트와 다르다: %s' % s
+
+
+def test_tile_counts_match_what_the_map_draws():
+    """발행 문구의 시군구 수가 홈 지도의 실제 타일 수와 같아야 한다.
+
+    2026-09-12: '187개 시군구'라고 적혀 있었으나 실제 타일은 182개(서울 25 + 157)였다.
+    사이트에 187이라는 수가 어디에도 없어 대조할 데가 없었고 4주마다 발행됐다.
+    """
+    import json
+    import re
+    root = os.path.join(os.path.dirname(__file__), '..', '..')
+    h = open(os.path.join(root, 'index.html'), encoding='utf-8').read()
+    q = json.loads(re.search(r'SGG_QNAME\s*=\s*(\{.*?\})\s*;', h, re.S).group(1))
+    seoul = sum(1 for n in q.values() if n.startswith('서울 '))
+    assert (P.SGG_N, P.SEOUL_N) == (len(q) - seoul, seoul)
+    said = [m['desc'] for m in P.MORE_ROTATION if '시군구' in m['desc']]
+    assert said, 'MORE_ROTATION 에서 시군구 문장을 찾지 못했다'
+    for s in said:
+        assert '%d곳' % P.SGG_N in s and '%d개 구' % P.SEOUL_N in s,             '발행 문구의 타일 수가 지도와 다르다: %s' % s
