@@ -193,9 +193,30 @@ def _tile_counts():
 SGG_N, SEOUL_N = _tile_counts()
 
 
-# 사이트 /cycle/ 의 고리 검증 대상 곳 수. 두 발행 도구가 같은 값을 말해야 하므로
-# make_theory_post 의 정본을 가져온다(사본을 두면 다음 모델 변경 때 갈린다).
-from make_theory_post import CYCLE_SYNC_N  # noqa: E402
+# 사이트 /cycle/ 고리②(전세→매매) 검증 결과의 정본. 숫자를 박지 않고 읽어 온다.
+#
+# ⚠️ 정본이 여기 있는 이유: make_theory_post 가 이 모듈을 import 하므로(CSS·복사 UI
+# 재사용) 반대 방향으로 가져오면 순환 참조가 된다. 2026-09-12에 실제로 그렇게 돼서
+# `python tools/make_naver_post.py` 가 ImportError 로 죽었다 — 테스트는 모듈을
+# __main__ 으로 돌리지 않아 210개가 전부 통과하면서도 발행 도구가 못 돌았다.
+def _cycle_sync():
+    """`/cycle/` 의 const D 에서 sync 목록을 읽는다. [{region, corr, sudo}, …]
+
+    2026-09-12 광주·전남 통합으로 15곳 → 14곳이 되고 값도 재산정됐다
+    (평균 0.71→0.73, 서울 0.58→0.55). 사이트와 블로그가 다른 숫자를 말하면
+    '계산법을 공개한다'는 근거가 그 자리에서 무너진다.
+    """
+    p = os.path.join(ROOT, 'cycle', 'index.html')
+    m = re.search(r'const D\s*=\s*(\{.*?\});',
+                  io.open(p, encoding='utf-8').read(), re.S)
+    if not m:
+        raise RuntimeError('/cycle/ 에서 D 블록을 찾지 못했다 — 곳 수를 못 맞춘다')
+    rows = json.loads(m.group(1))['sync']
+    return sorted(rows, key=lambda r: -r['corr'])
+
+
+CYCLE_SYNC = _cycle_sync()
+CYCLE_SYNC_N = len(CYCLE_SYNC)
 
 
 INTERP_PLACEHOLDER = (

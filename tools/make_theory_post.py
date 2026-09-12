@@ -56,22 +56,40 @@ def link(text, path='/cycle/', camp='cycle'):
 # 12편. 제목은 검색어를 앞에 두되 결론이나 질문으로 끝낸다 — 2026-08-15
 # 실측에서 이 자리 상위 글이 전부 '이해하기·알면 보인다' 류의 일반론이라,
 # 같은 어투로 쓰면 묻힌다.
-def _cycle_sync_n():
-    """사이트 `/cycle/`의 고리② 검증 대상 곳 수. 숫자를 박지 않고 읽어 온다.
-
-    2026-09-12: 광주·전남 통합으로 15 → 14가 됐는데 3편 제목만 15로 남아 있었다.
-    사이트와 블로그가 다른 숫자를 말하면 '계산법을 공개한다'는 근거가 무너진다.
-    """
-    import json
-    import re
-    p = os.path.join(ROOT, 'cycle', 'index.html')
-    m = re.search(r'const D\s*=\s*(\{.*?\});', io.open(p, encoding='utf-8').read(), re.S)
-    if not m:
-        raise RuntimeError('/cycle/ 에서 D 블록을 찾지 못했다 — 제목의 곳 수를 못 맞춘다')
-    return len(json.loads(m.group(1))['sync'])
+# 고리② 검증 결과의 정본은 make_naver_post 에 있다(순환 참조를 피하려고 그쪽에 뒀다).
+CYCLE_SYNC = P.CYCLE_SYNC
+CYCLE_SYNC_N = P.CYCLE_SYNC_N
 
 
-CYCLE_SYNC_N = _cycle_sync_n()
+def sync_table(cols=3):
+    """동조성 표를 사이트 값으로 만든다 — 손으로 옮기면 재산정 때마다 갈린다."""
+    r = CYCLE_SYNC
+    rows_per = -(-len(r) // cols)
+    head = ''.join('<th>지역</th><th>동조성</th>' for _ in range(cols))
+    out = []
+    for i in range(rows_per):
+        tds = []
+        for c in range(cols):
+            k = c * rows_per + i
+            if k < len(r):
+                nm, cv = r[k]['region'], r[k]['corr']
+                bold = nm == '서울'
+                tds.append('<td>%s%s%s</td><td>%s%.2f%s</td>' % (
+                    '<b>' if bold else '', P.esc(nm), '</b>' if bold else '',
+                    '<b>' if bold else '', cv, '</b>' if bold else ''))
+            else:
+                tds.append('<td></td><td></td>')
+        out.append('<tr>%s</tr>' % ''.join(tds))
+    return ('<table border="1" cellspacing="0" cellpadding="6"><thead><tr>%s</tr>'
+            '</thead><tbody>%s</tbody></table>' % (head, ''.join(out)))
+
+
+def sync_stats():
+    """(곳 수, 평균, 최고 지역·값, 최저 지역·값) — 본문 문장에 그대로 쓴다."""
+    r = CYCLE_SYNC
+    avg = sum(x['corr'] for x in r) / len(r)
+    return dict(n=len(r), avg=avg, top=r[0], low=r[-1],
+                top2='·'.join(x['region'] for x in r[:2]))
 
 
 POSTS = [
@@ -380,7 +398,7 @@ POSTS = [
     #
     # 2026-09-10. 앞 주 주간 글(8월 5주)이 강북 4구·인천으로 "전세가 먼저"를
     # 실시간으로 보여준 직후라, 그 장면을 이론의 사례로 되가져온다.
-    # 동조성 수치(15개 시도 전부 양, 평균 0.71, 서울 0.58, 대구·부산 0.8)는
+    # 동조성 수치(곳 수·평균·서울·최상위)는 전부 사이트 D.sync 에서 읽는다.
     # 사이트 /cycle/ 정본을 그대로 인용한다. 내가 월간 변동률로 다시 계산하면
     # 다른 값이 나온다(방법이 다름) — 블로그에 내 계산값을 실으면 사이트와
     # 다른 말이 되므로 싣지 않는다. 전세가율 연속 상승 개월수·역사적 위치는
@@ -430,22 +448,15 @@ POSTS = [
 
 <p>이 시리즈가 검증한 여섯 고리 가운데 가장 단단한 것이 이 고리입니다.</p>
 
-<p>분석한 <b>15개 시도 전부</b>에서 전세와 매매가 같은 방향으로 움직였습니다.
-한 곳도 예외가 없었습니다. 동조성은 평균 0.71이고, 대구와 부산은 0.8으로 거의
+<p>분석한 <b>%(sync_n)d개 시도 전부</b>에서 전세와 매매가 같은 방향으로 움직였습니다.
+한 곳도 예외가 없었습니다. 동조성은 평균 %(sync_avg)s이고, %(sync_top2)s은 %(sync_topv)s으로 거의
 한 몸처럼 움직입니다.</p>
 
 <p>[여기에 전세–매매 동조성 차트]</p>
 
 <p>시도별 동조성입니다. 1에 가까울수록 전세와 매매가 함께 움직입니다.</p>
 
-<table border="1" cellspacing="0" cellpadding="6"><thead>
-<tr><th>지역</th><th>동조성</th><th>지역</th><th>동조성</th><th>지역</th><th>동조성</th></tr></thead><tbody>
-<tr><td>대구</td><td>0.81</td><td>충북</td><td>0.75</td><td>인천</td><td>0.69</td></tr>
-<tr><td>부산</td><td>0.80</td><td>대전</td><td>0.74</td><td>전남</td><td>0.68</td></tr>
-<tr><td>울산</td><td>0.79</td><td>경남</td><td>0.73</td><td>전북</td><td>0.60</td></tr>
-<tr><td>강원</td><td>0.77</td><td>충남</td><td>0.71</td><td>광주</td><td>0.59</td></tr>
-<tr><td>경북</td><td>0.77</td><td>경기</td><td>0.69</td><td><b>서울</b></td><td><b>0.58</b></td></tr>
-</tbody></table>
+%(sync_table)s
 
 <p>왜 그런지는 어렵지 않습니다. 집을 <i>살지 말지</i>는 미룰 수 있어도
 <i>어디서 살지</i>는 못 미루기 때문에, 집이 모자라면 전세부터 오릅니다. 전세가
@@ -497,7 +508,7 @@ POSTS = [
 
 <h3>서울은 왜 다른가</h3>
 
-<p>동조성 0.58로 15개 시도 가운데 가장 느슨합니다. 서울에서는 전세와 무관하게
+<p>동조성 %(sync_lowv)s로 %(sync_n)d개 시도 가운데 가장 느슨합니다. 서울에서는 전세와 무관하게
 매매가 따로 움직일 여지가 큽니다.</p>
 
 <p>2018년이 그랬습니다. 수도권 전세는 밀리거나 제자리인데 매매만 분기마다
@@ -528,7 +539,7 @@ POSTS = [
 <p>다음은 세 번째 고리입니다. 오른 집값이 어떻게 공급을 부르는지, 그리고 왜
 <b>땅이 있는 곳에서만</b> 그게 통하는지 다루겠습니다.</p>
 
-<p>15개 시도의 동조성 수치와 검증 방법은 리포트에 그대로 적혀 있습니다.<br>
+<p>%(sync_n)d개 시도의 동조성 수치와 검증 방법은 리포트에 그대로 적혀 있습니다.<br>
 👉 %(cycle)s</p>
 
 <p><i>※ 숫자는 한국부동산원·국토교통부·KOSIS·한국은행 공개 데이터를 가공한
@@ -554,6 +565,7 @@ def render(post):
     # 이걸 직접 볼 수 있다"는 증거이고, 블로그의 목적이 사이트 유입이다
     # (2026-08-16 사용자). 맨 끝 링크 하나면 거기까지 읽은 사람만 넘어간다.
     # 링크를 갈라 두는 이유: 같은 곳으로 세 번 보내면 세 번째는 안 눌린다.
+    _S = sync_stats()
     body = post['body'].strip() % {
         'link': link('아공맵 부동산 사이클 리포트 보기'),
         'cycle': link('고리별 검증 결과 보기'),
@@ -564,6 +576,15 @@ def render(post):
         # 실측: <p></p><p><br></p> 가 두 군데). 감싸지 않고 넣고, 비어 있을
         # 때만 자리 표시자를 <p>로 감싼다.
         'exp': post.get('exp') or ('<p>%s</p>' % EXP_PLACEHOLDER),
+        # 동조성 관련 수치는 전부 사이트에서 읽어 넣는다(2026-09-12 재산정으로
+        # 15곳 → 14곳, 평균 0.71 → 0.73, 서울 0.58 → 0.55로 바뀌었다).
+        'sync_table': sync_table(),
+        'sync_n': _S['n'],
+        'sync_avg': ('%.2f' % _S['avg']),
+        'sync_top2': _S['top2'],
+        'sync_topv': ('%.1f' % _S['top']['corr']),
+        'sync_lowv': ('%.2f' % _S['low']['corr']),
+
     }
     S.append(P.field('본문', 'b1', body))
     S.append(P.tagfield(post.get('tags', []) + TAGS))
