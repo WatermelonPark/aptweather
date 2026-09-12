@@ -27,14 +27,20 @@ try:
 except Exception:
     pass
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sido_zones as SZ      # noqa: E402  (지역 정의의 정본 — 손 목록 금지)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data.js')
 PAGE = os.path.join(ROOT, 'cycle', 'index.html')
 
 # 차트에 세울 지역. 옛 생활권 4곳을 대신한다(위 주석 참조).
 ZONE_REGIONS = ['수도권', '부산', '대구', '대전']
-SIDO17 = ['서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
-          '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주']
+# ⚠️ 손 목록을 두지 않는다. 2026-09-10 광주·전남 통합 때 이 목록이 옛 이름을
+# 들고 있었고, 아래 build_jratio가 **모르는 지역을 조용히 건너뛰는** 구조라
+# 전세가율 차트에서 전남광주가 통째로 빠진 채 배포됐다(2026-09-12 발견).
+# 모델이 곧 목록이다.
+SIDO = [z for z in SZ.ORDER if z not in SZ.AGG]
 SUDO = {'서울', '경기', '인천'}
 ZONES_FROM = 2006          # 옛 배열과 같은 시작점
 OVERLAY_FROM = 2015        # 금리 오버레이 구간
@@ -105,8 +111,13 @@ def build_jratio(S):
     """전세가율 최신월 기준 시도 스펙트럼 + 수도권·지방 평균."""
     D = S['전세가율']
     k = len(D['dates']) - 1
-    rows = [(r, D['series'][r][k]) for r in SIDO17
-            if D['series'].get(r) and D['series'][r][k] is not None]
+    # 계열에 아예 없는 지역은 목록이 낡았다는 신호다 — 조용히 빠뜨리지 않는다.
+    gone = [r for r in SIDO if not D['series'].get(r)]
+    if gone:
+        raise RuntimeError('전세가율에 없는 지역: %s (모델과 저장분이 어긋났다)'
+                           % ', '.join(gone))
+    rows = [(r, D['series'][r][k]) for r in SIDO
+            if D['series'][r][k] is not None]
     rows.sort(key=lambda x: x[1])
     lvl = [{'region': r, 'val': round(v, 1), 'sudo': r in SUDO,
             'type': '투자성' if v < 60 else ('중간' if v < 73 else '실거주성')}
