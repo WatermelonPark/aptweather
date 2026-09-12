@@ -208,7 +208,7 @@ LOCAL14 = [r for r in SIDO17 if r not in CAPITAL3]
 SUM_RULES = (
     (SIDO17, '전국', '시도합=전국'),
     (CAPITAL3, '수도권', '수도권=서울+경기+인천'),
-    (LOCAL14, '지방', '지방=나머지14'),
+    (LOCAL14, '지방', '지방=나머지%d' % len(LOCAL14)),
     (['수도권', '지방'], '전국', '전국=수도권+지방'),
 )
 
@@ -493,9 +493,12 @@ def rone_latest_complete(tbl, since=None):
         if since:
             return rone_latest_complete(tbl)
         raise RuntimeError('list_total_count 없음')
+    # ⚠️ 마지막 페이지 번호는 **올림**이다. `total // 1000 + 1`로 쓰면 total이
+    #    1000의 배수일 때 존재하지 않는 다음 페이지를 집어 rows가 비고
+    #    '시점 파싱 실패'가 난다(조회 실패로 분류돼 오경보 red까지 간다).
     rows = []
     for blk in get_json(base + '&pIndex=%d&pSize=1000'
-                        % ((total // 1000) + 1)).get('SttsApiTblData', []):
+                        % (-(-total // 1000))).get('SttsApiTblData', []):
         if 'row' in blk:
             rows = blk['row']
     want = {z for z in U.WEEKLY_REGIONS if z not in ('전국', '수도권', '지방')}
@@ -539,7 +542,7 @@ def rone_region_names(tbl, cycle):
         raise RuntimeError('list_total_count 없음')
     names = set()
     for blk in get_json(base + '&pIndex=%d&pSize=1000'
-                        % ((total // 1000) + 1)).get('SttsApiTblData', []):
+                        % (-(-total // 1000))).get('SttsApiTblData', []):
         for r in blk.get('row', []) or []:
             nm = (r.get('CLS_FULLNM') or '').strip()
             if nm:
@@ -596,7 +599,7 @@ def rone_latest(tbl, cycle, since=None):
     if not total:
         raise RuntimeError('list_total_count 없음')
     rows = []
-    for blk in get_json(base + '&pIndex=%d&pSize=1000' % ((total // 1000) + 1)).get('SttsApiTblData', []):
+    for blk in get_json(base + '&pIndex=%d&pSize=1000' % (-(-total // 1000))).get('SttsApiTblData', []):
         if 'row' in blk:
             rows = blk['row']
     if cycle == 'WK':

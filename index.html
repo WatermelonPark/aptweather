@@ -946,7 +946,14 @@ function buildMatrix(D,idx,parsed){
      빠지는 것을 막는 주 방어는 시험이다(tools/tests/test_region_lists.py 가
      MATRIX_REGIONS 를 sido_zones.ORDER 와 대조해 배포 전에 잡는다). 이 경고는
      그 시험이 없는 경로로 데이터가 바뀌었을 때를 위한 보조 신호다. */
-  const missed=Object.keys(D.series||{}).filter(r=>MATRIX_REGIONS.indexOf(r)<0);
+  /* ⚠️ 집계 행은 제외하고 센다. 원천이 주는 권역 묶음(6대광역시·9개도·도심권 등)은
+     시도가 아니라 여기 올 일이 없는데, 그걸 그대로 세면 경고가 **매 방문 뜬다**.
+     항상 켜진 경고는 아무것도 가리키지 못해 진짜 누락을 묻는다(2026-09-12 리뷰:
+     전세가율 4개·매매지수 8개가 늘 걸렸다). 시도처럼 생긴 것만 남긴다. */
+  const NON_SIDO=['6대광역시','5대광역시','광역시','지방광역시','9개도','8개도','지방도',
+    '기타광역시','기타지방','도심권','동북권','동남권','서북권','서남권','CD(91일)'];
+  const missed=Object.keys(D.series||{})
+    .filter(r=>MATRIX_REGIONS.indexOf(r)<0 && NON_SIDO.indexOf(r)<0);
   if(missed.length)
     console.warn('MATRIX_REGIONS에 없는 지역이 데이터에 있다 — 시도라면 목록에 넣을 것:',missed);
   const single=regs.length<=1;
