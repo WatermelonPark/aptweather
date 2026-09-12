@@ -95,6 +95,23 @@ jobs:
               print('%s=%s' % (k, v))
           PY
 
+      # ⚠️ 예약이 떴는데 종류가 비면 알림이 안 나간다. 아래 이슈 생성 스텝의
+      # `if`가 건너뛰고 워크플로는 초록불로 끝나므로, 그대로 두면 **발행 알림이
+      # 조용히 사라진다.** 이 저장소가 반복해서 당한 게 그 모양이라 드러낸다.
+      #
+      # 원인은 하나뿐이다: KST 기준 요일이 화·금이 아니었다는 것. 예약은 그 두
+      # 요일에만 걸려 있으므로(화/금 04:00 KST), 이 경고가 뜬다면 GitHub 큐 지연이
+      # 20시간을 넘어 날짜가 하루 밀렸다는 뜻이다. 그때는 손으로 한 번 돌리면 된다:
+      #   gh workflow run write-reminder.yml -f force='주간 시세'
+      #
+      # 손으로 돌린 회차(workflow_dispatch)는 화·금이 아닌 날에도 정상이라 제외한다.
+      - name: 알림이 비었으면 드러낸다
+        if: github.event_name == 'schedule' && steps.plan.outputs.kind == ''
+        run: |
+          echo "::warning::예약이 떴는데 발행 종류가 비었다(KST ${{ steps.plan.outputs.date }})."
+          echo "::warning::큐 지연으로 요일이 밀린 것으로 보인다 — 이번 회차 알림이 나가지 않았다."
+          echo "::warning::필요하면 손으로: gh workflow run write-reminder.yml -f force='주간 시세'"
+
       - name: 알림 이슈 만들기
         if: steps.plan.outputs.kind != ''
         env:
