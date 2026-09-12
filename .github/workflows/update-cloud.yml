@@ -166,8 +166,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # ⚠️ download-artifact 는 v4 에 묶어 둔다. Node 20 경고가 남지만 그게 낫다.
+      # v7 로 올렸다가 2026-09-12 배치가 깨졌다: v4 는 pattern + merge-multiple:false 로
+      # 아티팩트를 **이름별 하위 디렉터리**(_art/data-1/…)에 풀어 주는데, v7 은 _art/ 아래
+      # 평평하게 푼다. 아래 코드가 `_art/data-*` 를 디렉터리로 훑기 때문에 data-core.js
+      # 같은 **파일**이 러너로 잡혀 "러너 5/3 clean" 이 나오고 cp 가 죽었다.
+      # 릴리스 노트의 breaking change 항목만 읽고 안전하다고 판단한 것이 잘못이었다 —
+      # 액션 메이저를 올릴 때는 실제 배치 1회를 돌려 보고 판단할 것.
+      # 올리려면 이 아래 for 루프를 새 구조에 맞게 함께 고쳐야 한다(백로그 7번).
       - name: clean 산출물 내려받기
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: _art
           pattern: data-*
@@ -175,7 +183,7 @@ jobs:
         continue-on-error: true    # clean 러너 0개면 아무것도 안 받음
 
       - name: 실패 사유 내려받기 (재시도 판정용)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: _why
           pattern: reason-*
