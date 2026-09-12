@@ -55,7 +55,21 @@ def test_workflow_actually_carries_this_policy():
     """위 표는 워크플로의 거울일 뿐이다 — 셸에서 사라지면 여기만 초록으로 남는다."""
     y = io.open(WF, encoding='utf-8').read()
     assert 'reason-${{ matrix.n }}' in y, '러너가 사유를 안 올린다'
-    assert re.search(r'pattern:\s*reason-\*', y), '커밋 잡이 사유를 안 받는다'
+    # 커밋 잡은 러너별로 **이름을 지정해** 받는다. pattern 으로 받으면 결과가 1개인
+    # 날에만 경로가 평평해져 간헐적으로 깨진다(2026-09-12 배치 사고, 백로그 7번).
+    # matrix 에서 러너 목록을 읽어 대조하므로, 러너를 늘리고 스텝을 안 늘리면 여기서
+    # 잡힌다 — 개수를 시험에 박아 두면 그 결합이 조용히 끊긴다.
+    import yaml
+    wf = yaml.safe_load(io.open(WF, encoding='utf-8'))
+    runners = wf['jobs']['fetch']['strategy']['matrix']['n']
+    assert len(runners) >= 2, '러너가 하나면 이중화가 아니다'
+    for n in runners:
+        assert re.search(r'name:\s*reason-%s(?![0-9])' % n, y), (
+            '커밋 잡이 러너 %s 의 사유를 안 받는다' % n)
+        assert re.search(r'name:\s*data-%s(?![0-9])' % n, y), (
+            '커밋 잡이 러너 %s 의 산출물을 안 받는다' % n)
+    assert not re.search(r'pattern:\s*(reason|data)-\*', y), (
+        'pattern 방식으로 되돌아갔다 — 결과가 1개인 날 경로가 평평해져 깨진다')
     assert 'nosecret|crash' in y, '분류표가 셸에서 사라졌다'
     assert re.search(r'HEALABLE.*=.*0.*\n.*then', y) or 'HEALABLE" = "0"' in y
     # 결정론적 실패는 재시도가 아니라 red여야 한다 — need_retry로 새지 않는지.
