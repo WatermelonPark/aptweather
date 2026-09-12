@@ -17,14 +17,27 @@ import io
 import json
 import os
 import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sido_zones as SZ  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = 'https://www.agongmap.co.kr'
 PUBLISHED = '2026-07-29'   # 페이지 최초 공개일(고정)
 
 # 2026-09-10 광주·전남 통합으로 16곳이 됐다(이름은 이력상 SIDO17을 유지).
+# ⚠️ 순서는 화면 표시용이라 손으로 둔다. 다만 **집합**은 모델과 같아야 한다 —
+# 여기서 한 곳이 빠지면 아래 nat26/nat27 전국 합계가 그만큼 적게 나오는데, 표는
+# 멀쩡해 보인다. 2026-09-12 에 같은 유형이 세 군데서 나왔다(사이클 전세가율 차트
+# 355d767 · 홈 표 모드 MATRIX_REGIONS · 홈 주간 타일). 전부 '모르는 지역을 조용히
+# 건너뛰는' 구조였고 아무것도 빨개지지 않았다. 그래서 시작할 때 대조하고 죽는다.
 SIDO17 = ['서울', '경기', '인천', '부산', '대구', '전남광주', '대전', '울산', '세종',
           '강원', '충북', '충남', '전북', '경북', '경남', '제주']
+_MODEL = set(z for z in SZ.ORDER if z not in SZ.AGG)
+if set(SIDO17) != _MODEL:
+    raise SystemExit('SIDO17이 모델과 다르다 — 차이 %s (sido_zones.ORDER 기준으로 맞출 것)'
+                     % sorted(set(SIDO17) ^ _MODEL))
 
 
 def load():
