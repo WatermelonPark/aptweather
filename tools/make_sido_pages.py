@@ -51,7 +51,7 @@ GRADE_TXT = {
 }
 # 집계 3종은 '지역'이 아니라 묶음이라 설명이 달라야 한다
 AGG_NOTE = {
-    '전국': '전국 17개 시도를 합친 값입니다.',
+    '전국': '전국 16개 시도를 합친 값입니다.',
     '수도권': '서울·경기·인천을 합친 값입니다.',
     '지방': '수도권을 뺀 14개 시도를 합친 값입니다.',
 }
@@ -668,7 +668,7 @@ def build_hub(calc):
     # 등급순은 토글이 만든다. JS 정렬 키(data-gi/tot)는 순서와 무관하게 실린다.
     sido = sorted([z for z in calc['zones'] if not z['agg']],
                   key=lambda x: -disp_tot(x, calc['H']))
-    desc = ('전국 17개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. '
+    desc = ('전국 16개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. '
             '실적은 국토교통부 준공, 앞으로 %d분기는 착공 실적 기준. 기준 %s.'
             % (calc['H'], calc['L']))
     h = [head('시도별 공급', desc, '시도별 아파트 공급 분석',
@@ -681,7 +681,7 @@ def build_hub(calc):
     for o in agg:
         h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
                  % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
-    h.append('</div><h2 class="z17">17개 시도</h2>'
+    h.append('</div><h2 class="z17">16개 시도</h2>'
              '<div class="tb-seg zsort" id="sido-sort" role="group" aria-label="정렬 기준">'
              '<button type="button" class="on" aria-pressed="true" data-s="a">세대수순</button>'
              '<button type="button" aria-pressed="false" data-s="g">등급순</button></div>'

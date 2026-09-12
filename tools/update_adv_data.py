@@ -958,20 +958,8 @@ def _label_ym(label):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
-# 원천이 두 지역을 **합쳐서** 주는 항목. 17시도 모델은 그 지역을 개별로 다루므로
-# series 에 넣지 않는다. 다만 값을 그냥 버리면 합계 검사(check_freshness.check_sido_sum)가
-# 그 시점을 영영 검증하지 못한다 — 광주·전남이 빈 채로 '17시도합 < 전국'이 되는데, 그
-# 부족분이 정말 이 항목 때문인지 다른 시도가 굳어서인지 구분할 수가 없어진다. 실제로
-# 그 구분을 못 하면 부산이 틀려도 검사가 통과한다(2026-09-10 파괴 시험으로 확인).
-# 그래서 값만 따로 남겨 검사가 보정에 쓰게 한다(KOSIS 2026.07 공표분부터 '전남광주').
-MERGED_KEYS = ('전남광주',)
-
-
 def merge_basic(D, fetched):
-    """fetched {(y,m):{region:val}} 를 D(dates/series)에 병합. 변경 셀 수 반환.
-
-    series 에 없는 지역 키는 버리되, MERGED_KEYS 는 D['merged'] 에 보존한다.
-    """
+    """fetched {(y,m):{region:val}} 를 D(dates/series)에 병합. 변경 셀 수 반환."""
     key2idx = {}
     for i, d in enumerate(D['dates']):
         ym = _label_ym(d)
@@ -979,10 +967,6 @@ def merge_basic(D, fetched):
     changed = 0
     for ym in sorted(fetched):
         vals = {r: v for r, v in fetched[ym].items() if r in D['series']}
-        keep = {r: v for r, v in fetched[ym].items()
-                if r in MERGED_KEYS and v is not None}
-        if keep:
-            D.setdefault('merged', {})['%d.%02d' % ym] = keep
         if not vals: continue
         if ym in key2idx:
             i = key2idx[ym]

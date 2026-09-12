@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """주간 시장상황 공유용 PNG 생성 — 블로그·카페·인스타 배포용.
 
-data.js의 ADV.weekly 최신 주차를 읽어 17개 시도 타일 지도를 그린다.
+data.js의 ADV.weekly 최신 주차를 읽어 16개 시도 타일 지도를 그린다.
 출력: share/weekly-map.png (매주 덮어씀 — /weekly/ og:image로도 사용)
 
 사용: python tools/make_weekly_share.py
