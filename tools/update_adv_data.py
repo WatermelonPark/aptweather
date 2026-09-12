@@ -263,7 +263,16 @@ def update_supply(stats, months=None):
                 print('supply %s: 빈 응답 — 건너뜀' % name)
                 continue
             _merge_gj(fetched)
-            _drop_incomplete(fetched, regions, name)
+            # ⚠️ 완비 기준은 regions가 아니라 SUPPLY_SIDO(실제 시도 16곳)다.
+            # regions는 저장 계열의 키라 '기타광역시'·'기타지방'까지 안고 있는데,
+            # 그 둘은 _supply_region()이 중간 집계행이라고 **일부러 버리는** 이름이라
+            # 원천 응답에 영영 나타나지 않는다. regions로 재면 missing이 절대 비지
+            # 않아 **모든 달이 제외된다** — 2026-09-08~12 배치 로그에 'supply 분양:
+            # 완비된 달이 없어 건너뜀'이 매 회차 찍혔고 미분양이 2026.06에 묶였다.
+            # 원천 개편 때 조용히 틀린 값이 들어오는 걸 막으려던 가드가 반대로
+            # 조용한 정지를 만든 것이다. SUPPLY_SIDO는 감시(check_freshness의
+            # rone_latest_complete)가 쓰는 집합과 같아서 두 기준이 자동으로 맞는다.
+            _drop_incomplete(fetched, SUPPLY_SIDO, name)
             if not fetched:
                 print('supply %s: 완비된 달이 없어 건너뜀' % name)
                 continue
