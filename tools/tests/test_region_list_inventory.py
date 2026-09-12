@@ -64,8 +64,13 @@ PARTIAL = {
     'SUPPLY_SIDO': 'WEEKLY_REGIONS 에서 파생(리터럴만 세면 일부로 보인다)',
 }
 
+# ⚠️ drafts/ 와 logs/ 는 **gitignore 대상인 로컬 산출물**이다. 초안은 발행 직전마다
+# 다시 만들어지고 사람이 손으로 고치기도 하므로, 훑으면 이 시험의 결과가 '지금 로컬에
+# 어떤 초안이 있느냐'에 따라 흔들린다. 저장소의 코드를 보는 시험이 로컬 파일에 기대면
+# 안 된다(2026-09-12 마케팅 세션 제보 — 그 세션에서 한 번 실패한 뒤 재현되지 않았다).
 SKIP_DIR = ('zone/', 'monthly/', 'moveins/', 'jeonse-ratio/', 'weekly/', 'cycle/',
-            'share/', 'docs/', 'tools/data/', 'tools/cache/', 'tools/tests/')
+            'share/', 'docs/', 'tools/data/', 'tools/cache/', 'tools/tests/',
+            'drafts/', 'logs/')
 SKIP_FILE = ('data.js', 'data-core.js', 'sido-geo.js')
 
 DECL = re.compile(

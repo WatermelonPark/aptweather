@@ -242,7 +242,12 @@ if(localStorage.getItem('ga_off'))window['ga-disable-G-3FJNG6G1F3']=true;
   </div></section>
 
   <section class="home-sec hs-alt"><div class="wrap">
-    <div class="hs-kicker">15개 시도 · 20년</div>
+    <!-- ⚠️ 고리 검증 대상 곳 수. /cycle/ 과 사이클 3편 원고가 쓰는 값과 같아야 한다
+         (정본은 make_naver_post.CYCLE_SYNC_N, 데이터에서 세어 나온다). 홈은 생성
+         대상이 아니라 파생을 걸 수 없어 손으로 적는다 — 대신 시험이 셋의 일치를
+         고정한다(tools/tests/test_cycle_count_sync.py). 2026-09-13 까지 여기만 15로
+         남아, 배너를 눌러 들어간 /cycle/ 은 14라고 말하는 모순이 라이브에 있었다. -->
+    <div class="hs-kicker">14개 시도 · 20년</div>
     <h3>집값은 왜 돌고 도는가</h3>
     <p>공급 → 전세 → 매매 → 다시 공급, 20년 데이터로 검증한 순환의 6개 고리입니다.</p>
     <!-- 사이클 카드에도 그림을 준다(2026-08-17 사용자). /cycle/의 상호작용
