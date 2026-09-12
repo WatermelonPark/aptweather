@@ -1026,6 +1026,28 @@ def merge_prov(D, rates, dec):
     return changed
 
 
+def _merge_gj_rate(by_prd):
+    """광주·전남 → 전남광주. **비율(%)이라 합산이 아니라 가중평균**이다.
+
+    merge_regions.py의 WEIGHTED 규칙과 같은 근거이고 가중치도 그 정본(W_GJ)을 쓴다.
+    합산하면 두 배에 가까운 값이 되어 버블밴드가 전 지역 중 유일하게 터무니없는
+    수치를 보여준다. 한쪽만 오면 있는 쪽을 그대로 쓴다 — 없는 값을 0으로 세면
+    비율이 내려앉는다.
+
+    ⚠️ fetch_bubble 안에 인라인으로 두면 원천 호출 없이는 시험할 수 없다. 실제로
+    처음엔 인라인이었고, 그 상태의 시험은 생산 코드가 아니라 시험 안의 산식을
+    검사하고 있어서 **합산으로 바꿔도 통과했다**(2026-09-12 깨뜨리기 확인).
+    """
+    from merge_regions import W_GJ      # 가중치 정본. 사본을 두면 조용히 갈린다.
+    for vals in by_prd.values():
+        g, j = vals.pop(_GJ_OLD[0], None), vals.pop(_GJ_OLD[1], None)
+        if g is not None and j is not None:
+            vals['전남광주'] = round(g * W_GJ + j * (1 - W_GJ), 2)
+        elif g is not None or j is not None:
+            vals['전남광주'] = g if g is not None else j
+    return by_prd
+
+
 def fetch_bubble():
     """버블밴드: 전월세전환율(아파트·시도, KOSIS DT_30404_N0010) + 주담대 신규취급 가중평균금리
     (ECOS 121Y006/BECBLA0302). {'prd','loan':{'v','p'},'regions','conv':{지역:%}} 반환."""
@@ -1043,7 +1065,12 @@ def fetch_bubble():
             continue
         rg = (r.get('C2_NM') or '').strip()
         rg = BUBBLE_SHORT.get(rg, rg)
-        if rg not in BUBBLE_REGIONS:
+        # ⚠️ 옛 이름(광주·전남)은 여기서 버리지 않고 그대로 통과시킨다. 아래에서
+        # 가중평균해 '전남광주'를 만든다. 예전엔 BUBBLE_SHORT가 옛 이름으로
+        # 매핑하고 바로 이 필터가 둘 다 버려서, 버블밴드 conv가 18곳이 되고
+        # 전남광주가 통째로 빠진 채 배포됐다(2026-09-12 발견). 누락이 조용했던
+        # 이유는 payload의 regions가 `if r in conv`로 걸러지기 때문이다.
+        if rg not in BUBBLE_REGIONS and rg not in _GJ_OLD:
             continue
         try:
             v = round(float(r['DT']), 2)
@@ -1056,6 +1083,7 @@ def fetch_bubble():
             continue
         won[(prd, rg)] = code
         by_prd.setdefault(prd, {})[rg] = v
+    _merge_gj_rate(by_prd)
     full = [p for p in sorted(by_prd) if len(by_prd[p]) >= 10]   # 값이 충분히 채워진 최신 월
     assert full, '전월세전환율 응답 없음'
     prd, conv = full[-1], by_prd[full[-1]]
