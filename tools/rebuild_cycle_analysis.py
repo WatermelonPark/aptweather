@@ -457,13 +457,23 @@ def cycle_strength(P):
 
 # ---------- 조립 ----------
 
-KEYS = ('sync', 'l2_lagcurve', 'link1_new', 'link3_regional', 'link3_split',
-        'link6_regional', 'supply_ratio', 'sr_corr', 'leadtime',
-        'cycle_strength', 'cycle_links', 'confidence')
+# 페이지의 차트가 실제로 읽는 키. 여기에 있는 것만 D에 넣는다.
+KEYS = ('sync', 'link1_new', 'link3_regional', 'link6_regional', 'cycle_strength')
+
+# 계산은 하되 페이지에는 싣지 않는 값. 본문에 이미 글자로 적혀 있어 D에 두면
+# 같은 숫자를 두 곳에 보관하는 셈이고, 방문자는 읽지도 않을 5KB를 받게 된다.
+# 대신 ANALYSIS 파일에 남겨 다음 재산정 때 견주고 시험이 본문과 대조한다.
+ARCHIVE_ONLY = ('l2_lagcurve', 'link3_split', 'supply_ratio', 'sr_corr',
+                'leadtime', 'cycle_links', 'confidence')
 
 # 페이지 어디서도 읽지 않는 채로 남아 있던 값들. 지역 모델이 바뀌어도 따라오지
 # 못해 옛 지역명이 그대로 남으므로 갱신할 때 같이 지운다.
-DROP = ('flow_vs_stock', 'flow_mean', 'stock_mean')
+DROP = ARCHIVE_ONLY + ('flow_vs_stock', 'flow_mean', 'stock_mean',
+                       'sudo_mean', 'jibang_mean', 'seoul', 'seoul_l2',
+                       'rate_facts')
+
+# 계산 결과를 통째로 남기는 자리. 페이지에서 뺀 근거가 여기 있다.
+ANALYSIS = os.path.join(ROOT, 'tools', 'data', 'cycle_analysis.json')
 
 
 def build(st):
@@ -579,6 +589,11 @@ def splice(page, D):
         cur[k] = D[k]
     for k in DROP:
         cur.pop(k, None)
+    dead = [k for k in cur if not re.search(r'D\.%s\b|D\[.%s.\]' % (k, k),
+                                           txt[:m.start()] + txt[m.end():])]
+    if dead:
+        raise RuntimeError('페이지가 읽지 않는 키가 D에 남았다: %s'
+                           % ', '.join(sorted(dead)))
     new = m.group(1) + json.dumps(cur, ensure_ascii=False) + ';\n'
     out = txt[:m.start()] + new + txt[m.end():]
     open(page, 'w', encoding='utf-8', newline='\n').write(out)
@@ -643,13 +658,20 @@ def main():
     st = load_stats(a.data)
     D = build(st)
     report(D)
-    if a.json:
-        open(a.json, 'w', encoding='utf-8').write(
-            json.dumps(D, ensure_ascii=False, indent=1))
     if a.write:
         n = splice(os.path.join(ROOT, 'cycle', 'index.html'), D)
-        print('\ncycle/index.html 갱신: D의 키 %d개 중 %d개를 다시 계산했다'
-              % (n, len(KEYS)))
+        path = a.json or ANALYSIS
+        d = os.path.dirname(path)
+        if d and not os.path.isdir(d):
+            os.makedirs(d)
+        open(path, 'w', encoding='utf-8', newline='\n').write(
+            json.dumps(D, ensure_ascii=False, indent=1, sort_keys=True) + '\n')
+        print('\ncycle/index.html 갱신: 차트가 읽는 키 %d개를 다시 계산했다(D는 키 %d개)'
+              % (len(KEYS), n))
+        print('계산 근거 전체: %s' % os.path.relpath(path, ROOT))
+    elif a.json:
+        open(a.json, 'w', encoding='utf-8', newline='\n').write(
+            json.dumps(D, ensure_ascii=False, indent=1, sort_keys=True) + '\n')
 
 
 if __name__ == '__main__':

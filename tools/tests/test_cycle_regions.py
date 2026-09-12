@@ -23,8 +23,11 @@ ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 PAGE = os.path.join(ROOT, 'cycle', 'index.html')
 
 # 지역 이름을 담고 있는 키. 값이 바뀌어도 이름만은 모델을 벗어나면 안 된다.
+# 페이지에 싣지 않고 tools/data/cycle_analysis.json에만 남긴 것(supply_ratio)도
+# 같이 본다. 화면에 안 나온다고 옛 이름을 품고 있어도 되는 것은 아니다.
 REGION_KEYS = ('jratio_level', 'sync', 'link3_regional', 'link6_regional',
                'supply_ratio', 'cycle_strength')
+ANALYSIS = os.path.join(ROOT, 'tools', 'data', 'cycle_analysis.json')
 
 
 def _D():
@@ -46,8 +49,12 @@ def test_regenerated_chart_covers_every_model_region():
 def test_no_chart_names_a_region_outside_the_model():
     """모델에 없는 지역이 남아 있으면 통합 전 값이 그대로 배포된 것이다."""
     D, _ = _D()
+    if os.path.exists(ANALYSIS):
+        D = dict(json.load(io.open(ANALYSIS, encoding='utf-8')), **D)
     want = _model()
     for k in REGION_KEYS:
+        if k not in D:
+            continue
         stray = {r['region'] for r in D[k]} - want
         assert not stray, '%s에 모델 밖 지역: %s' % (k, ', '.join(sorted(stray)))
 

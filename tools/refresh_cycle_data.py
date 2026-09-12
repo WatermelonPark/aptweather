@@ -148,8 +148,8 @@ def main():
     page = splice(page, 'zones', zones)
     page = splice(page, 'rate_overlay', overlay)
     page = splice(page, 'jratio_level', lvl)
-    page = splice(page, 'sudo_mean', sudo_mean)
-    page = splice(page, 'jibang_mean', jib_mean)
+    # 수도권·지방 평균은 페이지 어디서도 읽지 않아 D에서 뺐다. 배치 로그로는
+    # 계속 남겨 두는 편이 갱신 결과를 눈으로 확인하는 데 쓸모가 있다.
 
     io.open(PAGE, 'w', encoding='utf-8', newline='').write(page)
     z0 = zones[ZONE_REGIONS[0]]
