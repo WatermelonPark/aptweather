@@ -169,6 +169,11 @@ def _cd_change(sts):
     return ('%.2f' % prev[1], '%.2f' % cur[1], '%+.2f' % (cur[1] - prev[1]))
 
 
+# 사이트 /cycle/ 의 고리 검증 대상 곳 수. 두 발행 도구가 같은 값을 말해야 하므로
+# make_theory_post 의 정본을 가져온다(사본을 두면 다음 모델 변경 때 갈린다).
+from make_theory_post import CYCLE_SYNC_N  # noqa: E402
+
+
 INTERP_PLACEHOLDER = (
     '[이번 주 데이터에서 눈에 띈 것을 2~4문장으로. 위 표의 숫자를 다시 읊지 말고 '
     '왜 그런지, 무엇을 시사하는지 쓸 것. 예: 특정 지역만 튀는 이유, 매매-전세 '
@@ -183,7 +188,10 @@ MORE_ROTATION = [
          desc='시도별로 앞으로 3년간 들어올 물량과 필요한 양을 비교한 리포트가 있습니다. 지역을 골라 들어가 보세요.',
          path='/zone/', label='전국 시도 공급 순위'),
     dict(h='집값은 왜 도는가',
-         desc='공급 → 전세 → 매매 → 다시 공급으로 이어지는 순환의 6개 고리를, 15개 시도 20년 데이터로 검증한 리포트입니다.',
+         # 곳 수는 사이트의 고리 검증 대상과 같아야 한다(CYCLE_SYNC_N).
+         # 통합으로 15 → 14가 됐는데 이 문장만 15로 남아 4주마다 발행됐다.
+         desc='공급 → 전세 → 매매 → 다시 공급으로 이어지는 순환의 6개 고리를, '
+              '%d개 시도 20년 데이터로 검증한 리포트입니다.' % CYCLE_SYNC_N,
          path='/cycle/', label='「집값은 돌고 돈다」 읽기'),
     # 테스트가 셋인데 부린이 하나만 소개하고 있었다. "문항마다 국가 통계에
     # 근거한 해설"은 설명서 문구라 빼고, 종류를 보여준다(2026-09-07 사용자).
@@ -205,14 +213,23 @@ def rot_index(p):
 
 
 def _series_last(sts, key, region='전국'):
-    """(최신값, 직전값, 기준월) — 데이터가 없으면 (None, None, None)."""
+    """(최신값, 직전값, 기준월) — 데이터가 없으면 (None, None, None).
+
+    ⚠️ 값과 날짜를 **같은 원소에서** 가져온다. 예전엔 값은 결측을 걸러낸 목록의
+    끝에서, 날짜는 원본 목록의 끝에서 뽑았다. 꼬리가 None이면 지난달 값에 이번 달
+    날짜가 붙어 "전국 미분양은 6만 7천 호입니다(2026.07 기준)"처럼 **발행 글이 틀린
+    시점을 말한다.** 새 달 열은 merge_basic이 전 지역 None으로 먼저 만들고 받아온
+    지역만 채우므로, 전국이 아직 안 온 달에 실제로 이 모양이 된다.
+    """
     d = sts.get(key) or {}
     s = (d.get('series') or {}).get(region) or []
     dates = d.get('dates') or []
-    vals = [v for v in s if v is not None]
-    if len(vals) < 2 or not dates:
+    idx = [i for i, v in enumerate(s) if v is not None]
+    if len(idx) < 2 or not dates:
         return None, None, None
-    return vals[-1], vals[-2], dates[len(s) - 1] if len(dates) >= len(s) else dates[-1]
+    i = idx[-1]
+    when = dates[i] if i < len(dates) else dates[-1]
+    return s[i], s[idx[-2]], when
 
 
 def extra_section(adv, sts, rot):
