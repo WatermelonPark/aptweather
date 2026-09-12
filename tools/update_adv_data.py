@@ -184,12 +184,20 @@ def _drop_incomplete(fetched, regions, name):
     계속 비면 감시의 나이 검사가 뒤처짐으로 잡는다.
     """
     want = {r for r in regions if r not in ('전국', '수도권', '지방')}
+    had = len(fetched)
     for ym in sorted(fetched):
         missing = want - set(fetched[ym])
         if missing:
             del fetched[ym]
             print('supply %s: %d-%02d 제외, 시도 %d곳 결측(%s)'
                   % (name, ym[0], ym[1], len(missing), ', '.join(sorted(missing)[:4])))
+    # 받은 달을 **전부** 버렸다면 개별 달의 결측이 아니라 기준이 틀린 것이다.
+    # 8개월치가 모두 불완비일 수는 없다. 2026-09-08~12에 정확히 이 모양으로
+    # 공급 갱신이 멈췄는데, 로그가 평범한 제외 줄과 같아 닷새를 지나쳤다.
+    if had and not fetched:
+        print('::warning::supply %s: 받은 %d개 달을 전부 버렸다 — 완비 기준(%d개 이름)이 '
+              '원천이 주는 이름과 어긋났을 수 있다' % (name, had, len(want)))
+        print('supply %s: ⛔ 완비된 달이 하나도 없다 — 이번 회차 갱신 없음' % name)
     return fetched
 
 

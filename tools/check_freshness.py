@@ -468,8 +468,14 @@ def check_region_rows():
     return fails
 
 
-def rone_latest_complete(tbl, since=None):
+_COMPLETE_CACHE = {}
+
+
+def rone_latest_complete(tbl, since=None, want_total=False):
     """R-ONE 월간표에서 **우리 시도가 모두 들어찬** 가장 최신 시점.
+
+    want_total이면 (시점, 그 달 시도 합)을 돌려준다. 같은 조회를 두 번 하지
+    않도록 결과를 캐시하므로, 값 대조를 붙여도 API 호출은 늘지 않는다.
 
     배치(_drop_incomplete)가 불완전한 달을 버리므로, 감시도 같은 기준으로 봐야
     한다. 기준이 갈리면 배치는 일부러 안 받고 감시는 그걸 뒤처짐이라 하는
@@ -478,6 +484,10 @@ def rone_latest_complete(tbl, since=None):
     완비된 달이 하나도 없으면 그냥 최신 시점을 돌려준다 — 판정을 못 하게 되는
     것보다는 낫고, 그 경우는 뒤처짐으로 잡히는 게 맞다.
     """
+    key = (tbl, since)
+    if key in _COMPLETE_CACHE:
+        t, total = _COMPLETE_CACHE[key]
+        return (t, total) if want_total else t
     base = ('https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do'
             '?KEY=%s&Type=json&STATBL_ID=%s&DTACYCLE_CD=MM'
             % (os.environ.get('RONE_API_KEY', ''), tbl))
@@ -491,7 +501,7 @@ def rone_latest_complete(tbl, since=None):
                 total = h['list_total_count']
     if not total:
         if since:
-            return rone_latest_complete(tbl)
+            return rone_latest_complete(tbl, want_total=want_total)
         raise RuntimeError('list_total_count 없음')
     # ⚠️ 마지막 페이지 번호는 **올림**이다. `total // 1000 + 1`로 쓰면 total이
     #    1000의 배수일 때 존재하지 않는 다음 페이지를 집어 rows가 비고
@@ -502,13 +512,17 @@ def rone_latest_complete(tbl, since=None):
         if 'row' in blk:
             rows = blk['row']
     want = {z for z in U.WEEKLY_REGIONS if z not in ('전국', '수도권', '지방')}
-    by = {}
+    by, vals = {}, {}
     for r in rows:
         t = (r.get('WRTTIME_IDTFR_ID') or '').strip()
         reg = U._supply_region(r.get('CLS_FULLNM'))
         if not (t and reg) or r.get('DTA_VAL') in (None, ''):
             continue
         by.setdefault(t, set()).add(reg)
+        try:
+            vals.setdefault(t, {})[reg] = float(r['DTA_VAL'])
+        except (TypeError, ValueError):
+            pass
     if not by:
         raise RuntimeError('시점 파싱 실패')
     # 원천이 아직 옛 이름(광주·전남)으로 주는 계열이 있다. 배치가 조회 뒤 합치므로
@@ -521,7 +535,55 @@ def rone_latest_complete(tbl, since=None):
             have.add('전남광주')
         if not (want - have):
             full.append(t)
-    return max(full) if full else max(by)
+    t = max(full) if full else max(by)
+    # 시도 합. 원천이 '전국' 행을 주는 계열과 안 주는 계열이 섞여 있어, 양쪽에서
+    # 같은 방식으로 셀 수 있는 시도 합으로 잰다. 옛 이름 둘은 배치와 같게 합친다.
+    v = dict(vals.get(t) or {})
+    if old_a in v and old_b in v:
+        v['전남광주'] = v.pop(old_a) + v.pop(old_b)
+    total_val = sum(x for r, x in v.items() if r in want)
+    _COMPLETE_CACHE[key] = (t, total_val)
+    return (t, total_val) if want_total else t
+
+
+def check_supply_value(label, D, tbl, since):
+    """시점이 같아도 값이 같은가. 갱신이 멈춘 것을 시점만으로는 못 잡는다.
+
+    2026-09-08~12 실사고: 배치의 완비 기준이 원천에 없는 이름을 요구해 받은 달을
+    **전부** 버렸다. 저장분은 멈춘 채 남았고 원천도 새 달을 내지 않아 시점은 계속
+    같았다 — 감시가 닷새 내내 초록이었다. 시점이 같을 때 그 달의 시도 합을 견주면
+    그 사이 들어왔어야 할 소급 정정까지 함께 드러난다.
+
+    시점이 다르면 여기서는 아무 말도 하지 않는다. 그건 위의 나이 검사 몫이다.
+    """
+    try:
+        src_t, src_total = rone_latest_complete(tbl, since, want_total=True)
+    except Exception:
+        return None          # 조회 실패는 위의 check()가 이미 분류했다
+    dates = D.get('dates') or []
+    tag = None
+    for d in dates:
+        if digits(d)[:6] == digits(src_t)[:6]:
+            tag = d
+            break
+    if tag is None or not src_total:
+        return None
+    i = dates.index(tag)
+    sido = [r for r in U.SUPPLY_SIDO]
+    mine = 0.0
+    for r in sido:
+        ser = D['series'].get(r) or []
+        if i < len(ser) and ser[i] is not None:
+            mine += ser[i]
+    if round(mine) == round(src_total):
+        print('  %-12s %-12s 값 일치 (시도합 %s)'
+              % (label + ' 값', tag, format(int(mine), ',')))
+        return None
+    print('  %-12s %-12s 원천 %s / 라이브 %s  실패'
+          % (label + ' 값', tag, format(int(src_total), ','), format(int(mine), ',')))
+    return ('%s 값(%s 시도합 라이브 %s ≠ 원천 %s) — 시점은 같은데 값이 다르다. '
+            '갱신이 멈췄거나 소급 정정을 못 받았다'
+            % (label, tag, format(int(mine), ','), format(int(src_total), ',')))
 
 
 def rone_region_names(tbl, cycle):
@@ -837,6 +899,10 @@ def main():
         fails.append(check(name, last,
                            lambda c=cfg, sc=since: rone_latest_complete(c['tbl'], sc),
                            GRACE_MONTHLY))
+        # 시점이 같아도 값이 멈춰 있을 수 있다. 위 조회 결과를 캐시에서 재사용하므로
+        # API 호출은 늘지 않는다.
+        if D:
+            fails.append(check_supply_value(name, D, cfg['tbl'], since))
 
     print('[금리 — 원천 한국은행 ECOS]')
     D = stats.get('금리') or {}
