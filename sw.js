@@ -8,7 +8,7 @@
 // 실사고가 그렇게 났다(sed로 패턴을 잡아 하드코딩 값으로 치환). 되돌아간 번호는
 // 배포 이력을 못 읽게 만들고, 다음 사람이 이미 쓴 번호를 재사용하게 한다.
 // 단조 증가는 test_sw_version_only_moves_forward가 지킨다.
-const VERSION = 'v129'; // 홈 사이클 배너 곳 수 정정
+const VERSION = 'v130'; // 퀴즈 결과 → 공급 지도, 출처 약속 삭제
 const CACHE = `agongmap-${VERSION}`;
 
 const PRECACHE = [

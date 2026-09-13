@@ -287,6 +287,10 @@
     padding:14px;border-radius:var(--r-touch);border:0;cursor:pointer;background:var(--ink);color:#fff;margin-bottom:9px}
   .ns-btn:active{transform:scale(.99)}
   .ns-btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);margin-bottom:0}
+  /* 첫 버튼은 <a href>다(인앱 브라우저에서 길게 눌러 열도록). <button> 기본값이던 가운데
+     정렬을 대신 주고 밑줄을 뗀다. width:100%+padding 이 넘치지 않게 border-box. */
+  a.ns-btn{text-align:center;text-decoration:none;box-sizing:border-box}
+  .ns-btn.ghost+.ns-btn.ghost{margin-top:9px}
   .qshare-box{background:var(--paper2);border-radius:0;padding:22px;margin:0 auto;max-width:420px}
   .qshare-box h4{font-size:15px;font-weight:600;margin:0 0 12px}
   .qshare-btns{display:flex;flex-direction:column;gap:10px}
