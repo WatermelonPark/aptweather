@@ -73,6 +73,32 @@ GRADE_LABS = {'g4': '심각한 부족', 'g3': '매우 부족', 'g2': '부족',
               'g1': '균형', 'g0': '공급 여유'}
 
 
+def ratio_text(ratio, H=LEAD_Q, full=False):
+    """순부족비를 사람 말로 옮긴다. 판정 배지 옆에 붙는다(2026-09-13 PM 요청 ①).
+
+    발단: 경기 리포트가 판정은 '균형'인데 바로 아래 '누적 순부족 50,579세대'라
+    반대로 읽혔다. 등급은 '앞으로 H분기 필요량 대비 누적 순부족의 비율'로 자르는데
+    화면에는 그 비율이 없고 절대 세대수만 있었다. 비율을 같이 보여주면 왜 균형인지가
+    한 줄로 설명된다.
+
+    ⚠️ 여기서만 만든다. 홈은 JS라 같은 문구를 거기서 또 만들면 이중 구현이 되고,
+    이 프로젝트는 2026-08-06에 그런 미러를 전부 걷어냈다. calc()가 결과 행에
+    'rtxt'로 구워 싣고 화면은 읽기만 한다.
+    """
+    yrs = '%g년' % (H / 4.0)
+    # 필요량을 넘는 부족도 배가 아니라 퍼센트로 쓴다. '1.0배'로 쓰면 울산(1.012)·
+    # 경남(1.007)이 '딱 같다'로 읽히고, 판정 규칙 문장('50%에 못 미쳐')과도 단위가 갈린다.
+    pct = int(round(ratio * 100))
+    if pct >= 1:
+        return (('누적 순부족이 앞으로 %s 필요량의 %d%%입니다' % (yrs, pct)) if full
+                else ('%s 필요량의 %d%% 부족' % (yrs, pct)))
+    if pct <= -1:
+        return (('앞으로 %s 필요량보다 %d%% 더 들어옵니다' % (yrs, -pct)) if full
+                else ('%s 필요량보다 %d%% 여유' % (yrs, -pct)))
+    return (('누적 순부족이 앞으로 %s 필요량과 거의 같습니다' % yrs) if full
+            else ('%s 필요량과 거의 같음' % yrs))
+
+
 def qidx(y, q):
     """(연, 분기) → 정수 인덱스. 분기 산술을 한 축에서 하려고 쓴다."""
     return y * 4 + q - 1
@@ -317,6 +343,9 @@ def calc(stats):
             'z': z, 'region': REGION[z], 'agg': z in AGG, 'est': z in EST,
             'ref': ref, 'inow': round(inow), 'fut': round(fut), 'need': need,
             'tot': round(tot), 'ratio': round(ratio, 4), 'grade': g,
+            # 저장되는 ratio(소수 넷째 자리)로 만든다. 반올림 전 값으로 만들면 퍼센트 경계에서
+            # 화면의 문구와 저장된 숫자가 1%p 어긋날 수 있다.
+            'rtxt': ratio_text(round(ratio, 4), H),
             'unsold': (None if un is None else round(un)),
             'um': (None if um is None else round(um, 3)),
             'uwarn': bool(um is not None and um >= 1.0 and g in ('g4', 'g3', 'g2')),

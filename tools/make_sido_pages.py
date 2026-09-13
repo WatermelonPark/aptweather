@@ -39,15 +39,19 @@ GA = 'G-3FJNG6G1F3'
 TABLE_FROM = SZ.qidx(2017, 1)
 
 GRADE_TXT = {
-    # 라벨·설명문 모두 2026-08-15 PM 결정으로 한 칸 올렸다. 설명문은 '심하진
-    # 않습니다' 같은 형용사 대신 **순부족비가 뜻하는 크기를 그대로** 말한다 —
-    # 라벨만 올리면 절반이고, 숫자를 배신하던 건 설명문 쪽이 더 컸다.
-    # 색은 등급 키에 묶여 있어 그대로 둔다(심각도 순서가 보존된다).
-    'g4': ('심각한 부족', '#a93226', '앞으로 3년 필요량의 1.5배가 넘게 모자랍니다'),
-    'g3': ('매우 부족', '#c0392b', '앞으로 3년 필요량만큼이 통째로 모자랍니다'),
-    'g2': ('부족', '#b9770e', '앞으로 3년 필요량의 절반 이상이 모자랍니다'),
-    'g1': ('균형', '#5e6f74', '필요한 만큼 들어오고 있습니다'),
-    'g0': ('공급 여유', '#1a5276', '입주가 몰려 있어 세입자·매수자에게 유리한 시기가 옵니다'),
+    # 라벨은 2026-08-15 PM 결정으로 한 칸 올렸다. 색은 등급 키에 묶여 있어 그대로
+    # 둔다(심각도 순서가 보존된다).
+    #
+    # ⚠️ 등급마다 붙어 있던 고정 설명문을 2026-09-13에 걷었다. g1의 '필요한 만큼
+    # 들어오고 있습니다'가 바로 아래 '누적 순부족 50,579세대'와 정면으로 부딪혀
+    # 경기 리포트가 반대로 읽혔다(PM 요청 ①). 한 등급 안에서도 순부족비가 0.01과
+    # 0.49만큼 다른데 문장이 하나라 생긴 일이다. 이제 설명은 지역마다 그 지역의
+    # 비율로 만든다 — verdict_line() 참조.
+    'g4': ('심각한 부족', '#a93226'),
+    'g3': ('매우 부족', '#c0392b'),
+    'g2': ('부족', '#b9770e'),
+    'g1': ('균형', '#5e6f74'),
+    'g0': ('공급 여유', '#1a5276'),
 }
 # 집계 3종은 '지역'이 아니라 묶음이라 설명이 달라야 한다
 AGG_NOTE = {
@@ -182,6 +186,39 @@ MODEL_LIMIT_NOTE = {
             '가격이 바닥이던 시기에도 공급이 기준의 2~6배씩 들어와 있었습니다. '
             '세종의 판정은 참고로만 보세요.',
 }
+
+
+def _cut(x):
+    """컷 값을 문장에 넣을 모양으로. 비율 문구(ratio_text)와 같은 퍼센트 단위로 쓴다."""
+    return '%d%%' % round(x * 100)
+
+
+def verdict_line(row, H):
+    """리포트 머리의 판정 설명 — 그 지역의 비율과, 그 비율이 왜 그 등급인지.
+
+    등급 규칙의 숫자는 SZ.GRADE_CUTS에서 가져온다. 컷을 옮기면 문장이 따라 바뀐다.
+    계산법 공개가 핵심 가치라 '균형'이라는 말 뒤에 기준을 같이 적는다.
+    """
+    c = SZ.GRADE_CUTS
+    rule = {
+        'g4': '%s 이상이라 심각한 부족으로 분류합니다' % _cut(c[0]),
+        'g3': '%s 이상이라 매우 부족으로 분류합니다' % _cut(c[1]),
+        'g2': '%s 이상이라 부족으로 분류합니다' % _cut(c[2]),
+        'g1': '%s에 못 미쳐 균형으로 분류합니다' % _cut(c[2]),
+        'g0': '모자라는 몫이 없어 공급 여유로 분류합니다',
+    }[row['grade']]
+    return '%s. %s.' % (SZ.ratio_text(row['ratio'], H, full=True), rule)
+
+
+# 시도 안의 편차는 이 지표로 볼 수 없다(2026-09-13 PM 요청 ④ 조사 결론).
+# 국토부 공급 실적표 6종(준공·착공·인허가의 유형별·부문별·지역별)이 모두 시도까지만
+# 나누고, 시군구로 받던 건축HUB 경로는 2026-08-06에 폐기했다(착공일이 준공 뒤에야
+# 채워지고 준공예정이 착공 기준의 1.29~1.68배로 부풀어 있었다). 시군구 적정물량도
+# 원천이 없어 인구로 나누면 안분이 된다. 그래서 편차가 있다는 사실만 적는다.
+# 세종은 시·군·구가 없는 단일 행정구역이라 이 문장이 사실이 아니어서 뺀다.
+INNER_SPREAD_NOTE = ('시도 전체를 합친 값입니다. 같은 시도 안에서도 시·군·구마다 '
+                     '공급 사정이 크게 다를 수 있습니다.')
+NO_INNER_UNITS = ('세종',)
 
 
 DATE_RE = re.compile(r'\d{4}-\d{2}-\d{2}')
@@ -486,7 +523,7 @@ def _write_merged_stub(path, old, new):
 
 def build_page(z, calc, stats, pq, others):
     row = [x for x in calc['zones'] if x['z'] == z][0]
-    lab, color, gdesc = GRADE_TXT[row['grade']]
+    lab, color = GRADE_TXT[row['grade']]
     rows = series(stats, z, calc)
     L = SZ.qidx(int(calc['L'][:4]), int(calc['L'][5:]))
     fut = [r for r in rows if r[2]]
@@ -509,7 +546,7 @@ def build_page(z, calc, stats, pq, others):
              '<nav class="crumb"><a href="/">아공맵</a> › <a href="/zone/">시도 공급 분석</a> › <b>%s</b></nav>'
              '<h1>%s 아파트 공급</h1>'
              '<p class="zlead"><span class="sc-tier %s">%s</span> %s</p>'
-             % (esc(z), esc(z), row['grade'], esc(lab), esc(gdesc)))
+             % (esc(z), esc(z), row['grade'], esc(lab), esc(verdict_line(row, calc['H']))))
     if row.get('pwarn'):
         # 창 너머 신호(2026-08-11 사용자). 판정은 앞으로 3년(착공이 닿는 데까지)을
         # 보는데, 인허가 절벽은 그 창이 끝나는 2029년 이후에 입주 부족으로 나타난다.
@@ -530,6 +567,8 @@ def build_page(z, calc, stats, pq, others):
         h.append('<p class="zwarn">%s</p>' % esc(MODEL_LIMIT_NOTE[z]))
     if z in AGG_NOTE:
         h.append('<p class="znote">%s</p>' % esc(AGG_NOTE[z]))
+    elif z not in NO_INNER_UNITS:
+        h.append('<p class="znote">%s</p>' % esc(INNER_SPREAD_NOTE))
     # 홈 그래프 연동 — 이 지역을 보고 홈으로 돌아가면 그래프가 이 지역으로
     # 열린다(2026-08-08 사용자). sessionStorage라 탭을 닫으면 사라진다.
     h.append('<script>try{sessionStorage.setItem("agong_gr",%s)}catch(e){}</script>'
@@ -656,8 +695,9 @@ def build_page(z, calc, stats, pq, others):
     for o in others:
         if o['z'] == z:
             continue
-        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
-                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
+        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span><i>%s</i></a>'
+                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0],
+                    esc(o['rtxt'])))
     h.append('</div><p class="zsub" style="margin-top:14px">'
              '<a href="/">← 전국 공급 표로 돌아가기</a></p></div></section>')
     h.append(share_section(z))
@@ -682,8 +722,9 @@ def build_hub(calc):
              '<p class="zlead">%s</p></div></header>' % esc(desc))
     h.append('<section><div class="wrap"><h2>전국·수도권·지방</h2><div class="zlinks">')
     for o in agg:
-        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span></a>'
-                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0]))
+        h.append('<a href="/zone/%s/"><b>%s</b><span class="sc-tier %s">%s</span><i>%s</i></a>'
+                 % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0],
+                    esc(o['rtxt'])))
     h.append('</div><h2 class="z17">16개 시도</h2>'
              '<div class="tb-seg zsort" id="sido-sort" role="group" aria-label="정렬 기준">'
              '<button type="button" class="on" aria-pressed="true" data-s="a">세대수순</button>'
@@ -696,11 +737,11 @@ def build_hub(calc):
              '<div class="zlinks" id="sido-list">')
     for o in sido:
         h.append('<a href="/zone/%s/" data-gi="%d" data-tot="%d"><b>%s</b>'
-                 '<span class="sc-tier %s">%s</span><i>%s세대</i></a>'
+                 '<span class="sc-tier %s">%s</span><i>%s세대 · %s</i></a>'
                  % (urllib.parse.quote(o['z']), SZ.GRADE_KEYS.index(o['grade']),
                     disp_tot(o, calc['H']),
                     esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0],
-                    signed(disp_tot(o, calc['H']))))
+                    signed(disp_tot(o, calc['H'])), esc(o['rtxt'])))
     h.append('</div></div></section>')
     h.append('<script>(function(){'
              'var w=document.getElementById("sido-list"),seg=document.getElementById("sido-sort"),'

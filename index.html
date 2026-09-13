@@ -2941,7 +2941,9 @@ function renderSidoMap(){
     var z=Z[n]; if(!z) return;
     h+='<a href="/zone/'+encodeURIComponent(n)+'/"><b>'+n+'</b>'
       +'<span class="sc-tier '+z.grade+'">'+TB_GRADE[z.grade]+'</span>'
-      +'<i>'+tbSigned(z.tot)+'세대</i></a>';
+      /* 비율 문구는 sido_zones.ratio_text가 구워 싣는다 — 여기서 다시 만들지 않는다
+         (이중 구현 금지). 옛 캐시에 필드가 없으면 세대수만 보인다. */
+      +'<i>'+tbSigned(z.tot)+'세대'+(z.rtxt?' · '+z.rtxt:'')+'</i></a>';
   });
   h+='</div>';
   /* 라벨: 도 9곳은 도형 안에 들어가고, 광역시·세종 8곳은 도형이 작아 흰 테두리
