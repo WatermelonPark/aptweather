@@ -55,8 +55,14 @@ LEAD_Q = 12          # 착공 → 준공 12분기(3년). 실측 최적값.
 CONV = 0.958         # 착공 대비 준공 전환율. 전국 연간 12개월 완비 연도 평균.
 BACKLOG_WINDOW = 16  # 과거 재고 창 4년 (2026-08-02 사용자 결정, 앵커·상한 없음)
 # ⚠️ 마지막 컷은 -0.5가 아니라 **0.0**이다(2026-08-02 변경). 향후 16분기 물가차감
-# 실질 상승률이 비율 0에서 손익분기라서다(0 아래 실질 -0.3~-1.2% · 0~0.5 +0.13% ·
-# 0.5~1.0 +2.58% · 1.0+ +10.22%). 옛 make_zone_pages.GRADE_CUTS 주석 참조.
+# 실질 상승률이 비율 0에서 손익분기라서였다(0 아래 실질 -0.3~-1.2% · 0~0.5 +0.13% ·
+# 0.5~1.0 +2.58% · 1.0+ +10.22%).
+# ⚠️ 위 수치는 **옛 생활권 44곳 모델**로 잰 것이다. 2026-09-13 지금의 시도 모델로 다시
+# 재면(tools/study_grade_bands.py, 16개 시도 × 2014Q3~2022Q2 512개) 0 미만 +0.25%,
+# 0~0.25 -6.36%, 0.25~0.5 +1.54%, 0.5~1.0 +5.78%, 1.0+ +18.58%로 **0.0 손익분기가
+# 재현되지 않는다**(갈림은 0.25 부근). 그래도 컷은 옮기지 않았다 — 옮길 방향을 받칠
+# 근거가 없고 0.25~0.5에 든 지역이 없어 새 칸도 판정을 바꾸지 않는다(대표 결정,
+# docs/2026-09-13-판정기준-결정.md). 위 목록의 수치를 컷의 현재 근거로 인용하지 말 것.
 GRADE_CUTS = (1.5, 1.0, 0.5, 0.0)
 GRADE_KEYS = ('g4', 'g3', 'g2', 'g1', 'g0')
 # 창 너머 인허가 경고(pwarn)의 문턱. 1.0이 아니라 0.95인 게 핵심이다 —
@@ -256,6 +262,119 @@ def permit_trail12(stats, region):
     return pieces[0] + pieces[1] - pieces[2], ym
 
 
+PERMIT_WIN = 24          # 3년 너머 신호의 창. 12월을 두 번 담아 한 해의 이례를 반으로 줄인다
+CONV_FROM = 2012         # 착공 전환율을 재는 첫 해(착공 계열이 2011년부터 온전하다)
+
+
+def permit_monthly(stats, region):
+    """인허가 연내 누계 → 월별 호수 {'YYYY.MM': 호}.
+
+    ⚠️ 저장된 인허가는 '호 (연내 누계)'다. 월 값을 그대로 더하면 약 6배로 부푼다
+    (/monthly/ 표와 2026-09-13 분석이 이 함정에 걸렸다). 1월은 누계가 곧 그 달이고,
+    나머지 달은 전월 누계와의 차다. 전월이 비면 그 달은 만들지 않는다.
+    """
+    s = stats.get('인허가') or {}
+    ser = (s.get('series') or {}).get(region) or []
+    cum = {d[:7]: v for d, v in zip(s.get('dates') or [], ser) if v is not None}
+    out = {}
+    for k, v in cum.items():
+        y, m = int(k[:4]), int(k[5:7])
+        if m == 1:
+            out[k] = v
+            continue
+        p = cum.get('%d.%02d' % (y, m - 1))
+        if p is not None:
+            out[k] = v - p
+    return out
+
+
+def permit_start_conv(stats, region):
+    """같은 해 착공 ÷ 인허가 — 그 지역에서 허가 물량이 실제로 삽을 뜨는 비율.
+
+    CONV_FROM부터 인허가 12월 누계와 착공 12개월이 모두 있는 완비 연도를 합쳐 잰다.
+    해마다 크게 흔들리므로(전국 0.54~1.20) 연도별 값이 아니라 합계의 비율을 쓴다.
+    """
+    ps = stats.get('인허가') or {}
+    cum = {d[:7]: v for d, v in zip(ps.get('dates') or [],
+                                    (ps.get('series') or {}).get(region) or []) if v is not None}
+    ss = stats.get('착공') or {}
+    st = {d[:7]: v for d, v in zip(ss.get('dates') or [],
+                                   (ss.get('series') or {}).get(region) or [])}
+    tp = ts = 0.0
+    y = CONV_FROM
+    while ('%d.12' % y) in cum:
+        months = ['%d.%02d' % (y, m) for m in range(1, 13)]
+        if all(k in st for k in months):
+            tp += cum['%d.12' % y]
+            ts += sum((st[k] or 0.0) for k in months)
+        y += 1
+    return (ts / tp) if tp else None
+
+
+def permit_signal(stats, region, ref_q):
+    """3년 너머 참고 신호. 판정 산식에는 넣지 않는다.
+
+    값 = 최근 PERMIT_WIN개월 인허가의 연평균 × 착공 전환율 ÷ 연 필요량.
+    12월 몫 = 최근 12개월 인허가 중 12월 한 달의 비중. 이례 여부를 가르는 문턱은
+    두지 않고 숫자만 보여준다(2026-09-13 대표 결정).
+    돌려주는 값: {'pbr', 'pdec', 'pconv'} — 계산할 수 없으면 None.
+    """
+    mon = permit_monthly(stats, region)
+    ks = sorted(mon)
+    conv = permit_start_conv(stats, region)
+    if len(ks) < PERMIT_WIN or not conv or not ref_q:
+        return None
+    # 창이 중간에 비면(월 결측) 연평균이 줄어 얇게 잡힌다 — 연속된 달만 쓴다
+    last = ks[-1]
+    ly, lm = int(last[:4]), int(last[5:7])
+    want = []
+    for i in range(PERMIT_WIN):
+        t = ly * 12 + lm - 1 - i
+        want.append('%d.%02d' % (t // 12, t % 12 + 1))
+    if any(k not in mon for k in want):
+        return None
+    yearly = sum(mon[k] for k in want) * 12.0 / PERMIT_WIN
+    last12 = want[:12]
+    p12 = sum(mon[k] for k in last12)
+    dec = sum(mon[k] for k in last12 if k.endswith('.12'))
+    return {'pbr': yearly * conv / (ref_q * 4.0),
+            'pdec': (dec / p12) if p12 > 0 else None,
+            'pconv': conv}
+
+
+def split_text(inow, fut, need, ref, sig, est, H=LEAD_Q, W=BACKLOG_WINDOW):
+    """리포트 머리의 세 줄(지난 4년·앞으로 3년·3년 너머)과 추정 안내. 숫자만 쓴다.
+
+    대표 판정 한 줄이 서로 다른 세 방향을 뭉갠다(경기: 지난 4년 거의 균형, 앞으로
+    3년 12% 부족, 3년 너머 필요량 이상). 단계 말(충분·부족)을 붙이면 근거 없는
+    문턱이 새로 생기므로 숫자만 적는다(2026-09-13 대표 결정 A안).
+    ⚠️ 여기서만 만든다. calc()가 결과 행에 'split'으로 구워 싣고 화면은 읽기만 한다.
+    """
+    past = '%g년' % (W / 4.0)
+    ahead = '%g년' % (H / 4.0)
+    now = int(round(100.0 * inow / (ref * W))) if ref else 0
+    if now <= -1:
+        l1 = '필요량보다 %d%% 덜 지었습니다' % -now
+    elif now >= 1:
+        l1 = '필요량보다 %d%% 더 지었습니다' % now
+    else:
+        l1 = '필요량만큼 지었습니다'
+    l2 = '필요량의 %d%%가 들어옵니다' % int(round(100.0 * fut / need)) if need else None
+    l3 = dec = None
+    thin = False
+    if sig:
+        l3 = '최근 2년 인허가를 착공으로 환산하면 필요량의 %d%%입니다' % int(round(100 * sig['pbr']))
+        if sig.get('pdec') is not None:
+            dec = '최근 1년 인허가 중 12월 한 달이 %d%%입니다' % int(round(100 * sig['pdec']))
+        thin = sig['pbr'] < PWARN_CUT
+    return {
+        'rows': [('지난 %s' % past, l1), ('앞으로 %s' % ahead, l2)],
+        'ref': ('%s 너머' % ahead, l3, dec, thin) if l3 else None,
+        'ref_note': '인허가에는 실제로 착공하지 않는 계획이 섞여 있어 참고로만 봅니다. 판정에는 넣지 않습니다.',
+        'est_note': ('이 지역은 기준표에 없어 적정물량을 추정했습니다.' if est else None),
+    }
+
+
 def grade(ratio):
     c = GRADE_CUTS
     if ratio >= c[0]: return 'g4'
@@ -335,14 +454,16 @@ def calc(stats):
         #  '예측력'으로 오독하기 쉬운 자리라 수치를 남긴다.)
         # 대신 어긋남은 uwarn으로 드러낸다 — 숨기지 않되 순위는 건드리지 않는다.
         um = (un / float(ref)) if (un is not None and ref) else None
-        # 창 너머 신호: 최근 12개월 인허가 ÷ 적정연간. 인허가는 같은 해 착공보다
-        # 약 1.15배 많은 지표라(2012~2025 전국 실측) 그런데도 적정에 못 미치면 3년
-        # 창이 끝난 뒤의 공급은 얇다. 문턱 0.95는 착공으로 환산하면 약 0.83이라
-        # 여유가 크지는 않다('1.29~1.68배'는 HUB 준공예정 수치를 잘못 옮긴 것이었다,
-        # 2026-09-13 정정). 문턱은 0.95:
-        # 100% 언저리(수도권 99.98% 실측)가 매달 켜졌다 꺼졌다 하면 경고가 무시된다.
+        # 표 아래 '인허가 1년' 참고 행은 여전히 최근 12개월 원값(pm12·pmr)을 보여준다.
         pm, _ = permit_trail12(stats, z)
         pmr = (pm / float(ref * 4)) if (pm is not None and ref) else None
+        # 3년 너머 참고 신호(2026-09-13 대표 결정): 최근 24개월 연평균 × 착공 전환율.
+        # 12개월 원값은 한 해의 이례적 12월에 기대고(경기 2024년 60%·2025년 48%),
+        # 창 길이에 따라 판단이 뒤집혔다(울산 12개월 124% vs 24개월 82%).
+        # pwarn은 이제 이 값으로 켠다. 경고 박스가 아니라 참고 줄의 강조라, 문턱
+        # 0.95 경계(인천 94%)에서 달마다 깜빡이는 것은 감수한다(대표 결정).
+        sig = permit_signal(stats, z, ref)
+        split = split_text(inow, fut, need, ref, sig, z in EST, H)
         out.append({
             'z': z, 'region': REGION[z], 'agg': z in AGG, 'est': z in EST,
             'ref': ref, 'inow': round(inow), 'fut': round(fut), 'need': need,
@@ -355,7 +476,11 @@ def calc(stats):
             'uwarn': bool(um is not None and um >= 1.0 and g in ('g4', 'g3', 'g2')),
             'pm12': (None if pm is None else round(pm)),
             'pmr': (None if pmr is None else round(pmr, 3)),
-            'pwarn': bool(pmr is not None and pmr < PWARN_CUT),
+            'pbr': (None if sig is None else round(sig['pbr'], 3)),
+            'pdec': (None if (sig is None or sig['pdec'] is None) else round(sig['pdec'], 3)),
+            'pconv': (None if sig is None else round(sig['pconv'], 3)),
+            'pwarn': bool(sig is not None and sig['pbr'] < PWARN_CUT),
+            'split': split,
         })
     # ── 집계 항등식 자가검사 ────────────────────────────────────────────────
     # 부분 결측은 missing 가드에 안 걸린다. 한 지역의 특정 월만 None이면 그 지역만

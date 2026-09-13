@@ -265,22 +265,25 @@ def test_pwarn_threshold_avoids_knife_edge():
 def test_pwarn_fires_on_live_data_where_expected():
     """실데이터 고정점(2026-08-10 시장 통념과 대조): 경남(인허가가 특히 적은 곳)은
     뜨고, 대전(그나마 있다)·충남(너무 많았다)은 안 뜬다. 이 관계가 뒤집히면
-    인허가 계열이 오염된 것이다."""
+    인허가 계열이 오염된 것이다.
+
+    2026-09-13부터 pwarn은 12개월 원값(pmr)이 아니라 24개월 × 착공 전환율(pbr)로
+    켠다(대표 결정). 고정점 지역은 두 방식 모두에서 문턱과 멀리 떨어져 그대로 쓴다."""
     import io, json, re, os
     root = os.path.join(os.path.dirname(__file__), '..', '..')
     src = io.open(os.path.join(root, 'data.js'), encoding='utf-8').read()
     adv = json.loads(re.search(
         r'/\*ADV_DATA_START\*/\s*const ADV=(\{.*?\});?\s*/\*ADV_DATA_END\*/', src, re.S).group(1))
     by = {z['z']: z for z in adv['sido']['zones']}
-    thin = ('경남', '대구', '서울')      # 실측 pmr 0.23~0.42 — 컷에서 0.5 이상 떨어져 있다
-    thick = ('대전', '충남')             # 실측 pmr 1.84~1.90 — 역시 멀다
+    thin = ('경남', '대구', '서울')      # 실측 pbr 0.23~0.58 — 컷에서 0.37 이상 떨어져 있다
+    thick = ('대전', '충남')             # 실측 pbr 1.30~1.55 — 역시 멀다
     for z in thin:
         assert by[z]['pwarn'], '%s 경고가 꺼졌다 — 인허가 계열 오염 의심' % z
     for z in thick:
         assert not by[z]['pwarn'], '%s 경고가 켜졌다 — 인허가 계열 오염 의심' % z
     # 오염 판정의 본체는 문턱 통과 여부가 아니라 **관계**다. 얇은 쪽이 두꺼운 쪽보다
     # 확실히 낮아야 한다 — 이 부등식은 문턱과 무관해 시장이 움직여도 안 깨진다.
-    assert max(by[z]['pmr'] for z in thin) < min(by[z]['pmr'] for z in thick) / 2
+    assert max(by[z]['pbr'] for z in thin) < min(by[z]['pbr'] for z in thick) / 2
 
     # ⚠️ 전국·수도권·부산은 **일부러 단정하지 않는다.** 실측 pmr이 전국 0.853,
     # 부산 0.925, 수도권 1.000으로 컷(0.95)에서 0.03~0.10밖에 안 떨어져 있다.
