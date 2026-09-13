@@ -47,6 +47,7 @@ FULL = {
     'WEEKLY_REGIONS': MODEL,   # 주간 시세 수집
     'BUBBLE_REGIONS': MODEL,   # 버블밴드 (2026-09-12 누락, 리뷰 세션 발견)
     'SIDO17': SIDO,            # 지표 페이지 (이름은 이력상 17)
+    'DISPLAY_ORDER': MODEL,    # 시도 목록 표시 순서 정본 (2026-09-13 대표 결정)
 }
 
 # 일부만 담는 것이 의도인 목록. 왜 일부인지를 값으로 적는다.

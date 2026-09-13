@@ -47,6 +47,24 @@ EST = {'서울', '경기', '인천', '세종', '제주'}
 AGG = ('전국', '수도권', '지방')                          # 집계 3종(시도 순위에서 제외)
 ORDER = list(REF_Q)                                       # 표의 열 순서
 
+# 시도 목록을 **보여줄 때** 쓰는 고정 순서(2026-09-13 대표 결정).
+# 부족 순이 아니라 사람들이 관심을 두는 순서다 — 부족한 곳이 지방·제주일 수 있는데 그곳이 곧
+# 관심 지역은 아니다. 집계 3 → 수도권 → 광역시·세종 → 도. 대표가 바꾸면 여기만 고친다.
+# ⚠️ ORDER 와 헷갈리지 말 것. ORDER 는 기준표·발표 원천의 순서라 /monthly/ 처럼 정부 표와
+#    대조하는 화면이 그대로 쓴다. 순위를 말하는 곳(블로그 순위표)은 zone_order() 를 쓴다.
+#    목록 표시(허브·'다른 지역' 격자·홈 표 모드)만 이것을 쓴다 — calc() 가 zones 를 이 순서로 낸다.
+DISPLAY_ORDER = [
+    '전국', '수도권', '지방',
+    '서울', '경기', '인천',
+    '부산', '대구', '대전', '세종', '울산', '전남광주',
+    '충남', '충북', '경남', '경북', '전북', '강원', '제주',
+]
+# 손으로 적은 목록은 모델이 바뀌어도 따라오지 않는다(2026-09-10 광주·전남 통합). 어긋나면
+# 여기서 바로 죽는다 — 조용히 한 지역이 목록에서 빠지는 것보다 낫다.
+if sorted(DISPLAY_ORDER) != sorted(ORDER) or len(set(DISPLAY_ORDER)) != len(DISPLAY_ORDER):
+    raise SystemExit('DISPLAY_ORDER 가 모델 지역과 다르다: %s'
+                     % sorted(set(DISPLAY_ORDER) ^ set(ORDER)))
+
 REGION = {z: ('수도권' if z in ('서울', '경기', '인천') else '지방') for z in REF_Q}
 REGION.update({'전국': '전국', '수도권': '수도권', '지방': '지방'})
 
@@ -397,7 +415,7 @@ def calc(stats):
               % (len(missing), ', '.join(missing)), file=_s.stderr)
     return {'L': qkey(L), 'S': qkey(S), 'H': H,
             'lead': LEAD_Q, 'conv': CONV, 'window': BACKLOG_WINDOW,
-            'unsold_prd': un_prd, 'missing': missing, 'agg_warn': warn, 'zones': out}
+            'unsold_prd': un_prd, 'missing': missing, 'agg_warn': warn, 'zones': sorted(out, key=lambda x: DISPLAY_ORDER.index(x['z']))}
 
 
 def supply_rows(stats):

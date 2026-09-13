@@ -34,7 +34,7 @@
 | `update_adv_data.py --update` | 원천 API에서 데이터를 받아 `data.js`를 갱신. 키 없이 로직만 검증하려면 `--dry-run` |
 | `split_data.py` | `data.js` → `data-core.js`, `data-*.json` 분리 |
 | `make_sido_pages.py`, `make_indicator_pages.py`, `make_monthly_page.py` | 시도·지표·월간 페이지 생성 |
-| `sido_zones.py` | 판정 단위(시도) 목록·등급·정렬의 **정본**. 순위는 반드시 `zone_order()`를 쓴다(등급군 → 절대량). 절대 세대수로 정렬하면 판정과 모순이 난다 |
+| `sido_zones.py` | 판정 단위(시도) 목록·등급·정렬의 **정본**. 순위는 반드시 `zone_order()`를 쓴다(등급군 → 절대량). 절대 세대수로 순위를 매기면 판정과 모순이 난다. 시도 **목록을 보여줄 때**는 순위가 아니라 `DISPLAY_ORDER`(관심 지역 고정 순서)를 쓴다. `/monthly/`처럼 정부 표와 대조하는 화면은 `ORDER`(발표 원천 순서)를 유지한다 |
 | `check_freshness.py` | 데이터 신선도·정합성 검사. 감시 워크플로가 부른다 |
 | `refresh_cycle_data.py` | `/cycle/` 사이클 리포트 데이터 |
 | `make_zone_cards.py`, `make_og_cards.py`, `make_weekly_share.py` | 공유용 이미지·OG 카드 |

@@ -710,10 +710,10 @@ def build_page(z, calc, stats, pq, others):
 
 def build_hub(calc):
     agg = [z for z in calc['zones'] if z['agg']]
-    # 기본 정렬은 세대수순(2026-08-08 사용자) — 서버가 그 순서로 굽고,
-    # 등급순은 토글이 만든다. JS 정렬 키(data-gi/tot)는 순서와 무관하게 실린다.
-    sido = sorted([z for z in calc['zones'] if not z['agg']],
-                  key=lambda x: -disp_tot(x, calc['H']))
+    # 시도 목록은 고정 순서로 보여준다(2026-09-13 대표 결정) — calc() 가 이미
+    # sido_zones.DISPLAY_ORDER 순서로 zones 를 낸다. 여기서 다시 정렬하지 않는다.
+    # 예전의 정렬 토글은 뺐다: 목록은 순위가 아니고, 순위는 zone_order() 가 말한다.
+    sido = [z for z in calc['zones'] if not z['agg']]
     desc = ('전국 16개 시도의 아파트 공급을 적정물량과 견줘 정리했습니다. '
             '실적은 국토교통부 준공, 앞으로 %d분기는 착공 실적 기준. 기준 %s.'
             % (calc['H'], calc['L']))
@@ -729,14 +729,6 @@ def build_hub(calc):
                  % (urllib.parse.quote(o['z']), esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0],
                     esc(o['rtxt'])))
     h.append('</div><h2 class="z17">16개 시도</h2>'
-             '<div class="tb-seg zsort" id="sido-sort" role="group" aria-label="정렬 기준">'
-             '<button type="button" class="on" aria-pressed="true" data-s="a">세대수순</button>'
-             '<button type="button" aria-pressed="false" data-s="g">등급순</button></div>'
-             # ⚠️ 정렬은 순부족(tot) 내림차순이다. 공급 여유 등급은 tot가 음수라
-             # '세대수가 많은 순'이라고 쓰면 반대로 읽힌다 — 여유가 가장 큰 충남이
-             # 맨 아래에 온다(2026-08-07 감사). 부호를 포함해 정확히 쓴다.
-             '<p class="zsub" id="sido-note">모자란 세대수가 큰 순입니다'
-             '(공급 여유 등급은 여유가 적은 순).</p>'
              '<div class="zlinks" id="sido-list">')
     for o in sido:
         h.append('<a href="/zone/%s/" data-gi="%d" data-tot="%d"><b>%s</b>'
@@ -746,23 +738,6 @@ def build_hub(calc):
                     esc(o['z']), o['grade'], GRADE_TXT[o['grade']][0],
                     signed(disp_tot(o, calc['H'])), esc(o['rtxt'])))
     h.append('</div></div></section>')
-    h.append('<script>(function(){'
-             'var w=document.getElementById("sido-list"),seg=document.getElementById("sido-sort"),'
-             'note=document.getElementById("sido-note");'
-             'if(!w||!seg)return;'
-             'var g=function(e,k){return +e.getAttribute(k)};'
-             'seg.addEventListener("click",function(ev){'
-             'var b=ev.target.closest("button");if(!b)return;var s=b.getAttribute("data-s");'
-             'Array.prototype.forEach.call(seg.children,function(x){'
-             'var on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false")});'
-             'var a=Array.prototype.slice.call(w.children);'
-             'a.sort(s==="a"?function(x,y){return g(y,"data-tot")-g(x,"data-tot")}'
-             ':function(x,y){return g(x,"data-gi")-g(y,"data-gi")||g(y,"data-tot")-g(x,"data-tot")});'
-             'a.forEach(function(el){w.appendChild(el)});'
-             'if(note)note.textContent=s==="a"'
-             '?"모자란 세대수가 큰 순입니다(공급 여유 등급은 여유가 적은 순)."'
-             ':"등급순입니다. 같은 등급 안에서는 모자란 세대수가 큰 순(공급 여유 등급에서는 여유가 적은 순).";'
-             '});})();</script>')
     h.append(FOOT)
     return ''.join(h)
 
