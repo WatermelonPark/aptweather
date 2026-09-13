@@ -998,6 +998,22 @@ table.adv thead th:first-child{text-align:center}
     border-top:2px solid var(--ink2)}
   #tb-main tfoot th:first-child{z-index:6;font-weight:600;color:var(--ink);line-height:25px}
   #tb-main tfoot .tc b em{font-style:normal;color:#a93226;margin-left:2px;font-size:10px}
+  /* 리포트 머리 세 줄(2026-09-13 대표 결정). 앞 두 줄은 실적·착공 기반이라 본문
+     무게로, 세 번째 줄(인허가)은 참고 칩과 옅은 글씨로 신뢰 수준이 다르게 보이게 한다.
+     필요량에 못 미쳐도 경보 색을 쓰지 않는다 — 참고 신호 안에서 굵기로만 강조한다. */
+  .zsplit{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  .zs-row{display:grid;grid-template-columns:7.5em 1fr;gap:10px;font-size:14px;
+    color:var(--ink2);line-height:1.6;margin:3px 0}
+  .zs-row b{font-weight:600;color:var(--ink)}
+  .zs-ref{color:var(--muted);font-size:13px;margin-top:8px}
+  .zs-ref b{font-weight:500;color:var(--muted)}
+  .zs-ref small{display:block;font-size:12px}
+  .zs-thin strong{font-weight:600;color:var(--ink2)}
+  .zs-note,.zs-est{font-size:12px;color:var(--muted);line-height:1.6;margin:2px 0 0 calc(7.5em + 10px)}
+  .zs-est{margin-left:0;margin-top:8px}
+  .zchip{font-style:normal;font-size:10.5px;font-weight:500;color:var(--muted);
+    border:1px solid var(--line);padding:0 4px;margin-right:5px;vertical-align:1px}
+  @media (max-width:520px){.zs-row{grid-template-columns:1fr;gap:0}.zs-note{margin-left:0}}
   .zwarn{margin-top:10px;font-size:13px;color:#a93226;line-height:1.65;
     border-left:3px solid #a93226;padding-left:10px}
   /* 스크린리더 전용 — 표 caption처럼 화면엔 없고 음성으로만 읽히는 것 */
