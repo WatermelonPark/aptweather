@@ -123,17 +123,49 @@ def series_at(d, i):
     return out
 
 
-def sum_last(d, i, n=12):
-    """최근 n개월 합 — 인허가처럼 월별 들쭉날쭉이 큰 계열용."""
+def _ym(label):
+    m = re.match(r'^(\d{4})[.\-](\d{1,2})', str(label))
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def cum_month(d, i):
+    """누계 계열의 '이 달' 값 = 해당 월 누계 − 전월 누계. 1월은 누계가 곧 그 달 값이다.
+
+    ⚠️ 인허가 단위는 '호 (연내 누계)'다. 원값을 그대로 쓰면 1~7월 누계가 '이 달'로
+       나간다(2026-09-13 발견: 경기 38,240 → 실제 2,855). 전월 값이 없거나 바로 앞
+       칸이 전월이 아니면 비워 둔다 — 추정해 채우지 않는다.
+    """
     ser = d.get('series') or {}
+    dates = d['dates']
+    here = _ym(dates[i])
     out = {}
     for r in ORDER:
         v = ser.get(r)
-        if not v:
+        cur = v[i] if v and i < len(v) else None
+        if cur is None or here is None:
             out[r] = None
             continue
-        win = [x for x in v[max(0, i - n + 1):i + 1] if x is not None]
-        out[r] = sum(win) if win else None
+        if here[1] == 1:
+            out[r] = cur
+            continue
+        prev = _ym(dates[i - 1]) if i >= 1 else None
+        pv = v[i - 1] if prev == (here[0], here[1] - 1) and i - 1 < len(v) else None
+        out[r] = (cur - pv) if pv is not None else None
+    return out
+
+
+def trail12(stats, label):
+    """최근 12개월 인허가 합 — sido_zones.permit_trail12 를 그대로 쓴다.
+
+    ⚠️ 산식을 여기 새로 쓰지 않는다. 같은 대상을 시도 리포트('인허가 1년')와 이 페이지가
+       다른 방식으로 재면 한 사이트에서 두 값이 나온다 — 실제로 그랬다(누계 12개를 단순
+       합산해 전국이 3.8배로 나갔다). permit_trail12 는 지역마다 자기 최신 월로 계산하므로,
+       표의 기준 월(label)과 다른 지역은 섞지 않고 비운다.
+    """
+    out = {}
+    for r in ORDER:
+        v, ym = SZ.permit_trail12(stats, r)
+        out[r] = v if ym == label else None
     return out
 
 
@@ -227,7 +259,8 @@ def build(adv, sts):
     pm = sts.get('인허가')
     if pm:
         i, p = last_idx(pm)
-        cur, yr = series_at(pm, i), sum_last(pm, i, 12)
+        # 인허가는 '호 (연내 누계)' — 원값이 아니라 누계를 풀어 쓴다(2026-09-13).
+        cur, yr = cum_month(pm, i), trail12(sts, p)
         cells = {r: '<td>%s</td><td>%s</td>' % (num(cur.get(r)), num(yr.get(r)))
                  for r in ORDER if cur.get(r) is not None or yr.get(r) is not None}
         raw = p
